@@ -72,7 +72,7 @@ $routes->post('reviews/shop/save', 'Customer::saveShopReview');
 $routes->post('ai-assistant/chat', 'AiAssistant::chat');
 
 // Tenant Routes
-$routes->group('tenant', function ($routes) {
+$routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->get('/', 'Tenant::dashboard');
     $routes->get('dashboard', 'Tenant::dashboard');
     $routes->get('inventory', 'Tenant::inventory');
@@ -112,7 +112,7 @@ $routes->group('tenant', function ($routes) {
 });
 
 // Admin Routes
-$routes->group('admin', function ($routes) {
+$routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->get('/', 'Admin::dashboard');
     $routes->get('dashboard', 'Admin::dashboard');
     $routes->get('tenants', 'Admin::tenants');
