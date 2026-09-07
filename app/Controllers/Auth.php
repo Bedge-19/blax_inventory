@@ -26,7 +26,7 @@ class Auth extends BaseController
             $userModel = new UserModel();
             $user      = $userModel->findByEmail($email);
 
-            if ($user && (password_verify($password, $user['password_hash']) || $user['password_hash'] === '$2y$10$placeholderhash' || $password === 'password')) {
+            if ($user && password_verify($password, $user['password_hash'])) {
                 $shopId = null;
                 if ($user['role'] === 'shop_owner') {
                     $shopModel = new ShopModel();
