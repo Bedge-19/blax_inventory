@@ -420,6 +420,23 @@ $orderItems = $orderItems ?? [];
     </div>
 </div>
 
+<!-- Persistent Mobile / Tablet POS Running Total Floating Bar -->
+<div id="posMobileRunningBar" class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur border-t border-outline-variant/40 px-md py-sm shadow-2xl flex items-center justify-between">
+    <div class="flex items-center gap-sm">
+        <span class="w-9 h-9 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-sm">
+            <span class="material-symbols-outlined text-[20px]">receipt_long</span>
+        </span>
+        <div>
+            <span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-wider block">Due Now</span>
+            <span id="posMobileTotalText" class="font-mono text-title-md font-extrabold text-primary">₱0.00</span>
+        </div>
+    </div>
+    <button type="button" onclick="document.getElementById('posSubmitBtn').scrollIntoView({behavior: 'smooth'})" class="px-md py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 flex items-center gap-xs shadow-md active:scale-95 transition-all">
+        <span>Proceed to Pay</span>
+        <span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+    </button>
+</div>
+
 <!-- Modal: Store Pick-up Order Selector -->
 <div id="posPickupSelectorModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-md">
     <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-2xl w-full p-lg shadow-2xl space-y-md max-h-[90vh] flex flex-col">
@@ -859,6 +876,8 @@ $orderItems = $orderItems ?? [];
             if (amountDueNowEl) amountDueNowEl.textContent = formatMoney(additionalSubtotal);
             calculateChange(additionalSubtotal);
         }
+        const mobileTotal = document.getElementById('posMobileTotalText');
+        if (mobileTotal && amountDueNowEl) mobileTotal.textContent = amountDueNowEl.textContent;
     }
 
     // Cash calculations

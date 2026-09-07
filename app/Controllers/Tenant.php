@@ -1856,6 +1856,99 @@ class Tenant extends BaseController
         return redirect()->back()->with('success', 'Product archived. You can restore it from the Archive page.');
     }
 
+    /**
+     * Bulk archive selected products owned by the shop.
+     */
+    public function bulkArchiveProducts()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $productIds = $this->request->getPost('product_ids');
+
+        if (empty($productIds) || !is_array($productIds)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => 'No products selected.']);
+            }
+            return redirect()->back()->with('error', 'No products selected.');
+        }
+
+        $productModel = new ProductModel();
+        $archivedCount = 0;
+
+        foreach ($productIds as $id) {
+            $pid = (int) $id;
+            if ($pid <= 0) continue;
+            $product = $productModel->find($pid);
+            if ($product && (int) $product['shop_id'] === $shopId && $product['status'] !== 'archived') {
+                $productModel->update($pid, [
+                    'status'     => 'archived',
+                    'deleted_at' => date('Y-m-d H:i:s'),
+                ]);
+                $this->insertArchiveRow($shopId, 'inventory', $pid, (string) $product['name']);
+                $archivedCount++;
+            }
+        }
+
+        $msg = "Successfully archived {$archivedCount} product(s).";
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'archived_count' => $archivedCount, 'message' => $msg]);
+        }
+        return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * Bulk adjust stock for selected products owned by the shop.
+     */
+    public function bulkAdjustStock()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $productIds = $this->request->getPost('product_ids');
+        $delta      = (int) $this->request->getPost('delta');
+        $setTo      = $this->request->getPost('set_to');
+
+        if (empty($productIds) || !is_array($productIds)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => 'No products selected.']);
+            }
+            return redirect()->back()->with('error', 'No products selected.');
+        }
+
+        $productModel = new ProductModel();
+        $updatedCount = 0;
+
+        foreach ($productIds as $id) {
+            $pid = (int) $id;
+            if ($pid <= 0) continue;
+            $product = $productModel->find($pid);
+            if ($product && (int) $product['shop_id'] === $shopId) {
+                $newStock = (int) $product['stock_quantity'];
+                if ($setTo !== null && $setTo !== '') {
+                    $newStock = max(0, (int) $setTo);
+                } elseif ($delta !== 0) {
+                    $newStock = max(0, $newStock + $delta);
+                }
+                $productModel->update($pid, ['stock_quantity' => $newStock]);
+                $this->maybeNotifyLowStock($shopId, $product, $newStock);
+                $updatedCount++;
+            }
+        }
+
+        $msg = "Successfully updated stock for {$updatedCount} product(s).";
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'updated_count' => $updatedCount, 'message' => $msg]);
+        }
+        return redirect()->back()->with('success', $msg);
+    }
+
     private function stockStatusFor(int $stock, int $threshold): string
     {
         if ($stock <= 0) {

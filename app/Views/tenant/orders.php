@@ -76,9 +76,9 @@
                 <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors">Filter</button>
                 <a href="<?= base_url('tenant/orders') ?>" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</a>
                 <?php $exportUrl = base_url('tenant/orders/export') . (empty(array_filter($filters)) ? '' : '?' . http_build_query(array_filter($filters))); ?>
-                <a href="<?= $exportUrl ?>" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
+                <a id="exportOrdersBtn" href="<?= $exportUrl ?>" onclick="handleExportClick(this, 'Exporting CSV...')" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
                     <span class="material-symbols-outlined text-[18px]">download</span>
-                    Export
+                    <span>Export</span>
                 </a>
             </form>
         </div>
@@ -712,6 +712,27 @@
         return String(str || '').replace(/[&<>"']/g, function(m) {
             return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
         });
+    }
+
+    function handleExportClick(btn, label) {
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const textSpan = btn.querySelector('span:not(.material-symbols-outlined)');
+        const origIcon = icon ? icon.textContent : 'download';
+        const origText = textSpan ? textSpan.textContent : 'Export';
+        if (icon) {
+            icon.textContent = 'progress_activity';
+            icon.classList.add('animate-spin');
+        }
+        if (textSpan) textSpan.textContent = label || 'Exporting...';
+        btn.classList.add('opacity-75', 'pointer-events-none');
+        setTimeout(() => {
+            if (icon) {
+                icon.textContent = origIcon;
+                icon.classList.remove('animate-spin');
+            }
+            if (textSpan) textSpan.textContent = origText;
+            btn.classList.remove('opacity-75', 'pointer-events-none');
+        }, 3500);
     }
 </script>
 

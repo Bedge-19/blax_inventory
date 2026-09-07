@@ -71,6 +71,36 @@ function inv_stock_pill(int $stock, int $threshold): array {
         </div>
     </div>
 
+    <?php if ((int)($summary['low_stock'] ?? 0) > 0 || (int)($summary['out_of_stock'] ?? 0) > 0): ?>
+        <!-- Low Stock / Out of Stock Alert Banner -->
+        <div class="rounded-2xl p-md lg:p-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md shadow-sm">
+            <div class="flex items-center gap-md">
+                <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-2xl">notification_important</span>
+                </span>
+                <div>
+                    <h4 class="font-bold text-on-surface text-body-md">Low Stock &amp; Out of Stock Warning</h4>
+                    <p class="text-xs text-on-surface-variant">
+                        <span class="font-semibold text-amber-800"><?= (int)($summary['low_stock'] ?? 0) ?> items</span> are at or below threshold and 
+                        <span class="font-semibold text-red-700"><?= (int)($summary['out_of_stock'] ?? 0) ?> items</span> are completely out of stock.
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-sm flex-wrap">
+                <?php if ((int)($summary['low_stock'] ?? 0) > 0): ?>
+                    <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="px-md py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm">
+                        Filter Low Stock
+                    </a>
+                <?php endif; ?>
+                <?php if ((int)($summary['out_of_stock'] ?? 0) > 0): ?>
+                    <a href="<?= base_url('tenant/inventory?stock=out') ?>" class="px-md py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors shadow-sm">
+                        Filter Out of Stock
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- Search and Filter Bar -->
     <form method="get" action="<?= base_url('tenant/inventory') ?>" class="glass-card p-md rounded-xl flex flex-wrap items-center gap-md">
         <div class="relative flex-1 min-w-0 sm:min-w-[240px]">
@@ -158,6 +188,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                         <span class="material-symbols-outlined text-[14px]"><?= $icon ?></span>
                                         <?= number_format($stock) ?>
                                     </span>
+                                    <span class="block text-[10px] text-on-surface-variant opacity-70 mt-0.5">Min: <?= $thr ?></span>
                                 </td>
                                 <td class="px-lg py-md text-body-md text-on-surface text-right">₱<?= number_format((float) $p['price'], 2) ?></td>
                                 <td class="px-lg py-md text-right">
@@ -341,6 +372,51 @@ function inv_stock_pill(int $stock, int $threshold): array {
     </div>
 </div>
 
+<!-- Bulk Actions Floating Bar -->
+<div id="bulkActionsBar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-surface-container-lowest/95 backdrop-blur border border-primary/30 shadow-2xl rounded-2xl px-lg py-sm flex items-center gap-md transition-all">
+    <div class="flex items-center gap-xs text-xs font-bold text-on-surface">
+        <span class="w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center text-xs" id="selectedCountBadge">0</span>
+        <span class="whitespace-nowrap">products selected</span>
+    </div>
+    <div class="h-4 w-[1px] bg-outline-variant/40"></div>
+    <button type="button" onclick="openBulkStockModal()" class="px-md py-1.5 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 flex items-center gap-xs transition-colors shadow-sm whitespace-nowrap">
+        <span class="material-symbols-outlined text-[16px]">autorenew</span>
+        Bulk Adjust Stock
+    </button>
+    <button type="button" onclick="submitBulkArchive()" class="px-md py-1.5 bg-error-container text-on-error-container border border-error/30 rounded-xl text-xs font-bold hover:bg-error-container/80 flex items-center gap-xs transition-colors whitespace-nowrap">
+        <span class="material-symbols-outlined text-[16px]">archive</span>
+        Bulk Archive
+    </button>
+    <button type="button" onclick="deselectAllProducts()" class="p-1 hover:bg-surface-container rounded-lg text-on-surface-variant" title="Deselect All">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+    </button>
+</div>
+
+<!-- Bulk Adjust Stock Modal -->
+<div id="bulkStockModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">
+    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-md w-full space-y-md border border-outline-variant/30">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
+            <h3 class="text-title-lg font-bold">Bulk Stock Adjustment</h3>
+            <button onclick="document.getElementById('bulkStockModal').classList.add('hidden')" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <p class="text-body-md text-on-surface">Apply stock update to <span id="bulkStockCountText" class="font-bold text-primary">0</span> selected product(s).</p>
+        <div>
+            <label class="text-label-sm font-bold text-on-surface-variant block mb-1">Adjustment Quantity</label>
+            <input type="number" id="bulkStockQty" value="10" min="0" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl text-body-md">
+            <p class="text-[11px] text-on-surface-variant mt-1">Use "Add / Restock" to increase quantities or "Set Exact" to override stock.</p>
+        </div>
+        <div class="flex gap-sm pt-xs">
+            <button type="button" onclick="submitBulkStockAdjust('add')" class="flex-1 py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 flex items-center justify-center gap-xs">
+                <span class="material-symbols-outlined text-[16px]">add_circle</span> Add to Stock
+            </button>
+            <button type="button" onclick="submitBulkStockAdjust('set')" class="flex-1 py-md bg-surface-container-high text-on-surface rounded-xl font-bold hover:bg-surface-variant flex items-center justify-center gap-xs">
+                <span class="material-symbols-outlined text-[16px]">pin</span> Set Exact
+            </button>
+        </div>
+        <p id="bulkStockFeedback" class="text-xs text-on-surface-variant font-medium"></p>
+    </div>
+</div>
+
 <script>
     function openProductModal(btn) {
         const modal = document.getElementById('productModal');
@@ -445,6 +521,121 @@ function inv_stock_pill(int $stock, int $threshold): array {
             setTimeout(() => document.getElementById('stockModal').classList.add('hidden'), 700);
         } catch (e) {
             document.getElementById('stockFeedback').textContent = 'Could not reach the server.';
+        }
+    }
+
+    // --- Bulk Action Handling ---
+    function getSelectedProductIds() {
+        const checkboxes = document.querySelectorAll('.product-checkbox:checked');
+        return Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    function updateBulkBar() {
+        const selected = getSelectedProductIds();
+        const bar = document.getElementById('bulkActionsBar');
+        const badge = document.getElementById('selectedCountBadge');
+        if (!bar || !badge) return;
+        badge.textContent = selected.length;
+        if (selected.length > 0) {
+            bar.classList.remove('hidden');
+        } else {
+            bar.classList.add('hidden');
+        }
+    }
+
+    function deselectAllProducts() {
+        document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = false);
+        const selectAll = document.getElementById('selectAll');
+        if (selectAll) selectAll.checked = false;
+        updateBulkBar();
+    }
+
+    const selectAllCheckbox = document.getElementById('selectAll');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            document.querySelectorAll('.product-checkbox').forEach(cb => cb.checked = selectAllCheckbox.checked);
+            updateBulkBar();
+        });
+    }
+
+    document.querySelectorAll('.product-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const all = document.querySelectorAll('.product-checkbox');
+            const checked = document.querySelectorAll('.product-checkbox:checked');
+            if (selectAllCheckbox) selectAllCheckbox.checked = (all.length > 0 && all.length === checked.length);
+            updateBulkBar();
+        });
+    });
+
+    function openBulkStockModal() {
+        const selected = getSelectedProductIds();
+        if (selected.length === 0) return;
+        document.getElementById('bulkStockCountText').textContent = selected.length;
+        document.getElementById('bulkStockFeedback').textContent = '';
+        document.getElementById('bulkStockModal').classList.remove('hidden');
+    }
+
+    async function submitBulkStockAdjust(mode) {
+        const selected = getSelectedProductIds();
+        if (selected.length === 0) return;
+        const qtyVal = document.getElementById('bulkStockQty').value;
+        const qty = parseInt(qtyVal, 10);
+        if (isNaN(qty) || qty < 0) {
+            document.getElementById('bulkStockFeedback').textContent = 'Please enter a valid non-negative number.';
+            return;
+        }
+
+        const fb = document.getElementById('bulkStockFeedback');
+        fb.textContent = 'Updating ' + selected.length + ' products...';
+
+        const body = new FormData();
+        selected.forEach(id => body.append('product_ids[]', id));
+        if (mode === 'add') {
+            body.append('delta', qty);
+        } else {
+            body.append('set_to', qty);
+        }
+
+        try {
+            const resp = await fetch('<?= base_url('tenant/products/bulk-adjust-stock') ?>', {
+                method: 'POST',
+                body: body
+            });
+            const data = await resp.json();
+            if (data.success) {
+                fb.textContent = data.message || 'Stock updated successfully!';
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                fb.textContent = data.error || 'Failed to update stock.';
+            }
+        } catch (err) {
+            fb.textContent = 'Network error while updating stock.';
+        }
+    }
+
+    async function submitBulkArchive() {
+        const selected = getSelectedProductIds();
+        if (selected.length === 0) return;
+        if (!confirm('Archive ' + selected.length + ' selected product(s)? They will be hidden from the storefront and can be restored from the Archive page.')) {
+            return;
+        }
+
+        const body = new FormData();
+        selected.forEach(id => body.append('product_ids[]', id));
+
+        try {
+            const resp = await fetch('<?= base_url('tenant/products/bulk-archive') ?>', {
+                method: 'POST',
+                body: body
+            });
+            const data = await resp.json();
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || 'Failed to archive products.');
+            }
+        } catch (err) {
+            alert('Network error while archiving products.');
         }
     }
 </script>

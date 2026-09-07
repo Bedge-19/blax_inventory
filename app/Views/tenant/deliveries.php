@@ -85,9 +85,9 @@
                     </select>
                     <button type="button" onclick="resetLiveFilters()" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</button>
                     <?php $exportUrl = base_url('tenant/deliveries/export') . (empty(array_filter($filters)) ? '' : '?' . http_build_query(array_filter($filters))); ?>
-                    <a href="<?= $exportUrl ?>" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
+                    <a id="exportDeliveriesBtn" href="<?= $exportUrl ?>" onclick="handleExportClick(this, 'Exporting CSV...')" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
                         <span class="material-symbols-outlined text-[18px]">download</span>
-                        Export
+                        <span>Export</span>
                     </a>
                 </form>
             </div>
@@ -1010,6 +1010,27 @@
 
     if (typeof L !== 'undefined') {
         initMap();
+    }
+
+    function handleExportClick(btn, label) {
+        const icon = btn.querySelector('.material-symbols-outlined');
+        const textSpan = btn.querySelector('span:not(.material-symbols-outlined)');
+        const origIcon = icon ? icon.textContent : 'download';
+        const origText = textSpan ? textSpan.textContent : 'Export';
+        if (icon) {
+            icon.textContent = 'progress_activity';
+            icon.classList.add('animate-spin');
+        }
+        if (textSpan) textSpan.textContent = label || 'Exporting...';
+        btn.classList.add('opacity-75', 'pointer-events-none');
+        setTimeout(() => {
+            if (icon) {
+                icon.textContent = origIcon;
+                icon.classList.remove('animate-spin');
+            }
+            if (textSpan) textSpan.textContent = origText;
+            btn.classList.remove('opacity-75', 'pointer-events-none');
+        }, 3500);
     }
 </script>
 

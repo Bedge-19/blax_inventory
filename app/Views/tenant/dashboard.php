@@ -29,6 +29,25 @@ $compactMoney = function (float $v): string {
 
 <div class="flex-1 space-y-gutter">
 
+    <?php if (!empty($low_stock_count) && $low_stock_count > 0): ?>
+        <!-- Low Stock / Out of Stock Alert Banner -->
+        <div class="rounded-2xl p-md lg:p-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md shadow-sm">
+            <div class="flex items-center gap-md">
+                <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-2xl">warning</span>
+                </span>
+                <div>
+                    <h4 class="font-bold text-on-surface text-body-md sm:text-body-lg">Low Stock Attention Needed</h4>
+                    <p class="text-xs text-on-surface-variant">You have <span class="font-bold text-amber-800"><?= (int)$low_stock_count ?></span> item<?= (int)$low_stock_count === 1 ? '' : 's' ?> at or below the threshold. Restock now to prevent missed customer orders.</p>
+                </div>
+            </div>
+            <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="inline-flex items-center gap-xs px-md py-2 bg-amber-600 text-white text-xs font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-sm whitespace-nowrap">
+                <span>View Low Stock Products</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </a>
+        </div>
+    <?php endif; ?>
+
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
 

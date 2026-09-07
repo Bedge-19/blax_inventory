@@ -98,7 +98,9 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('products/save', 'Tenant::saveProduct');
     $routes->post('products/delete/(:num)', 'Tenant::deleteProduct/$1');
     $routes->post('products/archive/(:num)', 'Tenant::archiveProduct/$1');
+    $routes->post('products/bulk-archive', 'Tenant::bulkArchiveProducts');
     $routes->post('products/adjust-stock', 'Tenant::adjustStock');
+    $routes->post('products/bulk-adjust-stock', 'Tenant::bulkAdjustStock');
     $routes->post('printing/archive/(:num)', 'Tenant::archivePrintingRequest/$1');
     $routes->post('printing/archive-all', 'Tenant::archiveAllCompleted');
     $routes->get('printing/download/(:num)', 'Tenant::downloadPrintFile/$1');
