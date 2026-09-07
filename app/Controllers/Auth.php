@@ -152,41 +152,95 @@ class Auth extends BaseController
         return view('auth/signup');
     }
 
-    /**
-     * Testing-only password reset. This intentionally does not send an email
-     * or require a reset token; do not use this flow in production.
-     */
     public function forgotPassword()
     {
         if ($this->request->getMethod() === 'POST') {
-            $email    = trim($this->request->getPost('email') ?? '');
-            $password = trim($this->request->getPost('password') ?? '');
-            $confirm  = trim($this->request->getPost('confirm_password') ?? '');
+            $email = trim($this->request->getPost('email') ?? '');
 
             if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 return redirect()->to('/forgot-password')->with('error', 'Enter a valid email address.');
             }
-            if (strlen($password) < 8) {
-                return redirect()->to('/forgot-password')->with('error', 'Password must be at least 8 characters long.');
-            }
-            if ($password !== $confirm) {
-                return redirect()->to('/forgot-password')->with('error', 'Passwords do not match.');
-            }
 
             $userModel = new UserModel();
             $user = $userModel->findByEmail($email);
-            if (!$user) {
-                return redirect()->to('/forgot-password')->with('error', 'No account was found with that email address.');
+            if ($user) {
+                // Generate a secure 32-byte token
+                $rawToken = bin2hex(random_bytes(32));
+                $tokenHash = hash('sha256', $rawToken);
+                $expiresAt = date('Y-m-d H:i:s', time() + 3600); // 1 hour
+
+                $tokenModel = new \App\Models\PasswordResetTokenModel();
+                $tokenModel->insert([
+                    'user_id'    => (int) $user['id'],
+                    'token_hash' => $tokenHash,
+                    'expires_at' => $expiresAt,
+                ]);
+
+                $resetLink = base_url('reset-password/' . $rawToken);
+
+                try {
+                    $emailService = service('email');
+                    $emailService->setTo($email);
+                    $emailService->setSubject('Password Reset Request - Blax Marketplace');
+                    $emailService->setMessage(
+                        "Hello " . esc($user['first_name']) . ",<br><br>" .
+                        "We received a request to reset the password for your Blax account.<br>" .
+                        "Click the link below to set a new password:<br><br>" .
+                        "<a href=\"" . esc($resetLink) . "\">" . esc($resetLink) . "</a><br><br>" .
+                        "This link will expire in 1 hour.<br><br>" .
+                        "If you did not request a password reset, you can safely ignore this email."
+                    );
+                    $emailService->send();
+                } catch (\Throwable $e) {
+                    log_message('error', 'Failed to send password reset email: ' . $e->getMessage());
+                }
             }
 
-            $userModel->update($user['id'], [
-                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            ]);
-
-            return redirect()->to('/login')->with('success', 'Password changed successfully. You can now sign in.');
+            return redirect()->to('/forgot-password')->with('success', 'If an account exists with that email address, a password reset link has been sent.');
         }
 
         return view('auth/forgot_password');
+    }
+
+    public function resetPassword(?string $token = null)
+    {
+        $token = trim((string) $token);
+        if ($token === '') {
+            return redirect()->to('/forgot-password')->with('error', 'Invalid password reset token.');
+        }
+
+        $tokenHash = hash('sha256', $token);
+        $tokenModel = new \App\Models\PasswordResetTokenModel();
+        $resetRecord = $tokenModel->findValidToken($tokenHash);
+
+        if (!$resetRecord) {
+            return redirect()->to('/forgot-password')->with('error', 'The password reset link is invalid or has expired.');
+        }
+
+        if ($this->request->getMethod() === 'POST') {
+            $password = trim($this->request->getPost('password') ?? '');
+            $confirm  = trim($this->request->getPost('confirm_password') ?? '');
+
+            if (strlen($password) < 8) {
+                return redirect()->back()->with('error', 'Password must be at least 8 characters long.');
+            }
+            if ($password !== $confirm) {
+                return redirect()->back()->with('error', 'Passwords do not match.');
+            }
+
+            $userModel = new UserModel();
+            $userModel->update($resetRecord['user_id'], [
+                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            ]);
+
+            $tokenModel->update($resetRecord['id'], [
+                'used_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            return redirect()->to('/login')->with('success', 'Password reset successfully. You can now log in with your new password.');
+        }
+
+        return view('auth/reset_password', ['token' => $token]);
     }
 
     public function registerShop()

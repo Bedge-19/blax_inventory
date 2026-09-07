@@ -15,6 +15,8 @@ $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::login');
 $routes->get('forgot-password', 'Auth::forgotPassword');
 $routes->post('forgot-password', 'Auth::forgotPassword');
+$routes->get('reset-password/(:any)', 'Auth::resetPassword/$1');
+$routes->post('reset-password/(:any)', 'Auth::resetPassword/$1');
 $routes->get('signup', 'Auth::signup');
 $routes->post('signup', 'Auth::signup');
 $routes->get('signup/merchant', 'Auth::registerShop');
