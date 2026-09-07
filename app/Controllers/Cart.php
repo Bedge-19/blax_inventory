@@ -11,6 +11,7 @@ use App\Models\ShippingAddressModel;
 use App\Models\ShopModel;
 use App\Models\NotificationModel;
 use App\Models\ShopNotificationPreferenceModel;
+use App\Models\PaymentModel;
 
 class Cart extends BaseController
 {
@@ -542,6 +543,54 @@ class Cart extends BaseController
     public function paymongoWebhook()
     {
         $payload = (string) $this->request->getBody();
+
+        // Verify PayMongo webhook signature
+        $signatureHeader = $this->request->getHeaderLine('Paymongo-Signature');
+        if (empty($signatureHeader)) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Missing signature header']);
+        }
+
+        $webhookSecret = (string) (env('PAYMONGO_WEBHOOK_SECRET') ?? '');
+        if (empty($webhookSecret)) {
+            log_message('error', 'PAYMONGO_WEBHOOK_SECRET is not configured.');
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Webhook secret not configured']);
+        }
+
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $pair) {
+            $pairParts = explode('=', trim($pair), 2);
+            if (count($pairParts) === 2) {
+                $parts[$pairParts[0]] = $pairParts[1];
+            }
+        }
+
+        if (empty($parts['t'])) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid signature header']);
+        }
+
+        $timestamp = $parts['t'];
+        $expectedSignature = hash_hmac('sha256', $timestamp . '.' . $payload, $webhookSecret);
+
+        $signatures = [];
+        if (!empty($parts['te'])) {
+            $signatures[] = $parts['te'];
+        }
+        if (!empty($parts['li'])) {
+            $signatures[] = $parts['li'];
+        }
+
+        $isValid = false;
+        foreach ($signatures as $sig) {
+            if (hash_equals($expectedSignature, $sig)) {
+                $isValid = true;
+                break;
+            }
+        }
+
+        if (!$isValid) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid signature']);
+        }
+
         $data = json_decode($payload, true);
         if (!$data || empty($data['data']['attributes']['data']['id'])) {
             return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid webhook payload']);
