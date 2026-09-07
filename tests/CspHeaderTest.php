@@ -27,5 +27,7 @@ class CspHeaderTest extends CIUnitTestCase
         $this->assertStringContainsString('fonts.googleapis.com', $header);
         $this->assertStringContainsString('fonts.gstatic.com', $header);
         $this->assertStringContainsString('checkout.paymongo.com', $header);
+        $this->assertStringContainsString("'unsafe-inline'", $header);
+        $this->assertStringNotContainsString('nonce-', $header);
     }
 }

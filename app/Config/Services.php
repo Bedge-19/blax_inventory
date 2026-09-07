@@ -60,6 +60,20 @@ class Services extends BaseService
     }
 
     /**
+     * Content Security Policy service with Tailwind CDN compatibility.
+     */
+    public static function csp(?\Config\ContentSecurityPolicy $config = null, bool $getShared = true): \App\Libraries\AppContentSecurityPolicy
+    {
+        if ($getShared) {
+            return static::getSharedInstance('csp', $config);
+        }
+
+        $config ??= config(ContentSecurityPolicy::class);
+
+        return new \App\Libraries\AppContentSecurityPolicy($config);
+    }
+
+    /**
      * Conversational layer for the RHK Assistant chat.
      */
     public static function cohereChat(bool $getShared = true): CohereChatService
