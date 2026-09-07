@@ -36,6 +36,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'adminAuth'     => \App\Filters\AdminAuth::class,
         'tenantAuth'    => \App\Filters\TenantAuth::class,
+        'authThrottle'  => \App\Filters\AuthRateLimiter::class,
     ];
 
     /**

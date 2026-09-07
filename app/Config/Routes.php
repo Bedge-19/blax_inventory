@@ -12,17 +12,17 @@ $routes->post('ai/query', 'Home::aiQuery');
 
 // Auth Routes
 $routes->get('login', 'Auth::login');
-$routes->post('login', 'Auth::login');
+$routes->post('login', 'Auth::login', ['filter' => 'authThrottle']);
 $routes->get('forgot-password', 'Auth::forgotPassword');
-$routes->post('forgot-password', 'Auth::forgotPassword');
+$routes->post('forgot-password', 'Auth::forgotPassword', ['filter' => 'authThrottle']);
 $routes->get('reset-password/(:any)', 'Auth::resetPassword/$1');
-$routes->post('reset-password/(:any)', 'Auth::resetPassword/$1');
+$routes->post('reset-password/(:any)', 'Auth::resetPassword/$1', ['filter' => 'authThrottle']);
 $routes->get('signup', 'Auth::signup');
-$routes->post('signup', 'Auth::signup');
+$routes->post('signup', 'Auth::signup', ['filter' => 'authThrottle']);
 $routes->get('signup/merchant', 'Auth::registerShop');
-$routes->post('signup/merchant', 'Auth::registerShop');
+$routes->post('signup/merchant', 'Auth::registerShop', ['filter' => 'authThrottle']);
 $routes->get('merchant-signup', 'Auth::registerShop');
-$routes->post('merchant-signup', 'Auth::registerShop');
+$routes->post('merchant-signup', 'Auth::registerShop', ['filter' => 'authThrottle']);
 $routes->get('logout', 'Auth::logout');
 
 // Notification Routes
