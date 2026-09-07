@@ -47,130 +47,71 @@ class ContentSecurityPolicy extends BaseConfig
      *
      * @var list<string>|string|null
      */
-    public $defaultSrc;
+    public $defaultSrc = 'self';
 
-    /**
-     * Lists allowed scripts' URLs.
-     *
-     * @var list<string>|string
-     */
-    public $scriptSrc = 'self';
+    public $scriptSrc = [
+        'self',
+        'https://cdn.tailwindcss.com',
+        'unsafe-inline',
+        'unsafe-eval',
+    ];
 
-    /**
-     * Lists allowed stylesheets' URLs.
-     *
-     * @var list<string>|string
-     */
-    public $styleSrc = 'self';
+    public $styleSrc = [
+        'self',
+        'https://fonts.googleapis.com',
+        'unsafe-inline',
+    ];
 
-    /**
-     * Defines the origins from which images can be loaded.
-     *
-     * @var list<string>|string
-     */
-    public $imageSrc = 'self';
+    public $imageSrc = [
+        'self',
+        'data:',
+        'https:',
+    ];
 
-    /**
-     * Restricts the URLs that can appear in a page's `<base>` element.
-     *
-     * Will default to self if not overridden
-     *
-     * @var list<string>|string|null
-     */
-    public $baseURI;
+    public $baseURI = 'self';
 
-    /**
-     * Lists the URLs for workers and embedded frame contents
-     *
-     * @var list<string>|string
-     */
-    public $childSrc = 'self';
+    public $childSrc = [
+        'self',
+        'https://checkout.paymongo.com',
+    ];
 
-    /**
-     * Limits the origins that you can connect to (via XHR,
-     * WebSockets, and EventSource).
-     *
-     * @var list<string>|string
-     */
-    public $connectSrc = 'self';
+    public $connectSrc = [
+        'self',
+        'https://api.paymongo.com',
+        'https://checkout.paymongo.com',
+    ];
 
-    /**
-     * Specifies the origins that can serve web fonts.
-     *
-     * @var list<string>|string
-     */
-    public $fontSrc;
+    public $fontSrc = [
+        'self',
+        'https://fonts.gstatic.com',
+        'data:',
+    ];
 
-    /**
-     * Lists valid endpoints for submission from `<form>` tags.
-     *
-     * @var list<string>|string
-     */
-    public $formAction = 'self';
+    public $formAction = [
+        'self',
+        'https://checkout.paymongo.com',
+    ];
 
-    /**
-     * Specifies the sources that can embed the current page.
-     * This directive applies to `<frame>`, `<iframe>`, `<embed>`,
-     * and `<applet>` tags. This directive can't be used in
-     * `<meta>` tags and applies only to non-HTML resources.
-     *
-     * @var list<string>|string|null
-     */
-    public $frameAncestors;
+    public $frameAncestors = null;
 
-    /**
-     * The frame-src directive restricts the URLs which may
-     * be loaded into nested browsing contexts.
-     *
-     * @var list<string>|string|null
-     */
-    public $frameSrc;
+    public $frameSrc = [
+        'self',
+        'https://checkout.paymongo.com',
+    ];
 
-    /**
-     * Restricts the origins allowed to deliver video and audio.
-     *
-     * @var list<string>|string|null
-     */
-    public $mediaSrc;
+    public $mediaSrc = 'self';
 
-    /**
-     * Allows control over Flash and other plugins.
-     *
-     * @var list<string>|string
-     */
-    public $objectSrc = 'self';
+    public $objectSrc = 'none';
 
-    /**
-     * @var list<string>|string|null
-     */
-    public $manifestSrc;
+    public $manifestSrc = 'self';
 
-    /**
-     * Limits the kinds of plugins a page may invoke.
-     *
-     * @var list<string>|string|null
-     */
-    public $pluginTypes;
+    public $pluginTypes = null;
 
-    /**
-     * List of actions allowed.
-     *
-     * @var list<string>|string|null
-     */
-    public $sandbox;
+    public $sandbox = null;
 
-    /**
-     * Nonce tag for style
-     */
     public string $styleNonceTag = '{csp-style-nonce}';
 
-    /**
-     * Nonce tag for script
-     */
     public string $scriptNonceTag = '{csp-script-nonce}';
 
-    /**
-     * Replace nonce tag automatically
-     */
-    public bool $autoNonce = true;
+    public bool $autoNonce = false;
 }
