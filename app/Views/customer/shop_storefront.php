@@ -484,7 +484,7 @@
 
                     <div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
 
-                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block h-64 overflow-hidden bg-surface-container relative">
+                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block relative aspect-square overflow-hidden bg-surface-container">
 
                             <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="<?= esc(product_image_url($p['image_url'] ?? null)) ?>" alt="<?= esc($p['name']) ?>">
 

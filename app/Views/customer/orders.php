@@ -96,6 +96,54 @@
 
                             </div>
 
+                            <!-- Order Tracking Timeline -->
+                            <?php
+                                $isCancelled = ($orderStatus === 'cancelled');
+                                $isPickup = (($order['fulfillment_method'] ?? 'delivery') === 'pickup');
+                                $currentStep = match($orderStatus) {
+                                    'pending'                      => 1,
+                                    'processing'                   => 2,
+                                    'shipped', 'ready_for_pickup'  => 3,
+                                    'delivered', 'completed'       => 4,
+                                    default                        => 1,
+                                };
+                                $steps = [
+                                    1 => ['label' => 'Placed', 'icon' => 'shopping_bag'],
+                                    2 => ['label' => 'Processing', 'icon' => 'inventory_2'],
+                                    3 => ['label' => $isPickup ? 'Ready for Pick-up' : 'In Transit', 'icon' => $isPickup ? 'storefront' : 'local_shipping'],
+                                    4 => ['label' => 'Completed', 'icon' => 'check_circle'],
+                                ];
+                            ?>
+                            <?php if ($isCancelled): ?>
+                                <div class="my-sm py-xs px-sm bg-error-container/20 border border-error-container/50 rounded-xl flex items-center gap-xs text-error text-xs font-semibold">
+                                    <span class="material-symbols-outlined text-[16px]">cancel</span>
+                                    <span>This order has been cancelled.</span>
+                                </div>
+                            <?php else: ?>
+                                <div class="my-md py-sm px-md bg-surface-container-low/70 rounded-xl border border-outline-variant/20">
+                                    <div class="flex items-center justify-between relative">
+                                        <div class="absolute left-6 right-6 top-3 h-0.5 bg-outline-variant/30 z-0"></div>
+                                        <div class="absolute left-6 top-3 h-0.5 bg-primary z-0 transition-all duration-500" style="width: calc(<?= (($currentStep - 1) / 3) * 100 ?>% - 12px);"></div>
+                                        <?php foreach ($steps as $stepNum => $stepData): ?>
+                                            <?php 
+                                                $isCompleted = ($stepNum < $currentStep);
+                                                $isCurrent   = ($stepNum === $currentStep);
+                                            ?>
+                                            <div class="flex flex-col items-center gap-1 z-10">
+                                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all <?= $isCompleted ? 'bg-primary text-white' : ($isCurrent ? 'bg-primary text-white ring-4 ring-primary/20' : 'bg-surface-container-high text-outline border border-outline-variant/40') ?>">
+                                                    <?php if ($isCompleted): ?>
+                                                        <span class="material-symbols-outlined text-[13px]">check</span>
+                                                    <?php else: ?>
+                                                        <span class="material-symbols-outlined text-[13px]"><?= $stepData['icon'] ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <span class="text-[10px] md:text-[11px] whitespace-nowrap <?= $isCurrent ? 'font-bold text-primary' : ($isCompleted ? 'font-semibold text-on-surface' : 'text-outline') ?>"><?= $stepData['label'] ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
                             <div class="flex items-center gap-md mb-md">
 
                                 <?php foreach ($thumbnails as $item): ?>
@@ -233,12 +281,16 @@
 
         <?php else: ?>
 
-            <div class="glass-card rounded-xl p-xl text-center text-on-surface-variant">
-
-                <span class="material-symbols-outlined text-4xl text-outline mb-2">shopping_bag</span>
-
-                <p>No orders found yet.</p>
-
+            <div class="glass-card rounded-2xl p-xxl text-center max-w-md mx-auto my-xl border border-outline-variant/30 flex flex-col items-center">
+                <div class="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-md">
+                    <span class="material-symbols-outlined text-4xl">inventory_2</span>
+                </div>
+                <h2 class="text-title-lg font-bold text-on-surface mb-xs">No orders yet</h2>
+                <p class="text-body-md text-on-surface-variant max-w-md mb-lg">When you place orders for products or printing services, you will be able to track their progress and pick-up QR codes right here.</p>
+                <a href="<?= base_url('/') ?>" class="inline-flex items-center gap-xs bg-primary text-on-primary px-lg py-md rounded-xl font-button hover:bg-primary-container transition-all shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">storefront</span>
+                    <span>Explore Marketplace</span>
+                </a>
             </div>
 
         <?php endif; ?>

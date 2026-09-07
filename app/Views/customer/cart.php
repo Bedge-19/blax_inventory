@@ -233,6 +233,11 @@
 
                         </div>
 
+                        <div id="checkout-inline-error" class="hidden mb-md p-sm rounded-lg bg-error-container/20 border border-error text-error text-xs font-semibold flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[16px]">error</span>
+                            <span id="checkout-error-text"></span>
+                        </div>
+
                         <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-lg font-button text-button disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-95 flex items-center justify-center gap-sm duration-300 hover:scale-105" id="place-order-btn" disabled>
 
                             Confirm &amp; Pay
@@ -533,6 +538,22 @@
                     subtotal += price * qty;
                 }
             });
+
+            var inlineError = document.getElementById('checkout-inline-error');
+            var inlineErrorText = document.getElementById('checkout-error-text');
+            function showInlineError(msg) {
+                if (inlineError && inlineErrorText) {
+                    inlineErrorText.textContent = msg;
+                    inlineError.classList.remove('hidden');
+                }
+            }
+            if (inlineError) inlineError.classList.add('hidden');
+
+            if (!paymentVal) {
+                e.preventDefault();
+                showInlineError('Please select a payment method before proceeding.');
+                return;
+            }
 
             if (paymentVal === 'gcash') {
                 e.preventDefault();

@@ -19,9 +19,16 @@
         $cart = $cartModel->getOrCreateCart($userId);
         $cartCount = $cartItemModel->where('cart_id', $cart['id'])->countAllResults();
 
+        $orderModel = new \App\Models\OrderModel();
+        $activeOrdersCount = $orderModel->where('customer_id', $userId)
+            ->whereIn('status', ['pending', 'processing', 'shipped', 'ready_for_pickup'])
+            ->countAllResults();
+
         $notifModel = new \App\Models\NotificationModel();
         $unreadCount = $notifModel->getUnreadCount($userId);
         $recentNotifs = $notifModel->getRecent($userId, 6);
+    } else {
+        $activeOrdersCount = 0;
     }
 ?>
 
@@ -35,7 +42,14 @@
 
     <div class="flex-grow flex flex-col">
 
-        <?= view('components/marketplace_header', ['activeNav' => $activeNav, 'cartCount' => $cartCount, 'unreadCount' => $unreadCount, 'recentNotifs' => $recentNotifs, 'searchQuery' => $searchQuery ?? '']) ?>
+        <?= view('components/marketplace_header', [
+            'activeNav'          => $activeNav,
+            'cartCount'          => $cartCount,
+            'activeOrdersCount'  => $activeOrdersCount,
+            'unreadCount'        => $unreadCount,
+            'recentNotifs'       => $recentNotifs,
+            'searchQuery'        => $searchQuery ?? ''
+        ]) ?>
         <?= $this->renderSection('content') ?>
         <?= view('components/footer') ?>
 

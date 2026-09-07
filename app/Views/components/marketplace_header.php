@@ -38,6 +38,24 @@
                 }
                 input.classList.add('opacity-60');
                 input.setAttribute('readonly', 'readonly');
+
+                var grid = document.getElementById('product-grid');
+                if (grid) {
+                    var skeletonCard = `
+                        <div class="flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden shadow-sm animate-pulse">
+                            <div class="aspect-square bg-surface-container-high"></div>
+                            <div class="p-md space-y-2">
+                                <div class="h-3 w-1/3 bg-surface-container-high rounded"></div>
+                                <div class="h-4 w-3/4 bg-surface-container-high rounded"></div>
+                                <div class="h-3 w-1/4 bg-surface-container-high rounded"></div>
+                                <div class="pt-2 flex justify-between items-center">
+                                    <div class="h-5 w-1/3 bg-surface-container-high rounded"></div>
+                                    <div class="h-8 w-8 bg-surface-container-high rounded-lg"></div>
+                                </div>
+                            </div>
+                        </div>`;
+                    grid.innerHTML = skeletonCard.repeat(10);
+                }
             });
         })();
         </script>
@@ -102,16 +120,19 @@
                 </div>
             </div>
 
-            <a href="<?= base_url('cart') ?>" class="p-2 rounded-full hover:bg-surface-container-high relative">
-
+            <a href="<?= base_url('cart') ?>" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Cart" aria-label="Shopping Cart">
                 <span class="material-symbols-outlined text-on-surface-variant">shopping_cart</span>
-
-
-                <span id="cart-count-badge" class="absolute top-0 right-0 bg-primary text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold <?= ($cartCount > 0) ? '' : 'hidden' ?>"><?= $cartCount ?></span>
-
-
+                <span id="cart-count-badge" class="absolute top-0 right-0 bg-primary text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold <?= ($cartCount > 0) ? '' : 'hidden' ?>"><?= $cartCount ?></span>
             </a>
 
+            <?php if ($isLogged): ?>
+                <a href="<?= base_url('customer/orders') ?>" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="My Orders" aria-label="My Orders">
+                    <span class="material-symbols-outlined">receipt_long</span>
+                    <?php if (!empty($activeOrdersCount) && $activeOrdersCount > 0): ?>
+                        <span id="active-orders-badge" class="absolute top-0 right-0 bg-secondary text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold" title="<?= (int)$activeOrdersCount ?> active order(s)"><?= (int)$activeOrdersCount ?></span>
+                    <?php endif; ?>
+                </a>
+            <?php endif; ?>
         </div>
 
         <button id="mobile-menu-toggle" type="button" class="lg:hidden p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full" aria-label="Open menu">

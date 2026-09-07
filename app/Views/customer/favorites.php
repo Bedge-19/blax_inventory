@@ -110,12 +110,16 @@
 
             <?php else: ?>
 
-                <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-xl text-center text-on-surface-variant mb-lg">
-
-                    <span class="material-symbols-outlined text-4xl text-outline mb-2">favorite_border</span>
-
-                    <p>No favorite shops added yet. Discover merchants you love and they will appear here.</p>
-
+                <div class="glass-card rounded-2xl border border-outline-variant/30 p-xxl text-center text-on-surface-variant mb-lg flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-error-container/30 text-error flex items-center justify-center mb-md">
+                        <span class="material-symbols-outlined text-4xl">favorite</span>
+                    </div>
+                    <h2 class="text-title-lg font-bold text-on-surface mb-xs">No favorite shops yet</h2>
+                    <p class="text-body-md text-on-surface-variant max-w-md mb-lg">When browsing merchant stores, tap the heart icon to bookmark your favorite shops for one-tap access.</p>
+                    <a href="<?= base_url('shops') ?>" class="inline-flex items-center gap-xs bg-primary text-on-primary px-lg py-md rounded-xl font-button hover:bg-primary-container transition-all shadow-sm">
+                        <span class="material-symbols-outlined text-[20px]">store</span>
+                        <span>Browse Verified Shops</span>
+                    </a>
                 </div>
 
             <?php endif; ?>

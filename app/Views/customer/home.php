@@ -252,7 +252,7 @@
 
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-gutter">
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-gutter">
 
                 <?php if (!empty($products)): ?>
 
@@ -265,9 +265,11 @@
 
                         <div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
 
-                            <div class="relative h-36 sm:h-48 lg:h-64 bg-surface-container overflow-hidden">
+                            <div class="relative aspect-square bg-surface-container overflow-hidden">
 
-                                <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('<?= $imageUrl ?>');"></a>
+                                <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
+                                    <img src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                                </a>
                                 <button type="button" class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Add to favorites">
 
                                     <span class="material-symbols-outlined text-on-surface-variant">favorite</span>
