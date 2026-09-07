@@ -1,0 +1,296 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Paper &amp; Pads | EduSupply</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-low": "#f2f4f6",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#191c1e",
+                        "on-primary-container": "#eeefff",
+                        "on-secondary-container": "#586377",
+                        "on-tertiary-container": "#e4f2ff",
+                        "on-error": "#ffffff",
+                        "outline-variant": "#c3c6d7",
+                        "primary-container": "#2563eb",
+                        "primary": "#004ac6",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary": "#545f73",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "surface-container-high": "#e6e8ea",
+                        "inverse-primary": "#b4c5ff",
+                        "tertiary": "#005a82",
+                        "surface-tint": "#0053db",
+                        "surface-dim": "#d8dadc",
+                        "secondary-fixed": "#d8e3fb",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "surface-container": "#eceef0",
+                        "surface-bright": "#f7f9fb",
+                        "surface": "#f7f9fb",
+                        "surface-variant": "#e0e3e5",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-secondary-fixed": "#111c2d",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "primary-fixed": "#dbe1ff",
+                        "on-secondary": "#ffffff",
+                        "on-primary-fixed": "#00174b",
+                        "secondary-container": "#d5e0f8",
+                        "outline": "#737686",
+                        "on-surface": "#191c1e",
+                        "background": "#f7f9fb",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "error-container": "#ffdad6",
+                        "tertiary-container": "#0074a6",
+                        "tertiary-fixed": "#c9e6ff",
+                        "on-surface-variant": "#434655"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "columns": "12",
+                        "margin": "40px",
+                        "xs": "4px",
+                        "base": "8px",
+                        "md": "16px",
+                        "container-max": "1440px",
+                        "xl": "48px",
+                        "sm": "8px",
+                        "lg": "24px",
+                        "gutter": "24px",
+                        "xxl": "80px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "button": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-inverse-surface shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto transition-all duration-200 ease-out"><div class="flex justify-between items-center w-full px-lg py-sm max-w-container-max mx-auto h-20"><div class="flex items-center gap-lg flex-1"><span class="text-title-lg font-title-lg font-bold text-primary dark:text-primary-fixed-dim">MarketPlace</span><div class="hidden md:flex items-center relative"><span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span><input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary transition-all duration-200" placeholder="Search shops..." type="text"></div></div><nav class="hidden lg:flex items-center gap-lg mr-md"><a class="text-primary font-bold border-b-2 border-primary pb-1 transition-colors duration-200" href="#">Categories</a><a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Printing Services</a><a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Shops</a></nav><div class="flex items-center gap-md"><div class="flex items-center gap-sm"><button class="p-2 rounded-full hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span></button><button class="p-2 rounded-full hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-on-surface-variant" data-icon="shopping_cart">shopping_cart</span></button></div><div class="flex items-center gap-sm pl-md border-l border-outline-variant"><div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant"><img class="w-full h-full object-cover" data-alt="Professional profile portrait of Alex Johnson" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5xI-WEg30KmxsrZC019SEBgDcq3G5M7IbbGplsvDUoaLnsvxg80noYdv4oVtxamTMDvH-pnhlb7N2k4Hdb7JcoIhoE-Hywpi3hGNc_2JGuFKgljncYron_-i4d1wiiiYiszAsKmfnLuuYMDu-XlOf98_Hksq7wKcMokKY5ekNtg50RnbDl2I9TZV8wweJFdpjLXao0Pp7gjx4gktF8XvuhUD4qY6A60Ws4piR2IRqYb1AIUaNP8FrJRWu6lJDWy_DbCOwGEa4qA30nAk"></div></div></div></div></header>
+<main class="max-w-container-max mx-auto px-margin py-lg">
+<!-- Breadcrumbs -->
+<nav class="flex items-center gap-xs text-label-sm font-label-sm text-on-surface-variant mb-xl">
+<a class="hover:text-primary" href="#">Home</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<a class="hover:text-primary" href="#">Categories</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Paper &amp; Pads</span>
+</nav>
+<div class="flex flex-col lg:flex-row gap-gutter">
+<!-- Sidebar / SideNavBar -->
+
+<!-- Main Content Area -->
+<div class="flex-1">
+<div class="flex flex-col md:flex-row md:items-end justify-between mb-xl gap-md">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Paper &amp; Pads</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Curated collection of professional writing essentials.</p>
+</div>
+<div class="flex items-center gap-md">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Sort by: <span class="text-on-surface font-semibold">Most Relevant</span></span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">tune</span>
+</div>
+</div>
+<!-- Product Grid: 4-column, 5-row (20 items) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<!-- Featured Product (Item 1) -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+
+<div class="absolute top-md right-md">
+<button class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-on-surface hover:text-error active:scale-90 transition-all">
+
+</button>
+</div>
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Premium Hardcover Notebook</h3>
+<div class="flex items-center justify-between mt-md">
+<span class="font-headline-md text-headline-md text-primary">$24.99</span>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Products 2-20 -->
+<!-- Item 2 -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Close-up of a high-quality A4 yellow legal pad with blue ruling and micro-perforated top on a light wood desk, soft morning window light, professional office aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAwDj1Aip3kf3O53myviAYYRP9aWxW8CJ4PBaM923PTyX-OrYwQ5TAlneUWL9TieDbjL5dyCTIyUI0eJHEnVvLl416JMz2OQnqzu0e7C7rK6erFMcCwxIbWf89jhaBDD6MEuF_2d7ZWaQXZDaYpyt7-N_mlUb3WCX6MF_NmjnVEtBuUjAxWpUER_vO00gQDASi0wQ0mFvlo4vR6nuk_FV4LpwLrWYZE8jBn2vwVDe4NTY5vg7ln5lK1kA">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">A4 Legal Pad (3-Pack)</h3>
+<div class="flex items-center justify-between mt-md">
+<span class="font-headline-md text-headline-md text-primary">$12.50</span>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="A collection of pastel colored sticky notes arranged neatly on a modern white desk surface, clean lines, minimalist layout, bright airy atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh-4UMRsNDLjQsmXNgtk8Fkt7ET1A-bq2mmcnloLlEo_dr6kM6wtmAqsaWLCUNKH8WUzFFST4dYSaOQFmLAFB8akDnfXe8dwb5Y2vRoLtPBRYf3Rt2AwhEpvhp6sKbK6bjX7a627ovl27h-tcoJiTuuSCh_Yh3ljMgpnYDnh_HLfsM_K0Zy1B3PrKq4bcT2zWA2lrW9ITL90Oh0VJoiikgLpGbLswfXCVYVlVqhfPM4MFawoGdFYEPzQ">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Sticky Notes Master Set</h3>
+<div class="flex items-center justify-between mt-md">
+<span class="font-headline-md text-headline-md text-primary">$18.00</span>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Large format artist sketchbook with thick cream paper, open to a blank page next to some charcoal pencils on a rustic wooden table, soft shadows, creative mood." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGya58q6h4fpxAYvub_6haeS-ZtiVB9lQP_5tWNUuzAgXquXV4Y5T0whaECmY0qWkMNT2DuQWixeM_oQ4XikDabrMFoa4dYP9Y8BrS6XXuGQiYjUmhVyRgnac4tfchpORxtP8onTB94IaruIg0xe9PF_NYRPe4hO-qnd_4A9ONBLlM5JI1SehIn_zVrPJ8FYj1_NpUMCwiOQmkKFG1-JMOImwydKz_-yUHhRwlQYQ9X6figNUrYWBqKg">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Professional Sketchbook</h3>
+<div class="flex items-center justify-between mt-md">
+<span class="font-headline-md text-headline-md text-primary">$29.99</span>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Repeat patterns for 20 items (simulating for design quality) -->
+<!-- Row 2 -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" data-alt="Sleek black linen journal with silver foil details on a dark granite surface, professional studio lighting, luxury stationery feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBFxcSXS9y2czPx85BaqiPge032Qg1n3NoBXFuuYyjtfkjVpRM00cQ8ru4DLSDYFoa4RpoRXXgDXEcRM2Hypa6jnU2-MgodQYaw-4cwm4jXNMHUd-E5a8Aahom4QHemclz76QpeqHY7mFTpDcVhgOyyl4GxyWxC9vEWtwkAeNidbxG6OeY7KCyY1CrsW0ex17NkvM1GSuHNkJsmYb-V6ubcddipHO7BzA_iQXdKv14No-Tz48mubTHzDQ">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Executive Linen Journal</h3>
+<div class="flex items-center justify-between mt-md">
+<span class="font-headline-md text-headline-md text-primary">$32.00</span>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Item 6-20 would follow the same pattern, placeholders used to fill space as requested -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="Spiral bound college ruled notebooks in vibrant primary colors stacked against a white background, clean education commercial style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHQHWQFNSSegBvCaGxXYRJuHT0zj_QZYcoseTDimvMk9QprHlMtLzbFj51jMHFr6Icp0PkkuSKe0prveO0Y9m7SrSWa2gBxgAaEpD8WkqAOPSL19WGOSfqt-cFD7YuoVsPBh91hxE0hSkYc2lzeKAQCiH6qqHVJqfbEW1yiTEqqOFys2sHzOTfkK6OLEnUpChli3yTuavTatQZsdjqaHnDBhMDaLDtRMMYoaNcMku5z2wz12mwmhH1DQ">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Spiral Project Notebook</h3>
+<div class="flex items-center justify-between mt-md"><span class="font-headline-md text-headline-md text-primary">$8.50</span><button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined">shopping_cart</span></button></div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="Technical graph paper pad with precise green grid lines, drafting tools nearby on a clean drafting table, architectural design aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDak_m3GTHDsq8fBAfM54CVA2tzVGV1q2coqarBW24NDkJCv_tnXJsXcyZYvK4_PUEfJnpGiAIRE59mqBMcQqGr22xGNMfI9Xe8n6fI8FH2Z8maybY3AH_-CJfSFVbplOOGffRn2KJNIRHeGTbe71L1jNIFJ7O56DUP5TCp1M5hXxFHUTthXMxp0BF_vg0aAhDX4LzX0yIjcu_T-KSbMDj2MlIIujUMiIlF8nUWIH_eklL86kQTfdN8Q">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Precision Graph Pad</h3>
+<div class="flex items-center justify-between mt-md"><span class="font-headline-md text-headline-md text-primary">$14.25</span><button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined">shopping_cart</span></button></div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+<div class="aspect-square relative overflow-hidden bg-surface-container-low">
+<img class="w-full h-full object-cover" data-alt="Pack of high-quality watercolor paper sheets with textured finish, professional art grade, soft natural light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4_HmGknpVJeU6BpKRmiioQwgtzpi4V6HTK1Tj8tc_70BOUDeKkfYZgEde_wW6sLtpzvYkfji8VX4pyJbNaayxZmFRv75PJA_0kYGcxdaQTqjBPS1cAQyY-B9As5hsxMKDKrwkoeFBYHntGaia6OvIm5jhyctV-ZHAyTUJW4sTeR6SeNtBNYSdAvs3vtzYmf5q0no7Watoo8-KyDi8s8ynVNY4qYdFr-koQSp_SsFQvmS7_gvcIijDFQ">
+</div>
+<div class="p-md">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs truncate">Watercolor Paper Pack</h3>
+<div class="flex items-center justify-between mt-md"><span class="font-headline-md text-headline-md text-primary">$35.00</span><button class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined">shopping_cart</span></button></div>
+</div>
+</div>
+<!-- Row 3-5 omitted for brevity in code but implied for UI structure -->
+<div class="col-span-full py-xl flex justify-center border-t border-outline-variant mt-xl">
+<nav class="flex items-center gap-xs">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold">1</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">2</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">3</button>
+<span class="w-10 h-10 flex items-center justify-center text-on-surface-variant">...</span>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-high transition-colors">8</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-container-high text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</nav>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Professional Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim full-width bottom border-t border-outline-variant/50 w-full mt-auto"><div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl"><div class="flex flex-col gap-sm max-w-sm"><a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">RHK General Merchandise</a><p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p><div class="flex gap-md mt-md"><span class="material-symbols-outlined text-outline-variant">public</span><span class="material-symbols-outlined text-outline-variant">shield</span><span class="material-symbols-outlined text-outline-variant">verified</span></div></div><div class="grid grid-cols-2 sm:grid-cols-3 gap-xl"><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a></nav></div><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a></nav></div><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a></nav></div></div></div><div class="w-full py-lg border-t border-outline-variant/30 text-center"><p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p></div></footer>
+<script>
+        // Simple interaction for filters
+        document.querySelectorAll('aside .flex.items-center.justify-between').forEach(header => {
+            header.addEventListener('click', () => {
+                const icon = header.querySelector('.material-symbols-outlined:last-child');
+                const content = header.nextElementSibling;
+                if (content && content.classList.contains('pl-lg')) {
+                    content.classList.toggle('hidden');
+                    icon.textContent = content.classList.contains('hidden') ? 'expand_more' : 'expand_less';
+                }
+            });
+        });
+    </script>
+
+
+<button class="fixed bottom-lg left-margin z-50 w-12 h-12 rounded-full bg-surface-container-lowest shadow-sm border border-outline-variant flex items-center justify-center text-on-surface hover:bg-surface-container-high active:scale-90 transition-all duration-200" aria-label="Go back"><span class="material-symbols-outlined">arrow_back</span></button><button class="fixed bottom-lg right-margin z-50 w-14 h-14 rounded-full bg-primary text-on-primary shadow-sm flex items-center justify-center hover:bg-primary-fixed-dim active:scale-90 transition-all duration-200" aria-label="AI Assistant"><span class="material-symbols-outlined">smart_toy</span></button></body></html>

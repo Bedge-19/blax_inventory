@@ -1,0 +1,234 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Printing Services | RHK General Merchandise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#004ac6",
+                    "secondary": "#545f73",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "on-background": "#191c1e",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed": "#c9e6ff",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#b4c5ff",
+                    "on-primary-fixed": "#00174b",
+                    "on-surface": "#191c1e",
+                    "surface-dim": "#d8dadc",
+                    "secondary-fixed-dim": "#bcc7de",
+                    "on-error": "#ffffff",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "surface-bright": "#f7f9fb",
+                    "background": "#f7f9fb",
+                    "on-tertiary-container": "#e4f2ff",
+                    "surface-container-highest": "#e0e3e5",
+                    "secondary-fixed": "#d8e3fb",
+                    "secondary-container": "#d5e0f8",
+                    "error-container": "#ffdad6",
+                    "surface-container-low": "#f2f4f6",
+                    "inverse-surface": "#2d3133",
+                    "on-secondary-fixed-variant": "#3c475a",
+                    "tertiary": "#005a82",
+                    "primary-container": "#2563eb",
+                    "surface-tint": "#0053db",
+                    "outline-variant": "#c3c6d7",
+                    "on-primary-container": "#eeefff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary": "#ffffff",
+                    "on-primary": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "surface": "#f7f9fb",
+                    "on-tertiary-fixed": "#001e2f",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "outline": "#737686",
+                    "primary-fixed": "#dbe1ff",
+                    "on-secondary-fixed": "#111c2d",
+                    "tertiary-container": "#0074a6",
+                    "surface-container-high": "#e6e8ea",
+                    "on-surface-variant": "#434655",
+                    "surface-variant": "#e0e3e5",
+                    "on-secondary-container": "#586377",
+                    "inverse-on-surface": "#eff1f3",
+                    "surface-container": "#eceef0"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xxl": "80px",
+                    "sm": "8px",
+                    "base": "8px",
+                    "gutter": "24px",
+                    "columns": "12",
+                    "md": "16px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "container-max": "1440px",
+                    "margin": "40px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "button": ["Inter"],
+                    "display": ["Inter"],
+                    "body-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-x-hidden">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-inverse-surface shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto transition-all duration-200 ease-out">
+<div class="flex justify-between items-center w-full px-lg py-sm max-w-container-max mx-auto h-20">
+<!-- Brand & Search -->
+<div class="flex items-center gap-lg flex-1">
+<span class="text-title-lg font-title-lg font-bold text-primary dark:text-primary-fixed-dim">MarketPlace</span>
+<div class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary transition-all duration-200" placeholder="Search shops..." type="text">
+</div>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden lg:flex items-center gap-lg mr-md">
+<a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Categories</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Printing Services</a>
+<a class="dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200 text-primary font-bold border-b-2 border-primary pb-1" href="#">Shops</a>
+</nav>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="shopping_cart">shopping_cart</span>
+</button>
+</div>
+<div class="flex items-center gap-sm pl-md border-l border-outline-variant">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional profile portrait of Alex Johnson" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5xI-WEg30KmxsrZC019SEBgDcq3G5M7IbbGplsvDUoaLnsvxg80noYdv4oVtxamTMDvH-pnhlb7N2k4Hdb7JcoIhoE-Hywpi3hGNc_2JGuFKgljncYron_-i4d1wiiiYiszAsKmfnLuuYMDu-XlOf98_Hksq7wKcMokKY5ekNtg50RnbDl2I9TZV8wweJFdpjLXao0Pp7gjx4gktF8XvuhUD4qY6A60Ws4piR2IRqYb1AIUaNP8FrJRWu6lJDWy_DbCOwGEa4qA30nAk">
+</div>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-container-max mx-auto px-margin"><section class="py-xl"><div class="mb-xl"> <h1 class="text-display font-display text-on-surface mb-sm">All Shops</h1> <p class="text-body-lg text-on-surface-variant">Discover trusted local merchants and professional service providers.</p></div><div class="flex flex-col md:flex-row gap-md mb-xl"> <div class="relative flex-1"> <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span> <input class="w-full bg-white border border-outline-variant rounded-xl py-md pl-xl pr-sm focus:ring-2 focus:ring-primary focus:outline-none" placeholder="Search shops by name or specialty..." type="text"> </div> <div class="flex gap-md"> <select class="bg-white border border-outline-variant rounded-xl px-lg py-md text-body-md focus:ring-2 focus:ring-primary focus:outline-none"> <option>All Categories</option> <option>Printing</option> <option>Apparel</option> <option>Stationery</option> </select> <select class="bg-white border border-outline-variant rounded-xl px-lg py-md text-body-md focus:ring-2 focus:ring-primary focus:outline-none"> <option>Top Rated</option> <option>Most Recent</option> </select> </div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-lg"> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-primary-fixed overflow-hidden"> <img alt="InkMaster" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuV7AWggrZoYaPTM10HgG6IHMPHQZ3pLac3w3gLOTYGJR5Z4HXoB_zO_4P4Gc5kYwfg156AdnBPblS8ly8Fgf8rvj4FSR6fxxWwdUka_j00eY7a0jbmWOPxfbFxj-oJ_g2pn3HezGQthdtQDFcE4rxNly7M1IsG-AgbVIsDxny4DsZyJ-10AGX-usBF14Z6Wx6kxWyk8ba60G_nYs6JczSZLlYNSrIKNGEXJGT2ABEOrQ-1LyOWkw90arc"> </div> <h5 class="text-title-lg font-bold">InkMaster</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.9</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Specializing in High-Quality Printing</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-secondary-fixed overflow-hidden"> <img alt="PrintPixel" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLu0dULTb0E3CwIEc-AeiUr9zZoG18V4G6WNPoY3iNUS3JFlW7uGH2MV0xm2Ogr8Pt7zreXRIp1EFzg7BjlseG_vEcByeuNVPorcVfWt31TvSUBzowe5st96GclLgBLQIgXgy7tBiGO8Afd9PBZeQFTz_3eBjFR-CAgKSr7UcKVXgd8gQg9Ptze99hw--tzlDf5TtqfCf_xbaLx4S4cthhGg-501rLsoI-_Pj098_ntP2gid6UUU-w3vDY0"> </div> <h5 class="text-title-lg font-bold">PrintPixel</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.8</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Digital and Offset Printing Experts</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-tertiary-fixed overflow-hidden"> <img alt="The Thread" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDhqp0PfupPqkEYl_49W9KjkUoUqmzg08mLeFrWx9cRWJZBQFAZ9ngdb2PRsaEkyCcfPuwU5Xof4nhgfKSF9AgM8MG8kf-pOHxc1cR9VGkkMcjD0SvW5k23OF0FRBni2uygcS7v3H8fddN62H1ULFLoFDdW6291ABFjMNM4qLtwnlYQXHsn1kpcxioFoCvL54GYUT5Tm8iYlXAxDElhWhzjo5riI5l-QLmdRzjLzKVUKag2nPKl5LUaBP3j_eTWqb51XlUfmqEjUAi-"> </div> <h5 class="text-title-lg font-bold">The Thread</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">5.0</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Custom Apparel and Embroidery</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-primary-fixed overflow-hidden"> <img alt="FastPrint" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA25y5AHHIlN_OdKtS152CuaAxkumwOwycbshV8JXq_KBWK1FyfaNf8EcvUzPVRDtE1i9PkP1zs2TpiSgk3Ngr5d-B1faAnEZUH_5n60PurP9E9nJJLToF9jGgCwTB1LHFiheDANf560t_o1e5HBhPktYy_F8OdcTjGcrcbcsgvdvut3ZpcKiIh8Ns4M5ZJuMZanZmlPIKLsHZKzQCxvMv6LCThmgsXVFwjSQuUeQAadp7E6MRQ2QsKsn7j4_57ADw3Nvz3VCKGAg5c"> </div> <h5 class="text-title-lg font-bold">FastPrint</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.7</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Same-Day Document Services</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-secondary-fixed overflow-hidden"> <img alt="Campus Corner" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCERyfqkL7SriqVxt_5gcxuXaS1L99fmo0UXXXiu7ekm-zioqibTlvwIScGyNtrsMx0tBnb_qAzuj8b3L9sOP7c4QltaBC_MSXwwwPK9PZw6ZqIHMBN1W0tVWoaKgKLkJWBqXVl7hEJlIddcqesuGVuJh0gg_wboFwJKl9QWY2ZpC1ix2o-0fVmh223mlHjJq2Ta7T-lUtuQz2IqgWBHvk3bn2RWyKt3FmX69ApVni-cKzEu3_bliXk9wD8KND8FA5SNlcurpElnZ4q"> </div> <h5 class="text-title-lg font-bold">Campus Corner</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.6</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Student Essentials &amp; University Gear</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-tertiary-fixed overflow-hidden"> <img alt="EduTools" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBrkI-mSnOksifKB5SHaWbJ-aP2nfBngrZ4BWCS-dHIV5QlgmeFSsXQh_Q-i5joYHWAaKEx79WlFXXQ6yUByTteJX5GrWfUd9KCKD-5XfNBvZeV96RTAZNBvOEiKUbxn1SrKzymZAP5tED9tZhA-JfrMrm-n-3rNrayEu5Ia-BgLy6eLYOCTkE69nSig304mF4FoGhkooMJjhUCRGm4ctOBhBanQHa1ITYaZHcXxCSYLQ6zuYX0I6pxVZB6dVZNnXzfFSLpWGYNEfVl"> </div> <h5 class="text-title-lg font-bold">EduTools</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.9</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Educational Supplies &amp; Resources</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-primary-fixed overflow-hidden"> <img alt="Office Pro" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxDDKspQ-31ffBDLLdDKVU3htvYhJp61XY9HkbuaKJgVMFlAGUUcDkexqAwRqW0oODZyP27kOk2mkNULnViOKg8D8DhF6a9v7XGrbOQ2mqgFjPQ-_YyKg7oLT1cIWUcoTWIE2-riVPjKLYfAdZsnmJud-2jbtz-CRKzbS-001qIiaPGOMFe6rnZC4qZd5OlRhYOsAsidUCwWRIUK8NgKh-Pv3znY2wMCFHEIWdoqgBzWrGEKVwSjz_b7qRlEZPvbD9UGq61s3LJlN5"> </div> <h5 class="text-title-lg font-bold">Office Pro</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">4.8</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Enterprise Office Solutions</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div> <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30"> <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 border-secondary-fixed overflow-hidden"> <img alt="Creative Supplies" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAR4S6MXJ50jd9C3uuui4W6FQWOEbkzU9GVJ5dB9oPiF446OWN3rEup6Ef4M9aISM-YmmZ2nk1gqHGKiBQTa5k7xKeILCDx3463Msev0a6m5rQYyXPUpS5741Quz1mhjW-3BWgWMQ4k5qrmvzt_3MzyxoCGlJZ-dlTJEspr61TXqJaMcpSH2TJ9NLuRofT7BnFlE2MWkjQCYEn_5G-GMFQ5uHVFVulS0-C3BJGYohPtK9Et_-iTEsXX7PtQBrzOx7mLnYZ-lRYbANio"> </div> <h5 class="text-title-lg font-bold">Creative Supplies</h5> <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm"> <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span> <span class="text-label-sm font-bold">5.0</span> </div> <p class="text-label-sm text-on-surface-variant mb-lg">Art Materials &amp; Crafting Tools</p> <button class="w-full py-md bg-primary text-on-primary rounded-xl font-button hover:bg-primary/90 transition-colors">Visit Shop</button> </div></div><div class="mt-xl flex justify-center"><nav class="flex items-center gap-sm"><button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors"><span class="material-symbols-outlined">chevron_left</span></button><button class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-button text-button">1</button><button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">2</button><button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">3</button><span class="px-xs text-outline-variant">...</span><button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">8</button><button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors"><span class="material-symbols-outlined">chevron_right</span></button></nav></div></section></main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim full-width bottom border-t border-outline-variant/50 w-full mt-auto">
+<div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl">
+<div class="flex flex-col gap-sm max-w-sm">
+<a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">
+          RHK General Merchandise
+        </a>
+<p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p>
+<div class="flex gap-md mt-md">
+<span class="material-symbols-outlined text-outline-variant">public</span>
+<span class="material-symbols-outlined text-outline-variant">shield</span>
+<span class="material-symbols-outlined text-outline-variant">verified</span>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-xl">
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a>
+</nav>
+</div>
+</div>
+</div>
+<div class="w-full py-lg border-t border-outline-variant/30 text-center">
+<p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p>
+</div>
+</footer>
+<!-- Micro-interaction Script -->
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.addEventListener('mousedown', () => {
+                    btn.classList.add('scale-95');
+                });
+                btn.addEventListener('mouseup', () => {
+                    btn.classList.remove('scale-95');
+                });
+                btn.addEventListener('mouseleave', () => {
+                    btn.classList.remove('scale-95');
+                });
+            });
+        });
+    </script>
+<button aria-label="AI Assistant" class="fixed bottom-lg right-lg w-16 h-16 bg-primary text-on-primary rounded-full shadow-xl flex items-center justify-center z-50 hover:scale-105 transition-transform duration-200 group">
+<span class="material-symbols-outlined text-headline-md" style="font-variation-settings: &quot;FILL&quot; 1;">smart_toy</span>
+<div class="absolute bottom-full right-0 mb-md bg-surface-container-highest text-on-surface px-md py-sm rounded-xl text-label-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity shadow-md pointer-events-none">
+    How can I help you today?
+  </div>
+</button>
+
+
+
+
+
+
+
+</body></html>

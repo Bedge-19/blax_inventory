@@ -1,0 +1,663 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>InkMaster Storefront | RHK General Merchandise</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Shared Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#191c1e",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e0e3e5",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "outline-variant": "#c3c6d7",
+                        "on-primary-container": "#eeefff",
+                        "inverse-primary": "#b4c5ff",
+                        "on-secondary-container": "#586377",
+                        "primary-fixed": "#dbe1ff",
+                        "on-surface-variant": "#434655",
+                        "secondary": "#545f73",
+                        "secondary-fixed": "#d8e3fb",
+                        "tertiary-container": "#0074a6",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "surface-container": "#eceef0",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#00174b",
+                        "on-tertiary": "#ffffff",
+                        "tertiary": "#005a82",
+                        "on-tertiary-container": "#e4f2ff",
+                        "surface-container-highest": "#e0e3e5",
+                        "secondary-container": "#d5e0f8",
+                        "outline": "#737686",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#c9e6ff",
+                        "primary": "#004ac6",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-secondary": "#ffffff",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed": "#001e2f",
+                        "background": "#f7f9fb",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e6e8ea",
+                        "surface": "#f7f9fb",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "surface-container-low": "#f2f4f6",
+                        "on-background": "#191c1e",
+                        "on-secondary-fixed": "#111c2d",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-tint": "#0053db",
+                        "surface-dim": "#d8dadc",
+                        "surface-bright": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "primary-container": "#2563eb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "xxl": "1.5rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "8px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "margin": "40px",
+                        "xxl": "80px",
+                        "container-max": "1440px",
+                        "columns": "12",
+                        "xl": "48px",
+                        "gutter": "24px",
+                        "md": "16px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "button": ["Inter"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .drag-active {
+            border-color: #2563eb;
+            background-color: #eeefff;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-inverse-surface shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto transition-all duration-200 ease-out"><div class="flex justify-between items-center w-full px-lg py-sm max-w-container-max mx-auto h-20"><div class="flex items-center gap-lg flex-1"><span class="text-title-lg font-title-lg font-bold text-primary dark:text-primary-fixed-dim">MarketPlace</span><div class="hidden md:flex items-center relative"><span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span><input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary transition-all duration-200" placeholder="Search shops..." type="text"></div></div><nav class="hidden lg:flex items-center gap-lg mr-md"><a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Categories</a><a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Printing Services</a><a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Shops</a></nav><div class="flex items-center gap-md"><div class="flex items-center gap-sm"><button class="p-2 rounded-full hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span></button><button class="p-2 rounded-full hover:bg-surface-container-high transition-colors"><span class="material-symbols-outlined text-on-surface-variant" data-icon="shopping_cart">shopping_cart</span></button></div><div class="flex items-center gap-sm pl-md border-l border-outline-variant"><div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant"><img class="w-full h-full object-cover" data-alt="Professional profile portrait of Alex Johnson" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB5xI-WEg30KmxsrZC019SEBgDcq3G5M7IbbGplsvDUoaLnsvxg80noYdv4oVtxamTMDvH-pnhlb7N2k4Hdb7JcoIhoE-Hywpi3hGNc_2JGuFKgljncYron_-i4d1wiiiYiszAsKmfnLuuYMDu-XlOf98_Hksq7wKcMokKY5ekNtg50RnbDl2I9TZV8wweJFdpjLXao0Pp7gjx4gktF8XvuhUD4qY6A60Ws4piR2IRqYb1AIUaNP8FrJRWu6lJDWy_DbCOwGEa4qA30nAk"></div></div></div></div></header>
+<main class="max-w-container-max mx-auto px-margin py-xl">
+<!-- Shop Header -->
+<section class="mb-xxl flex flex-col md:flex-row gap-lg items-start md:items-center">
+<div class="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="A professional high-fidelity logo for a printing company named InkMaster. The logo is clean and minimalist, featuring a stylized fountain pen nib and a subtle ink droplet in a sophisticated color palette of deep blue and crisp white. It is displayed centered in a bright, modern studio setting with soft lighting and a premium aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzlnM0R_6-Q4tLIR0SqD7nYshmqfiym02CaXx9uvxsAT5yNQDbicHFHQmRfEoDQaHOsmHNJ8P8EEtBY3M8j0tbZs5W88sJSM74AXgFzBsfJAGIkXTRv-wu1AOZyanj5sucuuWwZdDlK5btI2aOrMtNCUOyBnSZk2iW66bNxH8OQBYcoo3Im0EMO5HUhhGdhu4nJPQc2AeaYQLEqI1Q8ZGbXrpM-Rd9_BwQ02h4Qyz3EIV7MVXzihwwpdU8DhwO43kJmuJJm4EmeGus">
+</div>
+<div class="flex-grow">
+<div class="flex flex-col md:flex-row md:items-center gap-sm mb-xs">
+<h1 class="text-headline-lg font-headline-lg text-on-surface">InkMaster</h1>
+<div class="flex items-center gap-xs bg-secondary-container px-sm py-xs rounded-full">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="text-label-sm font-label-sm text-on-secondary-container">4.9 (1.2k Reviews)</span>
+</div>
+</div>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl">
+                    Premium printing and stationery solutions since 2008. We specialize in high-quality document reproduction, architectural blueprints, and curated academic supplies for students and professionals.
+                </p>
+<div class="mt-md flex gap-sm">
+<button class="px-lg py-sm bg-primary text-on-primary rounded-lg font-button text-button hover:opacity-90 transition-all flex items-center gap-xs">
+<span class="material-symbols-outlined">mail</span> Contact Shop
+                    </button>
+<button class="px-lg py-sm border border-outline text-on-surface rounded-lg font-button text-button hover:bg-surface-container transition-all">
+                        Follow Store
+                    </button>
+</div>
+</div>
+</section>
+<!-- PDF Printing Services Bento -->
+<section class="mb-xxl">
+<div class="flex justify-between items-end mb-lg">
+<div>
+<h2 class="text-headline-md font-headline-md text-on-surface">Printing Services</h2>
+<p class="text-on-surface-variant font-body-md">High-fidelity document reproduction for PDF files</p>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Upload Zone -->
+<div class="md:col-span-7 bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-xxl p-xl flex flex-col items-center justify-center text-center transition-all hover:border-primary group" id="dropzone">
+<div class="w-20 h-20 bg-primary-fixed rounded-full flex items-center justify-center text-primary mb-md group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined !text-4xl">picture_as_pdf</span>
+</div>
+<h3 class="text-title-lg font-title-lg mb-xs">Upload your PDF</h3>
+<p class="text-on-surface-variant font-body-md mb-lg max-w-sm">Drag and drop your documents here, or click to browse files from your computer.</p>
+<input accept=".pdf" class="hidden" id="fileInput" type="file">
+<button class="bg-primary text-on-primary px-xl py-md rounded-lg font-button text-button shadow-sm hover:shadow-md transition-all" onclick="document.getElementById('fileInput').click()">
+                        Select PDF Document
+                    </button>
+<p class="mt-md text-label-sm font-label-sm text-outline">Max file size: 50MB. Formats: PDF only.</p>
+</div>
+<!-- Specs & Pricing -->
+<div class="md:col-span-5 flex flex-col gap-gutter">
+<div class="bg-surface-container rounded-xl p-lg flex-grow"><h4 class="text-title-lg font-title-lg mb-md flex items-center gap-xs">
+    <span class="material-symbols-outlined text-primary">settings_suggest</span>
+    Order Configuration
+</h4>
+<div class="mb-md flex flex-col gap-xs" id="upload-status-container">
+    <div class="flex items-center gap-sm">
+        <span class="px-sm py-0.5 rounded-full text-label-sm font-medium bg-primary-container text-on-primary-container flex items-center gap-xs" id="upload-badge">
+            <span class="material-symbols-outlined text-[14px]">check_circle</span>Ready Successfully
+        </span>
+        <span class="text-label-sm font-medium text-primary" id="page-count">Total Pages: 12</span>
+    </div>
+</div>
+<div class="space-y-lg">
+    <!-- Paper & Copies -->
+    <div class="grid grid-cols-2 gap-md">
+        <div>
+            <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-xs block">Paper Size</label>
+            <select class="w-full p-sm bg-surface-container-lowest border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary">
+                <option>Letter (8.5 x 11)</option>
+                <option>Legal (8.5 x 14)</option>
+                <option>A4</option>
+            </select>
+        </div>
+        <div>
+            <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-xs block">Copies</label>
+            <select class="w-full p-sm bg-surface-container-lowest border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="5">5</option>
+                <option value="10">10</option>
+            </select>
+        </div>
+    </div>
+    <!-- Color Mode -->
+    <div>
+        <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-xs block">Color Mode</label>
+        <div class="grid grid-cols-2 gap-sm">
+            <button class="p-sm bg-primary text-on-primary rounded-lg font-button text-button">Colored</button>
+            <button class="p-sm bg-surface-container-lowest border border-outline-variant text-on-surface rounded-lg font-button text-button hover:bg-surface-container-high transition-colors">B&amp;W</button>
+        </div>
+    </div>
+    <!-- Binding Options -->
+    <div>
+        <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-xs block">Binding Options</label>
+        <div class="flex flex-col gap-sm">
+            <label class="flex items-center justify-between p-sm bg-surface-container-lowest border border-outline-variant rounded-lg cursor-pointer hover:border-primary transition-colors">
+                <div class="flex items-center gap-sm">
+                    <input checked="" class="w-4 h-4 text-primary focus:ring-primary border-outline-variant" name="binding" type="radio" value="none">
+                    <span class="text-body-md">No Binding</span>
+                </div>
+                <span class="text-label-sm font-medium text-outline">Free</span>
+            </label>
+            <label class="flex items-center justify-between p-sm bg-surface-container-lowest border border-outline-variant rounded-lg cursor-pointer hover:border-primary transition-colors">
+                <div class="flex items-center gap-sm">
+                    <input class="w-4 h-4 text-primary focus:ring-primary border-outline-variant" name="binding" type="radio" value="spiral">
+                    <span class="text-body-md">Spiral Binding</span>
+                </div>
+                <span class="text-label-sm font-medium text-primary">+$3.00</span>
+            </label>
+        </div>
+    </div>
+    <!-- Fulfillment Method -->
+    <div>
+        <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-xs block">Fulfillment Method</label>
+        <div class="grid grid-cols-1 gap-sm">
+            <label class="flex items-center gap-md p-md bg-surface-container-lowest border border-outline-variant rounded-lg cursor-pointer hover:border-primary transition-colors">
+                <input class="w-4 h-4 text-primary focus:ring-primary border-outline-variant" name="fulfillment" type="radio" value="delivery">
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-primary">local_shipping</span>
+                    <div>
+                        <p class="text-body-md font-medium">Doorstep Delivery</p>
+                        <p class="text-label-sm text-outline-variant">Standard rates apply</p>
+                    </div>
+                </div>
+            </label>
+            <label class="flex items-center gap-md p-md bg-surface-container-lowest border border-outline-variant rounded-lg cursor-pointer hover:border-primary transition-colors">
+                <input checked="" class="w-4 h-4 text-primary focus:ring-primary border-outline-variant" name="fulfillment" type="radio" value="pickup">
+                <div class="flex items-center gap-sm">
+                    <span class="material-symbols-outlined text-primary">store</span>
+                    <div>
+                        <p class="text-body-md font-medium">Store Pick-up</p>
+                        <p class="text-label-sm text-outline-variant">Free at any RHK kiosk</p>
+                    </div>
+                </div>
+            </label>
+        </div>
+    </div>
+    <!-- Pricing -->
+    <div class="py-md border-t border-outline-variant/30">
+        <div class="flex justify-between items-center mb-xs">
+            <span class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Total Price</span>
+            <span class="text-title-lg font-bold text-primary">$0.00</span>
+        </div>
+        <div class="flex justify-between items-center mt-xs">
+            <span class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider">Down Payment (50%)</span>
+            <span class="text-title-lg font-bold text-primary">$0.00</span>
+        </div>
+    </div>
+    <!-- GCash Payment -->
+    <div class="pt-md border-t border-outline-variant/30 bg-surface-container-low/50 -mx-lg px-lg rounded-b-xl">
+        <h5 class="text-body-lg font-bold text-on-surface mb-md flex items-center gap-xs"><span class="material-symbols-outlined text-[#007DFE]">account_balance_wallet</span>Pay with GCash via PayMongo</h5>
+        <div class="flex flex-col items-center gap-md">
+            <div class="flex flex-col items-center gap-sm"><div class="w-32 h-32 bg-white p-sm border border-outline-variant rounded-lg flex items-center justify-center"><div class="text-center"><span class="material-symbols-outlined !text-4xl text-primary">qr_code_2</span><p class="text-[10px] text-outline-variant">Scan to Pay</p></div></div><p class="text-label-sm text-primary font-medium">Real-time transaction via PayMongo</p><p class="text-[10px] text-outline-variant text-center px-md">Securely processed and instantly verified</p></div>
+            <div class="w-full">
+                <label class="text-label-sm font-medium text-on-surface-variant mb-xs block">Reference Number</label><p class="text-[10px] text-primary mb-xs">Verified in real-time upon submission</p>
+                <input class="w-full p-sm bg-surface-container-lowest border-outline-variant rounded-lg text-body-md focus:ring-2 focus:ring-primary" placeholder="13-digit number" type="text">
+            </div>
+            <div class="w-full pb-md">
+                <label class="text-label-sm font-medium text-on-surface-variant mb-xs block">Proof of Payment</label>
+                <button class="w-full p-sm bg-surface-container-lowest border border-dashed border-outline-variant rounded-lg text-label-sm text-on-surface-variant flex items-center justify-center gap-xs hover:bg-white transition-colors">
+                    <span class="material-symbols-outlined">upload_file</span>
+                    Choose Image
+                </button>
+            </div>
+        </div>
+    </div>
+</div></div>
+<div class="bg-primary text-on-primary rounded-xl p-lg relative overflow-hidden">
+<div class="relative z-10">
+<h4 class="text-title-lg font-title-lg mb-xs">Same-Day Pickup</h4>
+<p class="font-body-md opacity-90">Order before 2 PM and collect your prints by evening at any RHK kiosk.</p>
+</div>
+<span class="material-symbols-outlined absolute -bottom-4 -right-4 !text-8xl opacity-10">bolt</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Product Catalog -->
+<section class="mb-xxl">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-lg gap-md">
+<div>
+<h2 class="text-headline-md font-headline-md text-on-surface">Product Catalog</h2>
+<p class="text-on-surface-variant font-body-md">Essential school and office supplies</p>
+</div>
+<div class="flex gap-sm">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-11 pr-lg py-sm bg-surface-container rounded-lg border-none focus:ring-2 focus:ring-primary text-body-md" placeholder="Search supplies..." type="text">
+</div>
+<button class="p-sm bg-surface-container rounded-lg text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">filter_list</span>
+</button>
+</div>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter"><!-- Row 1 -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container relative">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAuxT7wNWvcgPSPIUX7wSQUuiLo_KiWmhpBzOjOKN_YtgDmMdkmOXHv-OohQ8kSk3CfM6f_oNnVqCrhota1zsUUdZMIQ3fvctwgB1I6HttyYEZsgblTw8c3sNbil1aXmTsD1m78wxlvFGe_8m4Vu1_6x7j6xnLeoyHF0eSaFHIeX5E0HuBsQ4wB1xOu15LmDXKDT4DVKOM-LgTRTxQ9OPDx-p6A2BVDSyCpVrukTIoIh3meMCTOTVekrJMUhsUkoFK4FBIiwMU0ycw">
+<span class="absolute top-md right-md bg-primary-container text-on-primary-container px-sm py-xs rounded-full text-label-sm font-label-sm shadow-sm">Bestseller</span>
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Premium A5 Notebook</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Hardcover • 120 GSM • Ruled</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$14.50</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBE751aA7-eJlxBhYA1JWT6KTdNfxiw_T5jBU27deJEh3QByB38oYYOhgPbnl2MB63BZI9g91Ph_hFr8IKr7OR1H1U97iTAO7ALPxTJFZDHxKkHBA14HnkDIGC322lgCxSwKgL8jt-ZJiLb2mlccsnBFUI9C4nqOaxVpjlYKdur2zWEiTwc9pXsi5xb4l1Ory4x3KCqInmDcdrip5DuGfbqTztOS4mFm7780E3Z-L2LIM6OMEOkDaN2tsL5GgqWzSGkpAGDxebs9BSm">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Executive Pen Set</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Brushed Metal • Black Ink</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$22.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtnOlPcerb9Va_c0ltz8-ZlnFUzyM9fze7PtYIG5PEL3flTUJQ3tkCOUSeT3GlhA13AuGgVrZ81JtrnRGgPb4a416yszcWwvNYTu86vzKWLfVoOsH6_f8pw8cVSAuGDG3awVfefqE-mcvTMy3G0kXSiemS9EsxMfRQSzk9n1NICM5kWAbIaLWqlRqgaDBMdPVqMJTnKXdwIjVLCpueuD1w7o3RSe8-QInfn_s9nAigKoXGCivFKjRaws-Jo1YMkbhdxk-j6kaO9OAf">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Pro Graphing Calculator</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">High-Res Screen • 1000+ Func</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$89.99</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCGZxbzDv8heoJu90WUJuOKss9F2c11WTEIjBZKw9GJ8Aprpk1Tkv19ClCbTlZeaBqGS69dyg-Jr5geSsG71lN3iIuu2opLqWvuXXgm9DUKMmhESIFWchkoBBl_mAB6FRITuFbhLMaqWSqsuok9rW2VC5fbuHHoCwOvn_y3BQ0X7t3au05hNeaaOih2P7g1xW8-sXoGQknKDtWmhQ6LAROlnEj9PzxI_9LVhEQhCvtkXmbQsqdd5_HH3zZC4pLJFMGGEb9xXkMpzFQy">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Oak Desk Organizer</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Sustainable Oak • Modular</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$35.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 2 (Using Requested Images) -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Scientific Ruler Set</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Transparent • Metric/Imperial</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$8.25</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLvi1jk_VntsR3XD6CHPTMbm7_mP9ajW8K_ir-70C6yLzmbNFFgTD3tr0VgDFIB_1jvSBWwUPlraOa7Q0Gnmz0y5lmfzh7jjWNoqbopR6IgTYzCjOQZtLMyA5rlw9khiZrVxnayq4c9onHtDCqHIL0o9o037Mt-Qpr02krkoSqD2W7pQciD0jHM6cymkBg7ONtyj1nwnPg7Cx8pAb_ytBFR5Mj_6VVM9yDYxkh2Y4VjyLZY4McHc02WHDZfN">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Sticky Note Bundle</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Neon Colors • 500 Sheets</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$12.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Mechanical Pencil Kit</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">0.5mm • Ergonomic Grip</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$15.50</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Highlighter Set</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Pastel Tones • Chisel Tip</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$9.99</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 3 (Placeholders) -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDuPzLQjtH9RHkFknjIoJfOWYZ8OHRsjEM3YTB1g8laCC73GaeIbb-3uiLvbjMy8EfpcAhxTrCrEGSAVKZS84g76xKf-pNfxrFpnYhIjn17izVx2RFstVgF5MEpFO5xl7dFAtcojBOpk1ruaPEJQHjH_n5fDQGLrLbR63aOjdEvJPauSMsoBlHye5sdR0IgD2YUvPd5ejwXT0XJnFqvcz0ZwH8zHkYgsBEQYxWMwHo2qhML_d0U19RN4AsldAoYG1ecNY4MPBnr2guY">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Desktop Stapler</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Heavy Duty • 25 Sheet Cap</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$18.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAcxLYl-2PopUMJFm9-Fh3L5CtfxOmNu7f_ezyH7EFuCAYz8XFzYINMsM6a6xFRe4qT3S_uI5_RgzqLNZurbiBC2c4J4x2G8FnMnJLO15U48WcN5boIYMNHYVoOoDvivfGKJWSHwROhNdgP60qn1UnLp35R8UdwbtOTP3LrU-Zg9ymZF5BGeJVZfNzV32UM60zjNAbJ9Yc6xmXU0om8F8UFEkA65-UDekLp9pwSm7Hby0nX23OHZTbum1GAP3lX3dPXx82SD_pBdcNz">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Leather Portfolio</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">A4 Size • Business Professional</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$45.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuPdlncIcbRxH8Wf3X0O7i3WqdeVAD3XbHESR4iBol-j_w5wcS3jOIXBDS7SCtjr8TDCJtTAcIeWqluMhuLt7y3segxgV8c6nY5FszWtxKLR9x04GPgZge-BqWb_aFs02zLvUXKoMeL4NyGypoLHQSg3vKf8cgQ-tLwgW96FeEiT43KA0Fo8UMwXQtI_ixqjayBU0nzDxAiDzdqbbEumBIC71IpdjMdEDbSz5Yq6Ov99fZuAthbvggbNpfm4MQDUxgWWJOxvw-99on">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Paper Clip Holder</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Magnetic • Chrome Finish</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$6.50</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsKIRc94OWRZuDm8YSFF9_If72SHeFQG2lYM6Q5aRmKqs5DR3-j-P3sB7bOvbhTC2pWHcXnVviGjd_SU-tdRlx2hHuHA9y3d88Ocipj3iMY1a_9nqAb8c22XG-3PAlvZN8EATRRxpGCZJ67ROT0nJn2d1Muq6w2EOxWJdWSr7ohAIYVmS3SWy1ZbT1essO30hsd1164WWFbDtjqkIqM1mHEAJc5Ewa-oJ6gv76DQjYNcpOBPBoD1ydEGH8syFqF1OJdXV1YCn-Oc0K">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Correction Tape</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">5mm x 10m • Smooth Application</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$4.20</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 4 (Placeholders) -->
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIyg5OaOlliJoFIg7UBQjIPz6VF1P4nSI9Z4Upe7YhUs6C9WydcZuoKob6QZXVusdAM_QnwU5Du-WXnCFjmU1ie1V_ee4RU8vU9qZM8Axsi3mWshvfJICqYcZFl6Z1S5v43dDm7ZZKKhVj6Lp_tG4MooCda67Qw8zsvLmPsY9O8g9v2oCZDPP-4gRFHP7Xs6I-wkh0ZvNi5IKlDs7z1U8LILpuv1ThS2v0o7a6ZIpylcAnX4Acp_zu4JVEUPN6uB8KshIA65kPD3Tk">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Sketchbook Pro</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">150 GSM • Acid-Free Paper</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$28.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUPYgt1I0oqGJ6-8Saz5GD2UdcUPuIyqGazuoUTZU1g79lUSszLhb7cI8Qmu8NGj-2oU3aoecvn91AzoxXllzSwO5vUf3KKA6TBGj3Bui5eb8wUaNkEYujtp7b2UgHWRw1serZBMLfHPIr1h4QpFBMuW6WaQEDQJv_CTdZNGXo_DadhWMtXQvrtTpWoPJJe90h81FxH387scX-A3v_FXaM6cWnNNwDUHu5JyJhjjAoJpkvcP3k1O1uRKF0lb62nYiVyXh70NQ7XNwQ">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Office Scissors</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Stainless Steel • Soft Grip</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$7.50</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMhrd0azOeTOsyA-z1mX58YAm1fVijO9SG0GgzOC3SWBm4Cxl3qo5OkDF-ffGJL4_SytA1Isd-JCOQGL3zX7GZ8nKkPpSOArvW-c5eBBfsS-qoz6DRr4P2QN3KumujePSjj9OPgxMk5BCyn1uBtL4CLHglaQ9xv5zF2AQS8_ia6ZssB9LYdny4mbkxNZyd8uUuclip-8hhPkxstgGP0HbpqFmmmFkLn6TwY81CD9KwArHLCRCW7_kcEOLpM458dX8fXHWVjf412qpn">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Document Folders</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">Pack of 10 • Assorted Colors</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$11.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+<div class="h-64 overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2NAAtjt3ionfp2WfKMeAq6whjk0r_-r_nrjbhTx1DA74Jj7nsxuX1aOGod6r7cZZvyEkoMsEfCSgCaxeWC0ZdMYBWhIQ1sZqT342SUR1SzQZEHEYilOOa09R_6vRFBS33D9dnSvGA3o1-zRzh7omFeW-QZoE6t_oUqRdL99Kgy1Fro0CtJEac1uLEic53BSLpPe7mGOyPqQ_sWmqZW29hWV4h4qecXkX_4J4Qj6vbBNFMqyZujK1wkNSF8-3yuHcTLYQtoPwBArCk">
+</div>
+<div class="p-md">
+<h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors">Desk Lamp</h3>
+<p class="text-on-surface-variant text-label-sm font-label-sm mb-md">LED • Adjustable Brightness</p>
+<div class="flex justify-between items-center">
+<span class="text-headline-md font-headline-md text-on-surface">$32.00</span>
+<button class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div></div>
+<div class="mt-xl flex justify-center"><nav class="flex items-center gap-sm">
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-on-primary font-button text-button">
+        1
+    </button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">
+        2
+    </button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">
+        3
+    </button>
+<span class="px-xs text-outline-variant">...</span>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button">
+        8
+    </button>
+<button class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</nav></div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim full-width bottom border-t border-outline-variant/50 w-full mt-auto"><div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl"><div class="flex flex-col gap-sm max-w-sm"><a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">RHK General Merchandise</a><p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p><div class="flex gap-md mt-md"><span class="material-symbols-outlined text-outline-variant">public</span><span class="material-symbols-outlined text-outline-variant">shield</span><span class="material-symbols-outlined text-outline-variant">verified</span></div></div><div class="grid grid-cols-2 sm:grid-cols-3 gap-xl"><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a></nav></div><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a></nav></div><div class="flex flex-col gap-sm"><h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4><nav class="flex flex-col gap-xs"><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a><a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a></nav></div></div></div><div class="w-full py-lg border-t border-outline-variant/30 text-center"><p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p></div></footer>
+<script>
+        // Simple Interaction Script
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-active'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-active'), false);
+        });
+
+        dropzone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        fileInput.addEventListener('change', function() {
+            handleFiles(this.files);
+        });
+
+        function handleFiles(files) {
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type === 'application/pdf') {
+                    alert(`Selected: ${file.name}. Initializing secure upload to InkMaster...`);
+                    // Here would go the actual upload logic
+                } else {
+                    alert('Please upload PDF documents only.');
+                }
+            }
+        }
+
+        // Active state navigation logic simulation
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                document.querySelectorAll('nav a').forEach(l => {
+                    l.classList.remove('text-primary', 'border-b-2', 'border-primary', 'pb-1');
+                    l.classList.add('text-on-surface-variant');
+                });
+                link.classList.remove('text-on-surface-variant');
+                link.classList.add('text-primary', 'border-b-2', 'border-primary', 'pb-1');
+            });
+        });
+    </script>
+
+
+
+
+
+
+
+
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex items-center justify-center z-50 group" aria-label="AI Assistant">
+  <span class="material-symbols-outlined !text-title-lg group-hover:scale-110 transition-transform">smart_toy</span>
+</button>
+
+</body></html>

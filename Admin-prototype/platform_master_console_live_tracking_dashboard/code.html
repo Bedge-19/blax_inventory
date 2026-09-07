@@ -1,0 +1,402 @@
+<!DOCTYPE html><html class="h-full" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SupplyCentral - Live Tracking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fb",
+                        "on-secondary-fixed": "#111c2d",
+                        "surface-container-low": "#f2f4f6",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "primary-container": "#2563eb",
+                        "background": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "on-primary-container": "#eeefff",
+                        "surface-container-highest": "#e0e3e5",
+                        "surface-tint": "#0053db",
+                        "inverse-on-surface": "#eff1f3",
+                        "tertiary-container": "#0074a6",
+                        "tertiary": "#005a82",
+                        "secondary": "#545f73",
+                        "surface-bright": "#f7f9fb",
+                        "on-primary-fixed": "#00174b",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container": "#eceef0",
+                        "secondary-container": "#d5e0f8",
+                        "surface-variant": "#e0e3e5",
+                        "secondary-fixed": "#d8e3fb",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "surface-dim": "#d8dadc",
+                        "primary-fixed": "#dbe1ff",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-error-container": "#93000a",
+                        "on-background": "#191c1e",
+                        "outline": "#737686",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-container": "#586377",
+                        "tertiary-fixed": "#c9e6ff",
+                        "outline-variant": "#c3c6d7",
+                        "on-tertiary-fixed": "#001e2f",
+                        "primary": "#004ac6",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "inverse-surface": "#2d3133",
+                        "error": "#ba1a1a",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "on-surface": "#191c1e",
+                        "on-tertiary-container": "#e4f2ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "xs": "4px",
+                        "margin": "40px",
+                        "lg": "24px",
+                        "sm": "8px",
+                        "xxl": "80px",
+                        "gutter": "24px",
+                        "xl": "48px",
+                        "base": "8px",
+                        "columns": "12",
+                        "container-max": "1440px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "display": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "button": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        @keyframes float-around {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(15px, -15px); }
+          50% { transform: translate(30px, 0px); }
+          75% { transform: translate(15px, 15px); }
+        }
+
+        .delivery-marker {
+          position: absolute;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          box-shadow: 0 0 10px rgba(0,0,0,0.1);
+          transition: top 5s linear, left 5s linear;
+        }
+
+        .delivery-marker::after {
+          content: '';
+          position: absolute;
+          inset: -4px;
+          border-radius: 50%;
+          border: 1px solid currentColor;
+          opacity: 0.3;
+          animation: pulse-ring 2s infinite;
+        }
+
+        @keyframes pulse-ring {
+          0% { transform: scale(0.8); opacity: 0.5; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface h-full flex antialiased">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-lowest flex flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen">
+<div class="px-sm mb-xl">
+<h1 class="text-headline-md font-headline-md font-bold text-primary">RHK Console</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant/60">Platform Master Console</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="text-label-sm font-label-sm">Tenants</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm">Customers</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-label-sm font-label-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined" data-icon="payments">payments</span><span class="text-label-sm font-label-sm">Payment requests</span></a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span><span class="text-label-sm font-label-sm">Compliance</span></a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-lg font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="distance">distance</span>
+<span class="text-label-sm font-label-sm">Live Tracking</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="text-label-sm font-label-sm">Audit log</span>
+</a></nav>
+<div class="mt-auto pt-xl space-y-1 border-t border-outline-variant/10">
+<div class="flex items-center gap-md px-md py-md mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center text-white font-bold">
+                        AD
+                    </div>
+<div>
+<p class="text-label-sm font-label-sm text-on-surface font-bold">Super Admin</p>
+<p class="text-[10px] text-on-surface-variant">admin@rhk.com</p>
+</div>
+</div>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-label-sm font-label-sm">Help Center</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="text-label-sm font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="flex-1 flex flex-col ml-64 min-w-0 bg-background h-screen overflow-hidden">
+<!-- TopNavBar -->
+<header class="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 px-margin py-md flex justify-between items-center">
+<div>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-outline">
+</span>
+</div>
+<button class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 overflow-y-auto p-gutter relative">
+<div class="flex flex-col h-full bg-surface max-w-container-max mx-auto space-y-xl pb-xxl">
+<!-- Header Section -->
+<div class="flex justify-between items-center mb-6">
+<div>
+<h1 class="text-3xl font-bold text-on-surface font-headline-lg">Live Delivery Tracking</h1>
+<p class="text-on-surface-variant font-body-md mt-xs">Real-time oversight of all tenant deliveries across Polomolok.</p>
+</div>
+<div class="flex gap-3">
+<div class="flex items-center gap-2 bg-surface-container-high px-4 py-2 rounded-lg border border-outline-variant">
+<span class="w-3 h-3 bg-primary rounded-full animate-pulse"></span>
+<span class="text-sm font-medium">124 Active Deliveries</span>
+</div>
+
+</div>
+</div>
+<!-- Main Map Container -->
+<div class="relative flex-1 rounded-2xl overflow-hidden border border-outline-variant bg-surface-container shadow-inner" style="min-height: 600px;">
+<!-- Abstract Map Background (Stylized for UI) -->
+<div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, rgba(0,0,0,0.1) 1px, transparent 0); background-size: 40px 40px;"></div>
+<!-- Moving Delivery Circles -->
+<div class="absolute inset-0" id="tracking-container"><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 47.4969%; top: 11.8338%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 10.9917%; top: 30.1061%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 5.44542%; top: 49.4834%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 58.0254%; top: 4.6114%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 15.3741%; top: 4.20279%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 52.5962%; top: 79.7639%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 29.4986%; top: 88.5625%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 23.495%; top: 14.5106%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 11.6809%; top: 71.7186%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 58.6272%; top: 16.7049%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 46.512%; top: 61.4846%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 77.489%; top: 93.5782%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 38.8508%; top: 56.916%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 1.19864%; top: 40.3738%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 41.7126%; top: 20.2036%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 72.4974%; top: 24.1451%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 17.0683%; top: 44.5209%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: -0.125866%; top: 65.1135%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 16.2522%; top: 28.4195%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 80.399%; top: 10.0683%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 36.4667%; top: 48.6031%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 34.0483%; top: 40.8201%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 47.9765%; top: 83.5201%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 44.9577%; top: 88.4101%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 34.2998%; top: 42.7585%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 67.7015%; top: 40.6087%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 19.0226%; top: 87.7419%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 6.05825%; top: 42.6246%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 12.699%; top: 21.0713%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 85.4183%; top: 39.3002%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 23.4016%; top: 58.3901%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 91.0507%; top: 52.5539%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 68.9195%; top: 17.0612%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 94.7758%; top: 10.5859%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 64.9132%; top: 46.4737%;"></div><div class="delivery-marker" style="background-color: rgb(139, 92, 246); color: rgb(139, 92, 246); left: 60.3099%; top: 92.2057%;"></div><div class="delivery-marker" style="background-color: rgb(59, 130, 246); color: rgb(59, 130, 246); left: 51.4708%; top: 47.4141%;"></div><div class="delivery-marker" style="background-color: rgb(239, 68, 68); color: rgb(239, 68, 68); left: 65.8352%; top: 56.3531%;"></div><div class="delivery-marker" style="background-color: rgb(245, 158, 11); color: rgb(245, 158, 11); left: 44.4867%; top: 13.7585%;"></div><div class="delivery-marker" style="background-color: rgb(16, 185, 129); color: rgb(16, 185, 129); left: 77.444%; top: 6.48993%;"></div></div>
+<!-- Map Legend/Overlay -->
+<div class="absolute bottom-6 left-6 p-4 bg-surface/90 backdrop-blur-md rounded-xl border border-outline-variant shadow-lg max-w-xs">
+<h3 class="text-sm font-bold mb-3">Live Fleet Status</h3>
+<div class="space-y-2">
+<div class="flex items-center justify-between text-xs">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full" style="background-color: #3b82f6;"></span>
+            InkMaster Pro
+          </span>
+<span class="font-mono text-on-surface-variant">42 units</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full" style="background-color: #10b981;"></span>
+            RHK General
+          </span>
+<span class="font-mono text-on-surface-variant">38 units</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full" style="background-color: #f59e0b;"></span>
+            Creative Prints
+          </span>
+<span class="font-mono text-on-surface-variant">25 units</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full" style="background-color: #ef4444;"></span>
+            Luxe Essentials
+          </span>
+<span class="font-mono text-on-surface-variant">19 units</span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant text-[10px] text-on-surface-variant italic">
+        * Circles represent active transit units. Updated every 5 seconds.
+      </div>
+</div>
+<!-- Map Search/Filters -->
+<div class="absolute top-6 left-6 flex gap-2">
+<div class="relative">
+<input class="w-64 pl-10 pr-4 py-2 rounded-lg bg-surface/90 backdrop-blur-md border border-outline-variant shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm" placeholder="Search delivery ID..." type="text">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+</div>
+<select class="px-4 py-2 rounded-lg bg-surface/90 backdrop-blur-md border border-outline-variant shadow-sm text-sm focus:outline-none">
+<option>All Shops</option>
+<option>InkMaster Pro</option>
+<option>RHK General</option>
+</select>
+</div>
+</div><section class="mt-8 bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
+  <div class="px-6 py-4 border-b border-outline-variant flex justify-between items-center">
+    <h2 class="text-title-lg font-title-lg text-on-surface">Recently Delivered</h2><div class="relative max-w-xs w-full"><input type="text" placeholder="Search deliveries..." class="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-low border border-outline-variant shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"><span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span></div>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-surface-container-low text-on-surface-variant text-label-sm font-label-sm">
+          <th class="px-6 py-3 font-semibold">Tracking ID</th>
+          <th class="px-6 py-3 font-semibold">Merchant</th>
+          <th class="px-6 py-3 font-semibold">Destination</th>
+          <th class="px-6 py-3 font-semibold">Status</th>
+          <th class="px-6 py-3 font-semibold">Time</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-outline-variant/10">
+        <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-sm font-mono text-primary">#TRK-8921-A</td>
+          <td class="px-6 py-4 text-sm">InkMaster Pro</td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">Poblacion, Polomolok</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20">
+              Delivered
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">10:45 AM</td>
+        </tr>
+        <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-sm font-mono text-primary">#TRK-8812-C</td>
+          <td class="px-6 py-4 text-sm">RHK General</td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">Silway, Polomolok</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20">
+              Delivered
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">10:30 AM</td>
+        </tr>
+        <tr class="hover:bg-surface-container/50 transition-colors">
+          <td class="px-6 py-4 text-sm font-mono text-primary">#TRK-9022-B</td>
+          <td class="px-6 py-4 text-sm">Luxe Essentials</td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">Cannery Site, Polomolok</td>
+          <td class="px-6 py-4">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20">
+              Delivered
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-on-surface-variant">10:15 AM</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</div>
+</main>
+</div>
+<script>
+    (function() {
+      const container = document.getElementById('tracking-container');
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+      const markerCount = 40;
+      const markers = [];
+
+      function createMarker() {
+        const marker = document.createElement('div');
+        marker.className = 'delivery-marker';
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        marker.style.backgroundColor = color;
+        marker.style.color = color;
+        
+        // Random starting position
+        const startX = Math.random() * 95;
+        const startY = Math.random() * 95;
+        marker.style.left = startX + '%';
+        marker.style.top = startY + '%';
+        
+        container.appendChild(marker);
+        
+        return {
+          el: marker,
+          x: startX,
+          y: startY,
+          dx: (Math.random() - 0.5) * 2,
+          dy: (Math.random() - 0.5) * 2
+        };
+      }
+
+      for (let i = 0; i < markerCount; i++) {
+        markers.push(createMarker());
+      }
+
+      function updateMarkers() {
+        markers.forEach(m => {
+          // Update internal logic position
+          m.x += m.dx;
+          m.y += m.dy;
+
+          // Bounce off boundaries
+          if (m.x < 5 || m.x > 95) m.dx *= -1;
+          if (m.y < 5 || m.y > 95) m.dy *= -1;
+
+          // Apply to DOM
+          m.el.style.left = m.x + '%';
+          m.el.style.top = m.y + '%';
+        });
+        requestAnimationFrame(updateMarkers);
+      }
+
+      // Start animation
+      setTimeout(() => {
+        // We use requestAnimationFrame for smooth drift, 
+        // but the CSS transition property on .delivery-marker handles the smoothness
+        updateMarkers();
+      }, 100);
+    })();
+  </script>
+
+
+</body></html>

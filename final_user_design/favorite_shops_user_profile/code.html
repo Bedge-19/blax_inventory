@@ -1,0 +1,372 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Favorite Shops | MarketPlace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-active {
+            font-variation-settings: 'FILL' 1;
+        }
+        /* Custom scrollbar for a cleaner UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #e0e3e5;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c3c6d7;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-highest": "#e0e3e5",
+                      "on-error-container": "#93000a",
+                      "error-container": "#ffdad6",
+                      "on-background": "#191c1e",
+                      "on-error": "#ffffff",
+                      "secondary": "#545f73",
+                      "on-secondary": "#ffffff",
+                      "tertiary": "#005a82",
+                      "error": "#ba1a1a",
+                      "on-surface": "#191c1e",
+                      "primary-fixed": "#dbe1ff",
+                      "secondary-fixed": "#d8e3fb",
+                      "on-secondary-container": "#586377",
+                      "on-primary": "#ffffff",
+                      "on-tertiary": "#ffffff",
+                      "primary-container": "#2563eb",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "on-primary-fixed": "#00174b",
+                      "on-primary-container": "#eeefff",
+                      "tertiary-container": "#0074a6",
+                      "surface-container": "#eceef0",
+                      "on-surface-variant": "#434655",
+                      "surface": "#f7f9fb",
+                      "surface-tint": "#0053db",
+                      "surface-dim": "#d8dadc",
+                      "secondary-fixed-dim": "#bcc7de",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "on-tertiary-container": "#e4f2ff",
+                      "on-secondary-fixed-variant": "#3c475a",
+                      "outline-variant": "#c3c6d7",
+                      "on-secondary-fixed": "#111c2d",
+                      "outline": "#737686",
+                      "inverse-surface": "#2d3133",
+                      "surface-container-low": "#f2f4f6",
+                      "secondary-container": "#d5e0f8",
+                      "inverse-primary": "#b4c5ff",
+                      "surface-bright": "#f7f9fb",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "surface-container-lowest": "#ffffff",
+                      "primary": "#004ac6",
+                      "on-tertiary-fixed": "#001e2f",
+                      "tertiary-fixed": "#c9e6ff",
+                      "background": "#f7f9fb",
+                      "surface-container-high": "#e6e8ea",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-variant": "#e0e3e5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xs": "4px",
+                      "margin": "40px",
+                      "xxl": "80px",
+                      "xl": "48px",
+                      "container-max": "1440px",
+                      "sm": "8px",
+                      "base": "8px",
+                      "lg": "24px",
+                      "md": "16px",
+                      "columns": "12",
+                      "gutter": "24px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "title-lg": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "button": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "display": ["Inter"]
+              },
+              "fontSize": {
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-surface font-body-md text-on-surface min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-surface-container-lowest dark:bg-inverse-surface shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto transition-all duration-200 ease-out">
+<div class="flex items-center gap-xl">
+<span class="text-title-lg font-title-lg font-bold text-primary dark:text-primary-fixed-dim">MarketPlace</span>
+<div class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary transition-all duration-200" placeholder="Search shops..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-md">
+<nav class="hidden lg:flex items-center gap-lg mr-md">
+<a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Categories</a>
+<a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Printing Services</a>
+
+<a class="text-on-surface-variant dark:text-outline-variant font-body-md text-body-md hover:text-primary dark:hover:text-primary-fixed-dim transition-colors duration-200" href="#">Shops</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="shopping_cart">shopping_cart</span>
+</button>
+</div>
+<div class="flex items-center gap-sm pl-md border-l border-outline-variant">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional profile portrait of Alex Johnson, a premium member with a friendly and confident expression, set against a soft-focus office background with blue and white tones that match the corporate marketplace aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKchHBXkx2o88hHFe4ff4kTmjjiH4hYwDarDs3ZEGvtcG-bxZ3WRaH5tT3v-xCdulKC50hdSzimlehCPG-I_-HqatGYxaAE7K-YmgTwURRy9UngwRZIz3QLIM9d0A9wj1U-FP8CY4ft80moy111zPP1tt-73Xme5P52Pg6TSCnm7h0OemoLkBUQnLSYPktvNszUz4CLBKtHU15mjRksv7CzQRxzY0d2OIK866wRNWRZ2rJqyxU8qVNOhugk6bLKhWvmyzekSxMhW7RRQU">
+</div>
+</div>
+</div>
+</header>
+<div class="flex flex-1 max-w-container-max w-full mx-auto">
+<!-- SideNavBar -->
+<aside class="hidden md:flex flex-col h-[calc(100vh-64px)] w-64 sticky top-16 bg-surface-container-lowest dark:bg-surface-container-low border-r border-outline-variant/20 py-md px-base z-40"><div class="mb-lg px-sm"><h2 class="text-headline-md font-headline-md font-bold text-primary">Profile</h2></div><nav class="flex-1 flex flex-col gap-xs overflow-y-auto"><a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined">person</span><span class="text-label-sm font-label-sm">Profile Overview</span></a><a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined">shopping_bag</span><span class="text-label-sm font-label-sm">My Orders</span></a><a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined">print</span><span class="text-label-sm font-label-sm">Printing Requests</span></a><a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined">location_on</span><span class="text-label-sm font-label-sm">Shipping Addresses</span></a><a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-lg font-semibold translate-x-1" href="#"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span><span class="text-label-sm font-label-sm">Favorite Shops</span></a></nav><div class="mt-auto border-t border-outline-variant/20 pt-md flex flex-col gap-xs"><a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#"><span class="material-symbols-outlined">help</span><span class="text-label-sm font-label-sm">Help Center</span></a><a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/20 rounded-lg transition-all" href="#"><span class="material-symbols-outlined">logout</span><span class="text-label-sm font-label-sm">Sign Out</span></a></div></aside>
+<!-- Main Content Area -->
+<main class="flex-1 p-margin lg:p-xl bg-surface">
+<div class="max-w-4xl mx-auto">
+<div class="mb-xl">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-sm">Favorite Shops</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">Manage and quickly access your most-visited local merchants.</p>
+</div>
+<!-- Grid of Favorite Shop Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<!-- Shop Card 1: InkMaster -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col gap-md transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+<div class="flex justify-between items-start">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-container shadow-sm border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A sophisticated circular brand logo for InkMaster, featuring abstract ink droplets in deep blue and turquoise. The background is a crisp white, and the lighting is even and bright, creating a clean, modern aesthetic for a high-quality printing service." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCsgt0ubVErAVbp_zXe7Ocmotg7xT6fpdMZgTX8RFqBRA5537eYZMpXboHH2lP2YLROyyV6CX7WnOBOu4Fz9ShAnl9ldakw9K6H1LJpACVdVSHgBNYob8JBAbQAgP03StelIkkQWCGi42iyh52gWo16PpCRzI4oK-RR8DhAgCTkcdvLRiNtKnDFY9BFmxFc2w3wYDeiyW0VAKJGpiTXbiUxxfDHpXpIt9X8n-ufYWGk4sQGMlWi6ubJNg">
+</div>
+<button class="p-2 rounded-full text-error hover:bg-error-container transition-colors" title="Remove from favorites">
+<span class="material-symbols-outlined fill-active" data-icon="favorite" style="font-variation-settings: &quot;FILL&quot; 1;">favorite</span>
+</button>
+</div>
+<div>
+<div class="flex items-center justify-between mb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">InkMaster</h3>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-yellow-500 fill-active" data-icon="star" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="text-label-sm font-semibold">4.9</span>
+</div>
+</div>
+<p class="text-label-sm text-secondary mb-md">High-quality document printing and stationery</p>
+</div>
+<div class="mt-auto flex items-center gap-sm">
+<button class="flex-1 bg-primary text-on-primary font-button text-button py-2.5 rounded-lg hover:opacity-90 transition-opacity">Visit Shop</button>
+<button class="px-3 py-2.5 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="share">share</span>
+</button>
+</div>
+</div>
+<!-- Shop Card 2: PrintPixel -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col gap-md transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+<div class="flex justify-between items-start">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-container shadow-sm border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A modern, vibrant circular logo for PrintPixel showing a stylized pixelated printer icon in neon blue and purple gradients. The style is tech-focused and sleek, set against a clean white background to match a high-performance marketplace interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNfNZbffOaoWG1XZ00OAzJKCnNF944Jr8ITVlbzemGuTx5b7x6rdwQLKdCtuPmifO8QWzVxCnhY6lSIHOD6szagPLAJRbbpIXpVsmxRGoKPe7FVsgnDKzHpAkD1iZurSaPwCF6QB8xUmItteyuoXwaC4FQiNLP8v3A3UDZ3XrV4e5EfqFbDvIgBDhK3toAsgECp0IlUL_exdTrGx9LRhrN-WysyNcMoizgA-SoMXlhHE2V1ngbiWpbEA">
+</div>
+<button class="p-2 rounded-full text-error hover:bg-error-container transition-colors" title="Remove from favorites">
+<span class="material-symbols-outlined fill-active" data-icon="favorite" style="font-variation-settings: &quot;FILL&quot; 1;">favorite</span>
+</button>
+</div>
+<div>
+<div class="flex items-center justify-between mb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">PrintPixel</h3>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-yellow-500 fill-active" data-icon="star" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="text-label-sm font-semibold">4.7</span>
+</div>
+</div>
+<p class="text-label-sm text-secondary mb-md">Digital art prints and professional poster production</p>
+</div>
+<div class="mt-auto flex items-center gap-sm">
+<button class="flex-1 bg-primary text-on-primary font-button text-button py-2.5 rounded-lg hover:opacity-90 transition-opacity">Visit Shop</button>
+<button class="px-3 py-2.5 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="share">share</span>
+</button>
+</div>
+</div>
+<!-- Shop Card 3: The Thread -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col gap-md transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+<div class="flex justify-between items-start">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-container shadow-sm border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="An elegant circular boutique logo for The Thread, displaying a minimalist spool and needle silhouette in charcoal gray. The design is sophisticated and high-end, utilizing delicate lines and a pristine white background to evoke quality and craftsmanship." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAusnLJnqPgFtvKHN_DBLsWspWzzzxrbj4CVPiVy7QoOZDW2nOLzdAxFOUi9GR2qRZLxIqzFHxrIGOHaERGr5hnJc0WWvPCYWkuT9yfkxR9Sn8ixNzyCjGuzZ3O3AbMGurVNJ6K0QnbFWjR5hVlVD9npIDGmPVlIGQLZLcL3phUqXiXV_yK7KpTf5AMH4gJg5if2EMeSzZEmi4oRrX-ktTd5-Fy3qd8V0eF3B5EYerz2cF62jjF-iE52Q">
+</div>
+<button class="p-2 rounded-full text-error hover:bg-error-container transition-colors" title="Remove from favorites">
+<span class="material-symbols-outlined fill-active" data-icon="favorite" style="font-variation-settings: &quot;FILL&quot; 1;">favorite</span>
+</button>
+</div>
+<div>
+<div class="flex items-center justify-between mb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">The Thread</h3>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-yellow-500 fill-active" data-icon="star" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="text-label-sm font-semibold">5.0</span>
+</div>
+</div>
+<p class="text-label-sm text-secondary mb-md">Custom embroidery and garment personalization</p>
+</div>
+<div class="mt-auto flex items-center gap-sm">
+<button class="flex-1 bg-primary text-on-primary font-button text-button py-2.5 rounded-lg hover:opacity-90 transition-opacity">Visit Shop</button>
+<button class="px-3 py-2.5 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="share">share</span>
+</button>
+</div>
+</div>
+<!-- Shop Card 4: FastPrint -->
+<div class="group bg-surface-container-lowest border border-outline-variant rounded-xl p-lg flex flex-col gap-md transition-all duration-200 hover:-translate-y-1 hover:shadow-md">
+<div class="flex justify-between items-start">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-surface-container shadow-sm border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A dynamic, speed-oriented circular logo for FastPrint, with stylized paper sheets flying in a circular motion, using primary blue and secondary teal colors. The mood is efficient and reliable, presented on a clean, bright white background with soft professional lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCF6v8qd8ndPqerXKV7y1zzwUol1zlGGwmr4F8Mx2UlJxCZFSraqJrVOygyCTfzOoNNnQPkCvOjvT-ZGcR3LbDA1IAdgwdtPIaRxGD7uPqi1f_zgn5UFNV_ZJQQUT6s6ph_0JsCXPZD9IRnXz0tpPSsYW2_aSWaX4nvO2dOsqxk1QRfQ93ER6mCNMhR25SN0gHaNK740X4OVJZMlJtycjIANL3XK-sphqoRRYz97C0Vuv85WAI8Ij_RWw">
+</div>
+<button class="p-2 rounded-full text-error hover:bg-error-container transition-colors" title="Remove from favorites">
+<span class="material-symbols-outlined fill-active" data-icon="favorite" style="font-variation-settings: &quot;FILL&quot; 1;">favorite</span>
+</button>
+</div>
+<div>
+<div class="flex items-center justify-between mb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">FastPrint</h3>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-yellow-500 fill-active" data-icon="star" style="font-variation-settings: &quot;FILL&quot; 1;">star</span>
+<span class="text-label-sm font-semibold">4.8</span>
+</div>
+</div>
+<p class="text-label-sm text-secondary mb-md">24-hour turnaround for business cards and flyers</p>
+</div>
+<div class="mt-auto flex items-center gap-sm">
+<button class="flex-1 bg-primary text-on-primary font-button text-button py-2.5 rounded-lg hover:opacity-90 transition-opacity">Visit Shop</button>
+<button class="px-3 py-2.5 border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Empty State Suggestion / Call to Action -->
+<div class="mt-xxl bg-secondary-container rounded-2xl p-xl flex flex-col md:flex-row items-center gap-lg border border-outline-variant">
+<div class="p-lg bg-surface-container-lowest rounded-full">
+<span class="material-symbols-outlined text-primary text-[48px]" data-icon="explore">explore</span>
+</div>
+<div class="flex-1 text-center md:text-left">
+<h4 class="font-headline-md text-headline-md text-on-secondary-container mb-xs">Discover more shops</h4>
+<p class="font-body-md text-body-md text-on-secondary-container opacity-80">Explore thousands of highly-rated merchants across the marketplace ecosystem.</p>
+</div>
+<button class="bg-primary text-on-primary px-lg py-md rounded-lg font-button text-button shadow-sm hover:translate-y-[-2px] transition-all">Explore Marketplace</button>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim border-t border-outline-variant/50 w-full mt-auto">
+  <div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl">
+    <div class="flex flex-col gap-sm max-w-sm">
+      <a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">RHK General Merchandise</a>
+      <p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p>
+      <div class="flex gap-md mt-md">
+        <span class="material-symbols-outlined text-outline-variant">public</span>
+        <span class="material-symbols-outlined text-outline-variant">shield</span>
+        <span class="material-symbols-outlined text-outline-variant">verified</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-xl">
+      <div class="flex flex-col gap-sm">
+        <h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4>
+        <nav class="flex flex-col gap-xs">
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a>
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a>
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a>
+        </nav>
+      </div>
+      <div class="flex flex-col gap-sm">
+        <h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4>
+        <nav class="flex flex-col gap-xs">
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a>
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a>
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a>
+        </nav>
+      </div>
+      <div class="flex flex-col gap-sm">
+        <h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4>
+        <nav class="flex flex-col gap-xs">
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a>
+          <a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+  <div class="w-full py-lg border-t border-outline-variant/30 text-center">
+    <p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p>
+  </div>
+</footer>
+<script>
+        // Simple micro-interaction for heart buttons
+        document.querySelectorAll('button .material-symbols-outlined[data-icon="favorite"]').forEach(heart => {
+            heart.parentElement.addEventListener('click', function(e) {
+                e.preventDefault();
+                const icon = this.querySelector('span');
+                const isFilled = icon.style.fontVariationSettings.includes("'FILL' 1");
+                
+                if (isFilled) {
+                    icon.style.fontVariationSettings = "'FILL' 0";
+                    this.classList.remove('text-error');
+                    this.classList.add('text-outline');
+                } else {
+                    icon.style.fontVariationSettings = "'FILL' 1";
+                    this.classList.add('text-error');
+                    this.classList.remove('text-outline');
+                }
+                
+                // Active feedback scale effect
+                this.style.transform = 'scale(1.2)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+    </script>
+
+
+
+
+
+
+<button class="fixed bottom-8 right-8 w-16 h-16 bg-primary text-on-primary rounded-full shadow-sm flex items-center justify-center z-50 hover:shadow-md hover:translate-y-[-2px] transition-all duration-200 group" aria-label="AI Assistant">
+  <span class="material-symbols-outlined text-[32px] group-hover:scale-110 transition-transform" data-icon="smart_toy">smart_toy</span>
+</button></body></html>

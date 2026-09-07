@@ -1,0 +1,424 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Inventory Management | RHK General Merchandise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed-dim": "#bcc7de",
+                    "tertiary": "#005a82",
+                    "tertiary-container": "#0074a6",
+                    "on-primary": "#ffffff",
+                    "tertiary-fixed": "#c9e6ff",
+                    "surface-tint": "#0053db",
+                    "on-tertiary-fixed-variant": "#004c6e",
+                    "on-error-container": "#93000a",
+                    "surface": "#f7f9fb",
+                    "secondary": "#545f73",
+                    "primary-fixed": "#dbe1ff",
+                    "on-secondary-fixed": "#111c2d",
+                    "surface-container": "#eceef0",
+                    "surface-bright": "#f7f9fb",
+                    "primary-container": "#2563eb",
+                    "primary-fixed-dim": "#b4c5ff",
+                    "surface-variant": "#e0e3e5",
+                    "error": "#ba1a1a",
+                    "secondary-fixed": "#d8e3fb",
+                    "outline": "#737686",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "surface-container-highest": "#e0e3e5",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary-container": "#e4f2ff",
+                    "surface-container-high": "#e6e8ea",
+                    "on-primary-container": "#eeefff",
+                    "on-secondary-container": "#586377",
+                    "surface-container-low": "#f2f4f6",
+                    "surface-dim": "#d8dadc",
+                    "primary": "#004ac6",
+                    "tertiary-fixed-dim": "#89ceff",
+                    "on-secondary-fixed-variant": "#3c475a",
+                    "inverse-primary": "#b4c5ff",
+                    "inverse-on-surface": "#eff1f3",
+                    "on-surface-variant": "#434655",
+                    "on-primary-fixed": "#00174b",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed-variant": "#003ea8",
+                    "secondary-container": "#d5e0f8",
+                    "on-surface": "#191c1e",
+                    "error-container": "#ffdad6",
+                    "on-background": "#191c1e",
+                    "background": "#f7f9fb",
+                    "outline-variant": "#c3c6d7",
+                    "on-tertiary-fixed": "#001e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xxl": "80px",
+                    "margin": "40px",
+                    "columns": "12",
+                    "base": "8px",
+                    "sm": "8px",
+                    "lg": "24px",
+                    "container-max": "1440px",
+                    "gutter": "24px",
+                    "xs": "4px",
+                    "md": "16px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "headline-lg": ["Inter"],
+                    "button": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display": ["Inter"],
+                    "body-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-item {
+            background-color: #d5e0f8; /* secondary-container */
+            color: #586377; /* on-secondary-container */
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transform: translateX(4px);
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-item:hover:not(.active-nav-item) {
+            background-color: #e6e8ea; /* surface-container-high */
+            border-radius: 0.5rem;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid #e5e7eb;
+        }
+        .hover-lift {
+            transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+        }
+        .hover-lift:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface flex min-h-screen">
+<!-- SideNavBar Anchor -->
+<aside class="flex flex-col h-full py-md px-base z-40 bg-surface-container-lowest border-r border-outline-variant/20 fixed left-0 h-screen w-64">
+<div class="mb-xl px-sm">
+<h1 class="text-headline-md font-headline-md font-bold text-primary">RHK Admin</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Manage Storefront</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group bg-outline-variant/20 rounded-lg" href="#">
+<span class="material-symbols-outlined text-primary">inventory_2</span>
+<span class="text-label-sm font-label-sm">Inventory</span>
+</a><a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">print</span>
+<span class="text-label-sm font-label-sm">Printing Requests</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">shopping_bag</span>
+<span class="text-label-sm font-label-sm">Orders</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">leaderboard</span>
+<span class="text-label-sm font-label-sm">Analytics</span>
+</a>
+
+
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">local_shipping</span>
+<span class="text-label-sm font-label-sm">Delivery</span>
+</a><a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">archive</span>
+<span class="text-label-sm font-label-sm">Archive</span>
+</a></nav>
+<div class="mt-auto space-y-1">
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-sm font-label-sm">Help Center</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all text-error" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-label-sm font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-64 max-w-container-max mx-auto w-full px-lg pb-lg"><nav class="sticky top-0 z-40 bg-surface-container-lowest border-b border-outline-variant/20 px-lg py-sm flex items-center mb-lg -mx-lg justify-between"><h2 class="text-title-lg font-title-lg text-on-surface ml-lg">Inventory Management</h2><div class="flex items-center gap-sm mr-sm"><button class="p-sm rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant flex items-center justify-center"><span class="material-symbols-outlined">notifications</span></button><div class="relative group"><button class="flex items-center gap-sm p-xs rounded-lg hover:bg-surface-container-high transition-colors"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNhgT9MsM1czZG3uQHMvNbpzIQQGeqVmcImdqB-i3eaLlqrmBWyBw6IEwnL0_UFABhVLxKIh-J21TbagrX9CUMlE9L6p7pkZoy11rVBuo3l7ppPoZQeeHuDIOt7_sgFGCbr6elucLYb4XbMgdUF-SHq_qaXYA6NqHgzoCxTH3HbdzrWQZ7GHzGx-v4FEu12g1Ao-GdxTA-dYnPt8Swqyx5VLyDOP3qNvquQhoZhHku2xAsA--jM86XWzuCW9vW1_VSQbtg3IentgWBX1c" alt="User Profile" class="w-8 h-8 rounded-full object-cover"><span class="material-symbols-outlined text-on-surface-variant">expand_more</span></button><div class="absolute right-0 mt-xs w-48 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-50"><div class="p-xs"><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">settings</span><span class="text-label-sm font-label-sm">Settings</span></a><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">payments</span><span class="text-label-sm font-label-sm">Transfer</span></a><div class="h-px bg-outline-variant/20 my-xs"></div><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">person</span><span class="text-label-sm font-label-sm">Profile</span></a></div></div></div></div></nav>
+<!-- Header & Action Row -->
+<header class="flex justify-between items-center mb-xl">
+<div>
+<h2 class="text-headline-lg font-headline-lg text-on-surface">Inventory Management</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">Track and manage your product stock levels across all categories.</p>
+</div>
+<button class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center gap-sm font-button text-button hover:bg-primary/90 transition-colors shadow-sm active:scale-95">
+<span class="material-symbols-outlined">add</span>
+                New Product
+            </button>
+</header>
+<!-- Inventory Overview Cards (Bento Style) -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg mb-xl">
+<div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Total SKU Count</span>
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-xs rounded">inventory</span>
+</div>
+<div class="text-headline-md font-headline-md">1,248</div>
+</div>
+<div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Low Stock Items</span>
+<span class="material-symbols-outlined text-warning bg-secondary-container p-xs rounded">warning</span>
+</div>
+<div class="text-headline-md font-headline-md text-secondary">24</div>
+</div>
+<div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Out of Stock</span>
+<span class="material-symbols-outlined text-error bg-error-container p-xs rounded">block</span>
+</div>
+<div class="text-headline-md font-headline-md text-error">12</div>
+</div>
+<div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+<div class="flex justify-between items-start">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Total Inventory Value</span>
+<span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-xs rounded">payments</span>
+</div>
+<div class="text-headline-md font-headline-md">$42,900.50</div>
+</div>
+</div>
+<!-- Search and Filter Bar -->
+<div class="glass-card p-md rounded-xl mb-lg flex flex-wrap items-center gap-md">
+<div class="relative flex-1 min-w-[240px]">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-xl pr-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Search products, SKUs, or barcodes..." type="text">
+</div>
+<div class="flex items-center gap-sm">
+<select class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
+<option>All Categories</option>
+<option>Paper Products</option>
+<option>Writing Tools</option>
+<option>Art Supplies</option>
+<option>Office Tech</option>
+</select>
+<select class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
+<option>Status: All</option>
+<option>In Stock</option>
+<option>Low Stock</option>
+<option>Out of Stock</option>
+</select>
+<button class="bg-surface-container-high text-on-surface px-md py-sm rounded-lg flex items-center gap-xs font-label-sm hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+                    Advanced Filters
+                </button>
+</div>
+</div>
+<!-- Product Table Container -->
+<div class="glass-card rounded-xl overflow-hidden shadow-sm">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant/30">
+<tr>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Product</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">SKU</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Category</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Stock Level</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Unit Price</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<!-- Row 1: In Stock -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<img class="w-12 h-12 rounded-lg object-cover bg-surface-variant" data-alt="A professional product photography shot of a stack of premium white A4 printer paper in minimalist packaging, set against a clean, light-colored wooden desk in a bright office environment. Soft natural light creates a modern and professional atmosphere with a high-end commercial aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk31uiD1y6FaMtKD46mso5skI3sLwrb0cmOb6QwDXFLTe0xvgCJxjcWUCr8xCIMM7zJ0ay-c5JBI2NxvnsTGGcSU4Ye3RCgNCYzOJUi7p1t4NbTT67hdxX35-zVQL_hs3MbgtQjo0-LbsDvjbr2A6Yvb7NB8BxNaqngYRlQEffaaGObMDBUdkED0hHpZdgJr128hdy5jC2Co8IUFt6ib0ZfEntjx3FfhPrbD2AcT1tXS06Dfz7CGRh6Q">
+<span class="text-body-md font-semibold text-on-surface">Premium A4 Paper (500ct)</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">PAP-A4-500-PR</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">Paper Products</td>
+<td class="px-lg py-md text-center">
+<span class="px-md py-1 rounded-full bg-green-100 text-green-700 text-label-sm font-semibold">450</span>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface text-right">$12.99</td>
+<td class="px-lg py-md text-right">
+<div class="flex justify-end gap-md">
+<button class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"><span class="material-symbols-outlined">edit</span></button>
+<button class="p-xs hover:bg-surface-container-high rounded text-primary"><span class="material-symbols-outlined">autorenew</span></button>
+<button class="p-xs hover:bg-error-container/20 rounded text-error"><span class="material-symbols-outlined">archive</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Low Stock -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<img class="w-12 h-12 rounded-lg object-cover bg-surface-variant" data-alt="Close up studio shot of a set of professional graphite drawing pencils ranging from 2H to 6B, neatly organized in a metallic tin case. The lighting is soft and artistic, emphasizing the texture of the wooden pencils and the sleek metallic surface of the case. Minimalist and refined style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZS-XrGKsKCWCnwSVJAJixmMh5Ei_or7UXrcJsThVRx6H6EfQ-3V_2RBpRF3_ieMa78G45hLkzi4bX-YRjVRuoWtiTza0yFFysC2wokY-gF7yRGzKWHLNHQWNzHNUKjwIy5D36Pm9gagWTZ8AbfNs9xupUMEfplzyrfBVY4a9he6kmyUNF0A7jLI_hQmP3Nm03ZXO-DjTy8QAzYNlkfWTiwyUKSOLGUra1jOfeIqiAly9mvy0Dk2ZFiQ">
+<span class="text-body-md font-semibold text-on-surface">Artist Graphite Set</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">ART-GR-12-ST</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">Art Supplies</td>
+<td class="px-lg py-md text-center">
+<span class="px-md py-1 rounded-full bg-yellow-100 text-yellow-700 text-label-sm font-semibold">8</span>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface text-right">$24.50</td>
+<td class="px-lg py-md text-right">
+<div class="flex justify-end gap-md">
+<button class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"><span class="material-symbols-outlined">edit</span></button>
+<button class="p-xs hover:bg-surface-container-high rounded text-primary"><span class="material-symbols-outlined">autorenew</span></button>
+<button class="p-xs hover:bg-error-container/20 rounded text-error"><span class="material-symbols-outlined">archive</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Out of Stock -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<img class="w-12 h-12 rounded-lg object-cover bg-surface-variant" data-alt="A sleek, modern wireless ergonomic mouse in matte black, resting on a charcoal grey desk mat. The image is shot from a low angle with a shallow depth of field, highlighting the elegant curves and tech-focused design. Corporate professional lighting with subtle blue highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCvBvLFUWtrj77UTYgJ0jcPqRzeu6CXyu7ueaKnMQrdeTe25bAKs38FyBpW9HdJ__VB33ZHcgvj779uBBFV-gxB0bkyCPvGKAHC5JeP7cPPP1l3456b40c-w5NfSpVUeyfK-ilDa045uhrz-UH1SDIwjG26k5_eywxKwW7KbwEqdn6vW0T_NHryFbSByfDAwBbqYCcWtQASm3tDA4uIyDqI-VY2Pc2G3SnCmq1AwvHPzVaDD09puAyfvA">
+<span class="text-body-md font-semibold text-on-surface">Ergo Wireless Mouse</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">TEC-MSE-WLS-ER</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">Office Tech</td>
+<td class="px-lg py-md text-center">
+<span class="px-md py-1 rounded-full bg-red-100 text-red-700 text-label-sm font-semibold">0</span>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface text-right">$45.00</td>
+<td class="px-lg py-md text-right">
+<div class="flex justify-end gap-md">
+<button class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"><span class="material-symbols-outlined">edit</span></button>
+<button class="p-xs hover:bg-surface-container-high rounded text-primary"><span class="material-symbols-outlined">autorenew</span></button>
+<button class="p-xs hover:bg-error-container/20 rounded text-error"><span class="material-symbols-outlined">archive</span></button>
+</div>
+</td>
+</tr>
+<!-- Row 4: In Stock -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md">
+<div class="flex items-center gap-md">
+<img class="w-12 h-12 rounded-lg object-cover bg-surface-variant" data-alt="Minimalist collection of high-quality retractable ballpoint pens in various pastel colors, displayed on a clean white surface. High-key lighting and a soft focus create a clean, modern retail feel. Professional composition showing the precision and design of the stationery." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCU2GeoLC4UZ0U3YzcGCbPm8d9kTP092zWgM6hK9NcqexniAk0WK5c-uPbt6NVu_IidvXV5F8i1_hnvKQn8yipgdtGgjLL5-PIOuNbC-Xlkit7cTOCtSnyJ-ChlBW7BNyv-hw7wWOpcmS7GzM2skseW3hXUaWCB0dPIc3GXbWzqfgZju5champsxgvd5Hn1oa3YeCJJJBH0cT4-cnd8SBpH15gjQZqQl_htitEttW9c0I5Rh34Llx2bgA">
+<span class="text-body-md font-semibold text-on-surface">Soft-Grip Gel Pens (10pk)</span>
+</div>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">WRT-GEL-10-PK</td>
+<td class="px-lg py-md text-body-md text-on-surface-variant">Writing Tools</td>
+<td class="px-lg py-md text-center">
+<span class="px-md py-1 rounded-full bg-green-100 text-green-700 text-label-sm font-semibold">1,200</span>
+</td>
+<td class="px-lg py-md text-body-md text-on-surface text-right">$15.99</td>
+<td class="px-lg py-md text-right">
+<div class="flex justify-end gap-md">
+<button class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"><span class="material-symbols-outlined">edit</span></button>
+<button class="p-xs hover:bg-surface-container-high rounded text-primary"><span class="material-symbols-outlined">autorenew</span></button>
+<button class="p-xs hover:bg-error-container/20 rounded text-error"><span class="material-symbols-outlined">archive</span></button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination Footer -->
+<div class="px-lg py-md bg-surface-container-low flex justify-between items-center border-t border-outline-variant/30">
+<p class="text-label-sm font-label-sm text-on-surface-variant">Showing 1 to 4 of 1,248 items</p>
+<div class="flex items-center gap-xs">
+<button class="p-sm rounded hover:bg-surface-container-high disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary text-label-sm font-semibold">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high text-label-sm">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high text-label-sm">3</button>
+<span class="px-xs text-outline">...</span>
+<button class="w-8 h-8 rounded hover:bg-surface-container-high text-label-sm">312</button>
+<button class="p-sm rounded hover:bg-surface-container-high">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating AI Assistant Button -->
+<button class="fixed bottom-lg right-lg w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all group z-50 overflow-hidden" id="ai-fab">
+<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined text-[28px] group-hover:rotate-12 transition-transform">smart_toy</span>
+<!-- Tooltip -->
+<div class="absolute right-16 bg-inverse-surface text-inverse-on-surface px-md py-sm rounded-lg text-label-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
+            Ask RHK Assistant
+        </div>
+</button>
+<script>
+        // Micro-interactions for tabs
+        const sidebarItems = document.querySelectorAll('.sidebar-item');
+        sidebarItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!item.classList.contains('active-nav-item')) {
+                    sidebarItems.forEach(i => i.classList.remove('active-nav-item'));
+                    item.classList.add('active-nav-item');
+                }
+            });
+        });
+
+        // Simple mock search feedback
+        const searchInput = document.querySelector('input[type="text"]');
+        searchInput.addEventListener('input', (e) => {
+            console.log('Searching for:', e.target.value);
+            // Future: Implement real-time filtering logic
+        });
+
+        // AI Fab bounce effect on load
+        window.addEventListener('load', () => {
+            const fab = document.getElementById('ai-fab');
+            fab.classList.add('animate-bounce');
+            setTimeout(() => {
+                fab.classList.remove('animate-bounce');
+            }, 1000);
+        });
+    </script>
+
+
+
+
+
+
+
+
+
+
+</body></html>

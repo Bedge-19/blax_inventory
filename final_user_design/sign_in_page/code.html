@@ -1,0 +1,772 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>RHK General Merchandise | High-Performance Marketplace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        .glassmorphism {
+            backdrop-filter: blur(16px);
+            background-color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .shop-card:hover {
+            transform: translateY(-4px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#545f73",
+                        "primary-fixed": "#dbe1ff",
+                        "on-surface": "#191c1e",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-primary-container": "#eeefff",
+                        "surface-dim": "#d8dadc",
+                        "surface-container-low": "#f2f4f6",
+                        "secondary-fixed": "#d8e3fb",
+                        "surface-bright": "#f7f9fb",
+                        "on-surface-variant": "#434655",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "on-primary-fixed": "#00174b",
+                        "on-error-container": "#93000a",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-fixed": "#001e2f",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "tertiary-fixed": "#c9e6ff",
+                        "background": "#f7f9fb",
+                        "outline": "#737686",
+                        "inverse-primary": "#b4c5ff",
+                        "surface-container": "#eceef0",
+                        "primary": "#004ac6",
+                        "surface-container-high": "#e6e8ea",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "outline-variant": "#c3c6d7",
+                        "tertiary-container": "#0074a6",
+                        "on-background": "#191c1e",
+                        "surface-variant": "#e0e3e5",
+                        "on-error": "#ffffff",
+                        "on-secondary-fixed": "#111c2d",
+                        "on-tertiary-container": "#e4f2ff",
+                        "tertiary": "#005a82",
+                        "primary-container": "#2563eb",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3133",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#0053db",
+                        "surface": "#f7f9fb",
+                        "on-secondary-container": "#586377",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#d5e0f8",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed-dim": "#89ceff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xxl": "80px",
+                        "margin": "40px",
+                        "sm": "8px",
+                        "xl": "48px",
+                        "columns": "12",
+                        "md": "16px",
+                        "base": "8px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "lg": "24px",
+                        "xs": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "label-sm": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "button": ["Inter"],
+                        "body-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col">
+<!-- TopNavBar - Consistent with SCREEN_23 -->
+<header class="bg-surface-container-lowest shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto">
+<div class="flex items-center gap-xl">
+<span class="text-title-lg font-bold text-primary">MarketPlace</span>
+<div class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary" placeholder="Search shops..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-md">
+<nav class="hidden lg:flex items-center gap-lg mr-md">
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Categories</a>
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Printing Services</a>
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Shops</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-high">
+
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high">
+
+</button>
+</div>
+<div class="flex items-center gap-sm pl-md border-l border-outline-variant">
+<button class="bg-primary text-on-primary text-button font-button px-lg py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
+          Sign In
+        </button>
+</div>
+</div>
+</header>
+<main class="flex-1 w-full max-w-container-max mx-auto px-margin py-xl flex flex-col gap-xxl">
+<!-- Hero Section - Visual Hero Banner Area like SCREEN_23 -->
+<section class="relative w-full rounded-xl overflow-hidden shadow-md bg-surface-container-lowest h-[400px] flex items-center group">
+<div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-90 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvOGMS4-duEgYLB4TaBEY00lgo8aKcuK4GLrUZnGH9BFdgeiuyRPA51KGxqLeDZ3gtVJtH802mBjxj9B_8lsuWlEzciTMU6lyAZ2YVhYNTMNjLcrMYZXxrVf8qTxUIbak8jV_xD-iV8K-5vlKLcnbYP80H7-xsFNGiFE2CPZdZON4LW2aSaxFbLT0JvksX7O9FC1-1vFi-w7xhKi_8e6Bv4BEyFDTnOkW95003xE5NjvLweRb0k2eLz_T0');"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-surface-container-lowest/50 to-transparent"></div>
+<div class="relative z-10 px-xxl max-w-2xl flex flex-col gap-md">
+<span class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold">Seasonal Event</span>
+<h1 class="text-display font-display text-on-surface">The Ultimate Merchandise Selection</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant max-w-md">Discover premium goods, exclusive deals, and top-tier printing services all in one place from our network of verified elite shops.</p>
+<div class="mt-sm flex gap-md">
+<button class="bg-primary text-on-primary text-button font-button px-lg py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5">
+              Shop Now
+            </button>
+<button class="bg-surface border border-outline-variant text-on-surface text-button font-button px-lg py-md rounded-lg hover:bg-surface-container-low transition-all">
+              Merchant Portal
+            </button>
+</div>
+</div>
+<!-- Carousel Controls (Static representation) -->
+<div class="absolute bottom-md right-lg flex gap-sm z-20">
+<button class="w-10 h-10 rounded-full glassmorphism flex items-center justify-center text-on-surface hover:text-primary transition-colors shadow-sm"><span class="material-symbols-outlined">chevron_left</span></button>
+<button class="w-10 h-10 rounded-full glassmorphism flex items-center justify-center text-on-surface hover:text-primary transition-colors shadow-sm"><span class="material-symbols-outlined">chevron_right</span></button>
+</div>
+</section>
+<!-- Featured Shops Section - Polished Circular Profiles -->
+<!-- Global Product Catalog Section - Enhanced with Real Images -->
+<section class="flex flex-col gap-lg"><div class="flex justify-between items-center mb-xl">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Featured Shops</h2>
+<a class="text-primary font-button text-button hover:underline" href="#">View All</a>
+</div>
+<div class="flex flex-wrap justify-between items-start gap-lg gap-xl">
+<div class="flex flex-col items-center gap-md group cursor-pointer">
+<div class="rounded-full border-2 border-error-container p-1 transition-transform group-hover:scale-105 w-32 h-32">
+<div class="w-full h-full rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden"><img alt="InkMaster" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvOGMS4-duEgYLB4TaBEY00lgo8aKcuK4GLrUZnGH9BFdgeiuyRPA51KGxqLeDZ3gtVJtH802mBjxj9B_8lsuWlEzciTMU6lyAZ2YVhYNTMNjLcrMYZXxrVf8qTxUIbak8jV_xD-iV8K-5vlKLcnbYP80H7-xsFNGiFE2CPZdZON4LW2aSaxFbLT0JvksX7O9FC1-1vFi-w7xhKi_8e6Bv4BEyFDTnOkW95003xE5NjvLweRb0k2eLz_T0"></div>
+</div>
+<span class="text-body-md font-medium text-on-surface group-hover:text-primary transition-colors">InkMaster</span>
+</div>
+<div class="flex flex-col items-center gap-md group cursor-pointer">
+<div class="rounded-full border-2 border-error-container p-1 transition-transform group-hover:scale-105 w-32 h-32">
+<div class="w-full h-full rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden"><img alt="PrintPixel" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ"></div>
+</div>
+<span class="text-body-md font-medium text-on-surface group-hover:text-primary transition-colors">PrintPixel</span>
+</div>
+<div class="flex flex-col items-center gap-md group cursor-pointer">
+<div class="rounded-full border-2 border-error-container p-1 transition-transform group-hover:scale-105 w-32 h-32">
+<div class="w-full h-full rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden"><img alt="The Thread" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8"></div>
+</div>
+<span class="text-body-md font-medium text-on-surface group-hover:text-primary transition-colors">The Thread</span>
+</div>
+<div class="flex flex-col items-center gap-md group cursor-pointer">
+<div class="rounded-full border-2 border-error-container p-1 transition-transform group-hover:scale-105 w-32 h-32">
+<div class="w-full h-full rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden"><img alt="FastPrint" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvi1jk_VntsR3XD6CHPTMbm7_mP9ajW8K_ir-70C6yLzmbNFFgTD3tr0VgDFIB_1jvSBWwUPlraOa7Q0Gnmz0y5lmfzh7jjWNoqbopR6IgTYzCjOQZtLMyA5rlw9khiZrVxnayq4c9onHtDCqHIL0o9o037Mt-Qpr02krkoSqD2W7pQciD0jHM6cymkBg7ONtyj1nwnPg7Cx8pAb_ytBFR5Mj_6VVM9yDYxkh2Y4VjyLZY4McHc02WHDZfN"></div>
+</div>
+<span class="text-body-md font-medium text-on-surface group-hover:text-primary transition-colors">FastPrint</span>
+</div>
+<div class="flex flex-col items-center gap-md group cursor-pointer">
+<div class="rounded-full border-2 border-error-container p-1 transition-transform group-hover:scale-105 w-32 h-32">
+<div class="w-full h-full rounded-full bg-surface-container-high flex items-center justify-center overflow-hidden"><img alt="GlowDesign" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K"></div>
+</div>
+<span class="text-body-md font-medium text-on-surface group-hover:text-primary transition-colors">GlowDesign</span>
+</div>
+</div></section><section class="bg-surface-container-low/50 py-xxl -mx-margin px-margin rounded-3xl">
+<div class="max-w-container-max mx-auto">
+<div class="flex flex-col md:flex-row justify-between items-end mb-xl gap-lg">
+<div>
+<h2 class="font-headline-lg text-headline-lg mb-sm">Global Product Catalog</h2>
+<p class="text-body-md text-on-surface-variant">Aggregation of all products currently available across the entire RHK network.</p>
+</div>
+<div class="flex gap-sm">
+<div class="flex items-center gap-sm bg-white border border-outline-variant/30 rounded-lg px-md py-sm cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-outline text-base">filter_list</span>
+<span class="text-label-sm">Filter</span>
+</div>
+<div class="flex items-center gap-sm bg-white border border-outline-variant/30 rounded-lg px-md py-sm cursor-pointer hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-outline text-base">swap_vert</span>
+<span class="text-label-sm">Sort By</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-gutter">
+<!-- Product 1 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Student Essentials Bundle</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.9</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$249.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product 2 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida/AP1WRLu0dULTb0E3CwIEc-AeiUr9zZoG18V4G6WNPoY3iNUS3JFlW7uGH2MV0xm2Ogr8Pt7zreXRIp1EFzg7BjlseG_vEcByeuNVPorcVfWt31TvSUBzowe5st96GclLgBLQIgXgy7tBiGO8Afd9PBZeQFTz_3eBjFR-CAgKSr7UcKVXgd8gQg9Ptze99hw--tzlDf5TtqfCf_xbaLx4S4cthhGg-501rLsoI-_Pj098_ntP2gid6UUU-w3vDY0&quot;);"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Apex Logistics</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Precision Tool Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.7</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$199.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product 3 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Enterprise Printing</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Premium Notebook Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">5.0</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$89.50</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Product 4 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">RHK General</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">High-End Gel Pen Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.8</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$34.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Repeat products with images to fill grid -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Wireless Node Controller</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.6</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$65.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Scientific Calculator Pro</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.9</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$45.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida/AP1WRLsDWHFg_o0GO-hNX-gzRb7rAQdfBZxxQesJuptqaBmRDU3S-GX6XY0gqul6kEmyFGvtiEw-VDXuafJlaW5xuY0TMLIKR24HjD-9yfKEKfyk10dWP6-m1zipSFL0kAWYnBYdU3kCbwk1I-XmKE8hiHVzRgi-dOFD0bNCxKqQeJX0YgCzMmU1oReCpHAfRgZj0Fg1Wt7RzPzJ2pU9VyqderE8pdD0RwqWzmTOsW4JLU7ELQvHH6rrWyHvr90e&quot;);"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Apex Logistics</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Ergonomic Backpack</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.8</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$79.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Enterprise Printing</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">A5 Leather Journal</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">5.0</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$24.50</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">RHK General</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Desk Organizer Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.7</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$42.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Geometry Compass Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.6</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$15.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida/AP1WRLsz4CUTj7IqFqXiDH9J1EFMEPSdb9Tz0ySQ6TlLgsc-F75b0TThynIfGjs4AgcjSZbF1m3iKWDyBQ439dhi9x3Zbghe3jCYm-GGUV_qrQdCcf0bf0wyoas7HaIiRbi0LLbV3MQriqVUJxMac6W0ByBf0drDStGkE8lbW85t530Aad9NHodkq2ShTvAX_DoPNtfLmWvhgJiHhnood0MsYEe8iABHs8KZJHo8E8HC91GLOLYhwTVsTWsNuIoh&quot;);"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Apex Logistics</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Premium Fountain Pen</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.9</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$120.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Enterprise Printing</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Hardcover Sketchbook</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.8</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$32.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">RHK General</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Multi-Color Highlighter Set</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.5</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$18.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Graphing Paper Pad</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.7</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$12.50</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvi1jk_VntsR3XD6CHPTMbm7_mP9ajW8K_ir-70C6yLzmbNFFgTD3tr0VgDFIB_1jvSBWwUPlraOa7Q0Gnmz0y5lmfzh7jjWNoqbopR6IgTYzCjOQZtLMyA5rlw9khiZrVxnayq4c9onHtDCqHIL0o9o037Mt-Qpr02krkoSqD2W7pQciD0jHM6cymkBg7ONtyj1nwnPg7Cx8pAb_ytBFR5Mj_6VVM9yDYxkh2Y4VjyLZY4McHc02WHDZfN')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Apex Logistics</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Canvas Pencil Case</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.6</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$14.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Enterprise Printing</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Custom Planner 2024</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">5.0</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$45.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLuBBHwg36pB_0yNs3vDHtdKUk52Oyn3vAY04f9wuhIByOTUPvmB3WYqBlfmHFWOAasPcVNMkjnojs7HAqolYW104Fw7lUoymwWPmzSw84S3FC0tZSwPErNlkE1O9L2vKk5wQhPX0NtdCY8L0OeIArTIFQdJuw94ILSJ9QAEWOjL2yYOmJgs3tShw-m0blu_77ZPrGtqNcS5bIWVTERXflLYQIJqrsy4q-o7dUbDIkCLGaVldWDBozghJG2K')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">RHK General</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Executive Desk Mat</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.8</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$55.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLvplOLHo8D3ZCxFM2Ywu5EMvRCuo2yiaJ1U5Os7xMme1-_VdTDQGR6pmR-zkh9upvESj7hcd1Y4dMIOdCvPwd47YnPkP3x1HM5abgGKd0Q-7rbgMNB2y-WYYPaD19TdAxUi0z5rx-o1j4C3npaeTxKSWDKb-MpXhACGj6OrLCvWcAymPynyvtVw9eKyOL35wKd-5_hAQai_KJ205J1JlMY0pE0d_2var_H7dvTrZFbhW-6CNH19D5LMqCxZ')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Nexus Retail</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Wireless Mouse Pad</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.4</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$29.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida/AP1WRLsK78-XfbBz3kVzSLNoNeuy0uECwwl0PfejGX6hazJLPoCzewiG-kGnMMN6L3WiqLo0HoDNl42BH0co13C9RfcEdQMrgjv4kBUzzPbnR1RYRczAAJF-zHyPvGvZc8Pi5jrigc58NftNGVxeFQaAS9-faBfhfpJ8PYw8XBzFsZbP-lM9nSVfjVKytm3ODWwuWVZr93zDoyPRPHk2-dFiWvBdyu4K2mWwuv_0P1Qv3qD51nbfnNh8oEMGZmJR&quot;);"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Apex Logistics</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Laptop Sleeve 14"</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.7</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$35.00</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+<div class="group flex flex-col bg-white rounded-xl border border-outline-variant/20 overflow-hidden hover:shadow-lg transition-all duration-300">
+<div class="relative h-64 bg-surface-container overflow-hidden">
+<div class="w-full h-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" style="background-image: url('https://lh3.googleusercontent.com/aida/AP1WRLs2BvI0gnCFKfKUsUhVaYOn90Q16BxvmecOA1a3nSUT2aEdl-_EYwOp34kWJnAzqRevWPKmQndB3ab6HT_g3g3uULhM8T0DmnaNOasUai7BOCHaTCKqJyXixRJz8OPnpwZJXSOgDWc77Yd1ZTSK82MvCoH5tqa7N-VaV4KlEYteGZe0FV0HNZSS8WNf_-JwYcnlLc14dxZ7Y2-CGeK4f8OrXcvUojk5eX2Odm1FLEaZRfETkmqvqVFcexT8')"></div>
+<button class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+</button>
+</div>
+<div class="p-md flex flex-col flex-grow">
+<span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter">Enterprise Printing</span>
+<h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors">Sticky Note Collection</h4>
+<div class="flex items-center gap-xs mb-md">
+<span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-sm font-semibold">4.3</span>
+</div>
+<div class="mt-auto flex justify-between items-center">
+<span class="font-headline-md text-title-lg text-on-surface">$9.99</span>
+<button class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all">
+<span class="material-symbols-outlined text-base">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div></div>
+<div class="mt-lg flex justify-center items-center gap-md">
+<button class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex gap-sm">
+<button class="w-10 h-10 rounded-lg bg-primary text-on-primary font-button">1</button>
+<button class="w-10 h-10 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button">2</button>
+<button class="w-10 h-10 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button">3</button>
+<span class="flex items-end pb-2 px-1">...</span>
+<button class="w-10 h-10 rounded-lg border border-outline-variant text-on-surface-variant hover:bg-surface-container transition-colors font-button">12</button>
+</div>
+<button class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer - Consistent with SCREEN_23 -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim full-width bottom border-t border-outline-variant/50 w-full mt-auto">
+<div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl">
+<div class="flex flex-col gap-sm max-w-sm">
+<a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">
+          RHK General Merchandise
+        </a>
+<p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p>
+<div class="flex gap-md mt-md">
+<span class="material-symbols-outlined text-outline-variant">public</span>
+<span class="material-symbols-outlined text-outline-variant">shield</span>
+<span class="material-symbols-outlined text-outline-variant">verified</span>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-xl">
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a>
+</nav>
+</div>
+</div>
+</div>
+<div class="w-full py-lg border-t border-outline-variant/30 text-center">
+<p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p>
+</div>
+</footer>
+<script>
+    // Micro-interactions and effects
+    document.querySelectorAll('.shop-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            card.style.setProperty('--mouse-x', `${x}px`);
+            card.style.setProperty('--mouse-y', `${y}px`);
+        });
+    });
+</script>
+<button aria-label="AI Assistant" class="fixed bottom-[32px] right-[32px] w-16 h-16 bg-[#2563eb] text-white rounded-full shadow-xl hover:scale-110 transition-transform flex items-center justify-center z-[100] active:scale-95">
+<span class="material-symbols-outlined text-3xl">smart_toy</span>
+</button>
+
+
+
+
+
+
+
+</body></html>

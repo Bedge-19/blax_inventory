@@ -1,0 +1,302 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Tenant Admin Settings - RHK General Merchandise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#004c6e",
+                        "error-container": "#ffdad6",
+                        "surface-bright": "#f7f9fb",
+                        "inverse-surface": "#2d3133",
+                        "surface-variant": "#e0e3e5",
+                        "on-surface-variant": "#434655",
+                        "inverse-on-surface": "#eff1f3",
+                        "primary": "#004ac6",
+                        "surface-tint": "#0053db",
+                        "on-primary-fixed-variant": "#003ea8",
+                        "on-tertiary-fixed": "#001e2f",
+                        "secondary-fixed-dim": "#bcc7de",
+                        "on-primary-container": "#eeefff",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed-dim": "#89ceff",
+                        "on-tertiary-container": "#e4f2ff",
+                        "outline": "#737686",
+                        "surface-container": "#eceef0",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "tertiary-fixed": "#c9e6ff",
+                        "primary-fixed": "#dbe1ff",
+                        "background": "#f7f9fb",
+                        "tertiary-container": "#0074a6",
+                        "primary-container": "#2563eb",
+                        "surface": "#f7f9fb",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#191c1e",
+                        "surface-container-low": "#f2f4f6",
+                        "inverse-primary": "#b4c5ff",
+                        "secondary-container": "#d5e0f8",
+                        "tertiary": "#005a82",
+                        "surface-dim": "#d8dadc",
+                        "on-secondary-fixed-variant": "#3c475a",
+                        "on-secondary-fixed": "#111c2d",
+                        "primary-fixed-dim": "#b4c5ff",
+                        "secondary-fixed": "#d8e3fb",
+                        "surface-container-highest": "#e0e3e5",
+                        "on-background": "#191c1e",
+                        "error": "#ba1a1a",
+                        "on-primary-fixed": "#00174b",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#586377",
+                        "secondary": "#545f73",
+                        "outline-variant": "#c3c6d7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "container-max": "1440px",
+                        "gutter": "24px",
+                        "base": "8px",
+                        "lg": "24px",
+                        "xl": "48px",
+                        "md": "16px",
+                        "xxl": "80px",
+                        "columns": "12",
+                        "sm": "8px",
+                        "margin": "40px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "display": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "display": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "button": ["14px", { "lineHeight": "20px", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background flex h-screen overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-full py-md px-base z-40 bg-surface-container-lowest border-r border-outline-variant/20 fixed left-0 h-screen w-64">
+<div class="mb-xl px-sm">
+<h1 class="text-headline-md font-headline-md font-bold text-primary">RHK Admin</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant">Manage Storefront</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">inventory_2</span>
+<span class="text-label-sm font-label-sm">Inventory</span>
+</a><a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">print</span>
+<span class="text-label-sm font-label-sm">Printing Requests</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">shopping_bag</span>
+<span class="text-label-sm font-label-sm">Orders</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">leaderboard</span>
+<span class="text-label-sm font-label-sm">Analytics</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">local_shipping</span>
+<span class="text-label-sm font-label-sm">Delivery</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all group" href="#">
+<span class="material-symbols-outlined text-secondary">archive</span>
+<span class="text-label-sm font-label-sm">Archive</span>
+</a>
+
+</nav>
+<div class="mt-auto space-y-1">
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all text-on-surface-variant" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-sm font-label-sm">Help Center</span>
+</a>
+<a class="sidebar-item flex items-center gap-md px-md py-sm transition-all text-error" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-label-sm font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<div class="flex-1 flex flex-col md:ml-64 w-full relative">
+<!-- TopAppBar -->
+<nav class="sticky top-0 z-40 bg-surface-container-lowest border-b border-outline-variant/20 px-lg py-sm flex items-center mb-lg -mx-lg justify-between"><h2 class="text-title-lg font-title-lg text-on-surface ml-lg">Settings</h2><div class="flex items-center gap-sm mr-sm"><button class="p-sm rounded-lg hover:bg-surface-container-high transition-colors text-on-surface-variant flex items-center justify-center"><span class="material-symbols-outlined">notifications</span></button><div class="relative group"><button class="flex items-center gap-sm p-xs rounded-lg hover:bg-surface-container-high transition-colors"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDNhgT9MsM1czZG3uQHMvNbpzIQQGeqVmcImdqB-i3eaLlqrmBWyBw6IEwnL0_UFABhVLxKIh-J21TbagrX9CUMlE9L6p7pkZoy11rVBuo3l7ppPoZQeeHuDIOt7_sgFGCbr6elucLYb4XbMgdUF-SHq_qaXYA6NqHgzoCxTH3HbdzrWQZ7GHzGx-v4FEu12g1Ao-GdxTA-dYnPt8Swqyx5VLyDOP3qNvquQhoZhHku2xAsA--jM86XWzuCW9vW1_VSQbtg3IentgWBX1c" alt="User Profile" class="w-8 h-8 rounded-full object-cover"><span class="material-symbols-outlined text-on-surface-variant">expand_more</span></button><div class="absolute right-0 mt-xs w-48 bg-surface-container-lowest border border-outline-variant/20 rounded-xl shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all z-50"><div class="p-xs"><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">settings</span><span class="text-label-sm font-label-sm">Settings</span></a><div class="h-px bg-outline-variant/20 my-xs"></div><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">payments</span><span class="text-label-sm font-label-sm">Transfer</span></a><a href="#" class="flex items-center gap-md px-md py-sm rounded-lg hover:bg-surface-container-high transition-all text-on-surface-variant"><span class="material-symbols-outlined text-secondary">person</span><span class="text-label-sm font-label-sm">Profile</span></a></div></div></div></div></nav>
+<!-- Main Canvas -->
+<main class="flex-1 overflow-y-auto p-gutter bg-background">
+<div class="max-w-4xl mx-auto space-y-xl">
+<div>
+<h2 class="text-headline-lg font-headline-lg text-on-surface mb-sm">Settings</h2>
+<p class="text-body-md font-body-md text-on-surface-variant">Manage your shop profile, account preferences, and business details.</p>
+</div>
+<!-- Bento Grid Layout for Settings -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter">
+<!-- Shop Profile Card -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+<div class="flex items-center gap-sm mb-md border-b border-outline-variant/30 pb-sm">
+<span class="material-symbols-outlined text-primary">storefront</span>
+<h3 class="text-title-lg font-title-lg text-on-surface">Shop Profile</h3>
+</div>
+<div class="space-y-md">
+<div class="flex items-center gap-lg">
+<div class="w-24 h-24 rounded-lg bg-surface-container border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A polished, modern store logo for RHK General Merchandise featuring a minimalist abstract geometric symbol in deep blue and white. The design is sleek, professional, and communicates reliability in a retail context." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBS58KKB9HRTBkVkBo3LAPxRXIVB_QWkqh5SB6xtD2UOXuARpw1ZSkPoqWsDfExkPsMVm6Xh4EYWkm97qPj191TxuZNZgPjVRU2FUBkmxqpTRYJvK3ptUivYLhE0ovFUvu3GJOI7AL_QGPwVmZtp4WzE9xVuReQJrIGBY4FDSZ6GRoeyEAROeoWJbnFPerlELGxX1sCQcL2AA-U1dPsfwhYdnhHkqAKU8zaL_Erw6BQfh5epj3VWxzotg">
+</div>
+<div>
+<button class="px-md py-sm bg-surface-container-high hover:bg-surface-variant text-on-surface rounded-lg text-button font-button transition-colors border border-outline-variant/30 shadow-sm">Change Logo</button>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-sm">
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-xs">Shop Name</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-md py-sm text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" type="text" value="RHK General Merchandise">
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-xs">Description</label>
+<textarea class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-md py-sm text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none" rows="3">Providing quality general merchandise for everyday needs in Polomolok.</textarea>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-xs">Address</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-md py-sm text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" type="text" value="Polomolok, South Cotabato">
+</div>
+</div>
+<div class="flex justify-end pt-sm">
+<button class="px-lg py-sm bg-primary hover:bg-surface-tint text-on-primary rounded-lg text-button font-button transition-colors shadow-sm">Save Profile</button>
+</div>
+</div>
+</div>
+<!-- Payment Details Card -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+<div class="flex items-center gap-sm mb-md border-b border-outline-variant/30 pb-sm">
+<span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+<h3 class="text-title-lg font-title-lg text-on-surface">Payment Details</h3>
+</div>
+<div class="space-y-md">
+<p class="text-label-sm font-label-sm text-on-surface-variant">Configure where your payouts will be sent.</p>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-xs">GCash Number</label>
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant material-symbols-outlined text-[18px]">phone_iphone</span>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg pl-10 pr-md py-sm text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" type="text" value="0917 123 4567">
+</div>
+</div>
+<div>
+<label class="block text-label-sm font-label-sm text-on-surface-variant mb-xs">Account Name</label>
+<input class="w-full bg-surface-bright border border-outline-variant/50 rounded-lg px-md py-sm text-body-md font-body-md focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all" type="text" value="Juan Dela Cruz">
+</div>
+<div class="pt-sm">
+<button class="w-full px-lg py-sm bg-primary hover:bg-surface-tint text-on-primary rounded-lg text-button font-button transition-colors shadow-sm">Update Payment</button>
+</div>
+</div>
+</div>
+<!-- Business Hours Card -->
+<div class="md:col-span-6 bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+<div class="flex items-center gap-sm mb-md border-b border-outline-variant/30 pb-sm">
+<span class="material-symbols-outlined text-primary">schedule</span>
+<h3 class="text-title-lg font-title-lg text-on-surface">Business Hours</h3>
+</div>
+<div class="space-y-sm">
+<p class="text-label-sm font-label-sm text-on-surface-variant mb-sm">Set your open and close times for pick-up orders.</p>
+<!-- Day row -->
+<div class="flex items-center justify-between py-sm border-b border-outline-variant/10">
+<span class="text-body-md font-body-md font-medium text-on-surface w-24">Mon - Fri</span>
+<div class="flex items-center gap-sm">
+<input class="bg-surface-bright border border-outline-variant/50 rounded-md px-sm py-xs text-label-sm font-label-sm" type="time" value="08:00">
+<span class="text-on-surface-variant">-</span>
+<input class="bg-surface-bright border border-outline-variant/50 rounded-md px-sm py-xs text-label-sm font-label-sm" type="time" value="18:00">
+</div>
+</div>
+<div class="flex items-center justify-between py-sm border-b border-outline-variant/10">
+<span class="text-body-md font-body-md font-medium text-on-surface w-24">Saturday</span>
+<div class="flex items-center gap-sm">
+<input class="bg-surface-bright border border-outline-variant/50 rounded-md px-sm py-xs text-label-sm font-label-sm" type="time" value="09:00">
+<span class="text-on-surface-variant">-</span>
+<input class="bg-surface-bright border border-outline-variant/50 rounded-md px-sm py-xs text-label-sm font-label-sm" type="time" value="15:00">
+</div>
+</div>
+<div class="flex items-center justify-between py-sm">
+<span class="text-body-md font-body-md font-medium text-on-surface w-24">Sunday</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant bg-surface-container px-sm py-xs rounded-md">Closed</span>
+</div>
+</div>
+</div>
+<!-- Notification Preferences Card -->
+<div class="md:col-span-6 bg-surface-container-lowest rounded-xl border border-outline-variant/30 p-lg shadow-sm hover:shadow-md transition-shadow duration-200">
+<div class="flex items-center gap-sm mb-md border-b border-outline-variant/30 pb-sm">
+<span class="material-symbols-outlined text-primary">notifications_active</span>
+<h3 class="text-title-lg font-title-lg text-on-surface">Notifications</h3>
+</div>
+<div class="space-y-md">
+<label class="flex items-center justify-between cursor-pointer p-sm rounded-lg hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md font-medium text-on-surface">New Orders</div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">Get notified when a customer places an order.</div>
+</div>
+<div class="relative inline-flex items-center h-6 rounded-full w-11 bg-primary">
+<span class="translate-x-6 inline-block w-4 h-4 transform bg-white rounded-full transition-transform"></span>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer p-sm rounded-lg hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md font-medium text-on-surface">Low Stock Alerts</div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">Receive alerts when inventory falls below threshold.</div>
+</div>
+<div class="relative inline-flex items-center h-6 rounded-full w-11 bg-primary">
+<span class="translate-x-6 inline-block w-4 h-4 transform bg-white rounded-full transition-transform"></span>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer p-sm rounded-lg hover:bg-surface-container-low transition-colors">
+<div>
+<div class="text-body-md font-body-md font-medium text-on-surface">Weekly Summary Email</div>
+<div class="text-label-sm font-label-sm text-on-surface-variant">A weekly report of sales and analytics.</div>
+</div>
+<div class="relative inline-flex items-center h-6 rounded-full w-11 bg-surface-variant border border-outline-variant/50">
+<span class="translate-x-1 inline-block w-4 h-4 transform bg-white rounded-full shadow transition-transform"></span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+
+
+</body></html>

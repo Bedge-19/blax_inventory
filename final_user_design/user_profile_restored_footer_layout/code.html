@@ -1,0 +1,377 @@
+<!DOCTYPE html><html class="scroll-smooth" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>User Profile | RHK General Merchandise</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "primary-container": "#2563eb",
+                "surface-variant": "#e0e3e5",
+                "error": "#ba1a1a",
+                "surface-container-low": "#f2f4f6",
+                "on-surface-variant": "#434655",
+                "on-tertiary-container": "#e4f2ff",
+                "on-tertiary-fixed": "#001e2f",
+                "on-secondary-fixed": "#111c2d",
+                "surface-bright": "#f7f9fb",
+                "on-tertiary": "#ffffff",
+                "surface-container-highest": "#e0e3e5",
+                "outline": "#737686",
+                "inverse-surface": "#2d3133",
+                "primary-fixed-dim": "#b4c5ff",
+                "on-primary-fixed": "#00174b",
+                "surface-tint": "#0053db",
+                "primary": "#004ac6",
+                "background": "#f7f9fb",
+                "on-primary-fixed-variant": "#003ea8",
+                "on-secondary": "#ffffff",
+                "secondary-container": "#d5e0f8",
+                "surface-container-high": "#e6e8ea",
+                "on-secondary-container": "#586377",
+                "surface": "#f7f9fb",
+                "tertiary-fixed-dim": "#89ceff",
+                "surface-container-lowest": "#ffffff",
+                "outline-variant": "#c3c6d7",
+                "secondary": "#545f73",
+                "on-background": "#191c1e",
+                "tertiary": "#005a82",
+                "secondary-fixed": "#d8e3fb",
+                "error-container": "#ffdad6",
+                "on-primary-container": "#eeefff",
+                "on-primary": "#ffffff",
+                "tertiary-fixed": "#c9e6ff",
+                "inverse-primary": "#b4c5ff",
+                "surface-container": "#eceef0",
+                "secondary-fixed-dim": "#bcc7de",
+                "on-secondary-fixed-variant": "#3c475a",
+                "inverse-on-surface": "#eff1f3",
+                "on-surface": "#191c1e",
+                "tertiary-container": "#0074a6",
+                "on-error": "#ffffff",
+                "on-tertiary-fixed-variant": "#004c6e",
+                "on-error-container": "#93000a",
+                "surface-dim": "#d8dadc",
+                "primary-fixed": "#dbe1ff"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "xs": "4px",
+                "lg": "24px",
+                "container-max": "1440px",
+                "md": "16px",
+                "margin": "40px",
+                "base": "8px",
+                "xxl": "80px",
+                "columns": "12",
+                "gutter": "24px",
+                "sm": "8px",
+                "xl": "48px"
+            },
+            "fontFamily": {
+                "headline-md": ["Inter"],
+                "headline-lg": ["Inter"],
+                "title-lg": ["Inter"],
+                "display": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-sm": ["Inter"],
+                "button": ["Inter"],
+                "body-md": ["Inter"]
+            },
+            "fontSize": {
+                "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                "button": ["14px", {"lineHeight": "20px", "fontWeight": "500"}],
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-nav-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .glass-card {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen flex flex-col">
+<!-- TopNavBar Component -->
+<header class="bg-surface-container-lowest shadow-sm sticky top-0 z-50 flex justify-between items-center w-full px-margin h-16 max-w-container-max mx-auto">
+<div class="flex items-center gap-xl">
+<span class="text-title-lg font-bold text-primary">MarketPlace</span>
+<div class="hidden md:flex items-center relative">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
+<input class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary" placeholder="Search shops..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-md">
+<nav class="hidden lg:flex items-center gap-lg mr-md">
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Categories</a>
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Printing Services</a>
+<a class="text-on-surface-variant font-body-md hover:text-primary transition-colors" href="#">Shops</a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="p-2 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+<button class="p-2 rounded-full hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-on-surface-variant">shopping_cart</span>
+</button>
+</div>
+<div class="flex items-center gap-sm pl-md border-l border-outline-variant">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest border border-outline-variant">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDekWS8xaP7rB2Ehj1zDf9AzqhpSwDm98i_va6Z66t89xJEMgUIPL8GYYH4dnKUxLd_arBttck7_bbIESaWNXul-wEvMorgXokcw5HRcPrF6RNURmWDyIYJyDycXHka72_9qZamq9JKoML_I4WxfKiEVeg5mCyoK24BFVP-dRhrjN2Uqcq_7-iMq90q-7cX3Gl6jOj71ihgG5o8LpslqLIdb6wmdfccmdA2v2CPLK4WeelnoF5GOMRvzGC6FCNscipTwmGSNALYlOo33o4">
+</div>
+</div>
+</div>
+</header>
+<div class="flex-1 flex flex-col md:flex-row max-w-container-max mx-auto w-full">
+<!-- SideNavBar Component -->
+<aside class="hidden lg:flex flex-col w-64 bg-surface-container-lowest dark:bg-surface-container-low border-r border-outline-variant/20 py-md px-base sticky top-20 self-start h-[calc(100vh-80px)]">
+<div class="mb-lg px-sm">
+<h2 class="text-headline-md font-headline-md font-bold text-primary">Profile</h2>
+</div>
+<nav class="flex-1 flex flex-col gap-xs overflow-y-auto">
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-lg font-semibold active-nav-link translate-x-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="text-label-sm font-label-sm">Profile Overview</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">shopping_bag</span>
+<span class="text-label-sm font-label-sm">My Orders</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">print</span>
+<span class="text-label-sm font-label-sm">Printing Requests</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">location_on</span>
+<span class="text-label-sm font-label-sm">Shipping Addresses</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">favorite</span>
+<span class="text-label-sm font-label-sm">Favorite Shops</span>
+</a>
+</nav>
+<div class="mt-auto border-t border-outline-variant/20 pt-md flex flex-col gap-xs">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-sm font-label-sm">Help Center</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/20 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-label-sm font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 p-lg md:p-xl lg:p-xxl bg-surface/50 overflow-y-auto">
+<div class="max-w-4xl mx-auto space-y-lg pb-xl">
+<!-- Profile Header -->
+<section class="glass-card rounded-xl p-lg flex flex-col md:flex-row items-center gap-lg shadow-sm hover:shadow-md transition-all duration-300">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional and friendly headshot of Maria Santos, a woman in her 30s with a warm smile, set against a blurred modern office background with soft blue tones and clean minimalist aesthetics. High-fidelity digital photography with natural lighting and a premium feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD76X0Cdtlb4R2iNz2FiCOjlxDaqR_-cul9sFqdIYWlxYL69tEQ4e27hczAp968O5eBF7Nel2cQ8Psa6VvLrE3YpKeSehyMIHxjSy0gCAtT7Mq8sC8uO0goSdh7OkpvnZE6sqbSLUAS9Na0RzthdnffC5dECSs1hOi0K1lEUBzIjfg8TjzedlSb-6QVJyo1zF2FEukOwAD1_TdkAt9DMZQK6-GarZi-7hmfIvc0XXpl2Rh8nMwpQ_Ch6j71x5Q0Pg2L-wRIdqXk1HwWqOU">
+</div>
+<button class="absolute bottom-0 right-0 bg-primary text-on-primary p-xs rounded-full shadow-md hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+</div>
+<div class="text-center md:text-left flex-1">
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Maria Santos</h1>
+<p class="text-body-md font-body-md text-on-surface-variant opacity-80 flex items-center justify-center md:justify-start gap-xs">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+                            Member since January 2023
+                        </p>
+</div>
+<div class="w-full md:w-auto">
+<button class="w-full md:w-auto bg-primary text-on-primary px-xl py-sm rounded-lg font-button hover:translate-y-[-2px] transition-all shadow-md active:scale-95">Edit Profile</button>
+</div>
+</section>
+<!-- Quick Stats Bento -->
+<section class="grid grid-cols-1 sm:grid-cols-2 gap-lg">
+<div class="bg-surface-container-lowest border border-outline-variant/30 p-xl rounded-xl shadow-sm hover:shadow-md transition-all group">
+<div class="flex items-center justify-between mb-md">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Total Orders</span>
+<span class="material-symbols-outlined text-primary opacity-40 group-hover:opacity-100 transition-opacity">shopping_cart</span>
+</div>
+<p class="text-[32px] font-bold leading-tight">24</p>
+<p class="text-label-sm text-primary mt-sm font-semibold">+2 this month</p>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant/30 p-xl rounded-xl shadow-sm hover:shadow-md transition-all group">
+<div class="flex items-center justify-between mb-md">
+<span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Active Printing</span>
+<span class="material-symbols-outlined text-primary opacity-40 group-hover:opacity-100 transition-opacity">print</span>
+</div>
+<p class="text-[32px] font-bold leading-tight">03</p>
+<p class="text-label-sm text-tertiary mt-sm font-semibold">In production</p>
+</div>
+</section>
+<!-- Account Information Section -->
+<section class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant/20 bg-surface-container-low flex justify-between items-center">
+<h2 class="text-title-lg font-title-lg text-on-surface">Account Information</h2>
+<button class="text-primary font-button flex items-center gap-xs hover:underline transition-all">
+<span class="material-symbols-outlined text-[20px]">save</span> Update Information
+                        </button>
+</div>
+<div class="p-lg grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div class="space-y-base">
+<label class="text-label-sm font-label-sm text-on-surface-variant block">Full Name</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-md py-sm focus:ring-primary focus:border-primary transition-all" type="text" value="Maria Santos">
+</div>
+<div class="space-y-base">
+<label class="text-label-sm font-label-sm text-on-surface-variant block">Email Address</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-md py-sm pr-xl focus:ring-primary focus:border-primary transition-all" type="email" value="m.santos@email.com">
+<span class="material-symbols-outlined absolute right-md top-1/2 -translate-y-1/2 text-primary text-[20px]">check_circle</span>
+</div>
+</div>
+<div class="space-y-base">
+<label class="text-label-sm font-label-sm text-on-surface-variant block">Phone Number</label>
+<input class="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-md py-sm focus:ring-primary focus:border-primary transition-all" type="tel" value="+63 912 345 6789">
+</div>
+<div class="space-y-base">
+<label class="text-label-sm font-label-sm text-on-surface-variant block">Default Shipping Site</label>
+<select class="w-full bg-surface-container-low border border-outline-variant/40 rounded-lg px-md py-sm focus:ring-primary focus:border-primary transition-all">
+<option>Quezon City Main Office</option>
+<option>Manila Distribution Hub</option>
+<option>Cebu Regional Branch</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Recent Activity Table -->
+<section class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl overflow-hidden shadow-sm">
+<div class="px-lg py-md border-b border-outline-variant/20 bg-surface-container-low">
+<h2 class="text-title-lg font-title-lg text-on-surface">Recent Activity</h2>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead class="bg-surface-container-high/30">
+<tr>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-60 uppercase">Reference</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-60 uppercase">Service</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-60 uppercase">Date</th>
+<th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-60 uppercase">Status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md font-medium">#PO-23948</td>
+<td class="px-lg py-md">PDF Document Printing</td>
+<td class="px-lg py-md text-on-surface-variant">2 hours ago</td>
+<td class="px-lg py-md">
+<span class="px-sm py-1 bg-tertiary-container text-on-tertiary-container rounded-full text-xs font-semibold">Processing</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md font-medium">#ORD-10293</td>
+<td class="px-lg py-md">Custom Letterhead Printing</td>
+<td class="px-lg py-md text-on-surface-variant">Yesterday</td>
+<td class="px-lg py-md">
+<span class="px-sm py-1 bg-primary-fixed text-on-primary-fixed-variant rounded-full text-xs font-semibold">Shipped</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="px-lg py-md font-medium">#PO-23881</td>
+<td class="px-lg py-md">Academic Thesis Printing</td>
+<td class="px-lg py-md text-on-surface-variant">3 days ago</td>
+<td class="px-lg py-md">
+<span class="px-sm py-1 bg-surface-container-highest text-on-surface-variant rounded-full text-xs font-semibold">Completed</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- AI Assistant FAB -->
+<button class="fixed bottom-lg right-lg w-16 h-16 bg-primary-container text-on-primary-container rounded-full shadow-xl flex items-center justify-center hover:scale-110 active:scale-90 transition-all z-50 group overflow-hidden">
+<div class="absolute inset-0 bg-gradient-to-tr from-primary to-accent opacity-0 group-hover:opacity-20 transition-opacity"></div>
+<span class="material-symbols-outlined text-[32px]">smart_toy</span>
+</button>
+<!-- Footer Component -->
+<footer class="bg-surface-container-highest dark:bg-surface-dim border-t border-outline-variant/50 w-full mt-auto">
+<div class="w-full py-xxl px-margin max-w-container-max mx-auto flex flex-col md:flex-row justify-between gap-xl">
+<div class="flex flex-col gap-sm max-w-sm">
+<a class="text-title-lg font-display font-bold text-on-surface mb-xs" href="#">
+                    RHK General Merchandise
+                </a>
+<p class="text-body-md font-body-md text-on-surface-variant">A modern high-trust ecosystem for professional merchants and enterprise service providers.</p>
+<div class="flex gap-md mt-md">
+<span class="material-symbols-outlined text-outline-variant">public</span>
+<span class="material-symbols-outlined text-outline-variant">shield</span>
+<span class="material-symbols-outlined text-outline-variant">verified</span>
+</div>
+</div>
+<div class="grid grid-cols-2 sm:grid-cols-3 gap-xl">
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Quick Links</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">About Us</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Terms of Service</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Privacy Policy</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Support</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Contact Support</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Merchant Portal</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">API Docs</a>
+</nav>
+</div>
+<div class="flex flex-col gap-sm">
+<h4 class="text-body-md font-body-md font-semibold text-on-surface mb-xs">Connect</h4>
+<nav class="flex flex-col gap-xs">
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">LinkedIn</a>
+<a class="text-label-sm font-label-sm text-on-surface-variant hover:text-primary underline transition-all" href="#">Twitter/X</a>
+</nav>
+</div>
+</div>
+</div>
+<div class="w-full py-lg border-t border-outline-variant/30 text-center">
+<p class="text-label-sm text-on-surface-variant">© 2024 RHK General Merchandise. All rights reserved.</p>
+</div>
+</footer>
+<script>
+        // Micro-interactions and effects
+        document.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('focus', () => {
+                el.parentElement.classList.add('scale-[1.01]');
+            });
+            el.addEventListener('blur', () => {
+                el.parentElement.classList.remove('scale-[1.01]');
+            });
+        });
+    </script>
+
+
+
+
+</body></html>

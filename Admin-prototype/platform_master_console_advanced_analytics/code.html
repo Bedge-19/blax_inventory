@@ -1,0 +1,376 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><svg class="inline-defs-container" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"></svg><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Analytics - RHK Admin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "outline-variant": "#c3c6d7",
+                      "surface-variant": "#e0e3e5",
+                      "surface": "#f7f9fb",
+                      "tertiary-container": "#0074a6",
+                      "tertiary": "#005a82",
+                      "secondary-fixed": "#d8e3fb",
+                      "secondary-container": "#d5e0f8",
+                      "primary-container": "#2563eb",
+                      "surface-tint": "#0053db",
+                      "on-tertiary-fixed-variant": "#004c6e",
+                      "secondary": "#545f73",
+                      "primary": "#004ac6",
+                      "tertiary-fixed": "#c9e6ff",
+                      "on-error-container": "#93000a",
+                      "on-tertiary-container": "#e4f2ff",
+                      "surface-container-high": "#e6e8ea",
+                      "tertiary-fixed-dim": "#89ceff",
+                      "on-error": "#ffffff",
+                      "surface-container-low": "#f2f4f6",
+                      "on-secondary-fixed-variant": "#3c475a",
+                      "primary-fixed": "#dbe1ff",
+                      "inverse-on-surface": "#eff1f3",
+                      "surface-container-highest": "#e0e3e5",
+                      "on-primary-fixed-variant": "#003ea8",
+                      "error": "#ba1a1a",
+                      "surface-bright": "#f7f9fb",
+                      "on-secondary-container": "#586377",
+                      "secondary-fixed-dim": "#bcc7de",
+                      "on-secondary": "#ffffff",
+                      "on-secondary-fixed": "#111c2d",
+                      "surface-dim": "#d8dadc",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "on-background": "#191c1e",
+                      "inverse-primary": "#b4c5ff",
+                      "on-surface": "#191c1e",
+                      "on-tertiary-fixed": "#001e2f",
+                      "background": "#f7f9fb",
+                      "on-primary-container": "#eeefff",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#434655",
+                      "on-primary-fixed": "#00174b",
+                      "inverse-surface": "#2d3133",
+                      "primary-fixed-dim": "#b4c5ff",
+                      "error-container": "#ffdad6",
+                      "surface-container": "#eceef0",
+                      "outline": "#737686"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "xxl": "80px",
+                      "xl": "48px",
+                      "base": "8px",
+                      "md": "16px",
+                      "columns": "12",
+                      "lg": "24px",
+                      "xs": "4px",
+                      "margin": "40px",
+                      "sm": "8px",
+                      "container-max": "1440px"
+              },
+              "fontFamily": {
+                      "display": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "display": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "button": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+          .glass-panel {
+              background: rgba(255, 255, 255, 0.8);
+              backdrop-filter: blur(12px);
+              border: 1px solid rgba(229, 231, 235, 0.5);
+          }
+          .soft-shadow {
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+          }
+      </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-lowest flex flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen">
+<div class="px-sm mb-xl">
+<h1 class="text-headline-md font-headline-md font-bold text-primary">RHK Console</h1>
+<p class="text-label-sm font-label-sm text-on-surface-variant/60">Platform Master Console</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="text-label-sm font-label-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="text-label-sm font-label-sm">Tenants</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-label-sm font-label-sm">Customers</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm bg-secondary-container text-on-secondary-container rounded-lg font-semibold translate-x-1 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="text-label-sm font-label-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="text-label-sm font-label-sm">Payment requests</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span>
+<span class="text-label-sm font-label-sm">Compliance</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="distance">distance</span>
+<span class="text-label-sm font-label-sm">Live Tracking</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="text-label-sm font-label-sm">Audit log</span>
+</a></nav>
+<div class="mt-auto pt-xl space-y-1 border-t border-outline-variant/10">
+<div class="flex items-center gap-md px-md py-md mb-md">
+<div class="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center text-white font-bold">
+                        AD
+                    </div>
+<div>
+<p class="text-label-sm font-label-sm text-on-surface font-bold">Super Admin</p>
+<p class="text-[10px] text-on-surface-variant">admin@rhk.com</p>
+</div>
+</div>
+<a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="text-label-sm font-label-sm">Help Center</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="text-label-sm font-label-sm">Sign Out</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<div class="ml-64 flex-1 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 px-margin py-md flex justify-between items-center">
+<div>
+</div>
+<div class="flex items-center gap-md">
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center text-outline">
+</span>
+</div>
+<button class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+</div>
+</header>
+<!-- Main Dashboard Canvas -->
+<main class="flex-1 p-gutter max-w-container-max w-full mx-auto space-y-xl">
+<!-- Summary Metrics -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow hover:-translate-y-1 transition-transform duration-200">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Total Revenue</p>
+<div class="flex items-end justify-between">
+<h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">₱45,231.00</h3>
+<span class="text-emerald-600 flex items-center text-sm font-medium">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
+                            +12.5%
+                        </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow hover:-translate-y-1 transition-transform duration-200">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Active Users</p>
+<div class="flex items-end justify-between">
+<h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">1,245</h3>
+<span class="text-emerald-600 flex items-center text-sm font-medium">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
+                            +5.2%
+                        </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow hover:-translate-y-1 transition-transform duration-200">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">New Signups</p>
+<div class="flex items-end justify-between">
+<h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">342</h3>
+<span class="text-emerald-600 flex items-center text-sm font-medium">
+<span class="material-symbols-outlined text-sm mr-1">trending_up</span>
+                            +18.1%
+                        </span>
+</div>
+</div>
+<div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow hover:-translate-y-1 transition-transform duration-200">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Total Orders</p>
+<div class="flex items-end justify-between">
+<h3 class="font-headline-lg text-headline-lg font-bold text-on-surface">8,921</h3>
+<span class="text-rose-600 flex items-center text-sm font-medium">
+<span class="material-symbols-outlined text-sm mr-1">trending_down</span>
+                            -2.4%
+                        </span>
+</div>
+</div>
+</section>
+<!-- Charts Section -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Main Revenue Chart -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-title-lg text-title-lg font-bold text-on-surface">Revenue Growth (30 Days)</h3>
+<button class="text-primary text-sm font-medium hover:underline">View Detailed Report</button>
+</div>
+<div class="h-80 w-full rounded bg-surface-container-low flex items-center justify-center relative overflow-hidden">
+<!-- Abstract placeholder for chart -->
+<div class="absolute inset-0 bg-gradient-to-r from-primary-container/20 to-tertiary-container/10"></div>
+<p class="text-on-surface-variant/50 font-label-sm z-10">Chart Visualization Area</p>
+<!-- Simulated Chart Line -->
+<svg class="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+<path class="opacity-75" d="M0,80 Q20,60 40,70 T80,40 T100,20" fill="none" stroke="#2563eb" stroke-width="2"></path>
+<path class="opacity-20" d="M0,100 L0,80 Q20,60 40,70 T80,40 T100,20 L100,100 Z" fill="url(#chartGradient)"></path>
+<defs>
+<linearGradient id="chartGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#2563eb"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0"></stop>
+</linearGradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- Distribution -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow p-6">
+<h3 class="font-title-lg text-title-lg font-bold text-on-surface mb-6">Marketplace Distribution</h3>
+<div class="space-y-4"><div class=""><div class="flex justify-between text-sm mb-1"><span class="font-medium text-on-surface">Textbooks &amp; References</span><span class="text-on-surface-variant">42%</span></div><div class="w-full bg-surface-container-high rounded-full h-2"><div class="bg-primary h-2 rounded-full" style="width: 42%"></div></div></div><div class=""><div class="flex justify-between text-sm mb-1"><span class="font-medium text-on-surface">Stationery &amp; Writing</span><span class="text-on-surface-variant">28%</span></div><div class="w-full bg-surface-container-high rounded-full h-2"><div class="bg-tertiary h-2 rounded-full" style="width: 28%"></div></div></div><div class=""><div class="flex justify-between text-sm mb-1"><span class="font-medium text-on-surface">Art &amp; Creative Supplies</span><span class="text-on-surface-variant">15%</span></div><div class="w-full bg-surface-container-high rounded-full h-2"><div class="bg-secondary h-2 rounded-full" style="width: 15%"></div></div></div><div class=""><div class="flex justify-between text-sm mb-1"><span class="font-medium text-on-surface">School Uniforms</span><span class="text-on-surface-variant">10%</span></div><div class="w-full bg-surface-container-high rounded-full h-2"><div class="bg-primary-fixed-dim h-2 rounded-full" style="width: 10%"></div></div></div><div class=""><div class="flex justify-between text-sm mb-1"><span class="font-medium text-on-surface">Others</span><span class="text-on-surface-variant">5%</span></div><div class="w-full bg-surface-container-high rounded-full h-2"><div class="bg-outline h-2 rounded-full" style="width: 5%"></div></div></div></div>
+</div>
+</section>
+<!-- Tables & Maps -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<!-- Leaderboard Table -->
+<div class="lg:col-span-2 bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow overflow-hidden">
+<div class="p-6 border-b border-outline-variant/20 flex justify-between items-center bg-surface-bright/50">
+<h3 class="font-title-lg text-title-lg font-bold text-on-surface">Performance Leaderboard</h3>
+<button class="font-button text-button text-primary hover:bg-primary-container/10 px-4 py-2 rounded-lg transition-colors">Export CSV</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low/50">
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant/70 uppercase font-semibold">Shop Name</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant/70 uppercase font-semibold">Total Sales</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant/70 uppercase font-semibold">Growth (MoM)</th>
+<th class="p-4 font-label-sm text-label-sm text-on-surface-variant/70 uppercase font-semibold">Rating</th>
+</tr>
+</thead>
+<tbody class="text-sm"><tr class="border-b border-outline-variant/10 hover:bg-surface-container-lowest transition-colors"><td class="p-4 font-medium text-on-surface">National Book Store</td><td class="p-4">₱18,500.00</td><td class="p-4 text-emerald-600">+15%</td><td class="p-4 flex items-center"><span class="material-symbols-outlined text-amber-400 text-sm mr-1" data-weight="fill">star</span> 4.9</td></tr><tr class="border-b border-outline-variant/10 hover:bg-surface-container-lowest transition-colors"><td class="p-4 font-medium text-on-surface">EduSupplies Central</td><td class="p-4">₱12,200.00</td><td class="p-4 text-emerald-600">+8%</td><td class="p-4 flex items-center"><span class="material-symbols-outlined text-amber-400 text-sm mr-1" data-weight="fill">star</span> 4.7</td></tr><tr class="border-b border-outline-variant/10 hover:bg-surface-container-lowest transition-colors"><td class="p-4 font-medium text-on-surface">The Campus Shop</td><td class="p-4">₱6,400.00</td><td class="p-4 text-rose-600">-2%</td><td class="p-4 flex items-center"><span class="material-symbols-outlined text-amber-400 text-sm mr-1" data-weight="fill">star</span> 4.5</td></tr><tr class="hover:bg-surface-container-lowest transition-colors"><td class="p-4 font-medium text-on-surface">School Essentials Co.</td><td class="p-4">₱4,100.00</td><td class="p-4 text-emerald-600">+22%</td><td class="p-4 flex items-center"><span class="material-symbols-outlined text-amber-400 text-sm mr-1" data-weight="fill">star</span> 4.8</td></tr></tbody>
+</table>
+</div>
+</div>
+<!-- Geographic Distribution (Map Placeholder) -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow p-6 flex flex-col">
+<h3 class="font-title-lg text-title-lg font-bold text-on-surface mb-4">Top School Supplies (Polomolok)</h3>
+<div class="flex-1 rounded-lg overflow-hidden relative min-h-[200px] border border-outline-variant/20">
+<div class="bg-cover bg-center w-full h-full absolute inset-0 opacity-80" data-alt="A stylized, clean vector map of Polomolok, South Cotabato, Philippines. The map uses a minimalist, professional blue color palette with light gray landmasses. Key commercial zones are highlighted with subtle, glowing primary blue markers to indicate high sales density. The aesthetic is modern, data-driven, and perfectly suited for a high-end dashboard interface." data-location="Polomolok" style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuAJGO9a2tXn8IwElNfF700-BdojZbjRQEZuaKHLNYOHzVeiocm6bQRKYt8pTPQb-oqGqt-qBE82UbV-EusGlQ1Fjgg1__rWGlwtmG4r3H5YvlynzKyOSLuetfHf7scVuzJoGPlrFdq4AyLuUsEeZ2tQqdqQGyhkDVC02zNtJJGnXfY5d_t7uqbfJJPS3udhx0r7pKao4-dgJNxlmDtg1YvvhiEr1xKKjB1YvPwq4tPTaHdum8hsOXAY_w&quot;);"></div>
+<!-- Overlay labels -->
+<div class="absolute inset-0 p-4 flex flex-col justify-end bg-gradient-to-t from-surface-container-lowest via-transparent to-transparent">
+<div class="bg-surface-container-lowest/90 backdrop-blur-sm p-3 rounded-lg border border-outline-variant/30"><div class="flex justify-between items-center mb-1"><span class="text-sm font-semibold text-on-surface">University District</span><span class="text-xs font-bold text-primary">35%</span></div><div class="flex justify-between items-center"><span class="text-sm font-semibold text-on-surface">Central Campus</span><span class="text-xs font-bold text-primary">28%</span></div></div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+
+
+</body></html>
