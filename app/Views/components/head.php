@@ -44,6 +44,63 @@
         }
         return originalFetch.call(this, input, init);
     };
+
+    window.showToast = function(message, type = 'success', duration = 3500) {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'pointer-events-auto bg-surface-container-lowest text-on-surface border border-outline-variant/30 shadow-xl rounded-2xl p-3 flex items-center gap-3 transform translate-y-[-10px] opacity-0 transition-all duration-300 ease-out';
+        
+        let iconName = 'check_circle';
+        let iconColor = 'text-green-600';
+        if (type === 'error') {
+            iconName = 'error';
+            iconColor = 'text-red-600';
+        } else if (type === 'warning') {
+            iconName = 'warning';
+            iconColor = 'text-amber-600';
+        } else if (type === 'info') {
+            iconName = 'info';
+            iconColor = 'text-blue-600';
+        }
+
+        toast.innerHTML = `
+            <span class="material-symbols-outlined shrink-0 ${iconColor} text-xl">${iconName}</span>
+            <div class="flex-1 text-xs font-semibold leading-tight">${message}</div>
+            <button type="button" class="shrink-0 p-1 text-outline hover:text-on-surface rounded-full transition-colors" aria-label="Close notification">
+                <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+        `;
+
+        const closeBtn = toast.querySelector('button');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => dismissToast(toast));
+        }
+
+        container.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        const timer = setTimeout(() => dismissToast(toast), duration);
+
+        function dismissToast(el) {
+            clearTimeout(timer);
+            el.classList.remove('translate-y-0', 'opacity-100');
+            el.classList.add('translate-y-[-10px]', 'opacity-0');
+            setTimeout(() => {
+                if (el.parentNode) el.parentNode.removeChild(el);
+            }, 300);
+        }
+    };
 })();
 </script>
 

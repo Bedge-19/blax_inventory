@@ -188,4 +188,11 @@ class LayoutSmokeTest extends CIUnitTestCase
         $this->get('admin/audit-log')->assertOK();
         $this->get('admin/analytics')->assertOK();
     }
+
+    public function testHeadContainsToastHelper()
+    {
+        $result = $this->get('/');
+        $result->assertOK();
+        $this->assertBodyContains('window.showToast', $result);
+    }
 }
