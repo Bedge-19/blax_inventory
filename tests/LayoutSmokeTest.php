@@ -111,7 +111,9 @@ class LayoutSmokeTest extends CIUnitTestCase
 
     public function testCountPrintingPagesRejectsMissingFile()
     {
-        $result = $this->post('printing/count-pages');
+        $hash = csrf_hash();
+        $_COOKIE['csrf_cookie_name'] = $hash;
+        $result = $this->withHeaders(['X-CSRF-TOKEN' => $hash])->post('printing/count-pages');
         $result->assertStatus(400);
         $this->assertBodyContains('No PDF file received', $result);
     }

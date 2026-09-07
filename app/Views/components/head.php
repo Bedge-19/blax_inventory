@@ -1,7 +1,51 @@
 <meta charset="utf-8">
 <meta content="width=device-width, initial-scale=1.0" name="viewport">
+<meta name="csrf-token" content="<?= csrf_hash() ?>">
+<meta name="csrf-header" content="<?= csrf_header() ?>">
 
 <title><?= esc($title ?? 'Blax') ?></title>
+
+<script>
+(function() {
+    window.getCsrfToken = function() {
+        const meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    };
+    window.getCsrfHeader = function() {
+        const meta = document.querySelector('meta[name="csrf-header"]');
+        return meta ? meta.getAttribute('content') : 'X-CSRF-TOKEN';
+    };
+
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        init = init || {};
+        const method = (init.method || 'GET').toUpperCase();
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+            const token = window.getCsrfToken();
+            const header = window.getCsrfHeader();
+            if (token) {
+                if (!init.headers) {
+                    init.headers = {};
+                }
+                if (init.headers instanceof Headers) {
+                    if (!init.headers.has(header)) {
+                        init.headers.set(header, token);
+                    }
+                } else if (Array.isArray(init.headers)) {
+                    if (!init.headers.some(([k]) => k.toLowerCase() === header.toLowerCase())) {
+                        init.headers.push([header, token]);
+                    }
+                } else {
+                    if (!init.headers[header]) {
+                        init.headers[header] = token;
+                    }
+                }
+            }
+        }
+        return originalFetch.call(this, input, init);
+    };
+})();
+</script>
 
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">

@@ -15,11 +15,16 @@ class PosControllerTest extends CIUnitTestCase
 
     private function asTenant(): self
     {
+        $hash = csrf_hash();
+        $_COOKIE['csrf_cookie_name'] = $hash;
+
         return $this->withSession([
             'user_id'    => 2,
             'user_role'  => 'shop_owner',
             'shop_id'    => 1,
             'isLoggedIn' => true,
+        ])->withHeaders([
+            'X-CSRF-TOKEN' => $hash,
         ]);
     }
 
