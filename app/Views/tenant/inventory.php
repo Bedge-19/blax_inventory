@@ -151,7 +151,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Product</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">SKU</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Category</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Description</th>
+                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Description</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Stock Level</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Unit Price</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
@@ -184,8 +184,16 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                 </td>
                                 <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['sku']) ?></td>
                                 <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['category_name'] ?? 'General') ?></td>
-                                <td class="px-lg py-md text-body-md text-on-surface-variant max-w-[200px]" title="<?= esc($p['description'] ?? '') ?>">
-                                    <?= esc(mb_strimwidth($p['description'] ?? '', 0, 60, '…')) ?>
+                                <td class="px-lg py-md text-center">
+                                    <button type="button"
+                                            onclick="openDescriptionModal(this)"
+                                            class="inline-flex items-center gap-xs px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface text-label-sm font-medium transition-colors border border-outline-variant/30 hover:border-primary/40 group"
+                                            title="View Description"
+                                            data-name="<?= esc($p['name']) ?>"
+                                            data-description="<?= esc($p['description'] ?? '') ?>">
+                                        <span class="material-symbols-outlined text-[16px] text-primary group-hover:scale-110 transition-transform">visibility</span>
+                                        <span>View</span>
+                                    </button>
                                 </td>
                                 <td class="px-lg py-md text-center">
                                     <span id="stock-pill-<?= (int) $p['id'] ?>" class="px-md py-1 rounded-full <?= $pill ?> text-label-sm font-semibold inline-flex items-center gap-xs">
@@ -197,14 +205,6 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                 <td class="px-lg py-md text-body-md text-on-surface text-right">₱<?= number_format((float) $p['price'], 2) ?></td>
                                 <td class="px-lg py-md text-right">
                                     <div class="flex items-center justify-end gap-sm">
-                                        <button type="button"
-                                                onclick="openDescriptionModal(this)"
-                                                class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
-                                                title="View Description"
-                                                data-name="<?= esc($p['name']) ?>"
-                                                data-description="<?= esc($p['description'] ?? '') ?>">
-                                            <span class="material-symbols-outlined">visibility</span>
-                                        </button>
                                         <button type="button"
                                                 onclick="openProductModal(this)"
                                                 class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
