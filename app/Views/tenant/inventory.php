@@ -151,6 +151,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Product</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">SKU</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Category</th>
+                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Description</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Stock Level</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Unit Price</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
@@ -183,6 +184,9 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                 </td>
                                 <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['sku']) ?></td>
                                 <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['category_name'] ?? 'General') ?></td>
+                                <td class="px-lg py-md text-body-md text-on-surface-variant max-w-[200px]" title="<?= esc($p['description'] ?? '') ?>">
+                                    <?= esc(mb_strimwidth($p['description'] ?? '', 0, 60, '…')) ?>
+                                </td>
                                 <td class="px-lg py-md text-center">
                                     <span id="stock-pill-<?= (int) $p['id'] ?>" class="px-md py-1 rounded-full <?= $pill ?> text-label-sm font-semibold inline-flex items-center gap-xs">
                                         <span class="material-symbols-outlined text-[14px]"><?= $icon ?></span>
@@ -193,6 +197,14 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                 <td class="px-lg py-md text-body-md text-on-surface text-right">₱<?= number_format((float) $p['price'], 2) ?></td>
                                 <td class="px-lg py-md text-right">
                                     <div class="flex items-center justify-end gap-sm">
+                                        <button type="button"
+                                                onclick="openDescriptionModal(this)"
+                                                class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
+                                                title="View Description"
+                                                data-name="<?= esc($p['name']) ?>"
+                                                data-description="<?= esc($p['description'] ?? '') ?>">
+                                            <span class="material-symbols-outlined">visibility</span>
+                                        </button>
                                         <button type="button"
                                                 onclick="openProductModal(this)"
                                                 class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
@@ -227,7 +239,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="py-lg text-center text-on-surface-variant">No products match your filters.</td>
+                            <td colspan="8" class="py-lg text-center text-on-surface-variant">No products match your filters.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -272,6 +284,27 @@ function inv_stock_pill(int $stock, int $threshold): array {
         </div>
     </div>
 
+</div>
+
+<!-- Read-only View Product Description Modal -->
+<div id="descriptionModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">
+    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-md w-full space-y-md border border-outline-variant/30 max-h-[85vh] flex flex-col shadow-2xl">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
+            <h3 id="descModalTitle" class="text-title-lg font-bold text-on-surface break-words">Product Details</h3>
+            <button type="button" onclick="closeDescriptionModal()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-lg hover:bg-surface-container-high transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="overflow-y-auto flex-1 py-xs">
+            <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Description</label>
+            <div id="descModalBody" class="text-body-md text-on-surface whitespace-pre-line leading-relaxed break-words bg-surface-container-low/60 p-md rounded-xl border border-outline-variant/20 min-h-[100px]"></div>
+        </div>
+        <div class="pt-sm border-t border-outline-variant/20 flex justify-end">
+            <button type="button" onclick="closeDescriptionModal()" class="px-lg py-sm bg-surface-container-high text-on-surface hover:bg-surface-variant rounded-xl font-bold transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- Add / Edit Product Modal -->
@@ -418,6 +451,40 @@ function inv_stock_pill(int $stock, int $threshold): array {
 </div>
 
 <script>
+    function openDescriptionModal(btn) {
+        const modal = document.getElementById('descriptionModal');
+        const title = document.getElementById('descModalTitle');
+        const body = document.getElementById('descModalBody');
+
+        if (btn && title && body) {
+            title.textContent = btn.dataset.name || 'Product Details';
+            const desc = (btn.dataset.description || '').trim();
+            if (desc) {
+                body.textContent = desc;
+                body.classList.remove('italic', 'opacity-60');
+            } else {
+                body.textContent = 'No description provided for this product.';
+                body.classList.add('italic', 'opacity-60');
+            }
+        }
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+
+    function closeDescriptionModal() {
+        const modal = document.getElementById('descriptionModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    }
+
+    document.getElementById('descriptionModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDescriptionModal();
+        }
+    });
+
     function openProductModal(btn) {
         const modal = document.getElementById('productModal');
         document.getElementById('productModalTitle').textContent = 'Add New Product';
