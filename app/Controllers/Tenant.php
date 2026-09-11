@@ -1808,22 +1808,33 @@ class Tenant extends BaseController
         // Clear existing variants for this product before re-inserting
         $variantModel->where('product_id', $productId)->delete();
 
-        if (!empty($variantNames)) {
+        $count = max(count($variantValues), count($variantNames));
+        if ($count > 0) {
             $inserted = [];
-            foreach ($variantNames as $idx => $name) {
-                $name  = trim((string) $name);
-                $value = trim((string) ($variantValues[$idx] ?? ''));
-                if ($name === '' || $value === '') {
+            for ($idx = 0; $idx < $count; $idx++) {
+                $val  = isset($variantValues[$idx]) ? trim((string) $variantValues[$idx]) : '';
+                $name = isset($variantNames[$idx]) ? trim((string) $variantNames[$idx]) : '';
+
+                // Handle single type input or name+val gracefully
+                if ($val === '' && $name !== '' && $name !== 'Type') {
+                    $val  = $name;
+                    $name = 'Type';
+                } elseif ($val !== '' && ($name === '' || $name === 'Type')) {
+                    $name = 'Type';
+                }
+
+                if ($val === '') {
                     continue;
                 }
+
                 $stock = max(0, (int) ($variantStocks[$idx] ?? 0));
                 $price = isset($variantPrices[$idx]) && $variantPrices[$idx] !== '' ? (float) $variantPrices[$idx] : null;
                 $sku   = isset($variantSkus[$idx]) ? trim((string) $variantSkus[$idx]) : null;
 
                 $inserted[] = [
                     'product_id'     => $productId,
-                    'name'           => $name,
-                    'value'          => $value,
+                    'name'           => $name !== '' ? $name : 'Type',
+                    'value'          => $val,
                     'sku_suffix'     => $sku !== '' ? $sku : null,
                     'stock_quantity' => $stock,
                     'price_override' => ($price !== null && $price >= 0) ? $price : null,

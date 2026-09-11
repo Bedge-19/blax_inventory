@@ -394,23 +394,38 @@ function inv_stock_pill(int $stock, int $threshold): array {
                 <textarea name="description" id="p_description" rows="3" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl"></textarea>
             </div>
 
-            <!-- Product Variants (Types/Options e.g. Color, Size) -->
+            <!-- Product Variants / Types (For Any Product) -->
             <div class="border-t border-outline-variant/30 pt-md space-y-sm">
-                <div class="flex justify-between items-center">
+                <div class="flex justify-between items-start gap-sm">
                     <div>
                         <label class="text-label-sm font-bold text-on-surface flex items-center gap-xs">
-                            <span class="material-symbols-outlined text-[16px] text-primary">tune</span>
-                            Product Variants / Types
+                            <span class="material-symbols-outlined text-[18px] text-primary">category</span>
+                            Product Types / Variations
                         </label>
-                        <p class="text-[11px] text-on-surface-variant">Add options (e.g. Type/Color: Black, Blue, Red) with their own stock.</p>
+                        <p class="text-[11px] text-on-surface-variant mt-0.5">
+                            Kahit anong produkto, maaari kang maglagay ng types o variations (hal. klase, size, modelo, format, material) na may kanya-kanyang stock at presyo.
+                        </p>
                     </div>
-                    <button type="button" onclick="addVariantRow()" class="px-sm py-1 bg-surface-container-high hover:bg-surface-variant text-primary rounded-lg text-xs font-bold transition-colors flex items-center gap-1 border border-outline-variant/30">
-                        <span class="material-symbols-outlined text-[14px]">add</span> Add Variant
+                    <button type="button" onclick="addVariantRow()" class="px-md py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-colors flex items-center gap-1 border border-primary/30 shrink-0 shadow-xs">
+                        <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                        <span>Magdagdag ng Type</span>
                     </button>
+                </div>
+
+                <!-- Column Labels Header -->
+                <div id="variantHeaderLabels" class="hidden grid grid-cols-12 gap-xs text-[11px] font-bold text-on-surface-variant uppercase tracking-wider px-xs pt-1">
+                    <div class="col-span-6">Pangalan ng Type / Variation</div>
+                    <div class="col-span-3 text-center">Stock Qty</div>
+                    <div class="col-span-2 text-right">Presyo (₱)</div>
+                    <div class="col-span-1 text-center">Alisin</div>
                 </div>
 
                 <div id="variantRowsContainer" class="space-y-xs">
                     <!-- Dynamic variant rows populated by JS -->
+                </div>
+
+                <div id="variantEmptyHint" class="text-xs text-on-surface-variant italic py-2 text-center bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/30">
+                    Walang nakatakdang types. (Gagamitin ang pangunahing stock at presyo ng produkto sa itaas).
                 </div>
             </div>
 
@@ -577,6 +592,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                 });
             }
         }
+        updateVariantHeaderState();
         modal.classList.remove('hidden');
     }
 
@@ -662,31 +678,48 @@ function inv_stock_pill(int $stock, int $threshold): array {
             .replace(/'/g, '&#039;');
     }
 
-    function addVariantRow(name = '', value = '', stock = 0, price = '', sku = '') {
+    function addVariantRow(name = 'Type', value = '', stock = 0, price = '', sku = '') {
         const container = document.getElementById('variantRowsContainer');
         if (!container) return;
+
+        // If value was provided or name was saved as the variation label
+        const displayVal = (value !== '' ? value : (name !== 'Type' && name !== '' ? name : ''));
+
         const row = document.createElement('div');
-        row.className = 'variant-row grid grid-cols-12 gap-xs items-center p-xs bg-surface-container-low rounded-xl border border-outline-variant/30';
+        row.className = 'variant-row grid grid-cols-12 gap-xs items-center p-1.5 bg-surface-container-low rounded-xl border border-outline-variant/30 hover:border-outline-variant transition-colors';
         row.innerHTML = `
-            <div class="col-span-4">
-                <input type="text" name="variant_name[]" value="${escapeHtml(name)}" placeholder="Option (e.g. Color)" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+            <input type="hidden" name="variant_name[]" value="${escapeHtml(name || 'Type')}">
+            <div class="col-span-6">
+                <input type="text" name="variant_value[]" value="${escapeHtml(displayVal)}" placeholder="Hal. Hardbound, 80gsm, 0.5mm, XL, Matte..." required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
             </div>
             <div class="col-span-3">
-                <input type="text" name="variant_value[]" value="${escapeHtml(value)}" placeholder="Value (e.g. Black)" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+                <input type="number" min="0" name="variant_stock[]" value="${stock !== '' ? stock : 0}" placeholder="Stock" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface text-center focus:border-primary focus:ring-1 focus:ring-primary">
             </div>
             <div class="col-span-2">
-                <input type="number" min="0" name="variant_stock[]" value="${stock !== '' ? stock : 0}" placeholder="Stock" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
-            </div>
-            <div class="col-span-2">
-                <input type="number" step="0.01" min="0" name="variant_price[]" value="${price !== null && price !== undefined && price !== '' ? price : ''}" placeholder="₱ Override" class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+                <input type="number" step="0.01" min="0" name="variant_price[]" value="${price !== null && price !== undefined && price !== '' ? price : ''}" placeholder="Opsyonal" class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface text-right focus:border-primary focus:ring-1 focus:ring-primary">
             </div>
             <div class="col-span-1 flex justify-center">
-                <button type="button" onclick="this.closest('.variant-row').remove()" class="p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-error-container/20 transition-colors" title="Remove variant">
+                <button type="button" onclick="removeVariantRow(this)" class="p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-error-container/20 transition-colors" title="Alisin ang type na ito">
                     <span class="material-symbols-outlined text-[16px]">close</span>
                 </button>
             </div>
         `;
         container.appendChild(row);
+        updateVariantHeaderState();
+    }
+
+    function removeVariantRow(btn) {
+        btn.closest('.variant-row')?.remove();
+        updateVariantHeaderState();
+    }
+
+    function updateVariantHeaderState() {
+        const container = document.getElementById('variantRowsContainer');
+        const header = document.getElementById('variantHeaderLabels');
+        const hint = document.getElementById('variantEmptyHint');
+        const hasRows = container && container.children.length > 0;
+        if (header) header.classList.toggle('hidden', !hasRows);
+        if (hint) hint.classList.toggle('hidden', hasRows);
     }
 
     document.getElementById('p_images')?.addEventListener('change', function(e) {
