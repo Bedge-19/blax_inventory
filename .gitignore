@@ -1,126 +1,147 @@
-#-------------------------
-# Operating Specific Junk Files
-#-------------------------
-
-# OS X
+#--------------------------------------------------------------------
+# OPERATING SYSTEM JUNK FILES
+#--------------------------------------------------------------------
+# macOS
 .DS_Store
 .AppleDouble
 .LSOverride
-
-# OS X Thumbnails
 ._*
 
-# Windows image file caches
+# Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
-# Recycle Bin used on file shares
 $RECYCLE.BIN/
+*.lnk
 
-# Windows Installer files
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows Installers
 *.cab
 *.msi
 *.msm
 *.msp
 
-# Windows shortcuts
-*.lnk
-
-# Linux
-*~
-
-# KDE directory preferences
-.directory
-
-# Linux trash folder which might appear on any partition or disk
-.Trash-*
-
-#-------------------------
-# Environment Files
-#-------------------------
-# These should never be under version control,
-# as it poses a security risk.
+#--------------------------------------------------------------------
+# ENVIRONMENT & CREDENTIAL FILES (SECURITY SENSITIVE)
+#--------------------------------------------------------------------
+# Never commit real environment variables, secret keys, or local credentials.
 .env
 .env.*
 !.env.example
+!.env*.example
 env
+.env.local
+.env.*.local
+
+# Local credentials, certificates, and private keys
+*.key
+*.pem
+*.crt
+*.pfx
+*.pkcs12
+*.cert
+credentials.json
+client_secret*.json
+service_account*.json
+id_rsa
+id_rsa.pub
+
+# Vagrant
 .vagrant
 Vagrantfile
 
-#-------------------------
-# Database Dumps
-#-------------------------
-*.sql
+#--------------------------------------------------------------------
+# DEPENDENCIES & PACKAGE MANAGERS
+#--------------------------------------------------------------------
+/vendor/
+vendor/
+/node_modules/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-#-------------------------
-# AI / Assistant tooling
-#-------------------------
-.claude/
-
-#-------------------------
-# Build Artifacts
-#-------------------------
-build/
-
-#-------------------------
-# Temporary Files
-#-------------------------
+#--------------------------------------------------------------------
+# STORAGE, CACHE & TEMPORARY DIRECTORIES
+#--------------------------------------------------------------------
+# CodeIgniter 4 writable storage
 writable/
-php_errors.log
+writable/*
+!writable/
+!writable/cache/.gitkeep
+!writable/logs/.gitkeep
+!writable/session/.gitkeep
+!writable/debugbar/.gitkeep
+!writable/uploads/.gitkeep
 
-#-------------------------
-# User Uploads
-#-------------------------
+# Generic / Laravel storage & log directories
+/storage/
+storage/
+/storage/logs/
+/storage/framework/
+/storage/logs
+/storage/framework
+storage/logs/
+storage/framework/
+storage/cache/
+
+# Logs & temp files
+*.log
+php_errors.log
+.cache/
+tmp/
+
+#--------------------------------------------------------------------
+# USER UPLOADS (Ignore dynamic uploads, keep folder structure)
+#--------------------------------------------------------------------
 public/uploads/**
 !public/uploads/**/
 !public/uploads/**/.gitkeep
 !public/uploads/.gitkeep
 
-#-------------------------
-# User Guide Temp Files
-#-------------------------
+#--------------------------------------------------------------------
+# DATABASE DUMPS & LOCAL BACKUPS
+#--------------------------------------------------------------------
+*.sql
+*.sql.gz
+*.sqlite
+*.db
+
+#--------------------------------------------------------------------
+# BUILD & TEST ARTIFACTS
+#--------------------------------------------------------------------
+build/
+dist/
 user_guide_src/build/*
 user_guide_src/cilexer/build/*
 user_guide_src/cilexer/dist/*
 user_guide_src/cilexer/pycilexer.egg-info/*
-
-#-------------------------
-# Test Files
-#-------------------------
 tests/coverage*
-
-# Don't save phpunit under version control.
 phpunit
+/results/
+/phpunit*.xml
 
-#-------------------------
-# Composer
-#-------------------------
-vendor/
+#--------------------------------------------------------------------
+# AI / ASSISTANT TOOLING & SCRATCHPADS
+#--------------------------------------------------------------------
+.claude/
+.gemini/
+.agents/
 
-#-------------------------
-# IDE / Development Files
-#-------------------------
-
-# Modules Testing
-_modules/*
-
-# phpenv local config
-.php-version
-
-# Jetbrains editors (PHPStorm, etc)
+#--------------------------------------------------------------------
+# IDE & DEVELOPMENT CONFIGURATIONS
+#--------------------------------------------------------------------
+# JetBrains (PhpStorm, etc.)
 .idea/
 *.iml
 
-# Netbeans
-nbproject/
-build/
-nbbuild/
-dist/
-nbdist/
-nbactions.xml
-nb-configuration.xml
-.nb-gradle/
+# Visual Studio Code
+.vscode/
 
 # Sublime Text
 *.tmlanguage.cache
@@ -129,10 +150,16 @@ nb-configuration.xml
 *.sublime-workspace
 *.sublime-project
 .phpintel
+
+# NetBeans
+nbproject/
+nbbuild/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+.nb-gradle/
+
+# PHP tooling
+.php-version
+_modules/*
 /api/
-
-# Visual Studio Code
-.vscode/
-
-/results/
-/phpunit*.xml

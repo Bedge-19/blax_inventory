@@ -8,7 +8,8 @@
     $avatarChar = strtoupper(substr($userName, 0, 1));
 ?>
 
-<header class="bg-surface-container-lowest shadow-sm sticky top-0 z-40 flex justify-between items-center w-full min-h-[72px] py-2 px-4 md:px-8 lg:px-10 max-w-container-max mx-auto border-b border-outline-variant/30">
+<header class="bg-surface-container-lowest shadow-sm sticky top-0 z-40 w-full border-b border-outline-variant/30">
+    <div class="flex justify-between items-center w-full min-h-[72px] py-2 px-4 md:px-8 lg:px-10 max-w-container-max mx-auto">
 
     <div class="flex items-center gap-3 md:gap-6 lg:gap-xl">
 
@@ -229,6 +230,8 @@
             <?php endif; ?>
 
         </div>
+
+    </div>
 
     </div>
 

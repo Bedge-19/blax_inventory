@@ -9,7 +9,7 @@
     <div class="p-md rounded-xl bg-error-container text-on-error-container text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<div class="flex flex-1 max-w-container-max mx-auto w-full">
+<div class="flex flex-1 flex-col md:flex-row max-w-container-max mx-auto w-full">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'printing']) ?>
 

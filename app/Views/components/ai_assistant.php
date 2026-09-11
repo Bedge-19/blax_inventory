@@ -178,6 +178,12 @@
         return '\u20B1' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
+    function resolveImgUrl(url) {
+        if (!url) return FALLBACK_IMG;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        return '<?= base_url() ?>/' + url.replace(/^\/+/, '');
+    }
+
     // Product card rendered inside the chat. Every value comes from the
     // server's whitelisted product DTO - nothing is generated client-side.
     function productCard(p) {
@@ -185,7 +191,7 @@
         const url = PRODUCT_URL + encodeURIComponent(p.id);
         // Image goes in an escaped src attribute (not a CSS url(), which would
         // let a single quote in a seller-supplied URL break out of the context).
-        const img = escapeHtml(p.image_url || FALLBACK_IMG);
+        const img = escapeHtml(resolveImgUrl(p.image_url));
         const stockBadge = inStock
             ? '<span class="text-[10px] font-semibold text-green-700 bg-green-100 px-2 py-[2px] rounded-full">In stock</span>'
             : '<span class="text-[10px] font-semibold text-white bg-error px-2 py-[2px] rounded-full">Out of stock</span>';
@@ -269,10 +275,9 @@
 
             if (typing.parentNode) history.removeChild(typing);
 
-            if (!data) {
-                appendAssistant('Sorry, I had trouble replying just now. Please try again.', []);
-            } else if (data.status === 'error') {
-                appendAssistant(data.message || 'Sorry, something went wrong. Please try again.', []);
+            if (!response.ok || !data || data.status === 'error') {
+                const errMsg = (data && data.message) ? data.message : 'Sorry, I had trouble replying just now. Please try again.';
+                appendAssistant(errMsg, []);
             } else {
                 appendAssistant(data.reply || 'Here is what I found for you:', data.products);
             }

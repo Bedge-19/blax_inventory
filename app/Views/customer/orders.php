@@ -1,7 +1,7 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<div class="flex flex-1 max-w-container-max mx-auto w-full">
+<div class="flex flex-1 flex-col md:flex-row max-w-container-max mx-auto w-full">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'orders']) ?>
 
