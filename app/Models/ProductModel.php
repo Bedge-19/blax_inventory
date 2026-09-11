@@ -413,6 +413,7 @@ class ProductModel extends Model
             'id'             => (int) $r['id'],
             'name'           => (string) $r['name'],
             'price'          => (float) $r['price'],
+            'image_url'      => function_exists('product_image_url') ? product_image_url($r['image_url'] ?? null) : ($r['image_url'] !== null && $r['image_url'] !== '' ? (string) $r['image_url'] : null),
             'stock_quantity' => (int) $r['stock_quantity'],
             'shop_name'      => $r['shop_name'] !== null ? (string) $r['shop_name'] : null,
         ], $rows);

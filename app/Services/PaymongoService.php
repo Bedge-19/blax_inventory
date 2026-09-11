@@ -11,8 +11,10 @@ class PaymongoService
     public function __construct(?string $secretKey = null, ?string $publicKey = null)
     {
         $this->secretKey = $secretKey
+            ?? (string) (getenv('PAYMONGO_SECRET_KEY') ?: ($_ENV['PAYMONGO_SECRET_KEY'] ?? ''));
 
         $this->publicKey = $publicKey
+            ?? (string) (getenv('PAYMONGO_PUBLIC_KEY') ?: ($_ENV['PAYMONGO_PUBLIC_KEY'] ?? ''));
     }
 
     /**
