@@ -133,6 +133,51 @@
             <!-- Action Controls -->
             <div class="mt-auto space-y-md">
 
+                <?php
+                $groupedVariants = [];
+                if (!empty($variants)) {
+                    foreach ($variants as $v) {
+                        $groupedVariants[$v['name']][] = $v;
+                    }
+                }
+                ?>
+
+                <?php if (!empty($groupedVariants)): ?>
+                    <div class="bg-surface-container-low/70 rounded-2xl p-md mb-md border border-outline-variant/30 space-y-md" id="variants-section">
+                        <?php foreach ($groupedVariants as $groupName => $options): ?>
+                            <div>
+                                <div class="flex justify-between items-center mb-1.5">
+                                    <span class="text-label-sm font-bold text-on-surface uppercase tracking-wider">Select <?= esc($groupName) ?>:</span>
+                                    <span id="selected-val-<?= esc(url_title($groupName, '-', true)) ?>" class="text-xs font-bold text-primary"></span>
+                                </div>
+                                <div class="flex flex-wrap gap-xs">
+                                    <?php foreach ($options as $opt): ?>
+                                        <?php $isOutOfStock = (int) $opt['stock_quantity'] <= 0; ?>
+                                        <button type="button"
+                                                class="variant-pill px-md py-1.5 rounded-xl border text-label-sm font-semibold transition-all flex items-center gap-xs <?= $isOutOfStock ? 'opacity-40 border-dashed border-outline-variant cursor-not-allowed line-through bg-surface-container/50 text-on-surface-variant' : 'border-outline-variant/50 hover:border-primary bg-surface-container hover:bg-surface-variant text-on-surface' ?>"
+                                                <?= $isOutOfStock ? 'disabled title="Out of Stock"' : '' ?>
+                                                data-id="<?= (int) $opt['id'] ?>"
+                                                data-group="<?= esc($groupName) ?>"
+                                                data-group-slug="<?= esc(url_title($groupName, '-', true)) ?>"
+                                                data-value="<?= esc($opt['value']) ?>"
+                                                data-stock="<?= (int) $opt['stock_quantity'] ?>"
+                                                data-price="<?= $opt['price_override'] !== null ? (float) $opt['price_override'] : '' ?>">
+                                            <span><?= esc($opt['value']) ?></span>
+                                            <?php if ($opt['price_override'] !== null && (float) $opt['price_override'] > 0): ?>
+                                                <span class="text-[11px] opacity-75 font-normal">₱<?= number_format((float) $opt['price_override'], 2) ?></span>
+                                            <?php endif; ?>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <div id="variant-stock-status" class="text-xs font-semibold text-on-surface-variant flex items-center gap-xs pt-1 border-t border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px] text-primary">info</span>
+                            <span id="variant-stock-text">Please choose your options above</span>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
                 <?php $outOfStock = (int) ($product['stock_quantity'] ?? 0) <= 0; ?>
 
                 <form action="<?= base_url('cart/add') ?>" method="POST" class="space-y-md">
@@ -140,6 +185,7 @@
                     <?= csrf_field() ?>
 
                     <input type="hidden" name="product_id" value="<?= $product['id'] ?>">
+                    <input type="hidden" name="variant_id" id="selected-variant-id" value="">
                     <input type="hidden" name="quantity" id="quantity-input" value="1" min="1" max="<?= esc($product['stock_quantity'] ?? 99) ?>">
 
                     <div class="flex items-center gap-md">
@@ -378,6 +424,97 @@
                 update(parseInt(display.textContent, 10) + 1);
             });
         }
+    }
+
+    // Variant selection logic
+    var variantPills = document.querySelectorAll('.variant-pill');
+    var variantInput = document.getElementById('selected-variant-id');
+    var priceDisplay = document.querySelector('.text-display.font-display.text-primary');
+    var defaultPriceText = priceDisplay ? priceDisplay.textContent : '';
+    var cartBtn = document.querySelector('button[type="submit"].bg-secondary-container');
+    var buyBtn = document.querySelector('button[type="submit"].bg-primary');
+    var variantStockText = document.getElementById('variant-stock-text');
+
+    variantPills.forEach(function (pill) {
+        pill.addEventListener('click', function () {
+            if (this.hasAttribute('disabled')) return;
+
+            var group = this.getAttribute('data-group');
+            var groupSlug = this.getAttribute('data-group-slug');
+            var val = this.getAttribute('data-value');
+            var stock = parseInt(this.getAttribute('data-stock'), 10);
+            var price = this.getAttribute('data-price');
+            var id = this.getAttribute('data-id');
+
+            // Toggle active styling among sibling pills in same group
+            document.querySelectorAll('.variant-pill[data-group="' + group + '"]').forEach(function (sibling) {
+                sibling.classList.remove('ring-2', 'ring-primary', 'border-primary', 'bg-primary/10', 'text-primary');
+                sibling.classList.add('border-outline-variant/50', 'bg-surface-container', 'text-on-surface');
+            });
+
+            this.classList.remove('border-outline-variant/50', 'bg-surface-container', 'text-on-surface');
+            this.classList.add('ring-2', 'ring-primary', 'border-primary', 'bg-primary/10', 'text-primary');
+
+            // Update selected value text
+            var labelSpan = document.getElementById('selected-val-' + groupSlug);
+            if (labelSpan) {
+                labelSpan.textContent = val;
+            }
+
+            // Set hidden variant_id
+            if (variantInput) {
+                variantInput.value = id;
+            }
+
+            // Update price if overridden
+            if (priceDisplay) {
+                if (price && parseFloat(price) > 0) {
+                    priceDisplay.textContent = '₱' + parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                } else {
+                    priceDisplay.textContent = defaultPriceText;
+                }
+            }
+
+            // Update stock availability and quantity bounds
+            if (stock > 0) {
+                if (variantStockText) {
+                    variantStockText.textContent = val + ' — ' + stock + ' in stock';
+                    variantStockText.className = 'text-xs font-semibold text-primary';
+                }
+                if (cartBtn) {
+                    cartBtn.removeAttribute('disabled');
+                    cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">shopping_cart</span> Add to Cart';
+                }
+                if (buyBtn) {
+                    buyBtn.removeAttribute('disabled');
+                }
+                if (input) {
+                    input.setAttribute('max', stock);
+                    maxQty = stock;
+                    if (parseInt(input.value, 10) > stock) {
+                        update(stock);
+                    }
+                }
+            } else {
+                if (variantStockText) {
+                    variantStockText.textContent = val + ' is currently out of stock';
+                    variantStockText.className = 'text-xs font-semibold text-error';
+                }
+                if (cartBtn) {
+                    cartBtn.setAttribute('disabled', 'disabled');
+                    cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">remove_shopping_cart</span> Out of Stock';
+                }
+                if (buyBtn) {
+                    buyBtn.setAttribute('disabled', 'disabled');
+                }
+            }
+        });
+    });
+
+    // Auto-select first available variant on page load
+    var firstAvailable = document.querySelector('.variant-pill:not([disabled])');
+    if (firstAvailable) {
+        firstAvailable.click();
     }
 
     document.querySelectorAll('button').forEach(function (button) {

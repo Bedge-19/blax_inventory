@@ -16,6 +16,7 @@ use App\Models\UserModel;
 use App\Models\ShopBusinessHourModel;
 use App\Models\ShopNotificationPreferenceModel;
 use App\Models\ProductImageModel;
+use App\Models\ProductVariantModel;
 use App\Models\PaymentModel;
 
 class Tenant extends BaseController
@@ -291,22 +292,45 @@ class Tenant extends BaseController
             'inventory'
         );
 
+        $productIds = !empty($result['products']) ? array_column($result['products'], 'id') : [];
+        $productImages = [];
+        $productVariants = [];
+        if (!empty($productIds)) {
+            $allImages = (new ProductImageModel())
+                ->whereIn('product_id', $productIds)
+                ->orderBy('sort_order', 'ASC')
+                ->findAll();
+            foreach ($allImages as $img) {
+                $productImages[$img['product_id']][] = $img;
+            }
+
+            $allVariants = (new ProductVariantModel())
+                ->whereIn('product_id', $productIds)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+            foreach ($allVariants as $var) {
+                $productVariants[$var['product_id']][] = $var;
+            }
+        }
+
         return view('tenant/inventory', [
-            'shop'       => $shop,
-            'products'   => $result['products'],
-            'pager'      => $result['pager'],
-            'summary'    => $productModel->getInventorySummary($shopId),
-            'categories' => $productModel->getShopCategories($shopId),
-            'all_categories' => (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll(),
-            'filters'    => [
+            'shop'            => $shop,
+            'products'        => $result['products'],
+            'productImages'   => $productImages,
+            'productVariants' => $productVariants,
+            'pager'           => $result['pager'],
+            'summary'         => $productModel->getInventorySummary($shopId),
+            'categories'      => $productModel->getShopCategories($shopId),
+            'all_categories'  => (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll(),
+            'filters'         => [
                 'q'          => $search,
                 'sku'        => $sku,
                 'category'   => $categoryId,
                 'stock'      => $stockStatus,
                 'bestseller' => $bestseller,
             ],
-            'activeNav'  => 'inventory',
-            'title'      => 'Inventory Management',
+            'activeNav'       => 'inventory',
+            'title'           => 'Inventory Management',
         ]);
     }
 
@@ -1671,6 +1695,7 @@ class Tenant extends BaseController
             'low_stock_threshold' => $threshold > 0 ? $threshold : 5,
         ];
 
+        $targetProductId = $id;
         if ($id > 0) {
             $existing = $productModel->find($id);
             if (!$existing || (int) $existing['shop_id'] !== $shopId) {
@@ -1678,73 +1703,183 @@ class Tenant extends BaseController
             }
             $productModel->update($id, $data);
             $this->maybeNotifyLowStock($shopId, $existing, $stock);
-            // Handle new image upload on edit
-            $this->handleProductImageUpload($id);
-            $this->syncProductEmbedding($id);
-            return redirect()->back()->with('success', 'Product updated.');
+        } else {
+            $data['shop_id'] = $shopId;
+            $data['sku']     = $sku !== '' ? $sku : $this->generateSku($productModel, $shopId);
+            $data['status']  = 'active';
+            $data['rating_average'] = 0;
+            $data['rating_count']   = 0;
+
+            $productModel->insert($data);
+            $targetProductId = (int) $productModel->getInsertID();
         }
 
-        $data['shop_id'] = $shopId;
-        $data['sku']     = $sku !== '' ? $sku : $this->generateSku($productModel, $shopId);
-        $data['status']  = 'active';
-        $data['rating_average'] = 0;
-        $data['rating_count']   = 0;
+        // Multiple images upload & attachment
+        $this->handleProductImageUpload($targetProductId);
 
-        $productModel->insert($data);
-        $newId = (int) $productModel->getInsertID();
-        $this->handleProductImageUpload($newId);
-        $this->syncProductEmbedding($newId);
+        // Product variants save/update
+        $this->handleProductVariantsSave($targetProductId);
 
-        return redirect()->back()->with('success', 'Product added to inventory.');
+        // Sync embedding for AI search
+        $this->syncProductEmbedding($targetProductId);
+
+        $msg = $id > 0 ? 'Product updated.' : 'Product added to inventory.';
+        return redirect()->back()->with('success', $msg);
     }
 
     /**
-     * Upload and save a product image if one was submitted.
+     * Upload and save product images (supports multiple images via product_images[]).
      */
     private function handleProductImageUpload(int $productId): void
     {
-        $img = $this->request->getFile('product_image');
-        if (!$img || !$img->isValid() || $img->hasMoved()) {
-            return;
-        }
-        if (!in_array($img->getMimeType(), ['image/jpeg', 'image/png', 'image/webp'], true)) {
-            return;
-        }
-        $maxBytes = 5 * 1024 * 1024;
-        if ($img->getSize() > $maxBytes) {
-            return;
-        }
-
-        $uploadPath = ROOTPATH . 'public/uploads/product_images/';
+        $imageModel   = new ProductImageModel();
+        $uploadPath   = ROOTPATH . 'public/uploads/product_images/';
         if (!is_dir($uploadPath)) {
             mkdir($uploadPath, 0755, true);
         }
 
-        $fileName = 'prod_' . $productId . '_' . time() . '.' . $img->getClientExtension();
-        $img->move($uploadPath, $fileName);
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        $maxBytes     = 5 * 1024 * 1024; // 5MB
 
-        $imageModel = new ProductImageModel();
-        // Replace existing primary image
-        $existing = $imageModel->where('product_id', $productId)->where('is_primary', 1)->first();
-        if ($existing) {
-            // Delete old file if local
-            $oldPath = ROOTPATH . 'public/' . $existing['image_url'];
-            if (str_starts_with($existing['image_url'], 'uploads/') && file_exists($oldPath)) {
-                @unlink($oldPath);
-            }
-            $imageModel->update($existing['id'], [
-                'image_url'  => 'uploads/product_images/' . $fileName,
-                'sort_order' => 0,
-            ]);
-        } else {
-            $imageModel->insert([
-                'product_id' => $productId,
-                'image_url'  => 'uploads/product_images/' . $fileName,
-                'alt_text'   => '',
-                'is_primary' => 1,
-                'sort_order' => 0,
-            ]);
+        $existingCount = $imageModel->where('product_id', $productId)->countAllResults();
+        $maxSortOrder  = 0;
+        if ($existingCount > 0) {
+            $latest = $imageModel->where('product_id', $productId)->orderBy('sort_order', 'DESC')->first();
+            $maxSortOrder = $latest ? ((int) $latest['sort_order'] + 1) : $existingCount;
         }
+
+        // 1. Multiple files via product_images[]
+        $files = $this->request->getFileMultiple('product_images');
+        if (!empty($files)) {
+            foreach ($files as $file) {
+                if (!$file || !$file->isValid() || $file->hasMoved()) {
+                    continue;
+                }
+                if (!in_array($file->getMimeType(), $allowedMimes, true) || $file->getSize() > $maxBytes) {
+                    continue;
+                }
+
+                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientExtension();
+                $file->move($uploadPath, $fileName);
+
+                $isPrimary = ($existingCount === 0) ? 1 : 0;
+                $imageModel->insert([
+                    'product_id' => $productId,
+                    'image_url'  => 'uploads/product_images/' . $fileName,
+                    'alt_text'   => '',
+                    'is_primary' => $isPrimary,
+                    'sort_order' => $maxSortOrder++,
+                ]);
+                $existingCount++;
+            }
+        }
+
+        // 2. Single file input fallback (product_image)
+        $single = $this->request->getFile('product_image');
+        if ($single && $single->isValid() && !$single->hasMoved()) {
+            if (in_array($single->getMimeType(), $allowedMimes, true) && $single->getSize() <= $maxBytes) {
+                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $single->getClientExtension();
+                $single->move($uploadPath, $fileName);
+
+                $isPrimary = ($existingCount === 0) ? 1 : 0;
+                $imageModel->insert([
+                    'product_id' => $productId,
+                    'image_url'  => 'uploads/product_images/' . $fileName,
+                    'alt_text'   => '',
+                    'is_primary' => $isPrimary,
+                    'sort_order' => $maxSortOrder++,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Save product variants submitted via repeatable form fields.
+     */
+    private function handleProductVariantsSave(int $productId): void
+    {
+        $variantNames  = (array) $this->request->getPost('variant_name');
+        $variantValues = (array) $this->request->getPost('variant_value');
+        $variantStocks = (array) $this->request->getPost('variant_stock');
+        $variantPrices = (array) $this->request->getPost('variant_price');
+        $variantSkus   = (array) $this->request->getPost('variant_sku');
+
+        $variantModel = new ProductVariantModel();
+        // Clear existing variants for this product before re-inserting
+        $variantModel->where('product_id', $productId)->delete();
+
+        if (!empty($variantNames)) {
+            $inserted = [];
+            foreach ($variantNames as $idx => $name) {
+                $name  = trim((string) $name);
+                $value = trim((string) ($variantValues[$idx] ?? ''));
+                if ($name === '' || $value === '') {
+                    continue;
+                }
+                $stock = max(0, (int) ($variantStocks[$idx] ?? 0));
+                $price = isset($variantPrices[$idx]) && $variantPrices[$idx] !== '' ? (float) $variantPrices[$idx] : null;
+                $sku   = isset($variantSkus[$idx]) ? trim((string) $variantSkus[$idx]) : null;
+
+                $inserted[] = [
+                    'product_id'     => $productId,
+                    'name'           => $name,
+                    'value'          => $value,
+                    'sku_suffix'     => $sku !== '' ? $sku : null,
+                    'stock_quantity' => $stock,
+                    'price_override' => ($price !== null && $price >= 0) ? $price : null,
+                ];
+            }
+            if (!empty($inserted)) {
+                $variantModel->insertBatch($inserted);
+            }
+        }
+    }
+
+    /**
+     * Delete an uploaded product image (CSRF-protected, tenant-scoped).
+     */
+    public function deleteProductImage($imageId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $imageId    = (int) $imageId;
+        $imageModel = new ProductImageModel();
+
+        $image = $imageModel
+            ->select('product_images.*, products.shop_id')
+            ->join('products', 'products.id = product_images.product_id')
+            ->where('product_images.id', $imageId)
+            ->first();
+
+        if (!$image || (int) $image['shop_id'] !== $shopId) {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'error' => 'Image not found or permission denied.']);
+        }
+
+        $productId  = (int) $image['product_id'];
+        $wasPrimary = (int) $image['is_primary'] === 1;
+
+        // Delete local physical file
+        $filePath = ROOTPATH . 'public/' . $image['image_url'];
+        if (str_starts_with($image['image_url'], 'uploads/') && file_exists($filePath)) {
+            @unlink($filePath);
+        }
+
+        // Delete database record
+        $imageModel->delete($imageId);
+
+        // If primary image was deleted, promote the next lowest sort_order image
+        if ($wasPrimary) {
+            $next = $imageModel->where('product_id', $productId)->orderBy('sort_order', 'ASC')->first();
+            if ($next) {
+                $imageModel->update($next['id'], ['is_primary' => 1]);
+            }
+        }
+
+        return $this->response->setJSON(['success' => true, 'message' => 'Image deleted successfully.']);
     }
 
     /**

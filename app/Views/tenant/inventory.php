@@ -218,7 +218,9 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                                 data-stock="<?= (int) $p['stock_quantity'] ?>"
                                                 data-threshold="<?= (int) ($p['low_stock_threshold'] ?? 5) ?>"
                                                 data-description="<?= esc($p['description'] ?? '') ?>"
-                                                data-image="<?= esc(!empty($p['image_url']) ? (str_starts_with($p['image_url'], 'http') ? $p['image_url'] : base_url($p['image_url'])) : '') ?>">
+                                                data-image="<?= esc(!empty($p['image_url']) ? (str_starts_with($p['image_url'], 'http') ? $p['image_url'] : base_url($p['image_url'])) : '') ?>"
+                                                data-images="<?= esc(json_encode($productImages[$p['id']] ?? []), 'attr') ?>"
+                                                data-variants="<?= esc(json_encode($productVariants[$p['id']] ?? []), 'attr') ?>">
                                             <span class="material-symbols-outlined">edit</span>
                                         </button>
                                         <button type="button"
@@ -318,21 +320,34 @@ function inv_stock_pill(int $stock, int $threshold): array {
             <?= csrf_field() ?>
             <input type="hidden" name="product_id" id="product_id">
 
-            <!-- Product Image Upload -->
-            <div>
-                <label class="text-label-sm font-bold text-on-surface-variant">Product Photo</label>
-                <div id="p_img_dropzone" onclick="document.getElementById('p_image').click()" class="mt-xs cursor-pointer border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center gap-sm p-md hover:border-primary transition-colors bg-surface-container-low min-h-[120px] relative overflow-hidden">
-                    <img id="p_img_preview" src="" alt="Preview" class="absolute inset-0 w-full h-full object-cover rounded-xl hidden">
-                    <div id="p_img_placeholder" class="flex flex-col items-center gap-xs text-on-surface-variant">
-                        <span class="material-symbols-outlined text-4xl">add_photo_alternate</span>
-                        <span class="text-label-sm">Click to upload product photo</span>
-                        <span class="text-[11px] text-outline">JPG, PNG, WEBP — Max 5MB</span>
-                    </div>
-                    <button type="button" id="p_img_clear" onclick="clearProductImage(event)" class="hidden absolute top-1 right-1 bg-error text-on-error rounded-full w-6 h-6 flex items-center justify-center shadow">
-                        <span class="material-symbols-outlined text-[14px]">close</span>
-                    </button>
+            <!-- Product Images Upload & Gallery -->
+            <div class="space-y-xs">
+                <label class="text-label-sm font-bold text-on-surface-variant flex justify-between items-center">
+                    <span>Product Photos (Multiple Images Supported)</span>
+                    <span class="text-[11px] font-normal text-on-surface-variant">JPG, PNG, WEBP — Max 5MB each</span>
+                </label>
+
+                <!-- Existing uploaded thumbnails -->
+                <div id="p_existing_gallery" class="hidden mb-xs p-xs bg-surface-container-low rounded-xl border border-outline-variant/30">
+                    <p class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 px-1">Uploaded Photos</p>
+                    <div id="p_existing_thumbnails" class="flex flex-wrap gap-xs"></div>
                 </div>
-                <input type="file" name="product_image" id="p_image" accept="image/jpeg,image/png,image/webp" class="sr-only">
+
+                <!-- Dropzone / File input -->
+                <div id="p_img_dropzone" onclick="document.getElementById('p_images').click()" class="cursor-pointer border-2 border-dashed border-outline-variant rounded-xl flex flex-col items-center justify-center gap-xs p-md hover:border-primary transition-colors bg-surface-container-low min-h-[90px] relative">
+                    <div class="flex flex-col items-center gap-xs text-on-surface-variant text-center">
+                        <span class="material-symbols-outlined text-3xl text-primary">add_photo_alternate</span>
+                        <span class="text-label-sm font-medium">Click to select 1 or more product photos</span>
+                        <span class="text-[11px] text-outline">You can select multiple images at once</span>
+                    </div>
+                </div>
+                <input type="file" name="product_images[]" id="p_images" multiple accept="image/jpeg,image/png,image/webp" class="sr-only">
+
+                <!-- New selected files preview list -->
+                <div id="p_new_preview_container" class="hidden mt-xs p-xs bg-surface-container-low rounded-xl border border-outline-variant/30">
+                    <p class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1 px-1">Selected New Photos</p>
+                    <div id="p_new_preview_list" class="flex flex-wrap gap-xs"></div>
+                </div>
             </div>
 
             <div>
@@ -378,7 +393,28 @@ function inv_stock_pill(int $stock, int $threshold): array {
                 <label class="text-label-sm font-bold text-on-surface-variant">Description</label>
                 <textarea name="description" id="p_description" rows="3" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl"></textarea>
             </div>
-            <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90">Save Product</button>
+
+            <!-- Product Variants (Types/Options e.g. Color, Size) -->
+            <div class="border-t border-outline-variant/30 pt-md space-y-sm">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <label class="text-label-sm font-bold text-on-surface flex items-center gap-xs">
+                            <span class="material-symbols-outlined text-[16px] text-primary">tune</span>
+                            Product Variants / Types
+                        </label>
+                        <p class="text-[11px] text-on-surface-variant">Add options (e.g. Type/Color: Black, Blue, Red) with their own stock.</p>
+                    </div>
+                    <button type="button" onclick="addVariantRow()" class="px-sm py-1 bg-surface-container-high hover:bg-surface-variant text-primary rounded-lg text-xs font-bold transition-colors flex items-center gap-1 border border-outline-variant/30">
+                        <span class="material-symbols-outlined text-[14px]">add</span> Add Variant
+                    </button>
+                </div>
+
+                <div id="variantRowsContainer" class="space-y-xs">
+                    <!-- Dynamic variant rows populated by JS -->
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 shadow-md">Save Product</button>
         </form>
     </div>
 </div>
@@ -497,7 +533,16 @@ function inv_stock_pill(int $stock, int $threshold): array {
         document.getElementById('p_stock').value = '';
         document.getElementById('p_threshold').value = '5';
         document.getElementById('p_description').value = '';
-        resetProductImage();
+        
+        // Reset file inputs and preview lists
+        resetProductImages();
+
+        // Reset variants container
+        const variantContainer = document.getElementById('variantRowsContainer');
+        if (variantContainer) {
+            variantContainer.innerHTML = '';
+        }
+
         if (btn) {
             document.getElementById('productModalTitle').textContent = 'Edit Product';
             document.getElementById('product_id').value = btn.dataset.id;
@@ -509,42 +554,165 @@ function inv_stock_pill(int $stock, int $threshold): array {
             document.getElementById('p_stock').value = btn.dataset.stock || '';
             document.getElementById('p_threshold').value = btn.dataset.threshold || '5';
             document.getElementById('p_description').value = btn.dataset.description || '';
-            // Show existing image if available
-            const imgUrl = btn.dataset.image || '';
-            if (imgUrl) {
-                document.getElementById('p_img_preview').src = imgUrl;
-                document.getElementById('p_img_preview').classList.remove('hidden');
-                document.getElementById('p_img_placeholder').classList.add('hidden');
-                document.getElementById('p_img_clear').classList.remove('hidden');
+
+            // Populate existing images
+            let images = [];
+            try {
+                images = JSON.parse(btn.dataset.images || '[]');
+            } catch (e) {
+                images = [];
+            }
+            populateExistingImages(images);
+
+            // Populate existing variants
+            let variants = [];
+            try {
+                variants = JSON.parse(btn.dataset.variants || '[]');
+            } catch (e) {
+                variants = [];
+            }
+            if (variants && variants.length > 0) {
+                variants.forEach(v => {
+                    addVariantRow(v.name, v.value, v.stock_quantity, v.price_override, v.sku_suffix);
+                });
             }
         }
         modal.classList.remove('hidden');
     }
 
-    function resetProductImage() {
-        document.getElementById('p_image').value = '';
-        document.getElementById('p_img_preview').src = '';
-        document.getElementById('p_img_preview').classList.add('hidden');
-        document.getElementById('p_img_placeholder').classList.remove('hidden');
-        document.getElementById('p_img_clear').classList.add('hidden');
+    function resetProductImages() {
+        const fileInput = document.getElementById('p_images');
+        if (fileInput) fileInput.value = '';
+        const previewContainer = document.getElementById('p_new_preview_container');
+        if (previewContainer) previewContainer.classList.add('hidden');
+        const previewList = document.getElementById('p_new_preview_list');
+        if (previewList) previewList.innerHTML = '';
+        const existingGallery = document.getElementById('p_existing_gallery');
+        if (existingGallery) existingGallery.classList.add('hidden');
+        const existingThumbnails = document.getElementById('p_existing_thumbnails');
+        if (existingThumbnails) existingThumbnails.innerHTML = '';
     }
 
-    function clearProductImage(e) {
-        e.stopPropagation();
-        resetProductImage();
+    function populateExistingImages(images) {
+        const gallery = document.getElementById('p_existing_gallery');
+        const container = document.getElementById('p_existing_thumbnails');
+        if (!gallery || !container) return;
+
+        container.innerHTML = '';
+        if (images && images.length > 0) {
+            gallery.classList.remove('hidden');
+            images.forEach(img => {
+                const wrap = document.createElement('div');
+                wrap.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant/40 group bg-surface-variant';
+                wrap.id = 'img-thumb-' + img.id;
+                const src = img.image_url.startsWith('http') ? img.image_url : '<?= base_url() ?>/' + img.image_url;
+                wrap.innerHTML = `
+                    <img src="${src}" class="w-full h-full object-cover">
+                    ${img.is_primary == 1 ? '<span class="absolute bottom-0 inset-x-0 bg-primary text-[9px] text-white text-center font-bold py-0.5">Primary</span>' : ''}
+                    <button type="button" onclick="deleteExistingImage(${img.id}, this)" class="absolute top-0.5 right-0.5 bg-error text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:scale-110 transition-transform" title="Remove image">
+                        <span class="material-symbols-outlined text-[12px]">close</span>
+                    </button>
+                `;
+                container.appendChild(wrap);
+            });
+        } else {
+            gallery.classList.add('hidden');
+        }
     }
 
-    document.getElementById('p_image').addEventListener('change', function() {
-        const file = this.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('p_img_preview').src = e.target.result;
-            document.getElementById('p_img_preview').classList.remove('hidden');
-            document.getElementById('p_img_placeholder').classList.add('hidden');
-            document.getElementById('p_img_clear').classList.remove('hidden');
-        };
-        reader.readAsDataURL(file);
+    async function deleteExistingImage(imageId, btn) {
+        if (!confirm('Remove this photo from the product?')) return;
+        btn.disabled = true;
+
+        const fd = new FormData();
+        const csrfToken = document.querySelector('input[name="<?= csrf_token() ?>"]')?.value || '<?= csrf_hash() ?>';
+        fd.append('<?= csrf_token() ?>', csrfToken);
+
+        try {
+            const res = await fetch('<?= base_url('tenant/products/images/delete/') ?>/' + imageId, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                const thumb = document.getElementById('img-thumb-' + imageId);
+                if (thumb) thumb.remove();
+                const container = document.getElementById('p_existing_thumbnails');
+                if (container && container.children.length === 0) {
+                    document.getElementById('p_existing_gallery').classList.add('hidden');
+                }
+            } else {
+                alert(data.error || 'Failed to delete photo.');
+                btn.disabled = false;
+            }
+        } catch (err) {
+            alert('Network error while deleting photo.');
+            btn.disabled = false;
+        }
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function addVariantRow(name = '', value = '', stock = 0, price = '', sku = '') {
+        const container = document.getElementById('variantRowsContainer');
+        if (!container) return;
+        const row = document.createElement('div');
+        row.className = 'variant-row grid grid-cols-12 gap-xs items-center p-xs bg-surface-container-low rounded-xl border border-outline-variant/30';
+        row.innerHTML = `
+            <div class="col-span-4">
+                <input type="text" name="variant_name[]" value="${escapeHtml(name)}" placeholder="Option (e.g. Color)" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+            </div>
+            <div class="col-span-3">
+                <input type="text" name="variant_value[]" value="${escapeHtml(value)}" placeholder="Value (e.g. Black)" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+            </div>
+            <div class="col-span-2">
+                <input type="number" min="0" name="variant_stock[]" value="${stock !== '' ? stock : 0}" placeholder="Stock" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+            </div>
+            <div class="col-span-2">
+                <input type="number" step="0.01" min="0" name="variant_price[]" value="${price !== null && price !== undefined && price !== '' ? price : ''}" placeholder="₱ Override" class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface">
+            </div>
+            <div class="col-span-1 flex justify-center">
+                <button type="button" onclick="this.closest('.variant-row').remove()" class="p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-error-container/20 transition-colors" title="Remove variant">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    document.getElementById('p_images')?.addEventListener('change', function(e) {
+        const previewContainer = document.getElementById('p_new_preview_container');
+        const list = document.getElementById('p_new_preview_list');
+        if (!previewContainer || !list) return;
+
+        list.innerHTML = '';
+        if (this.files && this.files.length > 0) {
+            previewContainer.classList.remove('hidden');
+            Array.from(this.files).forEach((file) => {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    const item = document.createElement('div');
+                    item.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant/40 bg-surface-variant';
+                    item.innerHTML = `
+                        <img src="${ev.target.result}" class="w-full h-full object-cover">
+                        <span class="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white text-center py-0.5 truncate px-1">${escapeHtml(file.name)}</span>
+                    `;
+                    list.appendChild(item);
+                };
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewContainer.classList.add('hidden');
+        }
     });
 
     let stockProductId = null;

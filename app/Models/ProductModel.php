@@ -62,6 +62,22 @@ class ProductModel extends Model
     }
 
     /**
+     * Direct lookup for a single product with joined shop, category, and primary image details.
+     */
+    public function getProductWithDetails(int $id): ?array
+    {
+        return $this->db->table('products p')
+            ->select('p.*, s.shop_name, s.slug as shop_slug, c.name as category_name, pi.image_url')
+            ->join('shops s', 's.id = p.shop_id', 'left')
+            ->join('categories c', 'c.id = p.category_id', 'left')
+            ->join('product_images pi', 'pi.product_id = p.id AND pi.is_primary = 1', 'left')
+            ->where('p.deleted_at', null)
+            ->where('p.id', $id)
+            ->get()
+            ->getRowArray();
+    }
+
+    /**
      * Paginated global catalog listing across all active products,
      * preserving search + category filters across pages.
      *

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\CategoryModel;
 use App\Models\ProductModel;
 use App\Models\ProductImageModel;
+use App\Models\ProductVariantModel;
 use App\Models\ShopModel;
 use App\Models\OrderModel;
 use App\Models\OrderItemModel;
@@ -181,15 +182,7 @@ class Customer extends BaseController
     public function product($id)
     {
         $productModel = new ProductModel();
-        $products     = $productModel->getProductsWithDetails();
-
-        $product = null;
-        foreach ($products as $p) {
-            if ($p['id'] == $id) {
-                $product = $p;
-                break;
-            }
-        }
+        $product      = $productModel->getProductWithDetails((int) $id);
 
         if (!$product) {
             return redirect()->to('/');
@@ -202,6 +195,11 @@ class Customer extends BaseController
         $productImageModel = new ProductImageModel();
         $productImages = $productImageModel->where('product_id', $product['id'])
             ->orderBy('sort_order', 'ASC')
+            ->findAll();
+
+        $variantModel = new ProductVariantModel();
+        $variants = $variantModel->where('product_id', $product['id'])
+            ->orderBy('id', 'ASC')
             ->findAll();
 
         // Reviews
@@ -217,12 +215,13 @@ class Customer extends BaseController
         }
 
         return view('customer/product_detail', [
-            'product'       => $product,
+            'product'         => $product,
             'relatedProducts' => $relatedProducts,
-            'productImages' => $productImages,
-            'reviews'       => $reviews,
-            'reviewCount'   => $reviewCount,
-            'userReview'    => $userReview,
+            'productImages'   => $productImages,
+            'variants'        => $variants,
+            'reviews'         => $reviews,
+            'reviewCount'     => $reviewCount,
+            'userReview'      => $userReview,
         ]);
     }
 
