@@ -311,12 +311,12 @@ function inv_stock_pill(int $stock, int $threshold): array {
 
 <!-- Add / Edit Product Modal -->
 <div id="productModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">
-    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-lg w-full space-y-md border border-outline-variant/30 max-h-[90vh] overflow-y-auto">
+    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-3xl w-full space-y-md border border-outline-variant/30 max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
             <h3 id="productModalTitle" class="text-title-lg font-bold">Add New Product</h3>
             <button onclick="document.getElementById('productModal').classList.add('hidden')" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <form action="<?= base_url('tenant/products/save') ?>" method="POST" enctype="multipart/form-data" class="space-y-md">
+        <form id="productModalForm" action="<?= base_url('tenant/products/save') ?>" method="POST" enctype="multipart/form-data" class="space-y-md">
             <?= csrf_field() ?>
             <input type="hidden" name="product_id" id="product_id">
 
@@ -394,39 +394,78 @@ function inv_stock_pill(int $stock, int $threshold): array {
                 <textarea name="description" id="p_description" rows="3" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl"></textarea>
             </div>
 
-            <!-- Product Variants / Types (For Any Product) -->
-            <div class="border-t border-outline-variant/30 pt-md space-y-sm">
-                <div class="flex justify-between items-start gap-sm">
-                    <div>
-                        <label class="text-label-sm font-bold text-on-surface flex items-center gap-xs">
-                            <span class="material-symbols-outlined text-[18px] text-primary">category</span>
-                            Product Types / Variations
-                        </label>
-                        <p class="text-[11px] text-on-surface-variant mt-0.5">
-                            Kahit anong produkto, maaari kang maglagay ng types o variations (hal. klase, size, modelo, format, material) na may kanya-kanyang stock at presyo.
-                        </p>
+            <!-- Product Variations / Options (Compose-then-Apply UX) -->
+            <div class="border-t border-outline-variant/30 pt-md space-y-md">
+                <div>
+                    <div class="flex items-center gap-xs">
+                        <span class="material-symbols-outlined text-[20px] text-primary">tune</span>
+                        <h4 class="text-title-sm font-bold text-on-surface">Product Variations / Types</h4>
                     </div>
-                    <button type="button" onclick="addVariantRow()" class="px-md py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-xl text-xs font-bold transition-colors flex items-center gap-1 border border-primary/30 shrink-0 shadow-xs">
-                        <span class="material-symbols-outlined text-[16px]">add_circle</span>
-                        <span>Magdagdag ng Type</span>
-                    </button>
+                    <p class="text-xs text-on-surface-variant mt-0.5">
+                        Compose and apply product options (e.g., Color, Size) with individual stock and price overrides.
+                    </p>
                 </div>
 
-                <!-- Column Labels Header -->
-                <div id="variantHeaderLabels" class="hidden grid grid-cols-12 gap-xs text-[11px] font-bold text-on-surface-variant uppercase tracking-wider px-xs pt-1">
-                    <div class="col-span-6">Pangalan ng Type / Variation</div>
-                    <div class="col-span-3 text-center">Stock Qty</div>
-                    <div class="col-span-2 text-right">Presyo (₱)</div>
-                    <div class="col-span-1 text-center">Alisin</div>
+                <!-- Compose Panel -->
+                <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/30 space-y-sm">
+                    <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                        Compose Variant
+                    </span>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-sm items-end">
+                        <div class="sm:col-span-3">
+                            <label class="text-[11px] font-semibold text-on-surface-variant block mb-1">Type Category</label>
+                            <input type="text" id="compose_variant_name" list="variant_category_suggestions" placeholder="e.g., Color" class="w-full py-2 px-3 text-xs bg-surface-container border border-outline-variant/50 rounded-xl text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                            <datalist id="variant_category_suggestions">
+                                <option value="Color">
+                                <option value="Size">
+                                <option value="Material">
+                                <option value="Format">
+                            </datalist>
+                        </div>
+                        <div class="sm:col-span-3">
+                            <label class="text-[11px] font-semibold text-on-surface-variant block mb-1">Option Value <span class="text-error">*</span></label>
+                            <input type="text" id="compose_variant_value" placeholder="e.g., Black, Blue, Large..." class="w-full py-2 px-3 text-xs bg-surface-container border border-outline-variant/50 rounded-xl text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-[11px] font-semibold text-on-surface-variant block mb-1">Stock Qty <span class="text-error">*</span></label>
+                            <input type="number" id="compose_variant_stock" min="0" value="0" placeholder="0" class="w-full py-2 px-3 text-xs bg-surface-container border border-outline-variant/50 rounded-xl text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="text-[11px] font-semibold text-on-surface-variant block mb-1">Price Override (₱)</label>
+                            <input type="number" id="compose_variant_price" step="0.01" min="0" placeholder="Optional" class="w-full py-2 px-3 text-xs bg-surface-container border border-outline-variant/50 rounded-xl text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button type="button" id="btnApplyVariant" class="w-full py-2 px-3 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 flex items-center justify-center gap-1 transition-colors shadow-sm active:scale-95">
+                                <span class="material-symbols-outlined text-[16px]" id="btnApplyVariantIcon">add</span>
+                                <span id="btnApplyVariantText">Apply</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div id="variantRowsContainer" class="space-y-xs">
-                    <!-- Dynamic variant rows populated by JS -->
+                <!-- Applied Container -->
+                <div class="space-y-sm">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                            Applied Variants
+                        </span>
+                        <span id="variantCountBadge" class="text-[11px] font-semibold text-on-surface-variant">0 options</span>
+                    </div>
+
+                    <!-- Empty Hint -->
+                    <div id="variantEmptyHint" class="p-4 text-center bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/40 flex items-center justify-center gap-2 text-on-surface-variant text-xs">
+                        <span class="material-symbols-outlined text-[18px]">info</span>
+                        <span>No variants added yet. Use the composer above to add options, or proceed with base product stock and price.</span>
+                    </div>
+
+                    <!-- Applied List (Grouped by Category) -->
+                    <div id="appliedVariantsList" class="space-y-3">
+                        <!-- Populated dynamically by JS -->
+                    </div>
                 </div>
 
-                <div id="variantEmptyHint" class="text-xs text-on-surface-variant italic py-2 text-center bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/30">
-                    Walang nakatakdang types. (Gagamitin ang pangunahing stock at presyo ng produkto sa itaas).
-                </div>
+                <!-- Hidden inputs container synced upon form submit -->
+                <div id="variantHiddenInputsContainer"></div>
             </div>
 
             <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 shadow-md">Save Product</button>
@@ -552,11 +591,10 @@ function inv_stock_pill(int $stock, int $threshold): array {
         // Reset file inputs and preview lists
         resetProductImages();
 
-        // Reset variants container
-        const variantContainer = document.getElementById('variantRowsContainer');
-        if (variantContainer) {
-            variantContainer.innerHTML = '';
-        }
+        // Reset variants state
+        variantState = [];
+        editingVariantIndex = null;
+        resetVariantComposer();
 
         if (btn) {
             document.getElementById('productModalTitle').textContent = 'Edit Product';
@@ -579,20 +617,25 @@ function inv_stock_pill(int $stock, int $threshold): array {
             }
             populateExistingImages(images);
 
-            // Populate existing variants
+            // Populate existing variants into variantState
             let variants = [];
             try {
                 variants = JSON.parse(btn.dataset.variants || '[]');
             } catch (e) {
                 variants = [];
             }
-            if (variants && variants.length > 0) {
-                variants.forEach(v => {
-                    addVariantRow(v.name, v.value, v.stock_quantity, v.price_override, v.sku_suffix);
-                });
+            if (Array.isArray(variants) && variants.length > 0) {
+                variantState = variants.map(v => ({
+                    id: v.id || null,
+                    name: (v.name || 'Color').trim(),
+                    value: (v.value || '').trim(),
+                    sku: (v.sku_suffix || '').trim(),
+                    stock: Math.max(0, parseInt(v.stock_quantity, 10) || 0),
+                    price: (v.price_override !== null && v.price_override !== '' && v.price_override !== undefined) ? parseFloat(v.price_override) : ''
+                })).filter(v => v.value !== '');
             }
         }
-        updateVariantHeaderState();
+        renderAppliedVariants();
         modal.classList.remove('hidden');
     }
 
@@ -678,49 +721,224 @@ function inv_stock_pill(int $stock, int $threshold): array {
             .replace(/'/g, '&#039;');
     }
 
-    function addVariantRow(name = 'Type', value = '', stock = 0, price = '', sku = '') {
-        const container = document.getElementById('variantRowsContainer');
-        if (!container) return;
+    /* ==========================================================================
+       Product Variations / Options State & Controller (Compose-then-Apply UX)
+       ========================================================================== */
+    let variantState = [];
+    let editingVariantIndex = null;
 
-        // If value was provided or name was saved as the variation label
-        const displayVal = (value !== '' ? value : (name !== 'Type' && name !== '' ? name : ''));
+    function resetVariantComposer() {
+        editingVariantIndex = null;
+        const nameInput = document.getElementById('compose_variant_name');
+        if (nameInput) nameInput.value = '';
+        const valInput = document.getElementById('compose_variant_value');
+        if (valInput) valInput.value = '';
+        const stockInput = document.getElementById('compose_variant_stock');
+        if (stockInput) stockInput.value = '0';
+        const priceInput = document.getElementById('compose_variant_price');
+        if (priceInput) priceInput.value = '';
 
-        const row = document.createElement('div');
-        row.className = 'variant-row grid grid-cols-12 gap-xs items-center p-1.5 bg-surface-container-low rounded-xl border border-outline-variant/30 hover:border-outline-variant transition-colors';
-        row.innerHTML = `
-            <input type="hidden" name="variant_name[]" value="${escapeHtml(name || 'Type')}">
-            <div class="col-span-6">
-                <input type="text" name="variant_value[]" value="${escapeHtml(displayVal)}" placeholder="Hal. Hardbound, 80gsm, 0.5mm, XL, Matte..." required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface focus:border-primary focus:ring-1 focus:ring-primary">
-            </div>
-            <div class="col-span-3">
-                <input type="number" min="0" name="variant_stock[]" value="${stock !== '' ? stock : 0}" placeholder="Stock" required class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface text-center focus:border-primary focus:ring-1 focus:ring-primary">
-            </div>
-            <div class="col-span-2">
-                <input type="number" step="0.01" min="0" name="variant_price[]" value="${price !== null && price !== undefined && price !== '' ? price : ''}" placeholder="Opsyonal" class="w-full p-xs px-sm text-xs bg-surface-container border border-outline-variant/50 rounded-lg text-on-surface text-right focus:border-primary focus:ring-1 focus:ring-primary">
-            </div>
-            <div class="col-span-1 flex justify-center">
-                <button type="button" onclick="removeVariantRow(this)" class="p-1 text-on-surface-variant hover:text-error rounded-lg hover:bg-error-container/20 transition-colors" title="Alisin ang type na ito">
-                    <span class="material-symbols-outlined text-[16px]">close</span>
-                </button>
-            </div>
-        `;
-        container.appendChild(row);
-        updateVariantHeaderState();
+        const btnText = document.getElementById('btnApplyVariantText');
+        if (btnText) btnText.textContent = 'Apply';
+        const btnIcon = document.getElementById('btnApplyVariantIcon');
+        if (btnIcon) btnIcon.textContent = 'add';
     }
 
-    function removeVariantRow(btn) {
-        btn.closest('.variant-row')?.remove();
-        updateVariantHeaderState();
+    function renderAppliedVariants() {
+        const listContainer = document.getElementById('appliedVariantsList');
+        const emptyHint = document.getElementById('variantEmptyHint');
+        const countBadge = document.getElementById('variantCountBadge');
+
+        if (!listContainer || !emptyHint) return;
+
+        if (countBadge) {
+            countBadge.textContent = variantState.length + (variantState.length === 1 ? ' option' : ' options');
+        }
+
+        if (variantState.length === 0) {
+            emptyHint.classList.remove('hidden');
+            listContainer.innerHTML = '';
+            return;
+        }
+
+        emptyHint.classList.add('hidden');
+
+        // Group variants by Category
+        const groups = {};
+        variantState.forEach((item, idx) => {
+            const cat = item.name && item.name.trim() !== '' ? item.name.trim() : 'Type';
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push({ item, idx });
+        });
+
+        let html = '';
+        for (const [catName, entries] of Object.entries(groups)) {
+            html += `
+                <div class="p-3 bg-surface-container-low rounded-xl border border-outline-variant/30 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">label</span>
+                            ${escapeHtml(catName)}
+                        </span>
+                        <span class="text-[10px] text-on-surface-variant font-medium">${entries.length} option${entries.length === 1 ? '' : 's'}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+            `;
+
+            entries.forEach(({ item, idx }) => {
+                const isOut = item.stock <= 0;
+                const isLow = !isOut && item.stock <= 5;
+                const stockBadgeClass = isOut ? 'bg-red-100 text-red-700 border-red-200' : (isLow ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-green-100 text-green-700 border-green-200');
+                const stockLabel = isOut ? 'Out of Stock' : (isLow ? `Low: ${item.stock}` : `Stock: ${item.stock}`);
+                const priceBadge = (item.price !== null && item.price !== '' && item.price !== undefined) ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">₱${Number(item.price).toFixed(2)}</span>` : '';
+
+                html += `
+                    <div class="inline-flex items-center gap-2 py-1.5 px-3 bg-surface-container rounded-xl border border-outline-variant/40 shadow-xs hover:border-outline-variant transition-colors">
+                        <span class="font-semibold text-xs text-on-surface">${escapeHtml(item.value)}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold border ${stockBadgeClass}">${stockLabel}</span>
+                        ${priceBadge}
+                        <div class="flex items-center gap-1 border-l border-outline-variant/30 pl-1.5 ml-0.5">
+                            <button type="button" onclick="editVariant(${idx})" class="p-1 text-on-surface-variant hover:text-primary rounded-lg transition-colors flex items-center justify-center" title="Edit variant">
+                                <span class="material-symbols-outlined text-[15px]">edit</span>
+                            </button>
+                            <button type="button" onclick="removeVariant(${idx})" class="p-1 text-on-surface-variant hover:text-error rounded-lg transition-colors flex items-center justify-center" title="Remove variant">
+                                <span class="material-symbols-outlined text-[15px]">close</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        listContainer.innerHTML = html;
     }
 
-    function updateVariantHeaderState() {
-        const container = document.getElementById('variantRowsContainer');
-        const header = document.getElementById('variantHeaderLabels');
-        const hint = document.getElementById('variantEmptyHint');
-        const hasRows = container && container.children.length > 0;
-        if (header) header.classList.toggle('hidden', !hasRows);
-        if (hint) hint.classList.toggle('hidden', hasRows);
+    function applyVariant() {
+        const nameInput = document.getElementById('compose_variant_name');
+        const valInput = document.getElementById('compose_variant_value');
+        const stockInput = document.getElementById('compose_variant_stock');
+        const priceInput = document.getElementById('compose_variant_price');
+
+        if (!valInput) return;
+        const val = valInput.value.trim();
+        if (val === '') {
+            valInput.focus();
+            valInput.classList.add('border-error');
+            setTimeout(() => valInput.classList.remove('border-error'), 1500);
+            return;
+        }
+
+        const rawName = nameInput ? nameInput.value.trim() : '';
+        const name = rawName !== '' ? rawName : 'Type';
+        const stock = stockInput && stockInput.value !== '' ? Math.max(0, parseInt(stockInput.value, 10) || 0) : 0;
+        const price = priceInput && priceInput.value !== '' ? parseFloat(priceInput.value) : '';
+
+        if (editingVariantIndex !== null && editingVariantIndex >= 0 && editingVariantIndex < variantState.length) {
+            variantState[editingVariantIndex] = {
+                ...variantState[editingVariantIndex],
+                name: name,
+                value: val,
+                stock: stock,
+                price: price
+            };
+        } else {
+            // Check duplicate (case-insensitive name + val)
+            const existingIdx = variantState.findIndex(v => v.name.toLowerCase() === name.toLowerCase() && v.value.toLowerCase() === val.toLowerCase());
+            if (existingIdx >= 0) {
+                variantState[existingIdx].stock = stock;
+                variantState[existingIdx].price = price;
+            } else {
+                variantState.push({
+                    id: null,
+                    name: name,
+                    value: val,
+                    stock: stock,
+                    price: price,
+                    sku: ''
+                });
+            }
+        }
+
+        resetVariantComposer();
+        renderAppliedVariants();
+        if (valInput) valInput.focus();
     }
+
+    function editVariant(idx) {
+        if (idx < 0 || idx >= variantState.length) return;
+        const item = variantState[idx];
+        editingVariantIndex = idx;
+
+        const nameInput = document.getElementById('compose_variant_name');
+        if (nameInput) nameInput.value = item.name || '';
+        const valInput = document.getElementById('compose_variant_value');
+        if (valInput) valInput.value = item.value || '';
+        const stockInput = document.getElementById('compose_variant_stock');
+        if (stockInput) stockInput.value = item.stock;
+        const priceInput = document.getElementById('compose_variant_price');
+        if (priceInput) priceInput.value = (item.price !== null && item.price !== '' && item.price !== undefined) ? item.price : '';
+
+        const btnText = document.getElementById('btnApplyVariantText');
+        if (btnText) btnText.textContent = 'Update';
+        const btnIcon = document.getElementById('btnApplyVariantIcon');
+        if (btnIcon) btnIcon.textContent = 'check';
+
+        if (valInput) valInput.focus();
+    }
+
+    function removeVariant(idx) {
+        if (idx < 0 || idx >= variantState.length) return;
+        if (editingVariantIndex === idx) {
+            resetVariantComposer();
+        } else if (editingVariantIndex !== null && editingVariantIndex > idx) {
+            editingVariantIndex--;
+        }
+        variantState.splice(idx, 1);
+        renderAppliedVariants();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnApply = document.getElementById('btnApplyVariant');
+        if (btnApply) {
+            btnApply.addEventListener('click', applyVariant);
+        }
+
+        ['compose_variant_value', 'compose_variant_stock', 'compose_variant_price'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyVariant();
+                    }
+                });
+            }
+        });
+
+        // Form submit hook: serialize variantState into hidden inputs for backend compatibility
+        const productForm = document.getElementById('productModalForm') || document.querySelector('#productModal form');
+        if (productForm) {
+            productForm.addEventListener('submit', function() {
+                const hiddenContainer = document.getElementById('variantHiddenInputsContainer');
+                if (!hiddenContainer) return;
+                hiddenContainer.innerHTML = '';
+                variantState.forEach(v => {
+                    hiddenContainer.insertAdjacentHTML('beforeend', `
+                        <input type="hidden" name="variant_name[]" value="${escapeHtml(v.name || 'Type')}">
+                        <input type="hidden" name="variant_value[]" value="${escapeHtml(v.value)}">
+                        <input type="hidden" name="variant_stock[]" value="${v.stock}">
+                        <input type="hidden" name="variant_price[]" value="${v.price !== null && v.price !== undefined ? v.price : ''}">
+                        <input type="hidden" name="variant_sku[]" value="${escapeHtml(v.sku || '')}">
+                    `);
+                });
+            });
+        }
+    });
 
     document.getElementById('p_images')?.addEventListener('change', function(e) {
         const previewContainer = document.getElementById('p_new_preview_container');

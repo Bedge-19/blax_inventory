@@ -70,7 +70,45 @@
                 </tbody>
             </table>
         </div>
-        <div class="px-6 py-3 bg-surface-container-low/30 border-t border-outline-variant/20 text-xs text-on-surface-variant">Showing up to 100 most recent entries</div>
+        <?php if (isset($pager)): ?>
+            <?php
+            $total   = (int) $pager->getTotal('audit_log');
+            $perPage = 25;
+            $cur     = (int) $pager->getCurrentPage('audit_log');
+            $pages   = (int) $pager->getPageCount('audit_log');
+            $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
+            $end     = min($cur * $perPage, $total);
+            ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">
+                <p class="text-xs text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> entries</p>
+                <?php if ($pages > 1): ?>
+                    <div class="flex items-center gap-xs">
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('audit_log') ?>" title="Previous">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </a>
+                        <?php
+                        $window = [];
+                        for ($i = 1; $i <= $pages; $i++) {
+                            if ($i === 1 || $i === $pages || abs($i - $cur) <= 2) {
+                                $window[] = $i;
+                            }
+                        }
+                        $prev = 0;
+                        foreach ($window as $num):
+                            if ($num - $prev > 1): ?>
+                                <span class="px-xs text-outline text-xs">...</span>
+                            <?php endif; ?>
+                            <a class="w-8 h-8 rounded flex items-center justify-center text-xs <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high text-on-surface' ?>" href="<?= $pager->getPageURI($num, 'audit_log') ?>"><?= $num ?></a>
+                        <?php $prev = $num; endforeach; ?>
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('audit_log') ?>" title="Next">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 border-t border-outline-variant/20 text-xs text-on-surface-variant">Showing <?= count($audit_logs ?? []) ?> entries</div>
+        <?php endif; ?>
     </section>
 
 </div>

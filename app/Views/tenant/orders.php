@@ -90,6 +90,7 @@
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Order ID</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Customer</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Date</th>
+                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Fulfillment</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Amount</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Status</th>
                         <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
@@ -102,6 +103,7 @@
                             $fullName = trim(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? ''));
                             $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'GU';
                             $profileImage = trim((string) ($o['profile_image_url'] ?? ''));
+                            $isPickup = ($o['fulfillment_method'] ?? 'delivery') === 'pickup';
                             ?>
                             <tr class="hover:bg-surface-container-low/50 transition-colors">
                                 <td class="px-lg py-md">
@@ -119,6 +121,19 @@
                                     </div>
                                 </td>
                                 <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc(date('M d, Y h:i A', strtotime($o['placed_at']))) ?></td>
+                                <td class="px-lg py-md text-center">
+                                    <?php if ($isPickup): ?>
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-800 border border-amber-500/20 shadow-2xs">
+                                            <span class="material-symbols-outlined text-[14px]">storefront</span>
+                                            <span>Store Pick-up</span>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-800 border border-blue-500/20 shadow-2xs">
+                                            <span class="material-symbols-outlined text-[14px]">local_shipping</span>
+                                            <span>Doorstep Delivery</span>
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="px-lg py-md text-body-md font-bold text-on-surface">₱<?= number_format((float) $o['total_amount'], 2) ?></td>
                                 <td class="px-lg py-md text-center">
                                     <div class="flex flex-col items-center gap-1">
@@ -139,10 +154,10 @@
                                     <div class="flex justify-end items-center gap-sm">
                                         <?php if ($o['status'] === 'processing'): ?>
                                             <?php
-                                            $locationStr = trim(($o['address_line1'] ?? '') . ', ' . ($o['city'] ?? '')) ?: 'Polomolok, South Cotabato';
-                                            $labelStr    = esc($o['address_label'] ?? 'Home');
-                                            $phoneStr    = esc($o['customer_phone'] ?? ($o['phone'] ?? 'N/A'));
-                                            $shopNameStr = esc($shop['shop_name'] ?? 'Blax Storefront');
+                                             $locationStr = trim(($o['address_line1'] ?? '') . ', ' . ($o['city'] ?? '')) ?: 'Polomolok, South Cotabato';
+                                             $labelStr    = esc($o['address_label'] ?? 'Home');
+                                             $phoneStr    = esc($o['customer_phone'] ?? ($o['phone'] ?? 'N/A'));
+                                             $shopNameStr = esc($shop['shop_name'] ?? 'Blax Storefront');
                                             ?>
                                             <button type="button"
                                                     onclick="openOrderQrModal(
@@ -162,7 +177,7 @@
                                             </button>
                                         <?php endif; ?>
 
-                                        <?php if (($o['fulfillment_method'] ?? '') === 'pickup' && !in_array($o['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)): ?>
+                                        <?php if ($isPickup && !in_array($o['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)): ?>
                                             <a href="<?= base_url('tenant/pos?order_id=' . $o['id']) ?>" 
                                                class="p-xs hover:bg-secondary-container/50 rounded text-secondary transition-colors flex items-center gap-xs px-2.5 py-1 border border-secondary/40 bg-secondary-container/20 font-bold text-[11px] shadow-sm" 
                                                title="Add POS for Store Pick-up">
@@ -186,15 +201,35 @@
                                                 <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="space-y-xs px-sm pb-sm">
                                                     <?= csrf_field() ?>
                                                     <input type="hidden" name="order_id" value="<?= (int) $o['id'] ?>">
+                                                    <?php
+                                                    // Dynamically constrain statuses based on fulfillment method
+                                                    $rowStatusOptions = $isPickup
+                                                        ? [
+                                                            'pending'          => 'Pending',
+                                                            'processing'       => 'Processing',
+                                                            'ready_for_pickup' => 'Ready for Pickup',
+                                                            'cancelled'        => 'Cancelled',
+                                                        ]
+                                                        : [
+                                                            'pending'          => 'Pending',
+                                                            'processing'       => 'Processing',
+                                                            'shipped'          => 'Shipped',
+                                                            'cancelled'        => 'Cancelled',
+                                                        ];
+
+                                                    if (!isset($rowStatusOptions[$o['status']])) {
+                                                        $rowStatusOptions[$o['status']] = humanize_status($o['status']);
+                                                    }
+                                                    ?>
                                                     <select name="status" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-lg text-label-sm font-label-sm">
-                                                        <?php foreach ($statusOptions as $val => $label): ?>
+                                                        <?php foreach ($rowStatusOptions as $val => $label): ?>
                                                             <option value="<?= esc($val) ?>" <?= $o['status'] === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
                                                         <?php endforeach; ?>
                                                     </select>
                                                     <button type="submit" class="w-full py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90">Apply Status</button>
                                                 </form>
                                                 <div class="border-t border-outline-variant/20 my-xs"></div>
-                                                <?php if (($o['fulfillment_method'] ?? '') === 'pickup' && !in_array($o['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)): ?>
+                                                <?php if ($isPickup && !in_array($o['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)): ?>
                                                     <a href="<?= base_url('tenant/pos?order_id=' . $o['id']) ?>" class="w-full text-left px-sm py-sm rounded-lg text-secondary font-bold text-label-sm hover:bg-secondary-container/20 flex items-center gap-xs">
                                                         <span class="material-symbols-outlined text-[18px]">point_of_sale</span> Store Pick-up POS
                                                     </a>
@@ -224,7 +259,7 @@
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="py-lg text-center text-on-surface-variant">No orders match your filters.</td>
+                            <td colspan="7" class="py-lg text-center text-on-surface-variant">No orders match your filters.</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -502,7 +537,11 @@
                     cells.forEach(([key, cls]) => {
                         const td = document.createElement('td');
                         td.className = 'px-md py-sm text-body-md ' + cls + (key === 'product_name' ? ' font-medium text-on-surface' : ' text-on-surface-variant');
-                        td.textContent = key === 'unit_price' || key === 'line_total' ? money(it[key]) : it[key];
+                        if (key === 'product_name' && it.variant_label) {
+                            td.innerHTML = escapeHtml(it.product_name) + ' <span class="inline-block text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-1">' + escapeHtml(it.variant_label) + '</span>';
+                        } else {
+                            td.textContent = key === 'unit_price' || key === 'line_total' ? money(it[key]) : it[key];
+                        }
                         tr.appendChild(td);
                     });
                     tbody.appendChild(tr);

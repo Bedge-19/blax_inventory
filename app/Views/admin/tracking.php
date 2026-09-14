@@ -45,7 +45,10 @@
             </form>
         </div>
         <?php if (empty($pins)): ?>
-            <div class="absolute bottom-6 right-6 bg-surface/90 backdrop-blur px-sm py-xs rounded-full text-xs text-on-surface-variant border border-outline-variant">No active deliveries in transit</div>
+            <div class="absolute bottom-6 right-6 bg-surface/90 backdrop-blur px-3 py-1.5 rounded-full text-xs text-on-surface-variant border border-outline-variant font-medium flex items-center gap-1.5 shadow-sm">
+                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>Showing Polomolok Demo Pins (Testing)</span>
+            </div>
         <?php endif; ?>
     </div>
 
@@ -75,6 +78,43 @@
                 </tbody>
             </table>
         </div>
+        <?php if (isset($pager)): ?>
+            <?php
+            $total   = (int) $pager->getTotal('tracking');
+            $perPage = 20;
+            $cur     = (int) $pager->getCurrentPage('tracking');
+            $pages   = (int) $pager->getPageCount('tracking');
+            $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
+            $end     = min($cur * $perPage, $total);
+            ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">
+                <p class="text-xs text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> deliveries</p>
+                <?php if ($pages > 1): ?>
+                    <div class="flex items-center gap-xs">
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('tracking') ?>" title="Previous">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </a>
+                        <?php
+                        $window = [];
+                        for ($i = 1; $i <= $pages; $i++) {
+                            if ($i === 1 || $i === $pages || abs($i - $cur) <= 2) {
+                                $window[] = $i;
+                            }
+                        }
+                        $prev = 0;
+                        foreach ($window as $num):
+                            if ($num - $prev > 1): ?>
+                                <span class="px-xs text-outline text-xs">...</span>
+                            <?php endif; ?>
+                            <a class="w-8 h-8 rounded flex items-center justify-center text-xs <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high text-on-surface' ?>" href="<?= $pager->getPageURI($num, 'tracking') ?>"><?= $num ?></a>
+                        <?php $prev = $num; endforeach; ?>
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('tracking') ?>" title="Next">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
 </div>
@@ -82,33 +122,113 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
-    const pins = <?= json_encode($pins ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>;
-    const el = document.getElementById('fleet-map');
-    if(!el || typeof L==='undefined') return;
-    const POLO_CENTER=[6.2136,125.0661];
-    const POLO_BOUNDS=[[6.10,124.95],[6.32,125.18]];
-    const map = L.map(el, {maxBounds: POLO_BOUNDS, minZoom: 11}).setView(POLO_CENTER,12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap', maxZoom:18}).addTo(map);
-    L.rectangle(POLO_BOUNDS,{color:'#2563eb', weight:1, fillOpacity:0.03, dashArray:'6 6'}).addTo(map).bindTooltip('Polomolok boundary', {permanent:false});
-    const colors={ready_for_pickup:'#f59e0b', shipped:'#2563eb', in_transit:'#7c3aed', delivered:'#10b981'};
-    const markers=[];
-    (pins||[]).forEach(p=>{
-        const lat=parseFloat(p.current_lat), lng=parseFloat(p.current_lng);
-        if(isNaN(lat)||isNaN(lng)) return;
-        // enforce Polomolok bounds
-        if(lat < 6.10 || lat > 6.32 || lng < 124.95 || lng > 125.18) return;
-        const color=colors[p.status]||'#64748b';
-        const icon=L.divIcon({className:'fleet-pin', html:'<div style="width:14px;height:14px;border-radius:50%;background:'+color+';border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>', iconSize:[14,14], iconAnchor:[7,7]});
-        const m=L.marker([lat,lng],{icon}).addTo(map);
-        const shop=p.shop_name||'Shop';
-        m.bindPopup('<strong>#'+(p.tracking_id||'')+'</strong><br>'+shop+'<br>'+(p.destination_address||'Polomolok')+'<br>'+(p.status||'').replace(/_/g,' '));
-        markers.push(m);
-    });
-    if(markers.length){ map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3)); } else { map.setView(POLO_CENTER,12); }
+    const serverPins = <?= json_encode($pins ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>;
+    const demoPins = [
+        { tracking_id: 'TRK-TEST-POLO1', shop_name: 'Blax Printing Hub', destination_address: 'Purok 4, Brgy. Cannery Site, Polomolok', status: 'shipped', current_lat: 6.2305, current_lng: 125.0740, is_demo: true },
+        { tracking_id: 'TRK-TEST-POLO2', shop_name: 'Blax Printing Hub', destination_address: 'Crossing Rubber, Brgy. Rubber, Polomolok', status: 'in_transit', current_lat: 6.1950, current_lng: 125.0920, is_demo: true },
+        { tracking_id: 'TRK-TEST-POLO3', shop_name: 'Apex Prints', destination_address: 'Purok Pag-asa, Brgy. Glamang, Polomolok', status: 'ready_for_pickup', current_lat: 6.1823, current_lng: 125.0456, is_demo: true },
+        { tracking_id: 'TRK-TEST-POLO4', shop_name: 'Blax Printing Hub', destination_address: 'Poblacion, Polomolok', status: 'delivered', current_lat: 6.2185, current_lng: 125.0645, is_demo: true }
+    ];
+
+    const pins = (serverPins && serverPins.length > 0) ? serverPins : demoPins;
+
+    function initAdminMap() {
+        const el = document.getElementById('fleet-map');
+        if (!el || typeof L === 'undefined') return;
+
+        const POLO_CENTER = [6.2136, 125.0661];
+        const POLO_BOUNDS = [[6.10, 124.95], [6.32, 125.18]];
+        const map = L.map(el, { maxBounds: POLO_BOUNDS, minZoom: 11 }).setView(POLO_CENTER, 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+
+        L.rectangle(POLO_BOUNDS, {
+            color: '#2563eb',
+            weight: 1.5,
+            fillOpacity: 0.03,
+            dashArray: '6 6'
+        }).addTo(map).bindTooltip('Polomolok Delivery Scope', { permanent: false });
+
+        const colors = {
+            ready_for_pickup: '#f59e0b',
+            shipped: '#2563eb',
+            in_transit: '#7c3aed',
+            delivered: '#10b981'
+        };
+
+        const markers = [];
+        (pins || []).forEach(p => {
+            const lat = parseFloat(p.current_lat), lng = parseFloat(p.current_lng);
+            if (isNaN(lat) || isNaN(lng)) return;
+            if (lat < 6.10 || lat > 6.32 || lng < 124.95 || lng > 125.18) return;
+
+            const color = colors[p.status] || '#64748b';
+            const icon = L.divIcon({
+                className: 'fleet-pin',
+                html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.4)"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            const m = L.marker([lat, lng], { icon }).addTo(map);
+            const shop = p.shop_name || 'Shop';
+            const demoTag = p.is_demo ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-weight:bold;margin-left:4px;">DEMO PIN</span>' : '';
+
+            m.bindPopup(`
+                <div style="font-family:inherit;min-width:160px;">
+                    <div style="font-weight:bold;color:#2563eb;font-size:13px;">#${p.tracking_id || ''} ${demoTag}</div>
+                    <div style="font-size:11px;color:#0f172a;font-weight:600;margin-top:2px;">🏪 ${shop}</div>
+                    <div style="font-size:11px;color:#475569;margin-top:2px;">📍 ${p.destination_address || 'Polomolok'}</div>
+                    <div style="margin-top:4px;">
+                        <span style="font-size:10px;font-weight:bold;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:#e0f2fe;color:#0369a1;">
+                            ${(p.status || '').replace(/_/g, ' ')}
+                        </span>
+                    </div>
+                </div>
+            `);
+            markers.push(m);
+        });
+
+        if (markers.length) {
+            map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
+        } else {
+            map.setView(POLO_CENTER, 12);
+        }
+
+        setTimeout(() => { if (map) map.invalidateSize(); }, 300);
+        setTimeout(() => { if (map) map.invalidateSize(); }, 800);
+    }
+
+    function ensureAdminLeafletLoaded() {
+        if (typeof L !== 'undefined') {
+            initAdminMap();
+            return;
+        }
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (typeof L !== 'undefined') {
+                clearInterval(interval);
+                initAdminMap();
+            } else if (attempts > 60) {
+                clearInterval(interval);
+                console.warn('Leaflet map library timed out in admin tracking.');
+            }
+        }, 80);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureAdminLeafletLoaded);
+    } else {
+        ensureAdminLeafletLoaded();
+    }
 })();
 </script>
 <?= $this->endSection() ?>

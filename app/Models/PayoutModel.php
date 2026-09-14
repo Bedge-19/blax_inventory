@@ -83,4 +83,65 @@ class PayoutModel extends Model
     {
         return (string) $this->db->query('SELECT CURDATE() AS d')->getRow()->d;
     }
+
+    /**
+     * Paginated GCash payout requests for Admin management.
+     *
+     * @return array{payments: array, pager: \CodeIgniter\Pager\Pager|null}
+     */
+    public function getPaymentsPaginated(
+        ?string $search = null,
+        ?string $status = null,
+        int $perPage = 15,
+        int $page = 1,
+        string $group = 'payments'
+    ): array {
+        $this->builder()
+            ->select('payout_requests.*, s.shop_name, s.gcash_number')
+            ->join('shops s', 's.id = payout_requests.shop_id', 'left')
+            ->where('payout_requests.destination_method', 'gcash')
+            ->orderBy('payout_requests.requested_at', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $this->builder()->groupStart()
+                ->like('payout_requests.reference_number', $search)
+                ->orLike('s.shop_name', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== null && in_array($status, ['pending', 'processing', 'completed', 'failed'], true)) {
+            $this->builder()->where('payout_requests.status', $status);
+        }
+
+        $payments = $this->paginate($perPage, $group, $page);
+
+        return [
+            'payments' => $payments ?: [],
+            'pager'    => $this->pager,
+        ];
+    }
+
+    /**
+     * Paginated withdrawal history for a specific shop.
+     *
+     * @return array{withdrawals: array, pager: \CodeIgniter\Pager\Pager|null}
+     */
+    public function getWithdrawalsByShopPaginated(
+        int $shopId,
+        int $perPage = 15,
+        int $page = 1,
+        string $group = 'withdrawals'
+    ): array {
+        $this->builder()
+            ->select('payout_requests.*, payout_requests.destination_method as method, payout_requests.destination_detail as account_details, payout_requests.requested_at as created_at')
+            ->where('payout_requests.shop_id', $shopId)
+            ->orderBy('payout_requests.requested_at', 'DESC');
+
+        $withdrawals = $this->paginate($perPage, $group, $page);
+
+        return [
+            'withdrawals' => $withdrawals ?: [],
+            'pager'       => $this->pager,
+        ];
+    }
 }

@@ -50,6 +50,10 @@ $nextStates = [
             <h2 class="text-headline-lg font-headline-lg text-on-surface">Printing Requests Management</h2>
             <p class="text-body-md font-body-md text-on-surface-variant">Track requests your customers submit and manage the production queue.</p>
         </div>
+        <button type="button" onclick="openPrintingSettingsModal()" class="px-lg py-sm bg-surface-container-high hover:bg-surface-variant border border-outline-variant/40 rounded-xl text-on-surface font-semibold text-xs flex items-center gap-xs transition-all shadow-2xs hover:shadow-xs active:scale-95">
+            <span class="material-symbols-outlined text-[18px]">settings</span>
+            <span>Printing Settings</span>
+        </button>
     </div>
 
     <!-- Summary Cards -->
@@ -142,6 +146,18 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                     <div class="flex items-center gap-sm">
                                         <div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-label-sm font-bold <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?>">
                                             <span><?= esc($initials) ?></span>
+                            $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
+                            $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'GU';
+                            $profileImage = trim((string) ($r['profile_image_url'] ?? ''));
+                            ?>
+                            <tr class="hover:bg-surface-container-low/50 transition-colors">
+                                <td class="px-lg py-md">
+                                    <span class="font-mono text-body-md font-semibold text-primary">#<?= esc($r['request_number']) ?></span>
+                                </td>
+                                <td class="px-lg py-md">
+                                    <div class="flex items-center gap-sm">
+                                        <div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-label-sm font-bold <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?>">
+                                            <span><?= esc($initials) ?></span>
                                             <?php if ($profileImage !== ''): ?>
                                                 <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
                                             <?php endif; ?>
@@ -152,7 +168,19 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                 <td class="px-lg py-md">
                                     <div class="flex items-center gap-sm text-on-surface-variant">
                                         <span class="material-symbols-outlined text-outline">description</span>
-                                        <span class="text-body-md max-w-[180px] truncate" title="<?= esc($r['file_name']) ?>"><?= esc($r['file_name']) ?></span>
+                                        <div>
+                                            <span class="text-body-md max-w-[180px] truncate block" title="<?= esc($r['file_name']) ?>"><?= esc($r['file_name']) ?></span>
+                                            <?php if (!empty($r['document_type']) && $r['document_type'] === 'docx'): ?>
+                                                <div class="flex items-center gap-1 mt-0.5">
+                                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">DOCX</span>
+                                                    <?php if (($r['doc_change_type'] ?? '') === 'has_changes'): ?>
+                                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Has Changes</span>
+                                                    <?php else: ?>
+                                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-medium bg-surface-container text-outline">As Is</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-lg py-md">
@@ -162,6 +190,7 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                         </span>
                                         <p class="text-label-sm text-on-surface-variant"><?= esc(pr_spec_line($r)) ?></p>
                                     </div>
+                                </td>
                                 <td class="px-lg py-md text-center">
                                     <div class="flex flex-col items-center gap-1">
                                         <?= status_badge($r['status']) ?>
@@ -174,33 +203,37 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                 </td>
                                 <td class="px-lg py-md text-right">
                                     <div class="flex justify-end items-center gap-md">
-                                        <button type="button"
-                                                onclick="openRequestDetails(this)"
-                                                class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
-                                                title="View Details"
-                                                data-request="<?= esc($r['request_number']) ?>"
-                                                data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
-                                                data-file="<?= esc($r['file_name']) ?>"
-                                                data-specs="<?= esc(pr_spec_line($r)) ?>"
-                                                data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
-                                                data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
-                                                data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
-                                                data-progress="<?= (int) $r['progress_percent'] ?>"
-                                                data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
-                                                data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
-                                                data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
-                                            <span class="material-symbols-outlined">visibility</span>
-                                        </button>
-                                        <button type="button"
-                                                onclick="openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
-                                                class="p-xs hover:bg-surface-container-high rounded text-secondary"
-                                                title="View QR Code">
-                                            <span class="material-symbols-outlined">qr_code_2</span>
-                                        </button>
-                                        <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" class="p-xs hover:bg-surface-container-high rounded text-primary" title="Download File">
-                                            <span class="material-symbols-outlined">download</span>
-                                        </a>
-<div class="relative">
+                                         <button type="button"
+                                                 onclick="openRequestDetails(this)"
+                                                 class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
+                                                 title="View Details"
+                                                 data-request="<?= esc($r['request_number']) ?>"
+                                                 data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
+                                                 data-file="<?= esc($r['file_name']) ?>"
+                                                 data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
+                                                 data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
+                                                 data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
+                                                 data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
+                                                 data-specs="<?= esc(pr_spec_line($r)) ?>"
+                                                 data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
+                                                 data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
+                                                 data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
+                                                 data-progress="<?= (int) $r['progress_percent'] ?>"
+                                                 data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
+                                                 data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
+                                                 data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
+                                             <span class="material-symbols-outlined">visibility</span>
+                                         </button>
+                                         <button type="button"
+                                                 onclick="openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
+                                                 class="p-xs hover:bg-surface-container-high rounded text-secondary"
+                                                 title="View QR Code">
+                                             <span class="material-symbols-outlined">qr_code_2</span>
+                                         </button>
+                                         <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" class="p-xs hover:bg-surface-container-high rounded text-primary" title="Download File">
+                                             <span class="material-symbols-outlined">download</span>
+                                         </a>
+                                        <div class="relative">
                                             <button type="button" data-row="<?= (int) $r['id'] ?>" onclick="toggleDropdown(this)" class="more-toggle p-xs hover:bg-surface-container-high rounded text-on-surface-variant" title="More Actions" aria-haspopup="true" aria-expanded="false">
                                                 <span class="material-symbols-outlined">more_vert</span>
                                             </button>
@@ -372,7 +405,19 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                 <td class="px-lg py-md">
                                     <div class="flex items-center gap-sm text-on-surface-variant">
                                         <span class="material-symbols-outlined text-outline">description</span>
-                                        <span class="text-body-md max-w-[180px] truncate" title="<?= esc($r['file_name']) ?>"><?= esc($r['file_name']) ?></span>
+                                        <div>
+                                            <span class="text-body-md max-w-[180px] truncate block" title="<?= esc($r['file_name']) ?>"><?= esc($r['file_name']) ?></span>
+                                            <?php if (!empty($r['document_type']) && $r['document_type'] === 'docx'): ?>
+                                                <div class="flex items-center gap-1 mt-0.5">
+                                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 uppercase tracking-wider">DOCX</span>
+                                                    <?php if (($r['doc_change_type'] ?? '') === 'has_changes'): ?>
+                                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Has Changes</span>
+                                                    <?php else: ?>
+                                                        <span class="px-1.5 py-0.2 rounded text-[10px] font-medium bg-surface-container text-outline">As Is</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </td>
                                 <td class="px-lg py-md">
@@ -392,6 +437,10 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                                                 data-request="<?= esc($r['request_number']) ?>"
                                                 data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
                                                 data-file="<?= esc($r['file_name']) ?>"
+                                                data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
+                                                data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
+                                                data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
+                                                data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
                                                 data-specs="<?= esc(pr_spec_line($r)) ?>"
                                                 data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
                                                 data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
@@ -471,9 +520,11 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
             <h3 class="text-title-lg font-bold">Request <span id="rmRequest" class="text-primary"></span></h3>
             <button onclick="document.getElementById('requestModal').classList.add('hidden')" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
         </div>
-        <div class="space-y-sm">
+        <div class="space-y-sm max-h-[75vh] overflow-y-auto pr-1">
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Customer</span><span id="rmCustomer" class="text-body-md font-semibold text-on-surface"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">File</span><span id="rmFile" class="text-body-md text-on-surface"></span></div>
+            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Document Type</span><span id="rmDocType" class="text-body-md font-semibold text-on-surface"></span></div>
+            <div class="flex justify-between" id="rmChangeTypeRow"><span class="text-label-sm text-on-surface-variant">Change Type</span><span id="rmChangeType" class="text-body-md text-on-surface"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Specifications</span><span id="rmSpecs" class="text-body-md text-on-surface text-right"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Color / Size</span><span id="rmColor" class="text-body-md text-on-surface"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Fulfillment</span><span id="rmFulfillment" class="text-body-md text-on-surface"></span></div>
@@ -482,6 +533,18 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Total Price</span><span id="rmAmount" class="text-body-md font-semibold text-on-surface">₱0.00</span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Down Payment</span><span id="rmDown" class="text-body-md text-on-surface">₱0.00</span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Submitted</span><span id="rmDate" class="text-body-md text-on-surface"></span></div>
+
+            <!-- Special Instructions Box -->
+            <div id="rmInstructionsBox" class="hidden pt-2 border-t border-outline-variant/20">
+                <span class="text-[11px] font-bold text-on-surface-variant block uppercase tracking-wider mb-1">Special Instructions / Changes</span>
+                <p id="rmInstructions" class="text-xs text-on-surface bg-surface-container-low p-2.5 rounded-xl border border-outline-variant/30 whitespace-pre-wrap"></p>
+            </div>
+
+            <!-- Reference Attachments -->
+            <div id="rmAttachmentsBox" class="hidden pt-2 border-t border-outline-variant/20">
+                <span class="text-[11px] font-bold text-on-surface-variant block uppercase tracking-wider mb-1">Reference Attachments</span>
+                <div id="rmAttachmentsList" class="grid grid-cols-2 gap-2 mt-1"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -513,9 +576,179 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
     </div>
 </div>
 
+<!-- Printing Settings Modal -->
+<div id="printingSettingsModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-md overflow-y-auto">
+    <div class="bg-surface-container-lowest rounded-3xl p-lg sm:p-xl max-w-2xl w-full space-y-lg border border-outline-variant/30 shadow-2xl my-auto">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
+            <div class="flex items-center gap-xs text-primary font-bold">
+                <span class="material-symbols-outlined text-2xl">settings</span>
+                <span class="text-title-lg">Printing Service Settings</span>
+            </div>
+            <button type="button" onclick="closePrintingSettingsModal()" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <form id="printingSettingsForm" onsubmit="handleSavePrintingSettings(event)" class="space-y-lg">
+            <?= csrf_field() ?>
+
+            <!-- General Options & Binding Pricing -->
+            <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/30 space-y-md">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-primary">payments</span>
+                    General &amp; Binding Options
+                </h4>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-md">
+                    <div>
+                        <label class="text-[11px] font-bold text-on-surface-variant block mb-1">Down Payment (%)</label>
+                        <div class="relative">
+                            <input type="number" step="1" min="0" max="100" name="down_payment_percent" id="set_down_payment" value="<?= esc($printingSettings['down_payment_percent'] ?? 50) ?>" required class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-outline font-bold">%</span>
+                        </div>
+                        <p class="text-[10px] text-on-surface-variant mt-0.5">Required before job queued</p>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold text-on-surface-variant block mb-1">Staple Binding (₱)</label>
+                        <div class="relative">
+                            <input type="number" step="0.50" min="0" name="price_staple" id="set_price_staple" value="<?= esc($printingSettings['price_staple'] ?? 10) ?>" required class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-outline font-bold">₱</span>
+                        </div>
+                        <p class="text-[10px] text-on-surface-variant mt-0.5">Price added per copy</p>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] font-bold text-on-surface-variant block mb-1">Spiral Binding (₱)</label>
+                        <div class="relative">
+                            <input type="number" step="0.50" min="0" name="price_spiral" id="set_price_spiral" value="<?= esc($printingSettings['price_spiral'] ?? 35) ?>" required class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+                            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-outline font-bold">₱</span>
+                        </div>
+                        <p class="text-[10px] text-on-surface-variant mt-0.5">Price added per copy</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paper Sizes & Per-Page Pricing Table -->
+            <div class="space-y-sm">
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-on-surface-variant flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px] text-primary">format_size</span>
+                        Supported Paper Sizes &amp; Page Rates
+                    </h4>
+                    <span class="text-[11px] text-outline">Disabled sizes are hidden from customers</span>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-outline-variant/30 max-h-72 overflow-y-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-surface-container-low text-[11px] font-bold text-on-surface-variant uppercase tracking-wider sticky top-0 border-b border-outline-variant/30 z-10">
+                            <tr>
+                                <th class="py-2.5 px-3">Paper Size</th>
+                                <th class="py-2.5 px-3 text-center w-24">Enabled</th>
+                                <th class="py-2.5 px-3 text-right w-36">Color Rate (₱)</th>
+                                <th class="py-2.5 px-3 text-right w-36">B&amp;W Rate (₱)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
+                            <?php if (!empty($paperSizes)): ?>
+                                <?php foreach ($paperSizes as $sKey => $sVal): ?>
+                                    <?php $isEnabled = !empty($sVal['is_enabled']); ?>
+                                    <tr id="row_size_<?= esc($sKey) ?>" class="size-row <?= $isEnabled ? '' : 'opacity-50 bg-surface-container-low/40' ?> hover:bg-surface-container-low/30 transition-colors">
+                                        <td class="py-2 px-3 font-semibold text-on-surface">
+                                            <div><?= esc($sVal['label'] ?? strtoupper($sKey)) ?></div>
+                                            <span class="text-[10px] text-outline font-mono uppercase"><?= esc($sKey) ?></span>
+                                        </td>
+                                        <td class="py-2 px-3 text-center">
+                                            <input type="hidden" name="paper_sizes[<?= esc($sKey) ?>][is_enabled]" value="0">
+                                            <input type="checkbox" name="paper_sizes[<?= esc($sKey) ?>][is_enabled]" value="1" <?= $isEnabled ? 'checked' : '' ?> onchange="togglePaperSizeRow('<?= esc($sKey) ?>', this.checked)" class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4 cursor-pointer">
+                                        </td>
+                                        <td class="py-2 px-3 text-right">
+                                            <input type="number" step="0.25" min="0" name="paper_sizes[<?= esc($sKey) ?>][price_color]" value="<?= number_format((float) ($sVal['price_color'] ?? 5.00), 2, '.', '') ?>" class="w-24 ml-auto py-1 px-2 text-xs bg-surface-container border border-outline-variant/40 rounded-lg text-right font-medium text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+                                        </td>
+                                        <td class="py-2 px-3 text-right">
+                                            <input type="number" step="0.25" min="0" name="paper_sizes[<?= esc($sKey) ?>][price_bw]" value="<?= number_format((float) ($sVal['price_bw'] ?? 2.00), 2, '.', '') ?>" class="w-24 ml-auto py-1 px-2 text-xs bg-surface-container border border-outline-variant/40 rounded-lg text-right font-medium text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="settingsFeedback" class="hidden p-sm rounded-xl text-xs font-semibold"></div>
+
+            <div class="flex items-center justify-end gap-sm pt-sm border-t border-outline-variant/20">
+                <button type="button" onclick="closePrintingSettingsModal()" class="px-lg py-2 rounded-xl border border-outline-variant/40 hover:bg-surface-container text-on-surface text-xs font-semibold transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" id="btnSavePrintingSettings" class="px-xl py-2 bg-primary text-on-primary rounded-xl text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-xs shadow-sm active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">save</span>
+                    <span>Save Settings</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <script>
+    function openPrintingSettingsModal() {
+        document.getElementById('printingSettingsModal').classList.remove('hidden');
+    }
+
+    function closePrintingSettingsModal() {
+        document.getElementById('printingSettingsModal').classList.add('hidden');
+    }
+
+    function togglePaperSizeRow(key, isChecked) {
+        const row = document.getElementById('row_size_' + key);
+        if (!row) return;
+        if (isChecked) {
+            row.classList.remove('opacity-50', 'bg-surface-container-low/40');
+        } else {
+            row.classList.add('opacity-50', 'bg-surface-container-low/40');
+        }
+    }
+
+    async function handleSavePrintingSettings(e) {
+        e.preventDefault();
+        const form = document.getElementById('printingSettingsForm');
+        const btn = document.getElementById('btnSavePrintingSettings');
+        const fb = document.getElementById('settingsFeedback');
+
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        fb.className = 'hidden';
+
+        try {
+            const formData = new FormData(form);
+            const res = await fetch('<?= base_url('tenant/printing/settings/save') ?>', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                fb.className = 'p-sm rounded-xl text-xs font-semibold bg-green-100 text-green-800 flex items-center gap-1';
+                fb.innerHTML = `<span class="material-symbols-outlined text-[16px]">check_circle</span> <span>${data.message || 'Settings saved successfully!'}</span>`;
+                setTimeout(() => {
+                    closePrintingSettingsModal();
+                    window.location.reload();
+                }, 800);
+            } else {
+                fb.className = 'p-sm rounded-xl text-xs font-semibold bg-red-100 text-red-800';
+                fb.textContent = data.error || 'Failed to save settings.';
+            }
+        } catch (err) {
+            fb.className = 'p-sm rounded-xl text-xs font-semibold bg-red-100 text-red-800';
+            fb.textContent = 'Network error while saving settings.';
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70');
+        }
+    }
     let activeMenu = null;
 
     function closeMenus() {
@@ -583,6 +816,17 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
         document.getElementById('rmRequest').textContent = '#' + (btn.dataset.request || '');
         document.getElementById('rmCustomer').textContent = btn.dataset.customer || '';
         document.getElementById('rmFile').textContent = btn.dataset.file || '';
+        document.getElementById('rmDocType').textContent = btn.dataset.doctype || 'PDF';
+        
+        const changeTypeRow = document.getElementById('rmChangeTypeRow');
+        const changeTypeVal = document.getElementById('rmChangeType');
+        if ((btn.dataset.doctype || '').toUpperCase() === 'DOCX') {
+            changeTypeRow.classList.remove('hidden');
+            changeTypeVal.textContent = btn.dataset.changetype || 'Print As-Is';
+        } else {
+            changeTypeRow.classList.add('hidden');
+        }
+
         document.getElementById('rmSpecs').textContent = btn.dataset.specs || '';
         document.getElementById('rmColor').textContent = btn.dataset.color || '';
         document.getElementById('rmFulfillment').textContent = btn.dataset.fulfillment || '';
@@ -591,6 +835,48 @@ $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
         document.getElementById('rmAmount').textContent = '₱' + (btn.dataset.amount || '0.00');
         document.getElementById('rmDown').textContent = '₱' + (btn.dataset.down || '0.00');
         document.getElementById('rmDate').textContent = btn.dataset.date || '';
+
+        // Special Instructions
+        const instructionsBox = document.getElementById('rmInstructionsBox');
+        const instructionsText = document.getElementById('rmInstructions');
+        const inst = btn.dataset.instructions || '';
+        if (inst.trim() !== '') {
+            instructionsBox.classList.remove('hidden');
+            instructionsText.textContent = inst;
+        } else {
+            instructionsBox.classList.add('hidden');
+            instructionsText.textContent = '';
+        }
+
+        // Attachments
+        const attBox = document.getElementById('rmAttachmentsBox');
+        const attList = document.getElementById('rmAttachmentsList');
+        attList.innerHTML = '';
+        let attachments = [];
+        try {
+            attachments = JSON.parse(btn.dataset.attachments || '[]');
+        } catch (e) {
+            attachments = [];
+        }
+
+        if (attachments && attachments.length > 0) {
+            attBox.classList.remove('hidden');
+            attachments.forEach((att) => {
+                const item = document.createElement('a');
+                item.href = '<?= base_url() ?>/' + att.file_path;
+                item.target = '_blank';
+                item.className = 'p-2 rounded-xl bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 flex items-center gap-2 text-xs transition-colors group';
+                item.innerHTML = `
+                    <span class="material-symbols-outlined text-primary text-[18px]">image</span>
+                    <span class="truncate flex-1 font-medium text-on-surface group-hover:text-primary">${att.file_name}</span>
+                    <span class="material-symbols-outlined text-outline text-[14px]">open_in_new</span>
+                `;
+                attList.appendChild(item);
+            });
+        } else {
+            attBox.classList.add('hidden');
+        }
+
         document.getElementById('requestModal').classList.remove('hidden');
     }
 

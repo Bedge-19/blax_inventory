@@ -12,9 +12,13 @@ use App\Models\ShopModel;
 use App\Models\NotificationModel;
 use App\Models\ShopNotificationPreferenceModel;
 use App\Models\PaymentModel;
+use App\Models\ProductVariantModel;
+use App\Traits\CheckoutProcessorTrait;
 
 class Cart extends BaseController
 {
+    use CheckoutProcessorTrait;
+
     public function index()
     {
         $session = session();
@@ -151,6 +155,7 @@ class Cart extends BaseController
 
         $productId = (int)$this->request->getPost('product_id');
         $quantity  = max(1, (int)($this->request->getPost('quantity') ?? 1));
+        $variantId = (int)($this->request->getPost('variant_id') ?? 0);
 
         $productModel = new ProductModel();
         $product      = $productModel->find($productId);
@@ -162,21 +167,78 @@ class Cart extends BaseController
             return redirect()->back();
         }
 
-        $quantity = min($quantity, max(1, (int) $product['stock_quantity']));
+        $variantModel = new ProductVariantModel();
+        $variants = $variantModel->where('product_id', $productId)->findAll();
+
+        $selectedVariant = null;
+        $variantLabel = null;
+        $unitPrice = (float) $product['price'];
+        $maxStock = (int) $product['stock_quantity'];
+
+        if (!empty($variants)) {
+            if (!$variantId) {
+                $msg = 'Please select a product option to continue.';
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            foreach ($variants as $v) {
+                if ((int)$v['id'] === $variantId) {
+                    $selectedVariant = $v;
+                    break;
+                }
+            }
+
+            if (!$selectedVariant) {
+                $msg = 'The selected product option does not exist.';
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            if ((int)$selectedVariant['stock_quantity'] <= 0) {
+                $msg = 'The selected option is out of stock.';
+                if ($this->request->isAJAX()) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => $msg]);
+                }
+                return redirect()->back()->with('error', $msg);
+            }
+
+            $maxStock = (int) $selectedVariant['stock_quantity'];
+            $variantLabel = trim($selectedVariant['name'] . ': ' . $selectedVariant['value']);
+            if ($selectedVariant['price_override'] !== null && (float)$selectedVariant['price_override'] > 0) {
+                $unitPrice = (float) $selectedVariant['price_override'];
+            }
+        } else {
+            $variantId = null;
+        }
+
+        $quantity = min($quantity, max(1, $maxStock));
 
         $cartModel     = new CartModel();
         $cartItemModel = new CartItemModel();
 
         $cart = $cartModel->getOrCreateCart($userId);
-        $expiresAt = date('Y-m-d H:i:s', strtotime('+72 hours'));
+        $expiresAt = date('Y-m-d H:i:s', strtotime('+3 days'));
 
-        $existingItem = $cartItemModel->where('cart_id', $cart['id'])
-            ->where('product_id', $productId)
-            ->first();
+        $existingItemQuery = $cartItemModel->where('cart_id', $cart['id'])
+            ->where('product_id', $productId);
+        if ($variantId) {
+            $existingItemQuery->where('variant_id', $variantId);
+        } else {
+            $existingItemQuery->where('variant_id IS NULL');
+        }
+        $existingItem = $existingItemQuery->first();
 
         if ($existingItem) {
+            $newQty = min($existingItem['quantity'] + $quantity, max(1, $maxStock));
             $cartItemModel->update($existingItem['id'], [
-                'quantity'         => $existingItem['quantity'] + $quantity,
+                'quantity'         => $newQty,
+                'unit_price'       => $unitPrice,
+                'variant_label'    => $variantLabel,
                 'expires_at'       => $expiresAt,
                 'last_reminder_at' => null,
                 'reminder_count'   => 0,
@@ -185,8 +247,10 @@ class Cart extends BaseController
             $cartItemModel->insert([
                 'cart_id'          => $cart['id'],
                 'product_id'       => $productId,
+                'variant_id'       => $variantId,
+                'variant_label'    => $variantLabel,
                 'quantity'         => $quantity,
-                'unit_price'       => $product['price'],
+                'unit_price'       => $unitPrice,
                 'is_selected'      => 1,
                 'expires_at'       => $expiresAt,
                 'last_reminder_at' => null,
@@ -260,134 +324,27 @@ class Cart extends BaseController
         $itemsByShop = [];
         foreach ($cartItems as $item) {
             if (!empty($item['is_selected'])) {
-                $itemsByShop[$item['shop_id']][] = $item;
-            }
-        }
-
-        // If GCash payment method, do NOT create order yet.
-        // Instead, build the checkout intent payload, create PayMongo session, and redirect.
-        if ($paymentMethod === 'gcash') {
-            $grandTotal = 0;
-            $shopOrders = [];
-            foreach ($itemsByShop as $shopId => $items) {
-                $subtotal = 0;
-                foreach ($items as $item) {
-                    $subtotal += $item['unit_price'] * $item['quantity'];
-                }
-                $shippingFee = $fulfillmentMethod === 'delivery' ? 50.00 : 0.00;
-                $totalAmount = $subtotal + $shippingFee;
-                $grandTotal += $totalAmount;
-
-                $shopOrders[] = [
-                    'shop_id'      => $shopId,
-                    'subtotal'     => $subtotal,
-                    'shipping_fee' => $shippingFee,
-                    'total_amount' => $totalAmount,
-                    'items'        => array_map(function ($it) {
-                        return [
-                            'product_id'   => $it['product_id'],
-                            'product_name' => $it['product_name'],
-                            'quantity'     => $it['quantity'],
-                            'unit_price'   => $it['unit_price'],
-                            'line_total'   => $it['unit_price'] * $it['quantity'],
-                        ];
-                    }, $items),
+                $itemsByShop[$item['shop_id']][] = [
+                    'product_id'    => $item['product_id'],
+                    'variant_id'    => $item['variant_id'] ?? null,
+                    'variant_label' => $item['variant_label'] ?? null,
+                    'product_name'  => $item['name'] ?? $item['product_name'] ?? 'Product',
+                    'quantity'      => (int) $item['quantity'],
+                    'unit_price'    => (float) $item['unit_price'],
                 ];
             }
-
-            $token = bin2hex(random_bytes(16));
-            $paymongo = service('paymongoService');
-            $successUrl = base_url('cart/payment/callback?token=' . $token);
-            $cancelUrl  = base_url('cart/payment/callback?cancel=1&token=' . $token);
-
-            $sessionRes = $paymongo->createGcashCheckoutSession(
-                $grandTotal,
-                'Order Payment (Blax MarketPlace)',
-                $successUrl,
-                $cancelUrl,
-                [
-                    'type'     => 'product_order',
-                    'user_id'  => (string)$userId,
-                    'token'    => $token,
-                ]
-            );
-
-            if (!empty($sessionRes['success']) && !empty($sessionRes['checkout_url'])) {
-                $pendingData = [
-                    'user_id'            => $userId,
-                    'fulfillment_method' => $fulfillmentMethod,
-                    'payment_method'     => 'gcash',
-                    'shipping_address_id'=> $addressId,
-                    'shop_orders'        => $shopOrders,
-                    'selected_ids'       => $selectedIds,
-                    'session_id'         => $sessionRes['session_id'],
-                    'grand_total'        => $grandTotal,
-                    'token'              => $token,
-                ];
-
-                session()->set('pending_cart_checkout_' . $userId, $pendingData);
-                session()->set('pending_cart_token_' . $token, $pendingData);
-                cache()->save('pending_cart_' . $sessionRes['session_id'], $pendingData, 86400);
-                cache()->save('pending_cart_token_' . $token, $pendingData, 86400);
-
-                return redirect()->to($sessionRes['checkout_url']);
-            }
-
-            return redirect()->to('/cart')->with('error', $sessionRes['error'] ?? 'Unable to connect to PayMongo checkout. Please try again.');
         }
 
-        // Non-GCash (COD, Store Pickup) - create orders directly
-        $orderModel     = new OrderModel();
-        $orderItemModel = new OrderItemModel();
-
-        $createdOrderIds = [];
-        foreach ($itemsByShop as $shopId => $items) {
-            $subtotal = 0;
-            foreach ($items as $item) {
-                $subtotal += $item['unit_price'] * $item['quantity'];
-            }
-            $shippingFee = $fulfillmentMethod === 'delivery' ? 50.00 : 0.00;
-            $totalAmount = $subtotal + $shippingFee;
-
-            $orderId = $orderModel->insert([
-                'order_number'        => 'ORD-' . rand(10000, 99999),
-                'customer_id'         => $userId,
-                'shop_id'             => $shopId,
-                'shipping_address_id' => $addressId,
-                'fulfillment_method'  => $fulfillmentMethod,
-                'payment_method'      => $paymentMethod,
-                'subtotal'            => $subtotal,
-                'shipping_fee'        => $shippingFee,
-                'tax_amount'          => 0,
-                'total_amount'        => $totalAmount,
-                'status'              => 'pending',
-                'payment_status'      => 'unpaid',
-            ]);
-
-            $createdOrderIds[] = $orderId;
-
-            foreach ($items as $item) {
-                $orderItemModel->insert([
-                    'order_id'    => $orderId,
-                    'product_id'  => $item['product_id'],
-                    'product_name'=> $item['product_name'],
-                    'quantity'    => $item['quantity'],
-                    'unit_price'  => $item['unit_price'],
-                    'line_total'  => $item['unit_price'] * $item['quantity'],
-                ]);
-            }
-
-            $this->notifyNewOrder($shopId, $orderId);
-        }
-
-        // Clear selected cart items directly for non-GCash
-        foreach ($cartItems as $item) {
-            if (!empty($item['is_selected'])) {
-                $cartItemModel->delete($item['id']);
-            }
-        }
-
-        return redirect()->to('/customer/orders')->with('success', 'Your order has been placed successfully.');
+        return $this->processItemsByShop(
+            $itemsByShop,
+            $userId,
+            $paymentMethod,
+            $fulfillmentMethod,
+            $addressId ? (int) $addressId : null,
+            $selectedIds,
+            '/cart',
+            '/cart'
+        );
     }
 
     /**
@@ -404,7 +361,13 @@ class Cart extends BaseController
 
         $isCancel = (bool) $this->request->getGet('cancel');
         if ($isCancel) {
-            return redirect()->to('/cart')->with('warning', 'GCash checkout was cancelled. Your cart items have been kept.');
+            $token = (string) $this->request->getGet('token');
+            $pendingData = $token !== '' ? (session()->get('pending_cart_token_' . $token) ?? cache()->get('pending_cart_token_' . $token)) : null;
+            $cancelRedirect = $pendingData['cancel_redirect'] ?? '/cart';
+            $cancelMsg = !empty($pendingData['is_direct_buy'])
+                ? 'GCash checkout was cancelled.'
+                : 'GCash checkout was cancelled. Your cart items have been kept.';
+            return redirect()->to($cancelRedirect)->with('warning', $cancelMsg);
         }
 
         $sessionId = (string) ($this->request->getGet('session_id') ?? $this->request->getGet('checkout_session_id') ?? '');
@@ -482,13 +445,30 @@ class Cart extends BaseController
 
             foreach ($so['items'] as $it) {
                 $orderItemModel->insert([
-                    'order_id'    => $orderId,
-                    'product_id'  => $it['product_id'],
-                    'product_name'=> $it['product_name'],
-                    'quantity'    => $it['quantity'],
-                    'unit_price'  => $it['unit_price'],
-                    'line_total'  => $it['line_total'],
+                    'order_id'      => $orderId,
+                    'product_id'    => $it['product_id'],
+                    'variant_id'    => $it['variant_id'] ?? null,
+                    'variant_label' => $it['variant_label'] ?? null,
+                    'product_name'  => $it['product_name'],
+                    'quantity'      => $it['quantity'],
+                    'unit_price'    => $it['unit_price'],
+                    'line_total'    => $it['line_total'],
                 ]);
+
+                // Decrement stock upon verified payment
+                $pId  = (int) $it['product_id'];
+                $pQty = (int) $it['quantity'];
+                if (!empty($it['variant_id'])) {
+                    $vId = (int) $it['variant_id'];
+                    $vRow = $db->table('product_variants')->where('id', $vId)->get()->getRowArray();
+                    if ($vRow) {
+                        $db->table('product_variants')->where('id', $vId)->update(['stock_quantity' => max(0, (int) $vRow['stock_quantity'] - $pQty)]);
+                    }
+                }
+                $pRow = $db->table('products')->where('id', $pId)->get()->getRowArray();
+                if ($pRow) {
+                    $db->table('products')->where('id', $pId)->update(['stock_quantity' => max(0, (int) $pRow['stock_quantity'] - $pQty)]);
+                }
             }
 
             $paymentModel->insert([
@@ -504,12 +484,14 @@ class Cart extends BaseController
             ]);
         }
 
-        // Clear selected cart items
-        $cart = $cartModel->getOrCreateCart($userId);
-        if (!empty($pendingData['selected_ids'])) {
-            $cartItemModel->where('cart_id', $cart['id'])->whereIn('id', $pendingData['selected_ids'])->delete();
-        } else {
-            $cartItemModel->where('cart_id', $cart['id'])->where('is_selected', 1)->delete();
+        // Clear selected cart items only if not Direct Buy
+        if (empty($pendingData['is_direct_buy'])) {
+            $cart = $cartModel->getOrCreateCart($userId);
+            if (!empty($pendingData['selected_ids'])) {
+                $cartItemModel->where('cart_id', $cart['id'])->whereIn('id', $pendingData['selected_ids'])->delete();
+            } else {
+                $cartItemModel->where('cart_id', $cart['id'])->where('is_selected', 1)->delete();
+            }
         }
 
         // Clean up pending session data and cache
@@ -650,13 +632,30 @@ class Cart extends BaseController
 
                 foreach ($so['items'] as $it) {
                     $orderItemModel->insert([
-                        'order_id'    => $orderId,
-                        'product_id'  => $it['product_id'],
-                        'product_name'=> $it['product_name'],
-                        'quantity'    => $it['quantity'],
-                        'unit_price'  => $it['unit_price'],
-                        'line_total'  => $it['line_total'],
+                        'order_id'      => $orderId,
+                        'product_id'    => $it['product_id'],
+                        'variant_id'    => $it['variant_id'] ?? null,
+                        'variant_label' => $it['variant_label'] ?? null,
+                        'product_name'  => $it['product_name'],
+                        'quantity'      => $it['quantity'],
+                        'unit_price'    => $it['unit_price'],
+                        'line_total'    => $it['line_total'],
                     ]);
+
+                    // Decrement stock upon verified webhook payment
+                    $pId  = (int) $it['product_id'];
+                    $pQty = (int) $it['quantity'];
+                    if (!empty($it['variant_id'])) {
+                        $vId = (int) $it['variant_id'];
+                        $vRow = $db->table('product_variants')->where('id', $vId)->get()->getRowArray();
+                        if ($vRow) {
+                            $db->table('product_variants')->where('id', $vId)->update(['stock_quantity' => max(0, (int) $vRow['stock_quantity'] - $pQty)]);
+                        }
+                    }
+                    $pRow = $db->table('products')->where('id', $pId)->get()->getRowArray();
+                    if ($pRow) {
+                        $db->table('products')->where('id', $pId)->update(['stock_quantity' => max(0, (int) $pRow['stock_quantity'] - $pQty)]);
+                    }
                 }
 
                 $paymentModel->insert([
@@ -672,11 +671,14 @@ class Cart extends BaseController
                 ]);
             }
 
-            $cart = $cartModel->getOrCreateCart($userId);
-            if (!empty($pendingData['selected_ids'])) {
-                $cartItemModel->where('cart_id', $cart['id'])->whereIn('id', $pendingData['selected_ids'])->delete();
-            } else {
-                $cartItemModel->where('cart_id', $cart['id'])->where('is_selected', 1)->delete();
+            // Clear selected cart items only if not Direct Buy
+            if (empty($pendingData['is_direct_buy'])) {
+                $cart = $cartModel->getOrCreateCart($userId);
+                if (!empty($pendingData['selected_ids'])) {
+                    $cartItemModel->where('cart_id', $cart['id'])->whereIn('id', $pendingData['selected_ids'])->delete();
+                } else {
+                    $cartItemModel->where('cart_id', $cart['id'])->where('is_selected', 1)->delete();
+                }
             }
 
             cache()->delete('pending_cart_' . $sessionId);
@@ -697,36 +699,53 @@ class Cart extends BaseController
                 return $this->response->setStatusCode(404)->setJSON(['error' => 'Pending printing data not found']);
             }
 
-            $db = \Config\Database::connect();
+            $printingRequestModel = new \App\Models\PrintingRequestModel();
+            $paymentModel         = new PaymentModel();
+            $db                   = \Config\Database::connect();
             $db->transStart();
 
-            $prModel = new \App\Models\PrintingRequestModel();
-            $insertData = [
-                'request_number'     => $pending['request_number'] ?? ('PR-' . date('Ymd') . '-' . rand(1000, 9999)),
-                'customer_id'        => $pending['customer_id'],
-                'shop_id'            => $pending['shop_id'],
-                'file_name'          => $pending['file_name'],
-                'file_url'           => $pending['file_url'],
-                'paper_size'         => $pending['paper_size'],
-                'color_mode'         => $pending['color_mode'],
-                'copies'             => $pending['copies'],
-                'page_count'         => $pending['page_count'],
-                'binding_option'     => $pending['binding_option'],
-                'paper_stock'        => $pending['paper_stock'],
-                'fulfillment_method' => $pending['fulfillment_method'],
-                'total_price'        => $pending['total_price'],
-                'down_payment'       => $pending['down_payment'],
-                'status'             => 'Paid (50% Down Payment)',
-                'progress_percent'   => 0,
-            ];
+            $alreadyProcessed = $paymentModel->where('reference_number', $sessionId)->first();
+            if ($alreadyProcessed) {
+                $db->transComplete();
+                return $this->response->setJSON(['status' => 'already_processed']);
+            }
 
-            $prId = $prModel->insert($insertData);
+            $prId = $printingRequestModel->insert([
+                'customer_id'          => $pending['customer_id'],
+                'shop_id'              => $pending['shop_id'],
+                'file_url'             => $pending['file_url'],
+                'original_filename'    => $pending['original_filename'],
+                'page_count'           => $pending['page_count'],
+                'paper_size'           => $pending['paper_size'],
+                'color_mode'           => $pending['color_mode'],
+                'binding_type'         => $pending['binding_type'],
+                'quantity'             => $pending['quantity'],
+                'total_price'          => $pending['total_price'],
+                'down_payment_amount'  => $pending['down_payment_amount'],
+                'remaining_balance'    => $pending['remaining_balance'],
+                'status'               => 'confirmed',
+                'document_type'        => $pending['document_type'] ?? 'pdf',
+                'doc_change_type'      => $pending['doc_change_type'] ?? 'as_is',
+                'special_instructions' => $pending['special_instructions'] ?? null,
+            ]);
+
+            // Save reference photo attachments if any
+            if (!empty($pending['attachments']) && is_array($pending['attachments'])) {
+                $attachModel = new \App\Models\PrintingRequestAttachmentModel();
+                foreach ($pending['attachments'] as $attPath) {
+                    $attachModel->insert([
+                        'printing_request_id' => $prId,
+                        'image_url'           => $attPath,
+                        'created_at'          => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
 
             $paymentModel->insert([
                 'payable_type'     => 'printing_request',
                 'payable_id'       => $prId,
                 'method'           => 'gcash',
-                'amount'           => $pending['down_payment'],
+                'amount'           => $pending['down_payment_amount'],
                 'reference_number' => $sessionId,
                 'proof_image_url'  => null,
                 'status'           => 'verified',
@@ -738,17 +757,13 @@ class Cart extends BaseController
             $db->transComplete();
 
             if ($db->transStatus() !== false) {
-                $shop = (new \App\Models\ShopModel())->find($pending['shop_id']);
+                $shop = (new ShopModel())->find($pending['shop_id']);
                 if ($shop && !empty($shop['owner_id'])) {
-                    $customerUser = (new \App\Models\UserModel())->find($pending['customer_id']);
-                    $cName = $customerUser ? trim(($customerUser['first_name'] ?? '') . ' ' . ($customerUser['last_name'] ?? '')) : 'A customer';
-                    if ($cName === '') $cName = 'A customer';
-                    $prTime = date('M d, Y h:i A');
-                    (new \App\Models\NotificationModel())->create(
+                    (new NotificationModel())->create(
                         (int) $shop['owner_id'],
-                        'new_printing_request',
-                        'New Printing Request #' . ($pending['request_number'] ?? ('PR-' . $prId)),
-                        "Received printing request #{$pending['request_number']} from {$cName} at {$prTime}.",
+                        'printing_request',
+                        'New Printing Request',
+                        'A customer submitted a printing request with down payment.',
                         '/tenant/printing'
                     );
                 }

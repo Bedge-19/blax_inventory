@@ -144,12 +144,7 @@
 
                 </div>
 
-                <a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
 
-                    <span class="material-symbols-outlined">help</span>
-                    <span class="text-label-sm">Help Center</span>
-
-                </a>
 
                 <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
 

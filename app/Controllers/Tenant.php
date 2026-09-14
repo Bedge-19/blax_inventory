@@ -546,17 +546,43 @@ class Tenant extends BaseController
             'completed'
         );
 
+        $settingModel = new \App\Models\ShopPrintingSettingModel();
+        $paperModel   = new \App\Models\ShopPaperSizeSettingModel();
+        $attModel     = new \App\Models\PrintingRequestAttachmentModel();
+
+        $allReqIds = array_merge(
+            array_column($recent['requests'], 'id'),
+            array_column($completed['requests'], 'id')
+        );
+        $attsByReq = [];
+        if (!empty($allReqIds)) {
+            $rawAtts = $attModel->whereIn('printing_request_id', $allReqIds)->findAll();
+            foreach ($rawAtts as $att) {
+                $attsByReq[$att['printing_request_id']][] = $att;
+            }
+        }
+        foreach ($recent['requests'] as &$rq) {
+            $rq['attachments'] = $attsByReq[$rq['id']] ?? [];
+        }
+        unset($rq);
+        foreach ($completed['requests'] as &$cq) {
+            $cq['attachments'] = $attsByReq[$cq['id']] ?? [];
+        }
+        unset($cq);
+
         return view('tenant/printing', [
-            'shop'           => $shop,
-            'requests'       => $recent['requests'],
-            'pager'          => $recent['pager'],
-            'summary'        => (new PrintingRequestModel())->getPrintSummary($shopId),
-            'queue'          => (new PrintingRequestModel())->getProductionQueue($shopId),
-            'completed'      => $completed['requests'],
-            'completed_pager'=> $completed['pager'],
-            'filters'        => ['q' => $search, 'status' => $status, 'cq' => $cSearch],
-            'activeNav'      => 'printing',
-            'title'          => 'Printing Requests Management',
+            'shop'             => $shop,
+            'requests'         => $recent['requests'],
+            'pager'            => $recent['pager'],
+            'summary'          => (new PrintingRequestModel())->getPrintSummary($shopId),
+            'queue'            => (new PrintingRequestModel())->getProductionQueue($shopId),
+            'completed'        => $completed['requests'],
+            'completed_pager'  => $completed['pager'],
+            'filters'          => ['q' => $search, 'status' => $status, 'cq' => $cSearch],
+            'printingSettings' => $settingModel->getForShop($shopId),
+            'paperSizes'       => $paperModel->getForShop($shopId),
+            'activeNav'        => 'printing',
+            'title'            => 'Printing Requests Management',
         ]);
     }
 
@@ -795,15 +821,11 @@ class Tenant extends BaseController
         $shopId = $res['shopId'];
         $shop   = $res['shop'];
 
-        $orderModel  = new OrderModel();
-        $db          = \Config\Database::connect();
+        $page = max(1, (int) $this->request->getGet('page_withdrawals'));
 
-        $orders  = $orderModel->getOrdersByShop($shopId);
-        $payouts = $db->table('payout_requests p')
-            ->select("p.*, p.destination_method as method, p.requested_at as created_at")
-            ->where('p.shop_id', $shopId)
-            ->orderBy('p.requested_at', 'DESC')
-            ->get()->getResultArray();
+        $payoutModel = new PayoutModel();
+        $result      = $payoutModel->getWithdrawalsByShopPaginated($shopId, 15, $page, 'withdrawals');
+        $payouts     = $result['withdrawals'];
 
         $balanceData = $this->getShopEscrowAndBalance($shopId);
 
@@ -811,6 +833,7 @@ class Tenant extends BaseController
             'shop'              => $shop,
             'withdrawals'       => $payouts,
             'payouts'           => $payouts,
+            'pager'             => $result['pager'],
             'available_balance' => $balanceData['available_balance'],
             'escrow_holding'    => $balanceData['escrow_holding'],
             'released_earnings' => $balanceData['released_earnings'],
@@ -1011,6 +1034,22 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Order not found.');
         }
 
+        $fulfillmentMethod = $order['fulfillment_method'] ?? 'delivery';
+
+        // Constrain status transitions dynamically based on fulfillment type
+        if ($fulfillmentMethod === 'pickup') {
+            $allowedForPickup = ['pending', 'processing', 'ready_for_pickup', 'completed', 'cancelled'];
+            if (!in_array($status, $allowedForPickup, true)) {
+                return redirect()->back()->with('error', 'Invalid status for Store Pick-up order. Store Pick-up orders cannot be set to "' . humanize_status($status) . '".');
+            }
+        } else {
+            // Doorstep Delivery
+            $allowedForDelivery = ['pending', 'processing', 'shipped', 'delivered', 'completed', 'cancelled'];
+            if (!in_array($status, $allowedForDelivery, true)) {
+                return redirect()->back()->with('error', 'Invalid status for Doorstep Delivery order. Delivery orders cannot be set to "' . humanize_status($status) . '".');
+            }
+        }
+
         $data = ['status' => $status];
         if ($status === 'completed' || $status === 'delivered') {
             $data['completed_at'] = date('Y-m-d H:i:s');
@@ -1020,20 +1059,25 @@ class Tenant extends BaseController
         }
         $orderModel->update($orderId, $data);
 
-        // Notify customer of order status change
+        $shop = (new ShopModel())->find($shopId);
+
+        // Notify customer of order status change (in-app)
         $customerId = (int) ($order['customer_id'] ?? 0);
         if ($customerId > 0) {
             $orderNum = $order['order_number'] ?? ('ORD-' . $orderId);
-            $shop = (new ShopModel())->find($shopId);
             $shopName = $shop['shop_name'] ?? 'the shop';
 
+            $firstItem = (new OrderItemModel())->where('order_id', $orderId)->first();
+            $itemTitle = !empty($firstItem['product_name']) ? $firstItem['product_name'] : '';
+            $orderDesc = $itemTitle !== '' ? "Your order #{$orderNum} ({$itemTitle})" : "Your order #{$orderNum}";
+
             $statusLabels = [
-                'processing'       => ['Order is Processing', "Your order #{$orderNum} is now being processed by {$shopName}."],
-                'shipped'          => ['Order is Shipped', "Your order #{$orderNum} has been shipped and is on its way."],
-                'ready_for_pickup' => ['Order Ready for Pick-up', "Your order #{$orderNum} is ready for pick-up at {$shopName}."],
-                'delivered'        => ['Order Delivered', "Your order #{$orderNum} has been marked as delivered."],
-                'completed'        => ['Order Completed', "Your order #{$orderNum} has been completed. Thank you!"],
-                'cancelled'        => ['Order Cancelled', "Your order #{$orderNum} has been cancelled."],
+                'processing'       => ['Order is Processing', "{$orderDesc} is now being processed by {$shopName}."],
+                'shipped'          => ['Order is Shipped', "{$orderDesc} has been shipped and is on its way."],
+                'ready_for_pickup' => ['Order Ready for Pick-up', "{$orderDesc} is ready for pick-up at {$shopName}."],
+                'delivered'        => ['Order Delivered', "{$orderDesc} has been marked as delivered."],
+                'completed'        => ['Order Completed', "{$orderDesc} has been completed. Thank you!"],
+                'cancelled'        => ['Order Cancelled', "{$orderDesc} has been cancelled."],
             ];
 
             if (isset($statusLabels[$status])) {
@@ -1048,8 +1092,7 @@ class Tenant extends BaseController
             }
         }
 
-        // Notify shop owner of status update
-        $shop = (new ShopModel())->find($shopId);
+        // Notify shop owner of status update (in-app)
         if ($shop && !empty($shop['owner_id']) && in_array($status, ['processing', 'shipped', 'ready_for_pickup'], true)) {
             $ownerLabels = [
                 'processing'       => 'Order Processing',
@@ -1066,6 +1109,7 @@ class Tenant extends BaseController
             );
         }
 
+        $deliveryRecord = null;
         if ($status === 'shipped') {
             $deliveryModel = new DeliveryModel();
             $existing = $deliveryModel
@@ -1077,7 +1121,7 @@ class Tenant extends BaseController
                 $customer = (new UserModel())->find($order['customer_id']);
                 $address  = !empty($customer['address']) ? $customer['address'] : 'Customer Shipping Address';
 
-                $deliveryModel->insert([
+                $delId = $deliveryModel->insert([
                     'deliverable_type'    => 'order',
                     'deliverable_id'      => $orderId,
                     'tracking_id'          => 'TRK-' . strtoupper(substr(md5($orderId . time()), 0, 8)),
@@ -1089,13 +1133,27 @@ class Tenant extends BaseController
                     'shipped_at'          => date('Y-m-d H:i:s'),
                     'created_at'          => date('Y-m-d H:i:s'),
                 ]);
+                $deliveryRecord = $deliveryModel->find($delId);
             } else {
                 $deliveryModel->update($existing['id'], [
                     'status'     => 'shipped',
                     'shipped_at' => date('Y-m-d H:i:s'),
                 ]);
+                $deliveryRecord = $deliveryModel->find($existing['id']);
             }
+        }
 
+        // TextBee SMS Dispatch (Fires on 'shipped' for Delivery or 'ready_for_pickup' for Pick-up)
+        if (in_array($status, ['shipped', 'ready_for_pickup'], true)) {
+            try {
+                $textBee = new \App\Services\TextBeeService();
+                $textBee->sendOrderNotification($order, $status, $shop, $deliveryRecord);
+            } catch (\Throwable $e) {
+                log_message('error', '[Tenant::updateOrderStatus] TextBee SMS error: ' . $e->getMessage());
+            }
+        }
+
+        if ($status === 'shipped') {
             return redirect()->to(base_url('tenant/deliveries'))->with('success', 'Order #' . ($order['order_number'] ?? $orderId) . ' status updated to Shipped and transferred to Delivery module.');
         }
 
@@ -1165,10 +1223,12 @@ class Tenant extends BaseController
         $delRow = $deliveryModel->where('deliverable_type', 'printing_request')->where('deliverable_id', $requestId)->first();
         if ($delRow && !in_array($delRow['status'], ['delivered', 'returned'], true)) {
             $deliveryModel->update($delRow['id'], ['status' => $delStatus]);
+            $delRow['status'] = $delStatus;
         }
 
-        // Send customer notification
+        // Send customer in-app notification
         $reqNum = $row['request_number'] ?? ('PR-' . $requestId);
+        $fileName = !empty($row['file_name']) ? $row['file_name'] : 'Document.pdf';
         $customerId = (int) ($row['customer_id'] ?? 0);
         if ($customerId > 0) {
             $notifTitle = match ($target) {
@@ -1180,14 +1240,23 @@ class Tenant extends BaseController
                 default              => 'Printing Request Updated',
             };
             $notifMsg = match ($target) {
-                'ready_for_pickup'   => 'Your printing request #' . $reqNum . ' is ready for pick-up! Show your QR code at the shop.',
-                'ready_for_delivery' => 'Your printing request #' . $reqNum . ' has been printed and shipped for delivery!',
-                'completed'          => $isDelivery ? 'Your printing request #' . $reqNum . ' has been completed and is out for delivery!' : 'Your printing request #' . $reqNum . ' is completed! Please bring your Pick-up QR code to collect your order.',
-                'in_production'      => 'Your printing request #' . $reqNum . ' is now being printed in production.',
-                'cancelled'          => 'Your printing request #' . $reqNum . ' has been cancelled.',
-                default              => 'Your printing request #' . $reqNum . ' status has been updated to ' . humanize_status($target) . '.',
+                'ready_for_pickup'   => "Your printing request for {$fileName} (#{$reqNum}) is ready for pick-up! Show your QR code at the shop.",
+                'ready_for_delivery' => "Your printing request for {$fileName} (#{$reqNum}) has been printed and shipped for delivery!",
+                'completed'          => $isDelivery ? "Your printing request for {$fileName} (#{$reqNum}) has been completed and is out for delivery!" : "Your printing request for {$fileName} (#{$reqNum}) is completed! Please bring your Pick-up QR code to collect your order.",
+                'in_production'      => "Your printing request for {$fileName} (#{$reqNum}) is now being printed in production.",
+                'cancelled'          => "Your printing request for {$fileName} (#{$reqNum}) has been cancelled.",
+                default              => "Your printing request for {$fileName} (#{$reqNum}) status has been updated to " . humanize_status($target) . ".",
             };
             (new NotificationModel())->create($customerId, 'printing', $notifTitle, $notifMsg, '/customer/printing');
+        }
+
+        // TextBee SMS Dispatch for Printing Requests (ready_for_pickup or ready_for_delivery / completed delivery)
+        try {
+            $shop = (new ShopModel())->find($shopId);
+            $textBee = new \App\Services\TextBeeService();
+            $textBee->sendPrintingNotification($row, $target, $shop, $delRow);
+        } catch (\Throwable $e) {
+            log_message('error', '[Tenant::updatePrintingStatus] TextBee SMS error: ' . $e->getMessage());
         }
 
         return redirect()->back()->with('success', 'Printing request status updated.');
@@ -1273,6 +1342,43 @@ class Tenant extends BaseController
             ->setHeader('Content-Disposition', 'attachment; filename="' . str_replace('"', '', $name) . '"')
             ->setHeader('Content-Length', (string) filesize($real))
             ->setBody((string) file_get_contents($real));
+    }
+
+    /**
+     * Save printing settings for the current shop (prices, bindings, down payment, paper sizes).
+     */
+    public function savePrintingSettings()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+
+        $downPaymentPercent = (float) ($this->request->getPost('down_payment_percent') ?? 50.00);
+        $priceStaple        = (float) ($this->request->getPost('price_staple') ?? 10.00);
+        $priceSpiral        = (float) ($this->request->getPost('price_spiral') ?? 35.00);
+
+        $settingModel = new \App\Models\ShopPrintingSettingModel();
+        $settingModel->saveForShop($shopId, [
+            'down_payment_percent' => $downPaymentPercent,
+            'price_staple'         => $priceStaple,
+            'price_spiral'         => $priceSpiral,
+        ]);
+
+        $sizesInput = (array) $this->request->getPost('paper_sizes');
+        $sizeModel  = new \App\Models\ShopPaperSizeSettingModel();
+        $sizeModel->saveForShop($shopId, $sizesInput);
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Printing settings saved successfully.']);
+        }
+
+        return redirect()->back()->with('success', 'Printing settings saved successfully.');
     }
 
     /**
@@ -1795,22 +1901,38 @@ class Tenant extends BaseController
 
     /**
      * Save product variants submitted via repeatable form fields.
+     * Uses upsert-by-(name, value) to preserve variant IDs across edits.
      */
-    private function handleProductVariantsSave(int $productId): void
+    private function handleProductVariantsSave(int $productId, ?array $overrideRows = null): void
     {
-        $variantNames  = (array) $this->request->getPost('variant_name');
-        $variantValues = (array) $this->request->getPost('variant_value');
-        $variantStocks = (array) $this->request->getPost('variant_stock');
-        $variantPrices = (array) $this->request->getPost('variant_price');
-        $variantSkus   = (array) $this->request->getPost('variant_sku');
+        if ($overrideRows !== null) {
+            $variantNames  = array_column($overrideRows, 'name');
+            $variantValues = array_column($overrideRows, 'value');
+            $variantStocks = array_column($overrideRows, 'stock');
+            $variantPrices = array_column($overrideRows, 'price');
+            $variantSkus   = array_column($overrideRows, 'sku');
+        } else {
+            $req = $this->request ?? service('request');
+            $variantNames  = (array) $req->getPost('variant_name');
+            $variantValues = (array) $req->getPost('variant_value');
+            $variantStocks = (array) $req->getPost('variant_stock');
+            $variantPrices = (array) $req->getPost('variant_price');
+            $variantSkus   = (array) $req->getPost('variant_sku');
+        }
 
         $variantModel = new ProductVariantModel();
-        // Clear existing variants for this product before re-inserting
-        $variantModel->where('product_id', $productId)->delete();
+        $existingVariants = $variantModel->where('product_id', $productId)->findAll();
+
+        $existingMap = [];
+        foreach ($existingVariants as $ev) {
+            $key = mb_strtolower(trim($ev['name'])) . '|||' . mb_strtolower(trim($ev['value']));
+            $existingMap[$key] = $ev;
+        }
 
         $count = max(count($variantValues), count($variantNames));
+        $keptIds = [];
+
         if ($count > 0) {
-            $inserted = [];
             for ($idx = 0; $idx < $count; $idx++) {
                 $val  = isset($variantValues[$idx]) ? trim((string) $variantValues[$idx]) : '';
                 $name = isset($variantNames[$idx]) ? trim((string) $variantNames[$idx]) : '';
@@ -1827,22 +1949,41 @@ class Tenant extends BaseController
                     continue;
                 }
 
+                $canonicalName = $name !== '' ? $name : 'Type';
                 $stock = max(0, (int) ($variantStocks[$idx] ?? 0));
                 $price = isset($variantPrices[$idx]) && $variantPrices[$idx] !== '' ? (float) $variantPrices[$idx] : null;
                 $sku   = isset($variantSkus[$idx]) ? trim((string) $variantSkus[$idx]) : null;
 
-                $inserted[] = [
+                $data = [
                     'product_id'     => $productId,
-                    'name'           => $name !== '' ? $name : 'Type',
+                    'name'           => $canonicalName,
                     'value'          => $val,
                     'sku_suffix'     => $sku !== '' ? $sku : null,
                     'stock_quantity' => $stock,
                     'price_override' => ($price !== null && $price >= 0) ? $price : null,
                 ];
+
+                $key = mb_strtolower($canonicalName) . '|||' . mb_strtolower($val);
+                if (isset($existingMap[$key])) {
+                    $existingId = (int) $existingMap[$key]['id'];
+                    $variantModel->update($existingId, $data);
+                    $keptIds[] = $existingId;
+                } else {
+                    $newId = $variantModel->insert($data);
+                    if ($newId) {
+                        $keptIds[] = (int) $newId;
+                        // Avoid duplicates if same name+val appears multiple times in submitted arrays
+                        $existingMap[$key] = array_merge($data, ['id' => $newId]);
+                    }
+                }
             }
-            if (!empty($inserted)) {
-                $variantModel->insertBatch($inserted);
-            }
+        }
+
+        // Delete existing rows that were not retained in this submission
+        $existingIds = array_map('intval', array_column($existingVariants, 'id'));
+        $toDelete = array_diff($existingIds, $keptIds);
+        if (!empty($toDelete)) {
+            $variantModel->whereIn('id', $toDelete)->delete();
         }
     }
 

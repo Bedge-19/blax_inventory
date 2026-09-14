@@ -71,6 +71,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('submit', async (e) => {
         const form = e.target.closest('form[action*="cart/add"]');
         if (!form) return;
+
+        // Do not intercept if submission is for Buy Now or targets a non-cart endpoint
+        const submitter = e.submitter;
+        if (submitter) {
+            const formaction = submitter.getAttribute('formaction');
+            if (formaction && !formaction.includes('cart/add')) return;
+            if (submitter.id === 'buy-now-btn' || submitter.classList.contains('buy-now-btn')) return;
+        }
+
         e.preventDefault();
 
         const btn = form.querySelector('button[type="submit"]');

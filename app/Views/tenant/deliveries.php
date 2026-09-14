@@ -241,14 +241,25 @@
 
         <!-- Live Fleet Tracking -->
         <div class="glass-card rounded-xl overflow-hidden shadow-sm flex flex-col relative">
-            <div class="px-lg py-md border-b border-outline-variant/30 flex items-center justify-between">
+            <div class="px-lg py-md border-b border-outline-variant/30 flex flex-wrap items-center justify-between gap-sm">
                 <div>
-                    <h3 class="text-title-lg font-bold text-on-surface">Live Fleet Tracking</h3>
+                    <h3 class="text-title-lg font-bold text-on-surface flex items-center gap-2">
+                        <span>Live Fleet Tracking</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">Polomolok Map</span>
+                    </h3>
                     <p id="mapActiveSub" class="text-[11px] text-on-surface-variant font-medium">Real-time GPS delivery routes across Polomolok</p>
                 </div>
-                <button type="button" onclick="resetFleetMapView()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant border border-outline-variant/30 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[14px]">my_location</span> Reset Map
-                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <div id="testRouteControls" class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/30 px-2 py-1 rounded-lg">
+                        <span class="text-[10px] font-bold text-outline uppercase tracking-wider">Test Route:</span>
+                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO1')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Cannery Site">Cannery</button>
+                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO3')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Glamang">Glamang</button>
+                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO2')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Rubber">Rubber</button>
+                    </div>
+                    <button type="button" onclick="resetFleetMapView()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant border border-outline-variant/30 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">my_location</span> Reset Map
+                    </button>
+                </div>
             </div>
 
             <!-- Route Active Info Floating Bar -->
@@ -323,8 +334,8 @@
 
 <form id="deliveryCsrfForm" class="hidden"><?= csrf_field() ?></form>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
@@ -340,7 +351,77 @@
     let shouldReloadOnClose = false;
 
     const STORE_COORDS = [6.2217, 125.0667]; // Shop Base in Polomolok Poblacion
-    const pins = <?= json_encode($pins, JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+    const pins = <?= json_encode($pins ?? [], JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
+
+    // Temporary Polomolok sample test pins for testing map, routes, and rider movement
+    const samplePolomolokPins = [
+        {
+            id: 991,
+            tracking_id: 'TRK-TEST-POLO1',
+            ref_number: 'ORD-TEST-8801',
+            first_name: 'Maria',
+            last_name: 'Santos',
+            customer_phone: '09171234567',
+            status: 'in_transit',
+            destination_address: 'Purok 4, Brgy. Cannery Site, Polomolok',
+            current_lat: 6.2418,
+            current_lng: 125.0782,
+            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
+            is_test_pin: true
+        },
+        {
+            id: 992,
+            tracking_id: 'TRK-TEST-POLO2',
+            ref_number: 'ORD-TEST-8802',
+            first_name: 'Juan',
+            last_name: 'Dela Cruz',
+            customer_phone: '09189876543',
+            status: 'shipped',
+            destination_address: 'Crossing Rubber, Brgy. Rubber, Polomolok',
+            current_lat: 6.1950,
+            current_lng: 125.0920,
+            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
+            is_test_pin: true
+        },
+        {
+            id: 993,
+            tracking_id: 'TRK-TEST-POLO3',
+            ref_number: 'ORD-TEST-8803',
+            first_name: 'Analyn',
+            last_name: 'Flores',
+            customer_phone: '09205551234',
+            status: 'in_transit',
+            destination_address: 'Purok Pag-asa, Brgy. Glamang, Polomolok',
+            current_lat: 6.1823,
+            current_lng: 125.0456,
+            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
+            is_test_pin: true
+        },
+        {
+            id: 994,
+            tracking_id: 'TRK-TEST-POLO4',
+            ref_number: 'PR-TEST-8804',
+            first_name: 'Rico',
+            last_name: 'Magbanua',
+            customer_phone: '09224448888',
+            status: 'ready_for_pickup',
+            destination_address: 'Storefront Collection, Poblacion, Polomolok',
+            current_lat: 6.2217,
+            current_lng: 125.0667,
+            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
+            is_test_pin: true
+        }
+    ];
+
+    // Combine pins with sample pins for testing & inspection
+    let activePins = (pins && pins.length > 0) ? [...pins] : [...samplePolomolokPins];
+    if (pins && pins.length > 0) {
+        samplePolomolokPins.forEach(sp => {
+            if (!activePins.some(ap => ap.tracking_id === sp.tracking_id)) {
+                activePins.push(sp);
+            }
+        });
+    }
 
     function closeMenus() {
         if (activeMenu) {
@@ -477,7 +558,7 @@
         mapMarkers = {};
         const groupList = [storeMarker];
 
-        (pins || []).forEach((p) => {
+        (activePins || []).forEach((p) => {
             const lat = parseFloat(p.current_lat);
             const lng = parseFloat(p.current_lng);
             if (isNaN(lat) || isNaN(lng)) return;
@@ -485,9 +566,11 @@
             const customer = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Customer';
             const m = L.marker([lat, lng], { icon: createCustomerIcon(p.status) }).addTo(fleetMap);
             
+            const isTestBadge = p.is_test_pin ? '<span style="font-size:9px;font-weight:bold;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">DEMO PIN</span>' : '';
+
             const popupContent = `
                 <div style="min-width:180px;font-family:inherit;">
-                    <div style="font-weight:bold;font-size:13px;color:#2563eb;margin-bottom:2px;">#${p.ref_number ? p.ref_number : p.tracking_id}</div>
+                    <div style="font-weight:bold;font-size:13px;color:#2563eb;margin-bottom:2px;">#${p.ref_number ? p.ref_number : p.tracking_id} ${isTestBadge}</div>
                     <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Tracking: #${p.tracking_id}</div>
                     <div style="font-size:12px;font-weight:600;color:#0f172a;">👤 ${customer}</div>
                     <div style="font-size:11px;color:#475569;margin-top:2px;">📍 ${p.destination_address || 'Polomolok'}</div>
@@ -505,6 +588,9 @@
         if (groupList.length > 1) {
             fleetMap.fitBounds(L.featureGroup(groupList).getBounds(), { padding: [40, 40] });
         }
+
+        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 300);
+        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 800);
     }
 
     function resetFleetMapView() {
@@ -1008,8 +1094,28 @@
         document.getElementById('scanStatus').textContent = 'Point your camera at the delivery QR label.';
     }
 
-    if (typeof L !== 'undefined') {
-        initMap();
+    function ensureLeafletLoaded() {
+        if (typeof L !== 'undefined') {
+            initMap();
+            return;
+        }
+        let attempts = 0;
+        const interval = setInterval(() => {
+            attempts++;
+            if (typeof L !== 'undefined') {
+                clearInterval(interval);
+                initMap();
+            } else if (attempts > 60) {
+                clearInterval(interval);
+                console.warn('Leaflet map library timed out.');
+            }
+        }, 80);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', ensureLeafletLoaded);
+    } else {
+        ensureLeafletLoaded();
     }
 
     function handleExportClick(btn, label) {

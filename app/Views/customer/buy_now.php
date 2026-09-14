@@ -1,0 +1,299 @@
+<?= $this->extend('layouts/marketplace') ?>
+
+<?= $this->section('content') ?>
+
+<main class="max-w-6xl mx-auto px-md py-lg">
+
+    <!-- Breadcrumb & Back Link -->
+    <div class="flex items-center justify-between gap-md mb-lg">
+        <a href="<?= base_url('product/' . $product['id']) ?>" class="inline-flex items-center gap-xs text-label-md font-semibold text-primary hover:underline transition-colors">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+            Back to Product
+        </a>
+        <span class="text-xs text-on-surface-variant font-medium">Instant Direct Checkout</span>
+    </div>
+
+    <!-- Flash Messages -->
+    <?php if (session()->getFlashdata('error')): ?>
+        <div class="mb-lg p-md rounded-xl bg-error-container text-on-error-container text-body-md flex items-center gap-sm border border-error/30">
+            <span class="material-symbols-outlined text-error">error</span>
+            <span><?= esc(session()->getFlashdata('error')) ?></span>
+        </div>
+    <?php endif; ?>
+
+    <?php if (session()->getFlashdata('warning')): ?>
+        <div class="mb-lg p-md rounded-xl bg-amber-50 text-amber-800 text-body-md flex items-center gap-sm border border-amber-200">
+            <span class="material-symbols-outlined text-amber-600">warning</span>
+            <span><?= esc(session()->getFlashdata('warning')) ?></span>
+        </div>
+    <?php endif; ?>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-xl items-start">
+
+        <!-- Left Column: Single Product Summary -->
+        <div class="lg:col-span-6 space-y-lg">
+
+            <div class="glass-card rounded-2xl p-xl shadow-sm border border-outline-variant/30 space-y-lg">
+                
+                <div class="flex items-center justify-between border-b border-outline-variant/20 pb-md">
+                    <div class="flex items-center gap-xs text-label-md font-bold text-on-surface">
+                        <span class="material-symbols-outlined text-primary text-[22px]">storefront</span>
+                        <span><?= esc($shop['shop_name'] ?? 'Partner Merchant') ?></span>
+                    </div>
+                    <span class="text-xs text-on-surface-variant px-2.5 py-1 bg-surface-container-high rounded-full font-medium">Direct Order</span>
+                </div>
+
+                <!-- Product Row -->
+                <div class="flex gap-md sm:gap-lg">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-surface-container-low border border-outline-variant/30 shrink-0 flex items-center justify-center">
+                        <?php if (!empty($imageUrl)): ?>
+                            <img src="<?= esc($imageUrl) ?>" alt="<?= esc($product['name']) ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <span class="material-symbols-outlined text-outline-variant text-[48px]">image</span>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="flex-1 flex flex-col justify-between min-w-0">
+                        <div>
+                            <h1 class="text-title-md font-bold text-on-surface truncate"><?= esc($product['name']) ?></h1>
+                            
+                            <?php if (!empty($variantLabel)): ?>
+                                <div class="mt-1">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-secondary-container text-on-secondary-container text-xs font-semibold">
+                                        <?= esc($variantLabel) ?>
+                                    </span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="flex items-baseline justify-between gap-xs mt-xs">
+                            <span class="text-xs text-on-surface-variant">Unit Price</span>
+                            <span class="text-body-md font-bold text-on-surface">₱<?= number_format($unitPrice, 2) ?></span>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-xs border-t border-outline-variant/10 pt-xs">
+                            <span class="text-xs text-on-surface-variant">Quantity</span>
+                            <span class="px-2.5 py-0.5 rounded-full bg-surface-container-highest text-xs font-bold text-on-surface">
+                                <?= (int) $quantity ?> <?= $quantity === 1 ? 'unit' : 'units' ?>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Item Line Total -->
+                <div class="bg-surface-container-low/60 rounded-xl p-md flex items-center justify-between">
+                    <span class="text-label-md font-medium text-on-surface-variant">Item Subtotal</span>
+                    <span class="text-title-lg font-extrabold text-primary">₱<?= number_format($subtotal, 2) ?></span>
+                </div>
+
+                <p class="text-xs text-on-surface-variant text-center">
+                    Want to adjust quantity or variant? 
+                    <a href="<?= base_url('product/' . $product['id']) ?>" class="text-primary font-semibold hover:underline">Change on product page</a>
+                </p>
+
+            </div>
+
+            <!-- Guarantee Badges -->
+            <div class="grid grid-cols-2 gap-md text-xs text-on-surface-variant">
+                <div class="flex items-center gap-xs p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20">
+                    <span class="material-symbols-outlined text-primary text-[20px]">local_shipping</span>
+                    <span>Polomolok delivery service</span>
+                </div>
+                <div class="flex items-center gap-xs p-md rounded-xl bg-surface-container-lowest border border-outline-variant/20">
+                    <span class="material-symbols-outlined text-primary text-[20px]">verified_user</span>
+                    <span>Direct merchant order</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Checkout Form -->
+        <div class="lg:col-span-6">
+
+            <form action="<?= base_url('buy-now/place') ?>" method="POST" id="buy-now-form" class="space-y-lg">
+                <?= csrf_field() ?>
+                <input type="hidden" name="product_id" value="<?= esc($product['id']) ?>">
+                <input type="hidden" name="variant_id" value="<?= esc($selectedVariant['id'] ?? '') ?>">
+                <input type="hidden" name="quantity" value="<?= esc($quantity) ?>">
+                <input type="hidden" name="fulfillment_method" id="form-fulfillment-method" value="delivery">
+
+                <!-- Payment Method Section -->
+                <div class="glass-card rounded-2xl p-xl shadow-sm border border-outline-variant/30 space-y-md">
+                    <h2 class="text-title-sm font-bold text-on-surface uppercase tracking-wider text-xs">Payment &amp; Fulfillment</h2>
+
+                    <div class="grid grid-cols-1 gap-sm">
+
+                        <!-- GCash Option -->
+                        <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-xl border border-outline-variant/30 cursor-pointer group">
+                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="gcash" checked>
+                            <span class="material-symbols-outlined text-[#007DFE] group-hover:scale-110 transition-transform">account_balance_wallet</span>
+                            <div class="flex flex-col">
+                                <span class="text-body-md font-bold">GCash</span>
+                                <span class="text-xs text-on-surface-variant">Instant checkout via PayMongo</span>
+                            </div>
+                        </label>
+
+                        <!-- Store Pick-up Option -->
+                        <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-xl border border-outline-variant/30 cursor-pointer group">
+                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="pickup">
+                            <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">storefront</span>
+                            <div class="flex flex-col">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-body-md font-bold">Store Pick-up</span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">FREE</span>
+                                </div>
+                                <span class="text-xs text-on-surface-variant">Pick up directly at <?= esc($shop['shop_name'] ?? 'shop branch') ?></span>
+                            </div>
+                        </label>
+
+                        <!-- Cash on Delivery Option -->
+                        <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-xl border border-outline-variant/30 cursor-pointer group">
+                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="cod">
+                            <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">local_shipping</span>
+                            <div class="flex flex-col">
+                                <span class="text-body-md font-bold">Cash on Delivery</span>
+                                <span class="text-xs text-on-surface-variant">Pay when delivered to doorstep</span>
+                            </div>
+                        </label>
+
+                    </div>
+                </div>
+
+                <!-- Shipping Address Section (Hidden if Store Pick-up) -->
+                <div id="address-section" class="glass-card rounded-2xl p-xl shadow-sm border border-outline-variant/30 space-y-md">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-title-sm font-bold text-on-surface uppercase tracking-wider text-xs">Shipping Address</h2>
+                        <a href="<?= base_url('customer/addresses') ?>" class="text-xs text-primary font-semibold hover:underline">Manage</a>
+                    </div>
+
+                    <?php if (!empty($addresses)): ?>
+                        <select name="shipping_address_id" id="shipping-address-select" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
+                            <?php foreach ($addresses as $addr): ?>
+                                <option value="<?= $addr['id'] ?>" <?= !empty($addr['is_default']) ? 'selected' : '' ?>>
+                                    <?= esc($addr['recipient_name']) ?> — <?= esc($addr['address_line1']) ?>, <?= esc($addr['city']) ?> (<?= esc($addr['phone_number'] ?? '') ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="text-[11px] text-on-surface-variant italic">* Delivery is restricted to Polomolok, South Cotabato.</p>
+                    <?php else: ?>
+                        <p class="text-xs text-on-surface-variant mb-xs">No saved addresses. Please enter your address:</p>
+                        <input type="text" name="shipping_address" placeholder="Enter delivery address (e.g. Poblacion, Polomolok)" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm" required>
+                    <?php endif; ?>
+                </div>
+
+                <!-- Order Cost Summary & Place Order -->
+                <div class="glass-card rounded-2xl p-xl shadow-sm border border-outline-variant/30 space-y-md">
+                    <h2 class="text-title-sm font-bold text-on-surface uppercase tracking-wider text-xs">Order Summary</h2>
+
+                    <div class="space-y-sm text-sm">
+                        <div class="flex justify-between text-on-surface-variant">
+                            <span>Item Subtotal</span>
+                            <span class="font-medium text-on-surface" id="subtotal-display">₱<?= number_format($subtotal, 2) ?></span>
+                        </div>
+                        <div class="flex justify-between text-on-surface-variant">
+                            <span>Shipping Fee</span>
+                            <span class="font-medium text-on-surface" id="shipping-display">₱<?= number_format($shipping, 2) ?></span>
+                        </div>
+                        <div class="flex justify-between text-title-md font-bold text-on-surface border-t border-outline-variant/20 pt-sm">
+                            <span>Total Amount</span>
+                            <span class="text-primary text-title-lg font-extrabold" id="total-display">₱<?= number_format($subtotal + $shipping, 2) ?></span>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="place-order-btn" class="w-full py-lg bg-primary text-on-primary rounded-full font-headline-md text-headline-md hover:shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-sm mt-md">
+                        <span id="place-order-btn-text">Confirm &amp; Place Order</span>
+                        <span class="material-symbols-outlined text-[20px]">lock</span>
+                    </button>
+
+                    <p class="text-[11px] text-center text-on-surface-variant">
+                        By placing your order, you agree to Blax Marketplace terms and merchant fulfillment policy.
+                    </p>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</main>
+
+<!-- Floating Go Back Button -->
+<a href="<?= base_url('product/' . $product['id']) ?>" aria-label="Go Back" class="fixed bottom-8 left-8 w-14 h-14 bg-surface-container-lowest text-primary rounded-full shadow-lg flex items-center justify-center z-40 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
+    <span class="material-symbols-outlined text-[28px]">arrow_back</span>
+</a>
+
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+(function () {
+    var subtotal = <?= json_encode((float) $subtotal) ?>;
+    var baseShipping = <?= json_encode((float) $shipping) ?>;
+
+    var paymentRadios = document.querySelectorAll('.payment-radio');
+    var fulfillmentInput = document.getElementById('form-fulfillment-method');
+    var addressSection = document.getElementById('address-section');
+    var addressSelect = document.getElementById('shipping-address-select');
+    var shippingDisplay = document.getElementById('shipping-display');
+    var totalDisplay = document.getElementById('total-display');
+    var placeOrderBtnText = document.getElementById('place-order-btn-text');
+
+    function formatMoney(amount) {
+        return '₱' + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function updateFulfillmentAndTotals() {
+        var selectedMethod = 'gcash';
+        paymentRadios.forEach(function (r) {
+            if (r.checked) selectedMethod = r.value;
+        });
+
+        var isPickup = (selectedMethod === 'pickup');
+        var shippingFee = isPickup ? 0.00 : baseShipping;
+        var total = subtotal + shippingFee;
+
+        // Sync hidden fulfillment method
+        if (fulfillmentInput) {
+            fulfillmentInput.value = isPickup ? 'pickup' : 'delivery';
+        }
+
+        // Display updates
+        if (shippingDisplay) {
+            shippingDisplay.textContent = isPickup ? '₱0.00 (Free)' : formatMoney(shippingFee);
+        }
+        if (totalDisplay) {
+            totalDisplay.textContent = formatMoney(total);
+        }
+
+        // Button label update
+        if (placeOrderBtnText) {
+            if (selectedMethod === 'gcash') {
+                placeOrderBtnText.textContent = 'Pay via GCash';
+            } else if (selectedMethod === 'pickup') {
+                placeOrderBtnText.textContent = 'Confirm Store Pick-up';
+            } else {
+                placeOrderBtnText.textContent = 'Confirm Cash on Delivery';
+            }
+        }
+
+        // Address section visibility and requirement
+        if (addressSection) {
+            if (isPickup) {
+                addressSection.classList.add('opacity-40', 'pointer-events-none');
+                if (addressSelect) addressSelect.removeAttribute('required');
+            } else {
+                addressSection.classList.remove('opacity-40', 'pointer-events-none');
+                if (addressSelect) addressSelect.setAttribute('required', 'required');
+            }
+        }
+    }
+
+    paymentRadios.forEach(function (r) {
+        r.addEventListener('change', updateFulfillmentAndTotals);
+    });
+
+    updateFulfillmentAndTotals();
+})();
+</script>
+<?= $this->endSection() ?>

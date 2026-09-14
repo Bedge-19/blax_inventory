@@ -59,22 +59,6 @@
 
     </nav>
 
-    <div class="mt-auto pt-lg px-sm border-t border-outline-variant/10">
 
-        <a class="flex items-center gap-md px-md py-sm text-on-surface-variant hover:bg-surface-container-high rounded-lg transition-all" href="#">
-
-            <span class="material-symbols-outlined">help</span>
-            <span class="text-label-sm">Help Center</span>
-
-        </a>
-
-        <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
-
-            <span class="material-symbols-outlined">logout</span>
-            <span class="text-label-sm">Sign Out</span>
-
-        </a>
-
-    </div>
 
 </aside>

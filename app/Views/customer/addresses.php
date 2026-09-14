@@ -95,9 +95,14 @@
 
                                         <p class="text-body-md text-on-surface-variant leading-relaxed">
 
-                                            <?= esc($addr['address_line1'] ?? '') ?><br>
-                                            <?php if ($addrLine2 !== ''): ?><?= esc($addrLine2) ?><br><?php endif; ?>
-                                            <?= esc($addrRegion) ?><br>
+                                            <span class="font-medium text-on-surface"><?= esc($addr['address_line1'] ?? '') ?></span><br>
+                                            <?php if ($addrLine2 !== ''): ?>
+                                                <span class="inline-flex items-center gap-1 text-primary font-semibold text-xs bg-primary/10 px-2 py-0.5 rounded-md my-0.5">
+                                                    <span class="material-symbols-outlined text-[13px]">location_city</span>
+                                                    Brgy. <?= esc($addrLine2) ?>
+                                                </span><br>
+                                            <?php endif; ?>
+                                            <?= esc($addrCity !== '' ? $addrCity : 'Polomolok') ?>, <?= esc($addrProv !== '' ? $addrProv : 'South Cotabato') ?> <?= esc($addrZip !== '' ? $addrZip : '9504') ?><br>
                                             <?= esc($addrCountry) ?>
 
                                         </p>
@@ -248,15 +253,41 @@
 
             <div class="flex flex-col gap-1">
 
-                <label for="addr-line1" class="text-label-sm font-semibold text-on-surface-variant">Address Line 1</label>
-                <input type="text" id="addr-line1" name="address_line1" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
+                <label for="addr-line1" class="text-label-sm font-semibold text-on-surface-variant">Address Line 1 / Street <span class="text-error">*</span></label>
+                <input type="text" id="addr-line1" name="address_line1" placeholder="House No., Street Name, Purok / Block & Lot" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
 
             </div>
 
             <div class="flex flex-col gap-1">
 
-                <label for="addr-line2" class="text-label-sm font-semibold text-on-surface-variant">Address Line 2 <span class="text-outline">(optional)</span></label>
-                <input type="text" id="addr-line2" name="address_line2" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary">
+                <label for="addr-barangay" class="text-label-sm font-semibold text-on-surface-variant">Barangay (Polomolok) <span class="text-error">*</span></label>
+                <select id="addr-barangay" name="barangay" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary font-medium" required>
+                    <option value="">-- Select Barangay --</option>
+                    <option value="Bentung">Bentung</option>
+                    <option value="Cannery Site">Cannery Site</option>
+                    <option value="Crossing Palkan">Crossing Palkan</option>
+                    <option value="Glamang">Glamang</option>
+                    <option value="Kinilis">Kinilis</option>
+                    <option value="Klinan 6">Klinan 6</option>
+                    <option value="Koronadal Proper">Koronadal Proper</option>
+                    <option value="Lam-Caliaf">Lam-Caliaf</option>
+                    <option value="Landan">Landan</option>
+                    <option value="Lumakil">Lumakil</option>
+                    <option value="Maligo">Maligo</option>
+                    <option value="Palkan">Palkan</option>
+                    <option value="Poblacion">Poblacion</option>
+                    <option value="Polo">Polo</option>
+                    <option value="Pula Bato">Pula Bato</option>
+                    <option value="Rubber">Rubber</option>
+                    <option value="Silway 7">Silway 7</option>
+                    <option value="Silway 8">Silway 8</option>
+                    <option value="Sulit">Sulit</option>
+                    <option value="Sumbakil">Sumbakil</option>
+                    <option value="Upper Klinan">Upper Klinan</option>
+                    <option value="Pagalungan">Pagalungan</option>
+                    <option value="Magsaysay">Magsaysay</option>
+                </select>
+                <input type="hidden" id="addr-line2" name="address_line2" value="">
 
             </div>
 
@@ -264,15 +295,21 @@
 
                 <div class="flex flex-col gap-1">
 
-                    <label for="addr-city" class="text-label-sm font-semibold text-on-surface-variant">City</label>
-                    <input type="text" id="addr-city" name="city" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
+                    <label for="addr-city" class="text-label-sm font-semibold text-on-surface-variant flex items-center justify-between">
+                        <span>City / Municipality</span>
+                        <span class="text-[11px] text-outline font-normal">Fixed</span>
+                    </label>
+                    <input type="text" id="addr-city" name="city" value="Polomolok" readonly class="w-full p-md bg-surface-container/50 border border-outline-variant/60 rounded-xl text-sm font-medium text-on-surface cursor-not-allowed select-none">
 
                 </div>
 
                 <div class="flex flex-col gap-1">
 
-                    <label for="addr-province" class="text-label-sm font-semibold text-on-surface-variant">Province</label>
-                    <input type="text" id="addr-province" name="province" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
+                    <label for="addr-province" class="text-label-sm font-semibold text-on-surface-variant flex items-center justify-between">
+                        <span>Province</span>
+                        <span class="text-[11px] text-outline font-normal">Fixed</span>
+                    </label>
+                    <input type="text" id="addr-province" name="province" value="South Cotabato" readonly class="w-full p-md bg-surface-container/50 border border-outline-variant/60 rounded-xl text-sm font-medium text-on-surface cursor-not-allowed select-none">
 
                 </div>
 
@@ -282,15 +319,21 @@
 
                 <div class="flex flex-col gap-1">
 
-                    <label for="addr-zip" class="text-label-sm font-semibold text-on-surface-variant">Postal Code</label>
-                    <input type="text" id="addr-zip" name="postal_code" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary">
+                    <label for="addr-zip" class="text-label-sm font-semibold text-on-surface-variant flex items-center justify-between">
+                        <span>Postal Code</span>
+                        <span class="text-[11px] text-outline font-normal">Fixed</span>
+                    </label>
+                    <input type="text" id="addr-zip" name="postal_code" value="9504" readonly class="w-full p-md bg-surface-container/50 border border-outline-variant/60 rounded-xl text-sm font-medium text-on-surface cursor-not-allowed select-none">
 
                 </div>
 
                 <div class="flex flex-col gap-1">
 
-                    <label for="addr-country" class="text-label-sm font-semibold text-on-surface-variant">Country</label>
-                    <input type="text" id="addr-country" name="country" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" value="Philippines">
+                    <label for="addr-country" class="text-label-sm font-semibold text-on-surface-variant flex items-center justify-between">
+                        <span>Country</span>
+                        <span class="text-[11px] text-outline font-normal">Fixed</span>
+                    </label>
+                    <input type="text" id="addr-country" name="country" value="Philippines" readonly class="w-full p-md bg-surface-container/50 border border-outline-variant/60 rounded-xl text-sm font-medium text-on-surface cursor-not-allowed select-none">
 
                 </div>
 
@@ -336,10 +379,11 @@
             field('addr-recipient').value = '';
             field('addr-phone').value = '';
             field('addr-line1').value = '';
-            field('addr-line2').value = '';
-            field('addr-city').value = '';
-            field('addr-province').value = '';
-            field('addr-zip').value = '';
+            if (field('addr-barangay')) field('addr-barangay').value = '';
+            if (field('addr-line2')) field('addr-line2').value = '';
+            field('addr-city').value = 'Polomolok';
+            field('addr-province').value = 'South Cotabato';
+            field('addr-zip').value = '9504';
             field('addr-country').value = 'Philippines';
             field('addr-default').checked = false;
             defaultWrap.classList.remove('hidden');
@@ -353,13 +397,23 @@
             field('addr-recipient').value = btn.dataset.recipient || '';
             field('addr-phone').value = btn.dataset.phone || '';
             field('addr-line1').value = btn.dataset.line1 || '';
-            field('addr-line2').value = btn.dataset.line2 || '';
-            field('addr-city').value = btn.dataset.city || '';
-            field('addr-province').value = btn.dataset.province || '';
-            field('addr-zip').value = btn.dataset.zip || '';
-            field('addr-country').value = btn.dataset.country || 'Philippines';
+            var brgy = btn.dataset.line2 || '';
+            if (field('addr-barangay')) field('addr-barangay').value = brgy;
+            if (field('addr-line2')) field('addr-line2').value = brgy;
+            field('addr-city').value = 'Polomolok';
+            field('addr-province').value = 'South Cotabato';
+            field('addr-zip').value = '9504';
+            field('addr-country').value = 'Philippines';
             defaultWrap.classList.add('hidden');
             modal.classList.remove('hidden');
+        }
+
+        var bgSelect = field('addr-barangay');
+        if (bgSelect) {
+            bgSelect.addEventListener('change', function () {
+                var l2 = field('addr-line2');
+                if (l2) l2.value = this.value;
+            });
         }
 
         function closeModal() {

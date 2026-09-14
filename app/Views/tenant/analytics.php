@@ -185,6 +185,14 @@ $chartMax  = max((float) $chart_max, 0.01);
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            top: 24,
+                            right: 20,
+                            bottom: 8,
+                            left: 8
+                        }
+                    },
                     interaction: {
                         mode: 'index',
                         intersect: false,
@@ -202,7 +210,10 @@ $chartMax  = max((float) $chart_max, 0.01);
                             padding: 12,
                             cornerRadius: 10,
                             displayColors: true,
-                            boxPadding: 4,
+                            boxPadding: 6,
+                            caretPadding: 10,
+                            caretSize: 6,
+                            position: 'nearest',
                             callbacks: {
                                 label: function(context) {
                                     return ' ' + context.dataset.label + ': ₱' + Number(context.parsed.y).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -226,6 +237,7 @@ $chartMax  = max((float) $chart_max, 0.01);
                         },
                         y: {
                             beginAtZero: true,
+                            grace: '12%',
                             grid: {
                                 color: 'rgba(226, 232, 240, 0.6)',
                                 drawBorder: false

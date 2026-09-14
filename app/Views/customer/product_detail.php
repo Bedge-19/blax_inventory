@@ -8,9 +8,25 @@
         <!-- Left: Visual Assets -->
         <div class="lg:col-span-7 space-y-lg">
 
+            <?php
+                $primaryImgUrl = null;
+                if (!empty($productImages)) {
+                    foreach ($productImages as $img) {
+                        if (!empty($img['is_primary'])) {
+                            $primaryImgUrl = $img['image_url'];
+                            break;
+                        }
+                    }
+                    if (!$primaryImgUrl && isset($productImages[0])) {
+                        $primaryImgUrl = $productImages[0]['image_url'];
+                    }
+                }
+                $displayMainImg = $primaryImgUrl ?: ($product['image_url'] ?? null);
+            ?>
+
             <div class="relative rounded-2xl overflow-hidden bg-white shadow-md aspect-square group">
 
-                <img id="main-product-image" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="<?= esc(product_image_url($product['image_url'] ?? null)) ?>" alt="<?= esc($product['name']) ?>">
+                <img id="main-product-image" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="<?= esc(product_image_url($displayMainImg)) ?>" alt="<?= esc($product['name']) ?>">
 
                 <?php if (!empty($product['is_bestseller'])): ?>
 
@@ -26,9 +42,12 @@
 
                     <?php foreach ($productImages as $idx => $img): ?>
 
-                        <?php $thumbUrl = product_image_url($img['image_url'] ?? null); ?>
+                        <?php 
+                            $thumbUrl = product_image_url($img['image_url'] ?? null); 
+                            $isMainThumb = (!empty($img['is_primary']) || ($idx === 0 && !$primaryImgUrl));
+                        ?>
 
-                        <button type="button" class="gallery-thumb rounded-xl overflow-hidden h-24 cursor-pointer transition-colors p-0 <?= (!empty($img['is_primary']) || $idx === 0) ? 'border-2 border-primary' : 'border border-outline-variant/30 hover:border-primary' ?>" data-image="<?= esc($thumbUrl) ?>" aria-label="View product image">
+                        <button type="button" class="gallery-thumb rounded-xl overflow-hidden h-24 cursor-pointer transition-colors p-0 <?= $isMainThumb ? 'border-2 border-primary' : 'border border-outline-variant/30 hover:border-primary' ?>" data-image="<?= esc($thumbUrl) ?>" aria-label="View product image">
 
                             <img class="w-full h-full object-cover" src="<?= esc($thumbUrl) ?>" alt="<?= esc($img['alt_text'] ?? $product['name']) ?>">
 
@@ -134,15 +153,20 @@
             <div class="mt-auto space-y-md">
 
                 <?php
+                // Note: Currently supports single-axis variant selection (e.g. Color OR Size). For multi-axis products (Color AND Size combinations), a matrix option model with combined SKU/stock will be needed in a future update.
                 $groupedVariants = [];
                 if (!empty($variants)) {
                     foreach ($variants as $v) {
                         $groupedVariants[$v['name']][] = $v;
                     }
                 }
+                $hasVariants = !empty($groupedVariants);
+                $firstGroupName = $hasVariants ? array_key_first($groupedVariants) : 'option';
+                $outOfStock = (int) ($product['stock_quantity'] ?? 0) <= 0;
+                $cartDisabled = $outOfStock || $hasVariants;
                 ?>
 
-                <?php if (!empty($groupedVariants)): ?>
+                <?php if ($hasVariants): ?>
                     <div class="bg-surface-container-low/70 rounded-2xl p-md mb-md border border-outline-variant/30 space-y-md" id="variants-section">
                         <?php foreach ($groupedVariants as $groupName => $options): ?>
                             <div>
@@ -173,14 +197,12 @@
                         <?php endforeach; ?>
                         <div id="variant-stock-status" class="text-xs font-semibold text-on-surface-variant flex items-center gap-xs pt-1 border-t border-outline-variant/20">
                             <span class="material-symbols-outlined text-[16px] text-primary">info</span>
-                            <span id="variant-stock-text">Please choose your options above</span>
+                            <span id="variant-stock-text">Please select a <?= esc($firstGroupName) ?> above</span>
                         </div>
                     </div>
                 <?php endif; ?>
 
-                <?php $outOfStock = (int) ($product['stock_quantity'] ?? 0) <= 0; ?>
-
-                <form action="<?= base_url('cart/add') ?>" method="POST" class="space-y-md">
+                <form action="<?= base_url('cart/add') ?>" method="POST" id="product-purchase-form" class="space-y-md">
 
                     <?= csrf_field() ?>
 
@@ -208,16 +230,16 @@
 
                         </div>
 
-                        <button type="submit" class="flex-1 bg-secondary-container text-on-secondary-container py-md rounded-full font-button text-button hover:brightness-95 transition-all flex items-center justify-center gap-sm" <?= $outOfStock ? 'disabled' : '' ?>>
+                        <button type="submit" id="add-to-cart-btn" formaction="<?= base_url('cart/add') ?>" formmethod="POST" class="flex-1 bg-secondary-container text-on-secondary-container py-md rounded-full font-button text-button hover:brightness-95 transition-all flex items-center justify-center gap-sm disabled:opacity-50 disabled:cursor-not-allowed" <?= $cartDisabled ? 'disabled' : '' ?>>
 
                             <span class="material-symbols-outlined text-[20px]">shopping_cart</span>
-                            <?= $outOfStock ? 'Out of Stock' : 'Add to Cart' ?>
+                            <span id="cart-btn-text"><?= $outOfStock ? 'Out of Stock' : ($hasVariants ? 'Select an option to continue' : 'Add to Cart') ?></span>
 
                         </button>
 
                     </div>
 
-                    <button type="submit" class="w-full bg-primary text-on-primary py-lg rounded-full font-headline-md text-headline-md hover:shadow-lg transition-all active:scale-[0.98]" <?= $outOfStock ? 'disabled' : '' ?>>
+                    <button type="button" id="buy-now-btn" class="w-full bg-primary text-on-primary py-lg rounded-full font-headline-md text-headline-md hover:shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed" <?= $cartDisabled ? 'disabled' : '' ?>>
 
                         Buy Now
 
@@ -376,6 +398,82 @@
         <?php endif; ?>
     </section>
 
+    <!-- Related Products Section (Shopee / Lazada Style) -->
+    <?php if (!empty($relatedProducts)): ?>
+        <section class="mt-2xl pt-xl border-t border-outline-variant/30">
+            <div class="flex items-center justify-between mb-lg">
+                <div class="flex items-center gap-sm">
+                    <div class="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                        <span class="material-symbols-outlined text-2xl">auto_awesome</span>
+                    </div>
+                    <div>
+                        <h2 class="text-title-lg md:text-headline-sm font-bold text-on-surface">Related Products</h2>
+                        <p class="text-label-sm md:text-body-sm text-on-surface-variant">Katulad na mga produkto sa parehong kategorya</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-md">
+                <?php foreach ($relatedProducts as $rel): ?>
+                    <?php
+                        $relImg = product_image_url($rel['image_url'] ?? null);
+                        $relPrice = (float) $rel['price'];
+                        $relCompare = !empty($rel['compare_at_price']) ? (float) $rel['compare_at_price'] : 0;
+                        $hasDiscount = $relCompare > $relPrice;
+                        $discountPct = $hasDiscount ? round((($relCompare - $relPrice) / $relCompare) * 100) : 0;
+                        $relRating = round((float) ($rel['rating_average'] ?? 0), 1);
+                        $relRatingCount = (int) ($rel['rating_count'] ?? 0);
+                    ?>
+                    <div class="group bg-surface-container-lowest border border-outline-variant/30 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                        <div>
+                            <div class="relative aspect-square overflow-hidden bg-surface-container-low">
+                                <a href="<?= base_url('product/' . $rel['id']) ?>" class="block w-full h-full">
+                                    <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="<?= esc($relImg) ?>" alt="<?= esc($rel['name']) ?>" loading="lazy">
+                                </a>
+
+                                <?php if (!empty($rel['is_bestseller'])): ?>
+                                    <span class="absolute top-2 left-2 bg-primary-container text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">Bestseller</span>
+                                <?php elseif ($hasDiscount): ?>
+                                    <span class="absolute top-2 left-2 bg-error text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">-<?= $discountPct ?>%</span>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="p-sm md:p-md">
+                                <a href="<?= base_url('product/' . $rel['id']) ?>" class="text-body-sm font-semibold text-on-surface line-clamp-2 group-hover:text-primary transition-colors leading-snug min-h-[2.5rem]" title="<?= esc($rel['name']) ?>">
+                                    <?= esc($rel['name']) ?>
+                                </a>
+
+                                <div class="flex items-center gap-1 mt-xs text-xs text-on-surface-variant">
+                                    <span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    <span class="font-bold text-on-surface"><?= $relRating > 0 ? number_format($relRating, 1) : '5.0' ?></span>
+                                    <span class="text-[11px] text-outline font-normal">(<?= $relRatingCount ?>)</span>
+                                </div>
+
+                                <div class="mt-sm">
+                                    <div class="flex items-baseline gap-1 flex-wrap">
+                                        <span class="text-title-sm md:text-title-md font-bold text-primary">₱<?= number_format($relPrice, 2) ?></span>
+                                        <?php if ($hasDiscount): ?>
+                                            <span class="text-[11px] text-outline line-through">₱<?= number_format($relCompare, 2) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php if (!empty($rel['shop_name'])): ?>
+                                        <p class="text-[11px] text-on-surface-variant/70 truncate mt-0.5"><?= esc($rel['shop_name']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-sm pb-sm md:px-md md:pb-md pt-0">
+                            <a href="<?= base_url('product/' . $rel['id']) ?>" class="w-full block text-center py-1.5 px-2 bg-surface-container hover:bg-primary hover:text-on-primary text-primary text-xs font-bold rounded-lg transition-colors">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
 </main>
 
 <?= $this->endSection() ?>
@@ -427,13 +525,17 @@
     }
 
     // Variant selection logic
+    var hasVariants = <?= !empty($groupedVariants) ? 'true' : 'false' ?>;
+    var defaultGroupPrompt = 'Select an option to continue';
     var variantPills = document.querySelectorAll('.variant-pill');
     var variantInput = document.getElementById('selected-variant-id');
     var priceDisplay = document.querySelector('.text-display.font-display.text-primary');
     var defaultPriceText = priceDisplay ? priceDisplay.textContent : '';
-    var cartBtn = document.querySelector('button[type="submit"].bg-secondary-container');
-    var buyBtn = document.querySelector('button[type="submit"].bg-primary');
+    var cartBtn = document.getElementById('add-to-cart-btn') || document.querySelector('button[type="submit"].bg-secondary-container');
+    var cartBtnText = document.getElementById('cart-btn-text');
+    var buyBtn = document.getElementById('buy-now-btn') || document.querySelector('button[type="submit"].bg-primary');
     var variantStockText = document.getElementById('variant-stock-text');
+    var purchaseForm = document.getElementById('product-purchase-form') || document.querySelector('form[action*="cart/add"]');
 
     variantPills.forEach(function (pill) {
         pill.addEventListener('click', function () {
@@ -483,7 +585,11 @@
                 }
                 if (cartBtn) {
                     cartBtn.removeAttribute('disabled');
-                    cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">shopping_cart</span> Add to Cart';
+                    if (cartBtnText) {
+                        cartBtnText.textContent = 'Add to Cart';
+                    } else {
+                        cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">shopping_cart</span> Add to Cart';
+                    }
                 }
                 if (buyBtn) {
                     buyBtn.removeAttribute('disabled');
@@ -502,7 +608,11 @@
                 }
                 if (cartBtn) {
                     cartBtn.setAttribute('disabled', 'disabled');
-                    cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">remove_shopping_cart</span> Out of Stock';
+                    if (cartBtnText) {
+                        cartBtnText.textContent = 'Out of Stock';
+                    } else {
+                        cartBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">remove_shopping_cart</span> Out of Stock';
+                    }
                 }
                 if (buyBtn) {
                     buyBtn.setAttribute('disabled', 'disabled');
@@ -511,10 +621,62 @@
         });
     });
 
-    // Auto-select first available variant on page load
-    var firstAvailable = document.querySelector('.variant-pill:not([disabled])');
-    if (firstAvailable) {
-        firstAvailable.click();
+    // Direct Buy Now Navigation Handler
+    if (buyBtn) {
+        buyBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (this.hasAttribute('disabled')) return;
+
+            if (hasVariants && (!variantInput || !variantInput.value)) {
+                if (variantStockText) {
+                    variantStockText.textContent = 'Please select an option to continue.';
+                    variantStockText.className = 'text-xs font-bold text-error';
+                }
+                var variantsSection = document.getElementById('variants-section');
+                if (variantsSection) {
+                    variantsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    variantsSection.classList.add('ring-2', 'ring-error');
+                    setTimeout(function () {
+                        variantsSection.classList.remove('ring-2', 'ring-error');
+                    }, 2500);
+                }
+                return;
+            }
+
+            var productId = '<?= (int) $product['id'] ?>';
+            var qtyInput = document.getElementById('quantity-input');
+            var qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+            var variantId = variantInput ? variantInput.value : '';
+
+            var targetUrl = '<?= base_url('buy-now') ?>?product_id=' + encodeURIComponent(productId) + '&quantity=' + encodeURIComponent(qty);
+            if (variantId) {
+                targetUrl += '&variant_id=' + encodeURIComponent(variantId);
+            }
+            window.location.href = targetUrl;
+        });
+    }
+
+    // Client-side submit guard: require variant selection before submitting Add to Cart
+    if (purchaseForm) {
+        purchaseForm.addEventListener('submit', function (e) {
+            if (hasVariants && (!variantInput || !variantInput.value)) {
+                e.preventDefault();
+                if (variantStockText) {
+                    variantStockText.textContent = 'Please select an option to continue.';
+                    variantStockText.className = 'text-xs font-bold text-error';
+                }
+                var variantsSection = document.getElementById('variants-section');
+                if (variantsSection) {
+                    variantsSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    variantsSection.classList.add('ring-2', 'ring-error');
+                    setTimeout(function () {
+                        variantsSection.classList.remove('ring-2', 'ring-error');
+                    }, 2500);
+                }
+            }
+        });
     }
 
     document.querySelectorAll('button').forEach(function (button) {

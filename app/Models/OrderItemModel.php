@@ -14,6 +14,8 @@ class OrderItemModel extends Model
     protected $allowedFields    = [
         'order_id',
         'product_id',
+        'variant_id',
+        'variant_label',
         'product_name',
         'quantity',
         'unit_price',

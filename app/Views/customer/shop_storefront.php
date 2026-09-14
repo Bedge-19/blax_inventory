@@ -126,7 +126,7 @@
 
             </div>
 
-            <form action="<?= base_url('printing/request') ?>" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start">
+            <form action="<?= base_url('printing/request') ?>" method="POST" enctype="multipart/form-data" class="grid grid-cols-1 lg:grid-cols-12 gap-gutter items-start" id="printingRequestForm" onsubmit="return validatePrintingSubmit(event)">
 
                 <?= csrf_field() ?>
 
@@ -136,28 +136,43 @@
                 <!-- Left Column: Compact Upload & Document Status (5 cols on Desktop) -->
                 <div class="lg:col-span-5 space-y-md">
 
+                    <!-- Document Format Selection Toggle -->
+                    <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md shadow-2xs">
+                        <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-2 block">1. Select Document Format</label>
+                        <div class="grid grid-cols-2 gap-sm">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="document_type" value="pdf" id="docTypePdf" class="peer sr-only" checked onchange="toggleDocType('pdf')">
+                                <span class="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px]">picture_as_pdf</span> PDF Document
+                                </span>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="document_type" value="docx" id="docTypeDocx" class="peer sr-only" onchange="toggleDocType('docx')">
+                                <span class="flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px]">description</span> Word (.doc, .docx)
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Compact Dropzone Card -->
-                    <div class="bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-2xl p-lg min-h-[240px] max-h-[300px] flex flex-col items-center justify-center text-center transition-all hover:border-primary group cursor-pointer relative" id="dropzone">
+                    <div class="bg-surface-container-lowest border-2 border-dashed border-outline-variant rounded-2xl p-lg min-h-[220px] max-h-[290px] flex flex-col items-center justify-center text-center transition-all hover:border-primary group cursor-pointer relative" id="dropzone">
 
                         <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-sm group-hover:scale-110 group-hover:bg-primary group-hover:text-on-primary transition-all duration-200" id="dropzone-icon-box">
-
-                            <span class="material-symbols-outlined text-2xl">picture_as_pdf</span>
-
+                            <span class="material-symbols-outlined text-2xl" id="dropzoneIcon">picture_as_pdf</span>
                         </div>
 
-                        <h3 class="text-title-md font-bold text-on-surface mb-0.5">Upload your PDF</h3>
-                        <p class="text-on-surface-variant text-xs mb-md max-w-xs leading-relaxed">Drag &amp; drop your documents here, or click to browse files from your device.</p>
+                        <h3 class="text-title-md font-bold text-on-surface mb-0.5" id="dropzoneTitle">Upload your PDF</h3>
+                        <p class="text-on-surface-variant text-xs mb-md max-w-xs leading-relaxed" id="dropzoneDesc">Drag &amp; drop your document here, or click to browse files from your device.</p>
 
                         <input accept=".pdf" class="sr-only" id="fileInput" type="file" name="document">
 
                         <button type="button" id="selectPdfBtn" class="bg-primary text-on-primary px-lg py-2 rounded-xl font-button text-xs shadow-sm hover:shadow-md hover:bg-primary/90 transition-all flex items-center gap-xs">
-
                             <span class="material-symbols-outlined text-[18px]">upload_file</span>
-                            Select PDF Document
-
+                            <span id="selectBtnText">Select PDF Document</span>
                         </button>
 
-                        <p class="mt-sm text-[11px] text-outline">Max file size: 50MB &bull; Formats: PDF only</p>
+                        <p class="mt-sm text-[11px] text-outline" id="dropzoneFooter">Max file size: 50MB &bull; Formats: PDF only</p>
 
                     </div>
 
@@ -165,32 +180,66 @@
                     <div class="bg-surface-container-low rounded-xl p-md border border-outline-variant/30 flex flex-col gap-xs" id="upload-status-container">
 
                         <div class="flex items-center justify-between gap-sm flex-wrap">
-
                             <span class="px-sm py-1 rounded-full text-xs font-semibold bg-surface-container-high text-on-surface-variant flex items-center gap-xs" id="upload-badge">
-
-                                <span class="material-symbols-outlined text-[15px]">info</span>No PDF selected
-
+                                <span class="material-symbols-outlined text-[15px]">info</span>No file selected
                             </span>
-
                             <span class="text-xs font-bold text-on-surface-variant" id="page-count">No file selected</span>
-
                         </div>
 
                         <p class="text-xs text-on-surface-variant hidden mt-1" id="upload-hint">Page count will be verified automatically once your PDF is uploaded.</p>
 
                     </div>
 
+                    <!-- DOCX Manual Page Count (Word documents) -->
+                    <div id="docxPageCountContainer" class="hidden bg-surface-container-low rounded-xl p-md border border-outline-variant/30 space-y-1">
+                        <label for="docxEstimatedPages" class="text-xs font-bold text-on-surface flex items-center justify-between">
+                            <span>Estimated Page Count <span class="text-error">*</span></span>
+                            <span class="text-[10px] text-outline font-normal">Enter total pages</span>
+                        </label>
+                        <input type="number" id="docxEstimatedPages" min="1" step="1" placeholder="e.g. 5" class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary" oninput="handleManualPageCount(this.value)">
+                        <p class="text-[11px] text-on-surface-variant">Word files require estimated page count for pricing calculations.</p>
+                    </div>
+
+                    <!-- DOCX Change Request & Reference Attachments -->
+                    <div id="docxChangesContainer" class="hidden bg-surface-container-low rounded-xl p-md border border-outline-variant/30 space-y-md">
+                        <div>
+                            <label class="text-xs font-bold text-on-surface block mb-1">Printing Requirement</label>
+                            <div class="grid grid-cols-2 gap-sm">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="doc_change_type" value="as_is" class="peer sr-only" checked onchange="toggleDocxChanges('as_is')">
+                                    <span class="flex items-center justify-center gap-1.5 py-2 px-2 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary">
+                                        <span class="material-symbols-outlined text-[16px]">print</span> Print As-Is
+                                    </span>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="doc_change_type" value="has_changes" class="peer sr-only" onchange="toggleDocxChanges('has_changes')">
+                                    <span class="flex items-center justify-center gap-1.5 py-2 px-2 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary">
+                                        <span class="material-symbols-outlined text-[16px]">edit_note</span> With Changes
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Reference Photos for Changes -->
+                        <div id="docxReferencePhotosContainer" class="hidden space-y-1.5">
+                            <label class="text-xs font-bold text-on-surface flex items-center justify-between">
+                                <span>Reference Photos / Markups</span>
+                                <span class="text-[10px] text-outline font-normal">Max 5 images</span>
+                            </label>
+                            <input type="file" name="reference_photos[]" id="referencePhotosInput" multiple accept="image/*" class="w-full py-1.5 px-2 bg-surface-container border border-outline-variant/40 rounded-xl text-xs text-on-surface file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer">
+                            <p class="text-[11px] text-on-surface-variant">Attach photos or screenshots showing edits requested.</p>
+                        </div>
+                    </div>
+
                     <!-- Same-Day Pickup Promotion Card (Balanced under upload) -->
                     <div class="bg-gradient-to-br from-primary to-primary-container text-on-primary rounded-2xl p-md sm:p-lg relative overflow-hidden shadow-sm">
 
                         <div class="relative z-10">
-
                             <div class="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider mb-1 opacity-90">
                                 <span class="material-symbols-outlined text-[16px]">bolt</span> Same-Day Ready
                             </div>
                             <h4 class="text-title-sm font-bold mb-0.5">Quick Kiosk Pick-up</h4>
                             <p class="text-xs opacity-90 leading-relaxed">Submit your request before 2:00 PM and pick up your finished prints today at any available shop kiosk.</p>
-
                         </div>
 
                         <span class="material-symbols-outlined absolute -bottom-3 -right-3 text-7xl opacity-10 select-none pointer-events-none">print</span>
@@ -228,19 +277,23 @@
 
                                     <div class="relative">
 
-                                        <select name="paper_size" class="w-full py-2 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary focus:border-primary text-on-surface transition-all appearance-none pr-8">
-
-                                            <option value="letter">Letter (8.5 x 11)</option>
-                                            <option value="legal">Legal (8.5 x 14)</option>
-                                            <option value="a4">A4 (8.27 x 11.69)</option>
-                                            <option value="a3">A3 (11.7 x 16.5)</option>
-                                            <option value="a2">A2 (16.5 x 23.4)</option>
-                                            <option value="a1">A1 (23.4 x 33.1)</option>
-                                            <option value="a0">A0 (33.1 x 46.8)</option>
-                                            <option value="a5">A5</option>
-                                            <option value="b5">B5</option>
-                                            <option value="b4">B4</option>
-
+                                        <select name="paper_size" id="paperSizeSelect" class="w-full py-2 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary focus:border-primary text-on-surface transition-all appearance-none pr-8">
+                                            <?php if (!empty($paperSizes)): ?>
+                                                <?php foreach ($paperSizes as $sKey => $sVal): ?>
+                                                    <?php if (!empty($sVal['is_enabled'])): ?>
+                                                        <option value="<?= esc($sKey) ?>"
+                                                                data-price-color="<?= esc($sVal['price_color'] ?? 5.00) ?>"
+                                                                data-price-bw="<?= esc($sVal['price_bw'] ?? 2.00) ?>"
+                                                                <?= $sKey === 'letter' ? 'selected' : '' ?>>
+                                                            <?= esc($sVal['label'] ?? strtoupper($sKey)) ?>
+                                                        </option>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <option value="letter" data-price-color="5.00" data-price-bw="2.00" selected>Letter (8.5 x 11)</option>
+                                                <option value="legal" data-price-color="6.00" data-price-bw="2.50">Legal (8.5 x 14)</option>
+                                                <option value="a4" data-price-color="5.00" data-price-bw="2.00">A4 (8.27 x 11.69)</option>
+                                            <?php endif; ?>
                                         </select>
 
                                         <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-outline pointer-events-none">expand_more</span>
@@ -310,7 +363,7 @@
 
                                     <label class="cursor-pointer">
 
-                                        <input checked class="peer sr-only" name="binding" type="radio" value="none">
+                                        <input checked class="peer sr-only" name="binding" type="radio" value="none" data-cost="0">
                                         <div class="p-2 text-center rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex flex-col items-center justify-center">
                                             <span class="text-xs font-bold text-on-surface block">No Binding</span>
                                             <span class="text-[11px] text-outline font-medium">Free</span>
@@ -319,21 +372,21 @@
                                     </label>
 
                                     <label class="cursor-pointer">
-
-                                        <input class="peer sr-only" name="binding" type="radio" value="stapled">
+                                        <?php $staplePrice = (float) ($printingSettings['price_staple'] ?? 10.00); ?>
+                                        <input class="peer sr-only" name="binding" type="radio" value="stapled" data-cost="<?= $staplePrice ?>">
                                         <div class="p-2 text-center rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex flex-col items-center justify-center">
                                             <span class="text-xs font-bold text-on-surface block">Stapled</span>
-                                            <span class="text-[11px] text-outline font-medium">Free</span>
+                                            <span class="text-[11px] text-primary font-bold"><?= $staplePrice > 0 ? ('+₱' . number_format($staplePrice, 2)) : 'Free' ?></span>
                                         </div>
 
                                     </label>
 
                                     <label class="cursor-pointer">
-
-                                        <input class="peer sr-only" name="binding" type="radio" value="spiral">
+                                        <?php $spiralPrice = (float) ($printingSettings['price_spiral'] ?? 35.00); ?>
+                                        <input class="peer sr-only" name="binding" type="radio" value="spiral" data-cost="<?= $spiralPrice ?>">
                                         <div class="p-2 text-center rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex flex-col items-center justify-center">
                                             <span class="text-xs font-bold text-on-surface block">Spiral</span>
-                                            <span class="text-[11px] text-primary font-bold">+₱35.00</span>
+                                            <span class="text-[11px] text-primary font-bold">+₱<?= number_format($spiralPrice, 2) ?></span>
                                         </div>
 
                                     </label>
@@ -392,12 +445,13 @@
                             <!-- Special Instructions -->
                             <div>
 
-                                <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Special Instructions (Optional)</label>
-                                <textarea name="notes" rows="2" placeholder="e.g. Back-to-back, page range to print, specific paper color..." class="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs focus:ring-2 focus:ring-primary focus:border-primary text-on-surface"></textarea>
+                                <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block" id="notesLabel">Special Instructions (Optional)</label>
+                                <textarea name="notes" id="printingNotes" rows="2" placeholder="e.g. Back-to-back, page range to print, specific paper color..." class="w-full p-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs focus:ring-2 focus:ring-primary focus:border-primary text-on-surface"></textarea>
 
                             </div>
 
                             <!-- Pricing Breakdown & Down Payment -->
+                            <?php $dpPercent = (float) ($printingSettings['down_payment_percent'] ?? 50.00); ?>
                             <div class="pt-sm border-t border-outline-variant/20 space-y-sm">
 
                                 <div class="bg-surface-container-low p-md rounded-xl space-y-xs border border-outline-variant/20">
@@ -410,7 +464,7 @@
                                     <div class="flex justify-between items-center text-sm font-bold border-t border-outline-variant/20 pt-xs">
                                         <span class="text-on-surface flex items-center gap-1">
                                             <span class="material-symbols-outlined text-[17px] text-[#007DFE]">account_balance_wallet</span>
-                                            50% Down Payment:
+                                            <span id="dpPercentLabel"><?= round($dpPercent) ?>%</span> Down Payment:
                                         </span>
                                         <span class="text-title-md font-bold text-[#007DFE]" id="printing-down-payment">₱0.00</span>
                                     </div>
@@ -420,14 +474,14 @@
                                 <!-- Trust & Security Subtext -->
                                 <div class="flex items-center gap-2 px-1 text-[11px] text-on-surface-variant">
                                     <span class="material-symbols-outlined text-[16px] text-[#007DFE]">verified_user</span>
-                                    <span>Pay 50% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.</span>
+                                    <span>Pay <?= round($dpPercent) ?>% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.</span>
                                 </div>
 
                                 <!-- Primary Submit Button -->
-                                <button type="submit" class="w-full py-3 bg-[#007DFE] hover:bg-[#006bd6] text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+                                <button type="submit" id="btnSubmitPrinting" class="w-full py-3 bg-[#007DFE] hover:bg-[#006bd6] text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
 
                                     <span class="material-symbols-outlined text-[18px]">payments</span>
-                                    <span>Pay 50% Down Payment via GCash</span>
+                                    <span id="submitBtnText">Pay <?= round($dpPercent) ?>% Down Payment via GCash</span>
 
                                 </button>
 
@@ -864,8 +918,148 @@ function setUploadState(state, pageCountValue) {
     }
 }
 
-function isValidPdfFile(file) {
-    return file && /\.pdf$/i.test(file.name);
+function isValidFile(file) {
+    if (!file) return false;
+    const isDocx = document.getElementById('docTypeDocx')?.checked;
+    if (isDocx) {
+        return /\.(docx|doc)$/i.test(file.name);
+    }
+    return /\.pdf$/i.test(file.name);
+}
+
+function toggleDocType(type) {
+    const isDocx = type === 'docx';
+    const dropzoneTitle = document.getElementById('dropzoneTitle');
+    const dropzoneDesc = document.getElementById('dropzoneDesc');
+    const dropzoneFooter = document.getElementById('dropzoneFooter');
+    const selectBtnText = document.getElementById('selectBtnText');
+    const dropzoneIcon = document.getElementById('dropzoneIcon');
+    const fileInput = document.getElementById('fileInput');
+    const docxPageCountContainer = document.getElementById('docxPageCountContainer');
+    const docxChangesContainer = document.getElementById('docxChangesContainer');
+    const hiddenPageCount = document.getElementById('pdf-page-count');
+    const badge = document.getElementById('upload-badge');
+    const pageCount = document.getElementById('page-count');
+
+    // Reset current file input
+    if (fileInput) fileInput.value = '';
+
+    if (isDocx) {
+        if (fileInput) fileInput.setAttribute('accept', '.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        if (dropzoneTitle) dropzoneTitle.textContent = 'Upload your Word Document';
+        if (dropzoneDesc) dropzoneDesc.textContent = 'Drag & drop your .doc or .docx file here, or click to browse.';
+        if (dropzoneFooter) dropzoneFooter.textContent = 'Max file size: 50MB • Formats: DOC, DOCX';
+        if (selectBtnText) selectBtnText.textContent = 'Select Word Document';
+        if (dropzoneIcon) dropzoneIcon.textContent = 'description';
+
+        if (docxPageCountContainer) docxPageCountContainer.classList.remove('hidden');
+        if (docxChangesContainer) docxChangesContainer.classList.remove('hidden');
+
+        const estPages = parseInt(document.getElementById('docxEstimatedPages')?.value || '0', 10);
+        if (hiddenPageCount) hiddenPageCount.value = estPages;
+        if (badge) {
+            badge.className = 'px-sm py-0.5 rounded-full text-label-sm font-medium bg-surface-container-high text-on-surface-variant flex items-center gap-xs';
+            const icon = badge.querySelector('.material-symbols-outlined');
+            if (icon) icon.textContent = 'info';
+            badge.lastChild.textContent = ' No Word doc selected';
+        }
+        if (pageCount) {
+            pageCount.textContent = estPages > 0 ? (estPages + ' estimated pages') : 'No file selected';
+        }
+    } else {
+        if (fileInput) fileInput.setAttribute('accept', '.pdf');
+        if (dropzoneTitle) dropzoneTitle.textContent = 'Upload your PDF';
+        if (dropzoneDesc) dropzoneDesc.textContent = 'Drag & drop your document here, or click to browse files from your device.';
+        if (dropzoneFooter) dropzoneFooter.textContent = 'Max file size: 50MB • Formats: PDF only';
+        if (selectBtnText) selectBtnText.textContent = 'Select PDF Document';
+        if (dropzoneIcon) dropzoneIcon.textContent = 'picture_as_pdf';
+
+        if (docxPageCountContainer) docxPageCountContainer.classList.add('hidden');
+        if (docxChangesContainer) docxChangesContainer.classList.add('hidden');
+        const refContainer = document.getElementById('docxReferencePhotosContainer');
+        if (refContainer) refContainer.classList.add('hidden');
+
+        if (hiddenPageCount) hiddenPageCount.value = 0;
+        setUploadState('empty');
+        toggleDocxChanges('as_is');
+    }
+
+    updatePrintingPrice();
+}
+
+function toggleDocxChanges(mode) {
+    const hasChanges = mode === 'has_changes';
+    const photosContainer = document.getElementById('docxReferencePhotosContainer');
+    const notesLabel = document.getElementById('notesLabel');
+    const notesTextarea = document.getElementById('printingNotes');
+
+    if (hasChanges) {
+        if (photosContainer) photosContainer.classList.remove('hidden');
+        if (notesLabel) notesLabel.innerHTML = 'Special Instructions / Change Details <span class="text-error font-bold">*</span>';
+        if (notesTextarea) notesTextarea.placeholder = 'Please describe in detail the exact changes, edits, or formatting adjustments to make before printing...';
+    } else {
+        if (photosContainer) photosContainer.classList.add('hidden');
+        if (notesLabel) notesLabel.innerHTML = 'Special Instructions (Optional)';
+        if (notesTextarea) notesTextarea.placeholder = 'e.g. Back-to-back, page range to print, specific paper color...';
+    }
+}
+
+function handleManualPageCount(val) {
+    const pages = Math.max(0, parseInt(val, 10) || 0);
+    const hiddenPageCount = document.getElementById('pdf-page-count');
+    const pageCount = document.getElementById('page-count');
+    if (hiddenPageCount) hiddenPageCount.value = pages;
+    if (pageCount) {
+        pageCount.textContent = pages > 0 ? (pages + ' estimated page' + (pages === 1 ? '' : 's')) : 'Enter estimated pages';
+    }
+    updatePrintingPrice();
+}
+
+function validatePrintingSubmit(e) {
+    const isDocx = document.getElementById('docTypeDocx')?.checked;
+    const fileInput = document.getElementById('fileInput');
+    const hiddenPageCount = document.getElementById('pdf-page-count');
+    const pages = parseInt(hiddenPageCount?.value || '0', 10);
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('Please attach a document file before submitting.');
+        e.preventDefault();
+        return false;
+    }
+
+    if (pages <= 0) {
+        if (isDocx) {
+            alert('Please enter an estimated page count of at least 1 for your Word document.');
+            document.getElementById('docxEstimatedPages')?.focus();
+        } else {
+            alert('Please wait for the PDF page count to be verified or upload a valid PDF.');
+        }
+        e.preventDefault();
+        return false;
+    }
+
+    if (isDocx) {
+        const changeRadio = document.querySelector('input[name="doc_change_type"]:checked');
+        if (changeRadio && changeRadio.value === 'has_changes') {
+            const notes = (document.getElementById('printingNotes')?.value || '').trim();
+            if (notes === '') {
+                alert('Special Instructions / Change Details are required when requesting document changes.');
+                document.getElementById('printingNotes')?.focus();
+                e.preventDefault();
+                return false;
+            }
+        }
+    }
+
+    const btn = document.getElementById('btnSubmitPrinting');
+    if (btn) {
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        const btnText = document.getElementById('submitBtnText');
+        if (btnText) btnText.textContent = 'Connecting to PayMongo...';
+    }
+
+    return true;
 }
 
 if (dropzone && fileInput) {
@@ -918,11 +1112,14 @@ if (dropzone && fileInput) {
         }
 
         const file = files[0];
+        const isDocx = document.getElementById('docTypeDocx')?.checked;
 
-        if (!isValidPdfFile(file)) {
-            const errMsg = 'Invalid file type. Only PDF documents are accepted.';
+        if (!isValidFile(file)) {
+            const errMsg = isDocx
+                ? 'Invalid file type. Only Word documents (.doc, .docx) are accepted.'
+                : 'Invalid file type. Only PDF documents are accepted.';
             setUploadState('error', errMsg);
-            showPdfModal('error', 'PDF Upload Failed', errMsg);
+            showPdfModal('error', 'Upload Failed', errMsg);
             return;
         }
 
@@ -932,6 +1129,30 @@ if (dropzone && fileInput) {
             fileInput.files = dt.files;
         } catch (err) {}
 
+        if (isDocx) {
+            if (badge) {
+                badge.className = 'px-sm py-0.5 rounded-full text-label-sm font-medium bg-green-100 text-green-700 flex items-center gap-xs';
+                const icon = badge.querySelector('.material-symbols-outlined');
+                if (icon) icon.textContent = 'check_circle';
+                badge.lastChild.textContent = ' Word Document Attached';
+            }
+            const estInput = document.getElementById('docxEstimatedPages');
+            const estVal = parseInt(estInput?.value || '0', 10);
+            if (estVal <= 0) {
+                estInput?.focus();
+                pageCount.className = 'text-label-sm font-medium text-amber-600';
+                pageCount.textContent = 'Enter estimated pages below';
+            } else {
+                pageCount.className = 'text-label-sm font-medium text-primary';
+                pageCount.textContent = estVal + ' estimated page' + (estVal === 1 ? '' : 's');
+                if (hiddenPageCount) hiddenPageCount.value = estVal;
+            }
+            updatePrintingPrice();
+            showPdfModal('success', 'Word Document Uploaded', 'Document attached. Please verify your estimated page count below.', file.name, estVal > 0 ? estVal : null);
+            return;
+        }
+
+        // PDF Document handling
         if (badge) {
             badge.className = 'px-sm py-0.5 rounded-full text-label-sm font-medium bg-amber-100 text-amber-700 flex items-center gap-xs';
             if (badge.querySelector('.material-symbols-outlined')) badge.querySelector('.material-symbols-outlined').textContent = 'sync';
@@ -972,12 +1193,15 @@ if (dropzone && fileInput) {
         const pages = parseInt(hiddenPageCount ? hiddenPageCount.value : 0, 10) || 0;
         const colorRadio = document.querySelector('input[name="color_mode"]:checked');
         const isColored = colorRadio ? (colorRadio.value === 'colored') : true;
-        const paperSizeEl = document.querySelector('select[name="paper_size"]');
-        const paperSize = paperSizeEl ? paperSizeEl.value : 'letter';
+        const paperSizeEl = document.getElementById('paperSizeSelect') || document.querySelector('select[name="paper_size"]');
+        const selectedOpt = paperSizeEl && paperSizeEl.selectedIndex >= 0 ? paperSizeEl.options[paperSizeEl.selectedIndex] : null;
+
         const copiesEl = document.querySelector('select[name="copies"]');
         const copies = parseInt(copiesEl ? copiesEl.value : 1, 10) || 1;
         const bindingRadio = document.querySelector('input[name="binding"]:checked');
-        const binding = bindingRadio ? bindingRadio.value : 'none';
+        const bindingCost = parseFloat(bindingRadio ? (bindingRadio.dataset.cost || 0) : 0);
+
+        const downPaymentPercent = <?= (float) ($printingSettings['down_payment_percent'] ?? 50.00) ?>;
 
         if (pages <= 0) {
             const elTotal = document.getElementById('printing-total-price');
@@ -987,17 +1211,15 @@ if (dropzone && fileInput) {
             return;
         }
 
-        let basePerPage = isColored ? 5.00 : 2.00;
-        let sizeMultiplier = 1.0;
-        if (paperSize === 'legal' || paperSize === 'a3') sizeMultiplier = 1.5;
-        else if (['a2', 'a1', 'a0'].includes(paperSize)) sizeMultiplier = 2.5;
+        let basePerPage = 5.00;
+        if (selectedOpt) {
+            basePerPage = isColored
+                ? parseFloat(selectedOpt.dataset.priceColor || 5.00)
+                : parseFloat(selectedOpt.dataset.priceBw || 2.00);
+        }
 
-        let bindingCost = 0;
-        if (binding === 'stapled') bindingCost = 10.00;
-        else if (binding === 'spiral') bindingCost = 35.00;
-
-        let total = ((pages * basePerPage * sizeMultiplier) + bindingCost) * copies;
-        let downPayment = total * 0.50;
+        let total = ((pages * basePerPage) + bindingCost) * copies;
+        let downPayment = total * (downPaymentPercent / 100.00);
 
         const elTotal = document.getElementById('printing-total-price');
         const elDown = document.getElementById('printing-down-payment');

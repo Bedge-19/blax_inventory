@@ -54,7 +54,7 @@
         <div class="responsive-table">
             <table class="w-full text-left border-collapse">
                 <thead><tr class="bg-surface-container-low/50 text-label-sm text-on-surface-variant/70 uppercase">
-                    <th class="py-sm px-md">Customer Name</th><th class="py-sm px-md">Email</th><th class="py-sm px-md">Total Orders</th><th class="py-sm px-md">Status</th><th class="py-sm px-md">Date Joined</th><th class="py-sm px-md text-right">Actions</th>
+                    <th class="py-sm px-md">Customer Name</th><th class="py-sm px-md">Email</th><th class="py-sm px-md">Status</th><th class="py-sm px-md">Date Joined</th><th class="py-sm px-md text-right">Actions</th>
                 </tr></thead>
                 <tbody>
                     <?php if (!empty($customers)): foreach ($customers as $c): ?>
@@ -64,7 +64,6 @@
                                 <?= esc(($c['first_name']??'') . ' ' . ($c['last_name']??'')) ?>
                             </td>
                             <td class="py-md px-md text-xs"><?= esc($c['email']) ?><p class="text-[11px] text-on-surface-variant"><?= esc($c['phone'] ?? 'N/A') ?></p></td>
-                            <td class="py-md px-md font-bold text-primary"><?= esc($c['order_count'] ?? 0) ?></td>
                             <td class="py-md px-md"><?= status_badge($c['status'] ?? 'active') ?></td>
                             <td class="py-md px-md text-xs text-on-surface-variant"><?= date('M d, Y', strtotime($c['created_at'])) ?></td>
                             <td class="py-md px-md text-right">
@@ -90,17 +89,55 @@
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <span class="text-xs text-on-surface-variant">â€”</span>
+                                    <span class="text-xs text-on-surface-variant">—</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; else: ?>
-                        <tr><td colspan="6" class="py-lg text-center text-on-surface-variant">No customers found.</td></tr>
+                        <tr><td colspan="5" class="py-lg text-center text-on-surface-variant">No customers found.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
-        <div class="px-6 py-3 bg-surface-container-low/30 border-t border-outline-variant/20 text-xs text-on-surface-variant">Showing <?= count($customers ?? []) ?> of <?= esc($total_count ?? count($customers ?? [])) ?> results</div>
+        <?php if (isset($pager)): ?>
+            <?php
+            $total   = (int) $pager->getTotal('customers');
+            $perPage = 15;
+            $cur     = (int) $pager->getCurrentPage('customers');
+            $pages   = (int) $pager->getPageCount('customers');
+            $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
+            $end     = min($cur * $perPage, $total);
+            ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">
+                <p class="text-xs text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> results</p>
+                <?php if ($pages > 1): ?>
+                    <div class="flex items-center gap-xs">
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('customers') ?>" title="Previous">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </a>
+                        <?php
+                        $window = [];
+                        for ($i = 1; $i <= $pages; $i++) {
+                            if ($i === 1 || $i === $pages || abs($i - $cur) <= 2) {
+                                $window[] = $i;
+                            }
+                        }
+                        $prev = 0;
+                        foreach ($window as $num):
+                            if ($num - $prev > 1): ?>
+                                <span class="px-xs text-outline text-xs">...</span>
+                            <?php endif; ?>
+                            <a class="w-8 h-8 rounded flex items-center justify-center text-xs <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high text-on-surface' ?>" href="<?= $pager->getPageURI($num, 'customers') ?>"><?= $num ?></a>
+                        <?php $prev = $num; endforeach; ?>
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('customers') ?>" title="Next">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 border-t border-outline-variant/20 text-xs text-on-surface-variant">Showing <?= count($customers ?? []) ?> of <?= esc($total_count ?? count($customers ?? [])) ?> results</div>
+        <?php endif; ?>
     </section>
 
 </div>

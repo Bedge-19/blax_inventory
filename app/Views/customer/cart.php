@@ -107,6 +107,9 @@
                                 <div>
 
                                     <h3 class="text-body-lg font-bold text-on-surface"><?= esc($item['product_name']) ?></h3>
+                                    <?php if (!empty($item['variant_label'])): ?>
+                                        <span class="inline-block my-0.5 px-2 py-0.5 bg-primary/10 text-primary text-xs font-semibold rounded-md border border-primary/20"><?= esc($item['variant_label']) ?></span>
+                                    <?php endif; ?>
                                     <p class="text-label-sm text-on-surface-variant"><?= esc($item['shop_name'] ?? 'RHK Store') ?></p>
 
                                 </div>

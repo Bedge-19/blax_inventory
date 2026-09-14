@@ -110,7 +110,7 @@
 
                                     <?php if (($req['fulfillment_method'] ?? 'pickup') === 'pickup' && in_array($reqStatus, ['ready_for_pickup', 'completed'])): ?>
 
-                                        <button type="button" class="pr-qr-btn flex items-center gap-xs px-xl py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-lg shadow-primary/20" data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>">
+                                        <button type="button" class="pr-qr-btn flex items-center gap-xs px-xl py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-lg shadow-primary/20" data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>" data-name="<?= esc($req['file_name'] ?? 'Document.pdf') ?>">
                                             <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
                                             Pick-up QR
                                         </button>
@@ -242,7 +242,9 @@
         </div>
         
         <div class="flex flex-col items-center">
-            <span class="text-[10px] uppercase tracking-widest text-outline font-bold">Request Number</span>
+            <span class="text-[10px] uppercase tracking-widest text-outline font-bold">Document File</span>
+            <h4 id="qr-file-name" class="text-base font-bold text-on-surface text-center line-clamp-1 max-w-[280px]">Document.pdf</h4>
+            <span class="text-[10px] uppercase tracking-widest text-outline font-bold mt-2">Request Number</span>
             <span id="qr-request-number" class="text-headline-sm font-mono font-bold text-primary mt-0.5">#PR-00000</span>
             <p class="text-xs text-on-surface-variant/80 mt-2 leading-relaxed">Present this QR code to the store attendant upon pick-up.</p>
         </div>
@@ -345,10 +347,12 @@
             var qrDone = document.getElementById('qr-done');
             var qrContainer = document.getElementById('qr-canvas-container');
             var qrNumEl = document.getElementById('qr-request-number');
+            var qrFileEl = document.getElementById('qr-file-name');
 
-            function openQrModal(reqNum) {
+            function openQrModal(reqNum, fileName) {
                 if (!qrModal) return;
                 qrNumEl.textContent = '#' + reqNum;
+                if (qrFileEl) qrFileEl.textContent = fileName || 'Document.pdf';
                 qrContainer.innerHTML = '';
 
                 if (window.QRCode) {
@@ -373,7 +377,7 @@
 
             document.querySelectorAll('.pr-qr-btn').forEach(function (btn) {
                 btn.addEventListener('click', function () {
-                    openQrModal(btn.dataset.number);
+                    openQrModal(btn.dataset.number, btn.dataset.name);
                 });
             });
 

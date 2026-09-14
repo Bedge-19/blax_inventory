@@ -78,6 +78,28 @@ class ProductModel extends Model
     }
 
     /**
+     * Get related products in the same category excluding the current product,
+     * prioritizing active bestsellers and highly rated items with primary images.
+     */
+    public function getRelatedProducts(int $categoryId, int $excludeProductId, int $limit = 12): array
+    {
+        return $this->db->table('products p')
+            ->select('p.*, s.shop_name, s.slug as shop_slug, c.name as category_name, pi.image_url')
+            ->join('shops s', 's.id = p.shop_id', 'left')
+            ->join('categories c', 'c.id = p.category_id', 'left')
+            ->join('product_images pi', 'pi.product_id = p.id AND pi.is_primary = 1', 'left')
+            ->where('p.category_id', $categoryId)
+            ->where('p.id !=', $excludeProductId)
+            ->where('p.status', 'active')
+            ->where('p.deleted_at', null)
+            ->orderBy('p.is_bestseller', 'DESC')
+            ->orderBy('p.rating_average', 'DESC')
+            ->limit($limit)
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
      * Paginated global catalog listing across all active products,
      * preserving search + category filters across pages.
      *

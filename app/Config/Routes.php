@@ -51,6 +51,8 @@ $routes->post('cart/checkout', 'Cart::checkout');
 $routes->get('cart/payment/callback', 'Cart::paymentCallback');
 $routes->post('payment/webhook', 'Cart::paymongoWebhook');
 $routes->get('cart/remove/(:num)', 'Cart::remove/$1');
+$routes->get('buy-now', 'Checkout::direct');
+$routes->post('buy-now/place', 'Checkout::placeOrder');
 
 // Customer Dashboard / Account
 $routes->get('customer/orders', 'Customer::orders');
@@ -90,6 +92,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
 
     $routes->post('orders/update-status', 'Tenant::updateOrderStatus');
     $routes->post('printing/update-status', 'Tenant::updatePrintingStatus');
+    $routes->post('printing/settings/save', 'Tenant::savePrintingSettings');
     $routes->post('deliveries/update-status', 'Tenant::updateDeliveryStatus');
     $routes->post('deliveries/lookup', 'Tenant::deliveryLookup');
     $routes->post('withdrawals/request', 'Tenant::requestWithdrawal');

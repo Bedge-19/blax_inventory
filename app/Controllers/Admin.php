@@ -76,31 +76,26 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
+        $shopModel = new ShopModel();
+        $search    = trim((string)$this->request->getGet('q'));
+        $status    = trim((string)$this->request->getGet('status'));
+        $page      = max(1, (int) $this->request->getGet('page_tenants'));
+
+        $result = $shopModel->getTenantsPaginated($search, $status, 15, $page, 'tenants');
+        $shops  = $result['tenants'];
+
         $db = \Config\Database::connect();
-        $search = trim((string)$this->request->getGet('q'));
-        $status = trim((string)$this->request->getGet('status'));
-
-        $builder = $db->table('shops s')
-            ->select('s.*, u.first_name, u.last_name, u.email')
-            ->join('users u', 'u.id = s.owner_id', 'left');
-        if ($search !== '') {
-            $builder->groupStart()->like('s.shop_name',$search)->orLike('u.first_name',$search)->orLike('u.last_name',$search)->orLike('u.email',$search)->groupEnd();
-        }
-        if (in_array($status, ['active','pending','suspended','rejected'], true)) {
-            $builder->where('s.status',$status);
-        }
-        $shops = $builder->orderBy('s.created_at','DESC')->get()->getResultArray();
-
-        $activeCount = $db->table('shops')->where('status','active')->countAllResults();
+        $activeCount  = $db->table('shops')->where('status','active')->countAllResults();
         $pendingCount = $db->table('shops')->where('status','pending')->countAllResults();
 
         return view('admin/tenants', [
-            'tenants' => $shops,
-            'shops'   => $shops,
-            'filters' => ['q'=>$search,'status'=>$status],
+            'tenants'      => $shops,
+            'shops'        => $shops,
+            'pager'        => $result['pager'],
+            'filters'      => ['q'=>$search,'status'=>$status],
             'active_count' => $activeCount,
             'pending_count'=> $pendingCount,
-            'total_count'=> count($shops),
+            'total_count'  => (int) ($result['pager'] ? $result['pager']->getTotal('tenants') : count($shops)),
         ]);
     }
 
@@ -109,36 +104,27 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
+        $userModel = new UserModel();
+        $search    = trim((string)$this->request->getGet('q'));
+        $status    = trim((string)$this->request->getGet('status'));
+        $page      = max(1, (int) $this->request->getGet('page_customers'));
+
+        $result    = $userModel->getCustomersPaginated($search, $status, 15, $page, 'customers');
+        $customers = $result['customers'];
+
         $db = \Config\Database::connect();
-        $search = trim((string)$this->request->getGet('q'));
-        $status = trim((string)$this->request->getGet('status'));
-
-        $builder = $db->table('users u')->where('u.role','customer');
-        if ($search !== '') {
-            $builder->groupStart()->like('u.first_name',$search)->orLike('u.last_name',$search)->orLike('u.email',$search)->groupEnd();
-        }
-        if (in_array($status, ['active','suspended','pending','inactive'], true)) {
-            $builder->where('u.status',$status);
-        }
-        $customers = $builder->orderBy('u.created_at','DESC')->get()->getResultArray();
-
-        // Order count per customer (no financials)
-        foreach ($customers as &$c) {
-            $c['order_count'] = $db->table('orders')->where('customer_id',$c['id'])->countAllResults();
-        }
-        unset($c);
-
         $total = $db->table('users')->where('role','customer')->countAllResults();
         $activeToday = $db->table('users')->where('role','customer')->where('DATE(last_login_at) = CURDATE()', null, false)->countAllResults();
         // fallback if last_login_at null: use created_today
         $newThisWeek = $db->table('users')->where('role','customer')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-7 days')))->countAllResults();
 
         return view('admin/customers', [
-            'customers' => $customers,
-            'filters' => ['q'=>$search,'status'=>$status],
-            'total_count'=> $total,
-            'active_today'=> $activeToday,
-            'new_this_week'=> $newThisWeek,
+            'customers'     => $customers,
+            'pager'         => $result['pager'],
+            'filters'       => ['q'=>$search,'status'=>$status],
+            'total_count'   => $total,
+            'active_today'  => $activeToday,
+            'new_this_week' => $newThisWeek,
         ]);
     }
 
@@ -147,22 +133,15 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
+        $payoutModel = new PayoutModel();
+        $search      = trim((string)$this->request->getGet('q'));
+        $status      = trim((string)$this->request->getGet('status'));
+        $page        = max(1, (int) $this->request->getGet('page_payments'));
+
+        $result          = $payoutModel->getPaymentsPaginated($search, $status, 15, $page, 'payments');
+        $paymentRequests = $result['payments'];
+
         $db = \Config\Database::connect();
-        $search = trim((string)$this->request->getGet('q'));
-        $status = trim((string)$this->request->getGet('status'));
-
-        $builder = $db->table('payout_requests p')
-            ->select("p.*, s.shop_name, s.gcash_number")
-            ->join('shops s', 's.id = p.shop_id', 'left')
-            ->where('p.destination_method','gcash');
-        if ($search !== '') {
-            $builder->groupStart()->like('p.reference_number',$search)->orLike('s.shop_name',$search)->groupEnd();
-        }
-        if (in_array($status, ['pending','processing','completed','failed'], true)) {
-            $builder->where('p.status',$status);
-        }
-        $paymentRequests = $builder->orderBy('p.requested_at','DESC')->get()->getResultArray();
-
         $pendingTotal = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->selectSum('amount','total')->get()->getRow()->total ?? 0;
         $completedTotal = $db->table('payout_requests')->where('status','completed')->where('destination_method','gcash')->selectSum('amount','total')->get()->getRow()->total ?? 0;
         $pendingCount = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->countAllResults();
@@ -170,6 +149,7 @@ class Admin extends BaseController
         return view('admin/payments', [
             'payment_requests' => $paymentRequests,
             'payments'         => $paymentRequests,
+            'pager'            => $result['pager'],
             'filters'          => ['q'=>$search,'status'=>$status],
             'pending_total'    => (float)$pendingTotal,
             'completed_total'  => (float)$completedTotal,
@@ -182,22 +162,15 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
+        $complianceModel = new ComplianceModel();
+        $search          = trim((string)$this->request->getGet('q'));
+        $status          = trim((string)$this->request->getGet('status'));
+        $page            = max(1, (int) $this->request->getGet('page_compliance'));
+
+        $result  = $complianceModel->getCompliancePaginated($search, $status, 15, $page, 'compliance');
+        $reports = $result['reports'];
+
         $db = \Config\Database::connect();
-        $search = trim((string)$this->request->getGet('q'));
-        $status = trim((string)$this->request->getGet('status'));
-
-        $builder = $db->table('compliance_reports c')
-            ->select("c.*, c.reported_shop_id as shop_id, c.issue_type as issue, c.status as compliance_status, s.shop_name, (SELECT COUNT(*) FROM compliance_reports c2 WHERE c2.reported_shop_id = c.reported_shop_id AND c2.status != 'resolved') as flag_count, u.first_name as reporter_first, u.last_name as reporter_last")
-            ->join('shops s', 's.id = c.reported_shop_id', 'left')
-            ->join('users u', 'u.id = c.reporter_id', 'left');
-        if ($search !== '') {
-            $builder->groupStart()->like('c.report_number',$search)->orLike('c.issue_type',$search)->orLike('s.shop_name',$search)->groupEnd();
-        }
-        if (in_array($status, ['pending','under_review','flagged','resolved'], true)) {
-            $builder->where('c.status',$status);
-        }
-        $reports = $builder->orderBy('c.created_at','DESC')->get()->getResultArray();
-
         $totalReports = $db->table('compliance_reports')->countAllResults();
         $pendingReviews = $db->table('compliance_reports')->whereIn('status',['pending','under_review','flagged'])->countAllResults();
         $resolvedCases = $db->table('compliance_reports')->where('status','resolved')->countAllResults();
@@ -205,6 +178,7 @@ class Admin extends BaseController
         return view('admin/compliance', [
             'compliance_items' => $reports,
             'reports'          => $reports,
+            'pager'            => $result['pager'],
             'filters'          => ['q'=>$search,'status'=>$status],
             'total_reports'    => $totalReports,
             'pending_reviews'  => $pendingReviews,
@@ -217,10 +191,10 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
-        $db = \Config\Database::connect();
-        $search = trim((string)$this->request->getGet('q'));
+        $search     = trim((string)$this->request->getGet('q'));
         $shopFilter = trim((string)$this->request->getGet('shop'));
-        $status = trim((string)$this->request->getGet('status'));
+        $status     = trim((string)$this->request->getGet('status'));
+        $page       = max(1, (int) $this->request->getGet('page_tracking'));
 
         $deliveryModel = new DeliveryModel();
         $pins = $deliveryModel->getAllDeliveryPins($search, $shopFilter);
@@ -240,35 +214,18 @@ class Admin extends BaseController
             return true;
         }));
 
-        // List deliveries for table (Polomolok only)
-        $builder = $db->table('deliveries d')
-            ->select("d.*, d.deliverable_id as order_id, d.status as delivery_status, COALESCE(d.destination_address, sa.address_line1) as shipping_address, d.created_at as updated_at, s.shop_name, u.first_name, u.last_name, COALESCE(o.order_number, pr.request_number) as ref_number, d.deliverable_type")
-            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
-            ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
-            ->join('shipping_addresses sa', 'sa.id = o.shipping_address_id', 'left')
-            ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
-            ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left');
-        if ($search !== '') {
-            $builder->groupStart()->like('d.tracking_id',$search)->orLike('s.shop_name',$search)->orLike('d.destination_address',$search)->groupEnd();
-        }
-        if ($shopFilter !== '') {
-            $builder->where('s.shop_name',$shopFilter);
-        }
-        if (in_array($status, ['ready_for_pickup','shipped','in_transit','delivered','cancelled'], true)) {
-            $builder->where('d.status',$status);
-        }
-        // Restrict to Polomolok destinations
-        $builder->groupStart()->like('COALESCE(d.destination_address, sa.city)','Polomolok')->orLike('sa.province','South Cotabato')->orWhere('d.destination_address IS NULL')->groupEnd();
-
-        $deliveries = $builder->orderBy('d.created_at','DESC')->limit(50)->get()->getResultArray();
+        $result     = $deliveryModel->getAdminTrackingPaginated($search, $shopFilter, $status, 20, $page, 'tracking');
+        $deliveries = $result['deliveries'];
 
         // Shops for filter dropdown
+        $db = \Config\Database::connect();
         $shops = $db->table('shops')->select('shop_name')->orderBy('shop_name','ASC')->get()->getResultArray();
         $activeCount = $db->table('deliveries')->whereIn('status',['ready_for_pickup','shipped','in_transit'])->countAllResults();
 
         return view('admin/tracking', [
             'live_deliveries' => $deliveries,
             'deliveries'      => $deliveries,
+            'pager'           => $result['pager'],
             'pins'            => $pins,
             'shops'           => $shops,
             'filters'         => ['q'=>$search,'shop'=>$shopFilter,'status'=>$status],
@@ -281,34 +238,28 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
-        $db = \Config\Database::connect();
         $search = trim((string)$this->request->getGet('q'));
-        $role = trim((string)$this->request->getGet('role'));
+        $role   = trim((string)$this->request->getGet('role'));
         $status = trim((string)$this->request->getGet('status'));
+        $page   = max(1, (int) $this->request->getGet('page_audit_log'));
 
-        $builder = $db->table('audit_logs a')->select('a.*, u.first_name, u.last_name, u.email')->join('users u','u.id = a.actor_id','left');
-        if ($search !== '') {
-            $builder->groupStart()->like('a.action',$search)->orLike('a.target_type',$search)->orLike('u.first_name',$search)->groupEnd();
-        }
-        if (in_array($role, ['admin','tenant','customer','system'], true)) {
-            $builder->where('a.actor_role',$role);
-        }
-        if (in_array($status, ['success','failed'], true)) {
-            $builder->where('a.status',$status);
-        }
-        $logs = $builder->orderBy('a.created_at','DESC')->limit(100)->get()->getResultArray();
+        $auditLogModel = new AuditLogModel();
+        $result = $auditLogModel->getAuditLogsPaginated($search, $role, $status, 25, $page, 'audit_log');
+        $logs   = $result['logs'];
 
+        $db = \Config\Database::connect();
         $total24h = $db->table('audit_logs')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
         $critical = $db->table('audit_logs')->where('status','failed')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
         $newAccounts = $db->table('audit_logs')->where('action','Created Account')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
 
         return view('admin/audit_log', [
-            'audit_logs' => $logs,
-            'logs'       => $logs,
-            'filters'    => ['q'=>$search,'role'=>$role,'status'=>$status],
-            'total_24h'  => $total24h,
-            'critical'   => $critical,
-            'new_accounts'=> $newAccounts,
+            'audit_logs'   => $logs,
+            'logs'         => $logs,
+            'pager'        => $result['pager'],
+            'filters'      => ['q'=>$search,'role'=>$role,'status'=>$status],
+            'total_24h'    => $total24h,
+            'critical'     => $critical,
+            'new_accounts' => $newAccounts,
         ]);
     }
 

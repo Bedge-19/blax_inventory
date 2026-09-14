@@ -39,9 +39,9 @@
                     <button data-range="year" class="rangeBtn px-sm py-xs rounded-full text-xs font-semibold border <?= ($range??'30')==='year'?'bg-primary text-on-primary border-primary':'border-outline-variant text-on-surface-variant' ?>">Year</button>
                 </div>
             </div>
-            <div id="analyticsChartWrap" class="relative h-80 w-full bg-surface-container-low rounded-xl border border-outline-variant/20 overflow-hidden p-4">
+            <div id="analyticsChartWrap" class="relative h-80 w-full bg-surface-container-low rounded-xl border border-outline-variant/20 p-4">
                 <canvas id="analyticsChart" class="w-full h-full"></canvas>
-                <div id="analyticsTooltip" class="hidden absolute bg-inverse-surface text-inverse-on-surface text-xs px-sm py-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap"></div>
+                <div id="analyticsTooltip" class="hidden absolute z-30 pointer-events-none whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-lg shadow-xl bg-slate-900/95 text-slate-100 border border-slate-700/60 backdrop-blur-sm transition-[opacity,transform] duration-75"></div>
             </div>
             <p class="text-[11px] text-on-surface-variant mt-sm">Hover any point to see ₱ value. Source: <span class="font-semibold">payout_requests.fee</span> where status=completed and destination_method=gcash.</p>
         </div>
@@ -113,54 +113,185 @@
 (function(){
     let labels = <?= json_encode($chart_labels ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
     let values = <?= json_encode($chart_values ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
-    const canvas=document.getElementById('analyticsChart'), wrap=document.getElementById('analyticsChartWrap'), tooltip=document.getElementById('analyticsTooltip');
-    if(!canvas) return;
-    const ctx=canvas.getContext('2d');
-    function draw(){
-        const dpr=window.devicePixelRatio||1;
-        const rect=canvas.getBoundingClientRect();
-        canvas.width=rect.width*dpr; canvas.height=rect.height*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
-        const w=rect.width,h=rect.height, pad={t:16,r:16,b:28,l:48};
-        const max=Math.max(...values,1);
-        const stepX=(w-pad.l-pad.r)/Math.max(labels.length-1,1);
-        ctx.clearRect(0,0,w,h);
+    const canvas = document.getElementById('analyticsChart'),
+          wrap   = document.getElementById('analyticsChartWrap'),
+          tooltip= document.getElementById('analyticsTooltip');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let hoveredIdx = -1;
+
+    function draw(activeIdx = -1){
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const w = rect.width, h = rect.height, pad = {t: 24, r: 20, b: 28, l: 52};
+        const max = Math.max(...values, 1);
+        const stepX = (w - pad.l - pad.r) / Math.max(labels.length - 1, 1);
+        ctx.clearRect(0, 0, w, h);
+
         // grid
-        ctx.strokeStyle='rgba(115,118,134,0.12)'; ctx.lineWidth=1;
-        for(let i=0;i<=4;i++){ const y=pad.t+(h-pad.t-pad.b)*i/4; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
-        // area
+        ctx.strokeStyle = 'rgba(115,118,134,0.12)';
+        ctx.lineWidth = 1;
+        for(let i = 0; i <= 4; i++){
+            const y = pad.t + (h - pad.t - pad.b) * i / 4;
+            ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+        }
+
+        // area gradient
         ctx.beginPath();
-        values.forEach((v,i)=>{ const x=pad.l+i*stepX, y=pad.t + (h-pad.t-pad.b)*(1 - v/max); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
-        const lastX=pad.l+(values.length-1)*stepX, lastY=pad.t + (h-pad.t-pad.b)*(1 - (values[values.length-1]||0)/max);
-        ctx.lineTo(lastX,h-pad.b); ctx.lineTo(pad.l,h-pad.b); ctx.closePath();
-        const grad=ctx.createLinearGradient(0,0,0,h); grad.addColorStop(0,'rgba(37,99,235,0.18)'); grad.addColorStop(1,'rgba(37,99,235,0)'); ctx.fillStyle=grad; ctx.fill();
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX, y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        const lastX = pad.l + (values.length - 1) * stepX, lastY = pad.t + (h - pad.t - pad.b) * (1 - (values[values.length - 1] || 0) / max);
+        ctx.lineTo(lastX, h - pad.b); ctx.lineTo(pad.l, h - pad.b); ctx.closePath();
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, 'rgba(37,99,235,0.18)');
+        grad.addColorStop(1, 'rgba(37,99,235,0)');
+        ctx.fillStyle = grad; ctx.fill();
+
         // line
-        ctx.beginPath(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=2.5; ctx.lineJoin='round';
-        values.forEach((v,i)=>{ const x=pad.l+i*stepX, y=pad.t + (h-pad.t-pad.b)*(1 - v/max); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+        ctx.beginPath(); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX, y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // vertical guideline on hover
+        if (activeIdx >= 0 && activeIdx < values.length) {
+            const ax = pad.l + activeIdx * stepX;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(37,99,235,0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.moveTo(ax, pad.t);
+            ctx.lineTo(ax, h - pad.b);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         // dots
-        values.forEach((v,i)=>{ const x=pad.l+i*stepX, y=pad.t + (h-pad.t-pad.b)*(1 - v/max); ctx.beginPath(); ctx.arc(x,y,3.5,0,Math.PI*2); ctx.fillStyle='#2563eb'; ctx.fill(); ctx.beginPath(); ctx.arc(x,y,1.7,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill(); });
-        ctx.fillStyle='#434655'; ctx.font='11px Inter'; ctx.textAlign='right';
-        ctx.fillText('₱'+max.toLocaleString(undefined,{minimumFractionDigits:0}), pad.l-8, pad.t+10);
-        ctx.fillText('₱0', pad.l-8, h-pad.b);
-        ctx.textAlign='center'; ctx.fillStyle='rgba(67,70,85,0.75)';
-        const idxs=[0, Math.floor(labels.length/2), labels.length-1];
-        idxs.forEach(i=>{ if(labels[i]) ctx.fillText(labels[i], pad.l+i*stepX, h-8); });
-        canvas._pts = values.map((v,i)=>({x:pad.l+i*stepX, y:pad.t + (h-pad.t-pad.b)*(1 - v/max), v, label:labels[i]}));
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX, y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            const isHovered = (i === activeIdx);
+
+            if (isHovered) {
+                ctx.beginPath();
+                ctx.arc(x, y, 7.5, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(37, 99, 235, 0.22)';
+                ctx.fill();
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, isHovered ? 4.8 : 3.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#2563eb';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(x, y, isHovered ? 2.4 : 1.7, 0, Math.PI * 2);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+        });
+
+        // y labels
+        ctx.fillStyle = '#434655'; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('₱' + max.toLocaleString(undefined, {minimumFractionDigits: 0}), pad.l - 8, pad.t + 10);
+        ctx.fillText('₱0', pad.l - 8, h - pad.b);
+
+        // x labels
+        ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(67,70,85,0.75)';
+        const idxs = [0, Math.floor(labels.length / 2), labels.length - 1];
+        idxs.forEach(i => {
+            if(labels[i]) ctx.fillText(labels[i], pad.l + i * stepX, h - 8);
+        });
+
+        canvas._pts = values.map((v, i) => ({
+            x: pad.l + i * stepX,
+            y: pad.t + (h - pad.t - pad.b) * (1 - v / max),
+            v,
+            label: labels[i],
+            index: i
+        }));
     }
-    draw(); window.addEventListener('resize', draw);
-    canvas.addEventListener('mousemove', e=>{
-        const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left;
-        let best=null,bd=999; (canvas._pts||[]).forEach(p=>{const d=Math.abs(p.x-mx); if(d<bd){bd=d; best=p;}});
-        if(best && bd < 24){ tooltip.classList.remove('hidden'); tooltip.textContent=best.label+': ₱'+Number(best.v).toLocaleString(undefined,{minimumFractionDigits:2}); tooltip.style.left=(best.x+10)+'px'; tooltip.style.top=(best.y-36)+'px'; } else tooltip.classList.add('hidden');
+
+    draw();
+    window.addEventListener('resize', () => draw(hoveredIdx));
+
+    canvas.addEventListener('mousemove', e => {
+        if (!canvas._pts || !canvas._pts.length) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const mx = e.clientX - canvasRect.left;
+        let best = null, bd = 999;
+        canvas._pts.forEach(p => {
+            const d = Math.abs(p.x - mx);
+            if(d < bd){ bd = d; best = p; }
+        });
+
+        if (best && bd < 28) {
+            if (hoveredIdx !== best.index) {
+                hoveredIdx = best.index;
+                draw(hoveredIdx);
+            }
+            tooltip.innerHTML = '<span class="text-slate-400 font-normal">' + best.label + '</span> &middot; <span class="font-bold text-emerald-400">₱' + Number(best.v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+            tooltip.classList.remove('hidden');
+
+            const wrapRect = wrap.getBoundingClientRect();
+            const ptXInWrap = (canvasRect.left - wrapRect.left) + best.x;
+            const ptYInWrap = (canvasRect.top - wrapRect.top) + best.y;
+
+            const tipW = tooltip.offsetWidth || 130;
+            const tipH = tooltip.offsetHeight || 28;
+
+            // Center horizontally on point and clamp within wrap boundaries
+            let left = ptXInWrap - (tipW / 2);
+            const minLeft = 8;
+            const maxLeft = wrapRect.width - tipW - 8;
+            left = Math.max(minLeft, Math.min(left, maxLeft));
+
+            // Default position above point; flip below if too close to wrap top
+            let top = ptYInWrap - tipH - 12;
+            if (top < 8) {
+                top = ptYInWrap + 14;
+            }
+            if (top + tipH > wrapRect.height - 8) {
+                top = wrapRect.height - tipH - 8;
+            }
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        } else {
+            if (hoveredIdx !== -1) {
+                hoveredIdx = -1;
+                draw(-1);
+            }
+            tooltip.classList.add('hidden');
+        }
     });
-    canvas.addEventListener('mouseleave', ()=> tooltip.classList.add('hidden'));
+
+    canvas.addEventListener('mouseleave', () => {
+        if (hoveredIdx !== -1) {
+            hoveredIdx = -1;
+            draw(-1);
+        }
+        tooltip.classList.add('hidden');
+    });
+
     // range switching via AJAX
-    document.querySelectorAll('.rangeBtn').forEach(btn=>{
-        btn.addEventListener('click', ()=>{
-            const range=btn.dataset.range;
-            fetch('<?= base_url('admin/analytics/data') ?>?range='+range, {headers:{'X-Requested-With':'XMLHttpRequest'}})
-                .then(r=>r.json()).then(data=>{
-                    if(data.success){ labels=data.labels; values=data.values; draw();
-                        document.querySelectorAll('.rangeBtn').forEach(b=>{ b.className='rangeBtn px-sm py-xs rounded-full text-xs font-semibold border '+(b.dataset.range===range?'bg-primary text-on-primary border-primary':'border-outline-variant text-on-surface-variant'); });
+    document.querySelectorAll('.rangeBtn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const range = btn.dataset.range;
+            fetch('<?= base_url('admin/analytics/data') ?>?range=' + range, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(r => r.json()).then(data => {
+                    if (data.success) {
+                        labels = data.labels;
+                        values = data.values;
+                        hoveredIdx = -1;
+                        draw();
+                        document.querySelectorAll('.rangeBtn').forEach(b => {
+                            b.className = 'rangeBtn px-sm py-xs rounded-full text-xs font-semibold border ' + (b.dataset.range === range ? 'bg-primary text-on-primary border-primary' : 'border-outline-variant text-on-surface-variant');
+                        });
                     }
                 });
         });

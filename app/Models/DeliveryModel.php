@@ -382,4 +382,57 @@ class DeliveryModel extends Model
     {
         return (string) $this->db->query('SELECT CURDATE() AS d')->getRow()->d;
     }
+
+    /**
+     * Paginated deliveries for Admin live tracking / fleet monitor table.
+     *
+     * @return array{deliveries: array, pager: \CodeIgniter\Pager\Pager|null}
+     */
+    public function getAdminTrackingPaginated(
+        ?string $search = null,
+        ?string $shopFilter = null,
+        ?string $status = null,
+        int $perPage = 20,
+        int $page = 1,
+        string $group = 'tracking'
+    ): array {
+        $this->builder()
+            ->select("deliveries.*, deliveries.deliverable_id as order_id, deliveries.status as delivery_status, COALESCE(deliveries.destination_address, sa.address_line1) as shipping_address, deliveries.created_at as updated_at, s.shop_name, u.first_name, u.last_name, COALESCE(o.order_number, pr.request_number) as ref_number, deliveries.deliverable_type")
+            ->join('orders o', "o.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'order'", 'left')
+            ->join('printing_requests pr', "pr.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'printing_request'", 'left')
+            ->join('shipping_addresses sa', 'sa.id = o.shipping_address_id', 'left')
+            ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
+            ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
+            ->orderBy('deliveries.created_at', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $this->builder()->groupStart()
+                ->like('deliveries.tracking_id', $search)
+                ->orLike('s.shop_name', $search)
+                ->orLike('deliveries.destination_address', $search)
+                ->groupEnd();
+        }
+
+        if ($shopFilter !== null && $shopFilter !== '') {
+            $this->builder()->where('s.shop_name', $shopFilter);
+        }
+
+        if ($status !== null && in_array($status, ['ready_for_pickup', 'shipped', 'in_transit', 'delivered', 'cancelled'], true)) {
+            $this->builder()->where('deliveries.status', $status);
+        }
+
+        // Restrict to Polomolok destinations
+        $this->builder()->groupStart()
+            ->like('COALESCE(deliveries.destination_address, sa.city)', 'Polomolok')
+            ->orLike('sa.province', 'South Cotabato')
+            ->orWhere('deliveries.destination_address IS NULL')
+            ->groupEnd();
+
+        $deliveries = $this->paginate($perPage, $group, $page);
+
+        return [
+            'deliveries' => $deliveries ?: [],
+            'pager'      => $this->pager,
+        ];
+    }
 }

@@ -36,4 +36,40 @@ class UserModel extends Model
     {
         return $this->where('email', $email)->first();
     }
+
+    /**
+     * Paginated customer accounts for Admin management.
+     *
+     * @return array{customers: array, pager: \CodeIgniter\Pager\Pager|null}
+     */
+    public function getCustomersPaginated(
+        ?string $search = null,
+        ?string $status = null,
+        int $perPage = 15,
+        int $page = 1,
+        string $group = 'customers'
+    ): array {
+        $this->builder()
+            ->where('users.role', 'customer')
+            ->orderBy('users.created_at', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $this->builder()->groupStart()
+                ->like('users.first_name', $search)
+                ->orLike('users.last_name', $search)
+                ->orLike('users.email', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== null && in_array($status, ['active', 'suspended', 'pending', 'inactive'], true)) {
+            $this->builder()->where('users.status', $status);
+        }
+
+        $customers = $this->paginate($perPage, $group, $page);
+
+        return [
+            'customers' => $customers ?: [],
+            'pager'     => $this->pager,
+        ];
+    }
 }

@@ -38,9 +38,9 @@
                 </div>
                 <span class="text-xs font-semibold px-sm py-xs bg-primary-container text-on-primary-container rounded-full">3% Fee</span>
             </div>
-            <div id="dashboardChartWrap" class="relative h-64 w-full bg-surface-container-low rounded-xl border border-outline-variant/20 overflow-hidden p-4">
+            <div id="dashboardChartWrap" class="relative h-64 w-full bg-surface-container-low rounded-xl border border-outline-variant/20 p-4">
                 <canvas id="dashboardChart" class="w-full h-full"></canvas>
-                <div id="dashboardTooltip" class="hidden absolute bg-inverse-surface text-inverse-on-surface text-xs px-sm py-xs rounded-lg shadow-lg pointer-events-none whitespace-nowrap"></div>
+                <div id="dashboardTooltip" class="hidden absolute z-30 pointer-events-none whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-lg shadow-xl bg-slate-900/95 text-slate-100 border border-slate-700/60 backdrop-blur-sm transition-[opacity,transform] duration-75"></div>
             </div>
             <div class="flex justify-between text-[10px] text-on-surface-variant mt-sm">
                 <span><?= esc(($admin_revenue_chart_labels[0] ?? '') ) ?></span><span><?= esc(end($admin_revenue_chart_labels) ?? 'Today') ?></span>
@@ -127,50 +127,167 @@
     const ctx = canvas.getContext('2d');
     const wrap = document.getElementById('dashboardChartWrap');
     const tooltip = document.getElementById('dashboardTooltip');
-    function draw(){
+    let hoveredIdx = -1;
+
+    function draw(activeIdx = -1){
         const dpr = window.devicePixelRatio || 1;
         const rect = canvas.getBoundingClientRect();
         canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
         ctx.setTransform(dpr,0,0,dpr,0,0);
         const w = rect.width, h = rect.height;
-        const pad = {t:12,r:12,b:22,l:40};
+        const pad = {t: 20, r: 18, b: 24, l: 44};
         const max = Math.max(...values, 1);
-        const stepX = (w - pad.l - pad.r) / Math.max(labels.length -1,1);
+        const stepX = (w - pad.l - pad.r) / Math.max(labels.length - 1, 1);
         ctx.clearRect(0,0,w,h);
+
         // grid
-        ctx.strokeStyle='rgba(115,118,134,0.12)'; ctx.lineWidth=1;
-        for(let i=0;i<=3;i++){ const y=pad.t + (h-pad.t-pad.b)*i/3; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke(); }
-        // area
+        ctx.strokeStyle = 'rgba(115,118,134,0.12)'; ctx.lineWidth = 1;
+        for(let i = 0; i <= 3; i++){
+            const y = pad.t + (h - pad.t - pad.b) * i / 3;
+            ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+        }
+
+        // area gradient
         ctx.beginPath();
-        values.forEach((v,i)=>{
-            const x=pad.l + i*stepX; const y=pad.t + (h-pad.t-pad.b)*(1 - v/max);
-            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX;
+            const y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         });
-        const lastX=pad.l + (values.length-1)*stepX; const lastY=pad.t + (h-pad.t-pad.b)*(1 - values[values.length-1]/max);
-        ctx.lineTo(lastX, h-pad.b); ctx.lineTo(pad.l, h-pad.b); ctx.closePath();
-        const grad=ctx.createLinearGradient(0,0,0,h); grad.addColorStop(0,'rgba(37,99,235,0.18)'); grad.addColorStop(1,'rgba(37,99,235,0)'); ctx.fillStyle=grad; ctx.fill();
+        const lastX = pad.l + (values.length - 1) * stepX;
+        const lastY = pad.t + (h - pad.t - pad.b) * (1 - values[values.length - 1] / max);
+        ctx.lineTo(lastX, h - pad.b); ctx.lineTo(pad.l, h - pad.b); ctx.closePath();
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, 'rgba(37,99,235,0.18)');
+        grad.addColorStop(1, 'rgba(37,99,235,0)');
+        ctx.fillStyle = grad; ctx.fill();
+
         // line
-        ctx.beginPath(); ctx.strokeStyle='#2563eb'; ctx.lineWidth=2; ctx.lineJoin='round';
-        values.forEach((v,i)=>{ const x=pad.l+i*stepX; const y=pad.t + (h-pad.t-pad.b)*(1 - v/max); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }); ctx.stroke();
+        ctx.beginPath(); ctx.strokeStyle = '#2563eb'; ctx.lineWidth = 2.2; ctx.lineJoin = 'round';
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX;
+            const y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+
+        // vertical guideline on hover
+        if (activeIdx >= 0 && activeIdx < values.length) {
+            const ax = pad.l + activeIdx * stepX;
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(37,99,235,0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 3]);
+            ctx.moveTo(ax, pad.t);
+            ctx.lineTo(ax, h - pad.b);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
         // dots
-        values.forEach((v,i)=>{ const x=pad.l+i*stepX; const y=pad.t + (h-pad.t-pad.b)*(1 - v/max); ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fillStyle='#2563eb'; ctx.fill(); ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(x,y,1.5,0,Math.PI*2); ctx.fill(); });
+        values.forEach((v, i) => {
+            const x = pad.l + i * stepX;
+            const y = pad.t + (h - pad.t - pad.b) * (1 - v / max);
+            const isHovered = (i === activeIdx);
+
+            if (isHovered) {
+                ctx.beginPath();
+                ctx.arc(x, y, 7, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(37, 99, 235, 0.22)';
+                ctx.fill();
+            }
+
+            ctx.beginPath();
+            ctx.arc(x, y, isHovered ? 4.5 : 3, 0, Math.PI * 2);
+            ctx.fillStyle = '#2563eb';
+            ctx.fill();
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(x, y, isHovered ? 2.2 : 1.5, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
         // y labels
-        ctx.fillStyle='#434655'; ctx.font='11px Inter'; ctx.textAlign='right';
-        ctx.fillText('₱'+max.toLocaleString(undefined,{minimumFractionDigits:0}), pad.l-6, pad.t+10);
-        ctx.fillText('₱0', pad.l-6, h-pad.b);
-        // x labels sparse
-        ctx.textAlign='center'; ctx.fillStyle='rgba(67,70,85,0.7)';
-        [0, Math.floor(labels.length/2), labels.length-1].forEach(i=>{ if(labels[i]) ctx.fillText(labels[i], pad.l + i*stepX, h-6); });
-        canvas._points = values.map((v,i)=>({x:pad.l+i*stepX, y:pad.t + (h-pad.t-pad.b)*(1 - v/max), v, label:labels[i]}));
+        ctx.fillStyle = '#434655'; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('₱' + max.toLocaleString(undefined, {minimumFractionDigits: 0}), pad.l - 6, pad.t + 10);
+        ctx.fillText('₱0', pad.l - 6, h - pad.b);
+
+        // x labels
+        ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(67,70,85,0.7)';
+        [0, Math.floor(labels.length / 2), labels.length - 1].forEach(i => {
+            if (labels[i]) ctx.fillText(labels[i], pad.l + i * stepX, h - 6);
+        });
+
+        canvas._points = values.map((v, i) => ({
+            x: pad.l + i * stepX,
+            y: pad.t + (h - pad.t - pad.b) * (1 - v / max),
+            v,
+            label: labels[i],
+            index: i
+        }));
     }
-    draw(); window.addEventListener('resize', draw);
-    canvas.addEventListener('mousemove', (e)=>{
-        const rect=canvas.getBoundingClientRect(); const mx=e.clientX-rect.left;
-        if(!canvas._points) return; let best=null, bestDist=999;
-        canvas._points.forEach(p=>{ const d=Math.abs(p.x-mx); if(d<bestDist){bestDist=d; best=p;}});
-        if(best && bestDist < 20){ tooltip.classList.remove('hidden'); tooltip.textContent=best.label+': ₱'+Number(best.v).toLocaleString(undefined,{minimumFractionDigits:2}); tooltip.style.left=(best.x+8)+'px'; tooltip.style.top=(best.y-30)+'px'; } else tooltip.classList.add('hidden');
+
+    draw();
+    window.addEventListener('resize', () => draw(hoveredIdx));
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (!canvas._points || !canvas._points.length) return;
+        const canvasRect = canvas.getBoundingClientRect();
+        const mx = e.clientX - canvasRect.left;
+        let best = null, bestDist = 999;
+        canvas._points.forEach(p => {
+            const d = Math.abs(p.x - mx);
+            if (d < bestDist) { bestDist = d; best = p; }
+        });
+
+        if (best && bestDist < 28) {
+            if (hoveredIdx !== best.index) {
+                hoveredIdx = best.index;
+                draw(hoveredIdx);
+            }
+            tooltip.innerHTML = '<span class="text-slate-400 font-normal">' + best.label + '</span> &middot; <span class="font-bold text-emerald-400">₱' + Number(best.v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '</span>';
+            tooltip.classList.remove('hidden');
+
+            const wrapRect = wrap.getBoundingClientRect();
+            const ptXInWrap = (canvasRect.left - wrapRect.left) + best.x;
+            const ptYInWrap = (canvasRect.top - wrapRect.top) + best.y;
+
+            const tipW = tooltip.offsetWidth || 130;
+            const tipH = tooltip.offsetHeight || 28;
+
+            // Center horizontally on point and clamp within wrap to prevent clipping
+            let left = ptXInWrap - (tipW / 2);
+            const minLeft = 8;
+            const maxLeft = wrapRect.width - tipW - 8;
+            left = Math.max(minLeft, Math.min(left, maxLeft));
+
+            // Default position above point; flip below if too close to wrap top
+            let top = ptYInWrap - tipH - 12;
+            if (top < 8) {
+                top = ptYInWrap + 14;
+            }
+            if (top + tipH > wrapRect.height - 8) {
+                top = wrapRect.height - tipH - 8;
+            }
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+        } else {
+            if (hoveredIdx !== -1) {
+                hoveredIdx = -1;
+                draw(-1);
+            }
+            tooltip.classList.add('hidden');
+        }
     });
-    canvas.addEventListener('mouseleave', ()=> tooltip.classList.add('hidden'));
+
+    canvas.addEventListener('mouseleave', () => {
+        if (hoveredIdx !== -1) {
+            hoveredIdx = -1;
+            draw(-1);
+        }
+        tooltip.classList.add('hidden');
+    });
 })();
 </script>
 <?= $this->endSection() ?>

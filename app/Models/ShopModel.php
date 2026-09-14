@@ -157,4 +157,42 @@ class ShopModel extends Model
             'pager' => $this->pager,
         ];
     }
+
+    /**
+     * Paginated tenant shops for Admin management.
+     *
+     * @return array{tenants: array, pager: \CodeIgniter\Pager\Pager|null}
+     */
+    public function getTenantsPaginated(
+        ?string $search = null,
+        ?string $status = null,
+        int $perPage = 15,
+        int $page = 1,
+        string $group = 'tenants'
+    ): array {
+        $this->builder()
+            ->select('shops.*, u.first_name, u.last_name, u.email')
+            ->join('users u', 'u.id = shops.owner_id', 'left')
+            ->orderBy('shops.created_at', 'DESC');
+
+        if ($search !== null && $search !== '') {
+            $this->builder()->groupStart()
+                ->like('shops.shop_name', $search)
+                ->orLike('u.first_name', $search)
+                ->orLike('u.last_name', $search)
+                ->orLike('u.email', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== null && in_array($status, ['active', 'pending', 'suspended', 'rejected'], true)) {
+            $this->builder()->where('shops.status', $status);
+        }
+
+        $tenants = $this->paginate($perPage, $group, $page);
+
+        return [
+            'tenants' => $tenants ?: [],
+            'pager'   => $this->pager,
+        ];
+    }
 }

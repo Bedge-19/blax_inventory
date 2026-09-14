@@ -180,6 +180,17 @@ $isShopOwner = ($initialRole ?? 'customer') === 'shop_owner';
                 setRole('shop_owner');
             });
         }
+
+        // Prevent accidental double-submission
+        var form = document.querySelector('form[action*="login"]');
+        var submitBtn = document.getElementById('submit-button');
+        if (form && submitBtn) {
+            form.addEventListener('submit', function() {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+                submitBtn.innerText = 'Signing In...';
+            });
+        }
     })();
 </script>
 

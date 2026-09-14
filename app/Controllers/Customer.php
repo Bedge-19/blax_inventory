@@ -163,19 +163,24 @@ class Customer extends BaseController
             $userShopReview = $reviewModel->getUserReview($userId, null, $shop['id']);
         }
 
+        $paperSizes       = (new \App\Models\ShopPaperSizeSettingModel())->getForShop((int) $shop['id']);
+        $printingSettings = (new \App\Models\ShopPrintingSettingModel())->getForShop((int) $shop['id']);
+
         return view('customer/shop_storefront', [
-            'shop'            => $shop,
-            'products'        => $result['products'],
-            'pager'           => $result['pager'],
-            'totalPages'      => $totalPages,
-            'currentPage'     => $page,
-            'perPage'         => $perPage,
-            'totalProducts'   => $total,
-            'searchQuery'     => $search,
-            'shopReviews'     => $shopReviews,
-            'shopReviewCount' => $shopReviewCount,
-            'userShopReview'  => $userShopReview,
-            'businessHours'   => $businessHours,
+            'shop'             => $shop,
+            'products'         => $result['products'],
+            'pager'            => $result['pager'],
+            'totalPages'       => $totalPages,
+            'currentPage'      => $page,
+            'perPage'          => $perPage,
+            'totalProducts'    => $total,
+            'searchQuery'      => $search,
+            'shopReviews'      => $shopReviews,
+            'shopReviewCount'  => $shopReviewCount,
+            'userShopReview'   => $userShopReview,
+            'businessHours'    => $businessHours,
+            'paperSizes'       => $paperSizes,
+            'printingSettings' => $printingSettings,
         ]);
     }
 
@@ -188,9 +193,7 @@ class Customer extends BaseController
             return redirect()->to('/');
         }
 
-        $relatedProducts = $productModel->where('category_id', $product['category_id'])
-            ->where('id !=', $product['id'])
-            ->findAll(4);
+        $relatedProducts = $productModel->getRelatedProducts((int) $product['category_id'], (int) $product['id'], 12);
 
         $productImageModel = new ProductImageModel();
         $productImages = $productImageModel->where('product_id', $product['id'])
@@ -290,7 +293,9 @@ class Customer extends BaseController
         }
         unset($order);
 
+        $productModel = new ProductModel();
         $imageByProduct = [];
+        $productNames = [];
         if (!empty($productIds)) {
             $imageRows = $productImageModel->builder()
                 ->whereIn('product_id', array_keys($productIds))
@@ -304,11 +309,23 @@ class Customer extends BaseController
                     $imageByProduct[$pid] = $img['image_url'];
                 }
             }
+
+            $prodRows = $productModel->builder()
+                ->select('id, name')
+                ->whereIn('id', array_keys($productIds))
+                ->get()->getResultArray();
+            foreach ($prodRows as $pr) {
+                $productNames[(int) $pr['id']] = $pr['name'];
+            }
         }
 
         foreach ($orders as &$order) {
             foreach ($order['items'] as &$item) {
-                $item['image_url'] = $imageByProduct[(int) $item['product_id']] ?? '';
+                $pid = (int) ($item['product_id'] ?? 0);
+                $item['image_url'] = $imageByProduct[$pid] ?? '';
+                if (empty($item['product_name']) && isset($productNames[$pid])) {
+                    $item['product_name'] = $productNames[$pid];
+                }
             }
             unset($item);
         }
@@ -381,16 +398,27 @@ class Customer extends BaseController
 
         $addressId = (int) $this->request->getPost('address_id');
 
+        $validBarangays = [
+            'Bentung', 'Cannery Site', 'Crossing Palkan', 'Glamang', 'Kinilis',
+            'Klinan 6', 'Koronadal Proper', 'Lam-Caliaf', 'Landan', 'Lumakil',
+            'Maligo', 'Palkan', 'Poblacion', 'Polo', 'Pula Bato', 'Rubber',
+            'Silway 7', 'Silway 8', 'Sulit', 'Sumbakil', 'Upper Klinan',
+            'Pagalungan', 'Magsaysay'
+        ];
+
+        $barangay = trim((string) ($this->request->getPost('barangay') ?: $this->request->getPost('address_line2')));
+
+        // Scoped strictly to Polomolok, South Cotabato, 9504, Philippines
         $data = [
             'label'          => trim((string) $this->request->getPost('label')),
             'recipient_name' => trim((string) $this->request->getPost('recipient_name')),
             'phone'          => trim((string) $this->request->getPost('phone')),
             'address_line1'  => trim((string) $this->request->getPost('address_line1')),
-            'address_line2'  => trim((string) $this->request->getPost('address_line2')),
-            'city'           => trim((string) $this->request->getPost('city')),
-            'province'       => trim((string) $this->request->getPost('province')),
-            'postal_code'    => trim((string) $this->request->getPost('postal_code')),
-            'country'        => trim((string) $this->request->getPost('country')) ?: 'Philippines',
+            'address_line2'  => $barangay,
+            'city'           => 'Polomolok',
+            'province'       => 'South Cotabato',
+            'postal_code'    => '9504',
+            'country'        => 'Philippines',
         ];
 
         $errors = [];
@@ -401,13 +429,10 @@ class Customer extends BaseController
             $errors[] = 'Recipient name is required.';
         }
         if ($data['address_line1'] === '') {
-            $errors[] = 'Address line 1 is required.';
+            $errors[] = 'Address line 1 (Street / House No.) is required.';
         }
-        if ($data['city'] === '') {
-            $errors[] = 'City is required.';
-        }
-        if ($data['province'] === '') {
-            $errors[] = 'Province is required.';
+        if ($barangay === '' || !in_array($barangay, $validBarangays, true)) {
+            $errors[] = 'Please select a valid official barangay of Polomolok.';
         }
 
         if ($errors) {
@@ -598,34 +623,88 @@ class Customer extends BaseController
 
         $file = $this->request->getFile('document');
         if (!$file || !$file->isValid() || $file->hasMoved()) {
-            session()->setFlashdata('error', 'Please attach a PDF document before submitting your printing request.');
+            session()->setFlashdata('error', 'Please attach a document before submitting your printing request.');
             return redirect()->back();
         }
 
-        if (strtolower($file->getClientExtension()) !== 'pdf') {
-            session()->setFlashdata('error', 'Only PDF documents are accepted for printing.');
-            return redirect()->back();
-        }
+        $documentType = strtolower(trim((string) $this->request->getPost('document_type'))) === 'docx' ? 'docx' : 'pdf';
+        $docChangeType = null;
+        $notes = trim((string) $this->request->getPost('notes'));
+        $stagedRefPhotos = [];
 
+        $ext = strtolower($file->getClientExtension());
         $uploadPath = WRITEPATH . 'uploads/printing';
         if (!is_dir($uploadPath)) {
             mkdir($uploadPath, 0777, true);
         }
         $fileName = $file->getRandomName();
-        $file->move($uploadPath, $fileName);
-        $movedPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
 
-        if (!is_valid_pdf($movedPath, $file->getClientName())) {
-            @unlink($movedPath);
-            session()->setFlashdata('error', 'The uploaded file is not a valid PDF document.');
-            return redirect()->back();
-        }
+        if ($documentType === 'docx') {
+            if (!in_array($ext, ['docx', 'doc'], true)) {
+                session()->setFlashdata('error', 'Only Word documents (.doc, .docx) are accepted when Word Document is selected.');
+                return redirect()->back();
+            }
 
-        $pageCount = count_pdf_pages($movedPath);
-        if ($pageCount <= 0) {
-            @unlink($movedPath);
-            session()->setFlashdata('error', 'Could not determine the page count of the uploaded PDF.');
-            return redirect()->back();
+            $pageCount = max(1, (int) $this->request->getPost('estimated_page_count'));
+            $docChangeType = strtolower(trim((string) $this->request->getPost('doc_change_type'))) === 'has_changes' ? 'has_changes' : 'as_is';
+
+            if ($docChangeType === 'has_changes') {
+                if ($notes === '') {
+                    session()->setFlashdata('error', 'Special instructions are required when requesting document changes or formatting.');
+                    return redirect()->back();
+                }
+
+                // Handle reference photos upload (max 5MB each, image files only)
+                $attachmentsUploadPath = FCPATH . 'uploads/printing_attachments/';
+                if (!is_dir($attachmentsUploadPath)) {
+                    mkdir($attachmentsUploadPath, 0755, true);
+                }
+
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+                $maxBytes = 5 * 1024 * 1024; // 5MB
+
+                $refFiles = $this->request->getFileMultiple('reference_photos');
+                if (!empty($refFiles)) {
+                    foreach ($refFiles as $rf) {
+                        if ($rf && $rf->isValid() && !$rf->hasMoved()) {
+                            if (in_array($rf->getMimeType(), $allowedMimes, true) && $rf->getSize() <= $maxBytes) {
+                                $refName = 'ref_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $rf->getClientExtension();
+                                $rf->move($attachmentsUploadPath, $refName);
+                                $stagedRefPhotos[] = [
+                                    'file_name' => $rf->getClientName(),
+                                    'file_path' => 'uploads/printing_attachments/' . $refName,
+                                    'file_size' => $rf->getSize(),
+                                ];
+                            }
+                        }
+                    }
+                }
+            }
+
+            $file->move($uploadPath, $fileName);
+            $movedPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
+        } else {
+            // PDF Document
+            if ($ext !== 'pdf') {
+                session()->setFlashdata('error', 'Only PDF documents are accepted for PDF printing.');
+                return redirect()->back();
+            }
+
+            $file->move($uploadPath, $fileName);
+            $movedPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
+
+            if (!is_valid_pdf($movedPath, $file->getClientName())) {
+                @unlink($movedPath);
+                session()->setFlashdata('error', 'The uploaded file is not a valid PDF document.');
+                return redirect()->back();
+            }
+
+            $pageCount = count_pdf_pages($movedPath);
+            if ($pageCount <= 0) {
+                @unlink($movedPath);
+                session()->setFlashdata('error', 'Could not determine the page count of the uploaded PDF.');
+                return redirect()->back();
+            }
         }
 
         $fileUrl = 'writable/uploads/printing/' . $fileName;
@@ -636,57 +715,54 @@ class Customer extends BaseController
             $paperSize = 'letter';
         }
 
-        $colorMode = strtolower($this->request->getPost('color_mode')) === 'colored' ? 'color' : 'bw';
+        $colorMode = strtolower((string) $this->request->getPost('color_mode')) === 'colored' ? 'color' : 'bw';
         $bindingMap = ['stapled' => 'staple', 'spiral' => 'spiral', 'none' => 'none'];
-        $binding = $bindingMap[strtolower($this->request->getPost('binding'))] ?? 'none';
+        $binding = $bindingMap[strtolower((string) $this->request->getPost('binding'))] ?? 'none';
         $copies = max(1, (int) $this->request->getPost('copies'));
 
         $fulfillment = $this->request->getPost('fulfillment_method') === 'delivery' ? 'delivery' : 'pickup';
-        // Polomolok restriction: shop must be in Polomolok
-        $shopCityOk = stripos($shop['city'] ?? '', 'Polomolok') !== false || stripos($shop['province'] ?? '', 'South Cotabato') !== false || stripos($shop['address_line'] ?? '', 'Polomolok') !== false;
-        // Allow if shop city empty (legacy data) but log; enforce via delivery address later
-        // For printing delivery, we restrict to Polomolok shops — if shop has no city, assume Polomolok (system default)
-        if ($fulfillment === 'delivery') {
-            // Check shipping default address if provided; if not, still allow but delivery will be Polomolok-only
-        }
 
-        $basePerPage = ($colorMode === 'color') ? 5.00 : 2.00;
-        $sizeMultiplier = 1.0;
-        if (in_array($paperSize, ['legal', 'a3'], true)) {
-            $sizeMultiplier = 1.5;
-        } elseif (in_array($paperSize, ['a2', 'a1', 'a0'], true)) {
-            $sizeMultiplier = 2.5;
-        }
+        // Fetch dynamic pricing for shop
+        $shopPaperSizes = (new \App\Models\ShopPaperSizeSettingModel())->getForShop($shopId);
+        $shopSettings   = (new \App\Models\ShopPrintingSettingModel())->getForShop($shopId);
+
+        $sizeSetting = $shopPaperSizes[$paperSize] ?? ($shopPaperSizes['letter'] ?? ['price_color' => 5.00, 'price_bw' => 2.00]);
+        $basePerPage = ($colorMode === 'color') ? (float) $sizeSetting['price_color'] : (float) $sizeSetting['price_bw'];
 
         $bindingCost = match ($binding) {
-            'staple'  => 10.00,
-            'spiral'  => 35.00,
-            default   => 0.00,
+            'staple' => (float) ($shopSettings['price_staple'] ?? 10.00),
+            'spiral' => (float) ($shopSettings['price_spiral'] ?? 35.00),
+            default  => 0.00,
         };
 
-        $totalPrice = round((($pageCount * $basePerPage * $sizeMultiplier) + $bindingCost) * $copies, 2);
-        $downPayment = round($totalPrice * 0.50, 2);
+        $totalPrice = round((($pageCount * $basePerPage) + $bindingCost) * $copies, 2);
+        $downPaymentPercent = (float) ($shopSettings['down_payment_percent'] ?? 50.00);
+        $downPayment = round($totalPrice * ($downPaymentPercent / 100.00), 2);
 
         // Prepare pending printing request data (do NOT insert into database yet)
         $pendingPrinting = [
-            'request_number'     => 'PR-' . date('Ymd') . '-' . rand(1000, 9999),
-            'customer_id'        => $userId,
-            'shop_id'            => $shopId,
-            'file_name'          => $file->getClientName(),
-            'file_url'           => $fileUrl,
-            'paper_size'         => $paperSize,
-            'color_mode'         => $colorMode,
-            'copies'             => $copies,
-            'page_count'         => $pageCount,
-            'binding_option'     => $binding,
-            'paper_stock'        => trim($this->request->getPost('paper_stock')) ?: 'standard',
-            'fulfillment_method' => $fulfillment,
-            'total_price'        => $totalPrice,
-            'down_payment'       => $downPayment,
-            'progress_percent'   => 0,
+            'request_number'       => 'PR-' . date('Ymd') . '-' . rand(1000, 9999),
+            'customer_id'          => $userId,
+            'shop_id'              => $shopId,
+            'file_name'            => $file->getClientName(),
+            'file_url'             => $fileUrl,
+            'document_type'        => $documentType,
+            'doc_change_type'      => $docChangeType,
+            'special_instructions' => $notes !== '' ? $notes : null,
+            'paper_size'           => $paperSize,
+            'color_mode'           => $colorMode,
+            'copies'               => $copies,
+            'page_count'           => $pageCount,
+            'binding_option'       => $binding,
+            'paper_stock'          => trim((string) $this->request->getPost('paper_stock')) ?: 'standard',
+            'fulfillment_method'   => $fulfillment,
+            'total_price'          => $totalPrice,
+            'down_payment'         => $downPayment,
+            'progress_percent'     => 0,
+            'reference_photos'     => $stagedRefPhotos,
         ];
 
-        // Initiate PayMongo GCash checkout session for 50% down payment
+        // Initiate PayMongo GCash checkout session for down payment
         $token = bin2hex(random_bytes(16));
         $paymongo = service('paymongoService');
         $successUrl = base_url('printing/callback?token=' . $token);
@@ -694,7 +770,7 @@ class Customer extends BaseController
 
         $res = $paymongo->createGcashCheckoutSession(
             $downPayment,
-            '50% Down Payment - ' . $file->getClientName(),
+            round($downPaymentPercent) . '% Down Payment - ' . $file->getClientName(),
             $successUrl,
             $cancelUrl,
             [
@@ -785,25 +861,42 @@ class Customer extends BaseController
 
         $prModel = new PrintingRequestModel();
         $insertData = [
-            'request_number'     => $pending['request_number'] ?? ('PR-' . date('Ymd') . '-' . rand(1000, 9999)),
-            'customer_id'        => $userId,
-            'shop_id'            => $pending['shop_id'],
-            'file_name'          => $pending['file_name'],
-            'file_url'           => $pending['file_url'],
-            'paper_size'         => $pending['paper_size'],
-            'color_mode'         => $pending['color_mode'],
-            'copies'             => $pending['copies'],
-            'page_count'         => $pending['page_count'],
-            'binding_option'     => $pending['binding_option'],
-            'paper_stock'        => $pending['paper_stock'],
-            'fulfillment_method' => $pending['fulfillment_method'],
-            'total_price'        => $pending['total_price'],
-            'down_payment'       => $pending['down_payment'],
-            'status'             => 'Paid (50% Down Payment)',
-            'progress_percent'   => 0,
+            'request_number'       => $pending['request_number'] ?? ('PR-' . date('Ymd') . '-' . rand(1000, 9999)),
+            'customer_id'          => $userId,
+            'shop_id'              => $pending['shop_id'],
+            'file_name'            => $pending['file_name'],
+            'file_url'             => $pending['file_url'],
+            'document_type'        => $pending['document_type'] ?? 'pdf',
+            'doc_change_type'      => $pending['doc_change_type'] ?? 'as_is',
+            'special_instructions' => $pending['special_instructions'] ?? null,
+            'paper_size'           => $pending['paper_size'],
+            'color_mode'           => $pending['color_mode'],
+            'copies'               => $pending['copies'],
+            'page_count'           => $pending['page_count'],
+            'binding_option'       => $pending['binding_option'],
+            'paper_stock'          => $pending['paper_stock'],
+            'fulfillment_method'   => $fulfillmentMethod = $pending['fulfillment_method'] ?? 'pickup',
+            'total_price'          => $pending['total_price'],
+            'down_payment'         => $pending['down_payment'],
+            'status'               => 'Paid (Down Payment)',
+            'progress_percent'     => 0,
         ];
 
         $prId = $prModel->insert($insertData);
+
+        if (!empty($pending['reference_photos']) && is_array($pending['reference_photos'])) {
+            $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
+            foreach ($pending['reference_photos'] as $attachment) {
+                $attPath = is_array($attachment) ? ($attachment['file_path'] ?? ($attachment['image_url'] ?? '')) : (string) $attachment;
+                if ($attPath !== '') {
+                    $attachmentModel->insert([
+                        'printing_request_id' => $prId,
+                        'image_url'           => $attPath,
+                        'created_at'          => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            }
+        }
 
         $paymentModel->insert([
             'payable_type'     => 'printing_request',
@@ -829,11 +922,12 @@ class Customer extends BaseController
             $cName = $customerUser ? trim(($customerUser['first_name'] ?? '') . ' ' . ($customerUser['last_name'] ?? '')) : 'A customer';
             if ($cName === '') $cName = 'A customer';
             $prTime = date('M d, Y h:i A');
+            $fileName = !empty($pending['file_name']) ? $pending['file_name'] : 'Document.pdf';
             (new \App\Models\NotificationModel())->create(
                 (int) $shop['owner_id'],
                 'new_printing_request',
-                'New Printing Request #' . $pending['request_number'],
-                "Received printing request #{$pending['request_number']} from {$cName} at {$prTime}.",
+                "New Printing Request for {$fileName} (#{$pending['request_number']})",
+                "Received printing request for {$fileName} (#{$pending['request_number']}) from {$cName} at {$prTime}.",
                 '/tenant/printing'
             );
         }

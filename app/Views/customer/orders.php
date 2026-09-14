@@ -144,38 +144,37 @@
                                 </div>
                             <?php endif; ?>
 
-                            <div class="flex items-center gap-md mb-md">
-
-                                <?php foreach ($thumbnails as $item): ?>
-
-                                    <div class="relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant/30 bg-surface-container-low flex items-center justify-center">
-
-                                        <?php if (!empty($item['image_url'])): ?>
-
-                                            <?php
-                                                $itemImg = $item['image_url'];
-                                                if (!str_starts_with($itemImg, 'http://') && !str_starts_with($itemImg, 'https://')) {
-                                                    $itemImg = base_url($itemImg);
-                                                }
-                                            ?>
-                                            <img class="w-full h-full object-cover" src="<?= esc($itemImg) ?>" alt="<?= esc($item['product_name'] ?? 'Product') ?>">
-
-                                        <?php else: ?>
-
-                                            <span class="material-symbols-outlined text-outline">inventory_2</span>
-
-                                        <?php endif; ?>
-
+                            <div class="space-y-xs mb-md bg-surface-container-low/50 p-sm rounded-xl border border-outline-variant/20">
+                                <?php foreach (array_slice($order['items'] ?? [], 0, 2) as $item): ?>
+                                    <?php
+                                        $itemImg = $item['image_url'] ?? '';
+                                        if (!empty($itemImg) && !str_starts_with($itemImg, 'http://') && !str_starts_with($itemImg, 'https://')) {
+                                            $itemImg = base_url($itemImg);
+                                        }
+                                        $pName = !empty($item['product_name']) ? $item['product_name'] : 'Product Item';
+                                    ?>
+                                    <div class="flex items-center gap-sm">
+                                        <div class="relative w-12 h-12 rounded-lg overflow-hidden border border-outline-variant/30 bg-surface-container-low flex items-center justify-center shrink-0">
+                                            <?php if (!empty($itemImg)): ?>
+                                                <img class="w-full h-full object-cover" src="<?= esc($itemImg) ?>" alt="<?= esc($pName) ?>">
+                                            <?php else: ?>
+                                                <span class="material-symbols-outlined text-outline text-lg">inventory_2</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-body-sm font-semibold text-on-surface truncate">
+                                                <?= esc($pName) ?>
+                                                <?php if (!empty($item['variant_label'])): ?>
+                                                    <span class="text-[11px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-1"><?= esc($item['variant_label']) ?></span>
+                                                <?php endif; ?>
+                                            </p>
+                                            <p class="text-label-sm text-on-surface-variant">Qty: <?= (int) ($item['quantity'] ?? 1) ?> · ₱<?= number_format((float) ($item['unit_price'] ?? 0), 2) ?></p>
+                                        </div>
                                     </div>
-
                                 <?php endforeach; ?>
-
                                 <?php if ($extraItems > 0): ?>
-
-                                    <span class="text-on-surface-variant text-label-sm font-label-sm bg-surface-container rounded-full w-8 h-8 flex items-center justify-center">+<?= $extraItems ?></span>
-
+                                    <p class="text-xs text-on-surface-variant font-medium pt-1 border-t border-outline-variant/15">+<?= $extraItems ?> more item(s) in this order</p>
                                 <?php endif; ?>
-
                             </div>
 
                             <?php if ($orderStatus === 'cancelled'): ?>
@@ -269,7 +268,7 @@
 
                             <?php endif; ?>
 
-                            <button type="button" class="flex-1 md:flex-none border border-outline-variant text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-surface-container-high transition-colors">Order Details</button>
+                            <button type="button" class="order-details-btn flex-1 md:flex-none border border-outline-variant text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-surface-container-high transition-colors" data-order='<?= esc(json_encode($order), 'attr') ?>'>Order Details</button>
 
                         </div>
 
@@ -304,6 +303,55 @@
     <span class="material-symbols-outlined text-[32px]">arrow_back</span>
 
 </button>
+
+<!-- Order Details Modal -->
+<div id="order-details-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="order-details-overlay"></div>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-md">
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline tracking-wider">Order Details</span>
+                <h3 class="text-title-lg font-bold text-primary font-mono" id="od-number">#ORD-00000</h3>
+            </div>
+            <button type="button" id="od-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-sm text-sm bg-surface-container-low p-md rounded-2xl border border-outline-variant/20">
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline block">Shop</span>
+                <span id="od-shop" class="font-semibold text-on-surface"></span>
+            </div>
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline block">Date Placed</span>
+                <span id="od-date" class="text-on-surface"></span>
+            </div>
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline block">Fulfillment</span>
+                <span id="od-fulfillment" class="text-on-surface capitalize"></span>
+            </div>
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline block">Payment</span>
+                <span id="od-payment" class="font-semibold uppercase text-primary"></span>
+            </div>
+        </div>
+
+        <div>
+            <h4 class="text-xs uppercase font-bold text-outline tracking-wider mb-sm">Purchased Items</h4>
+            <div id="od-items-list" class="space-y-sm divide-y divide-outline-variant/10"></div>
+        </div>
+
+        <div class="border-t border-outline-variant/20 pt-md space-y-xs text-sm">
+            <div class="flex justify-between text-on-surface-variant">
+                <span>Total Amount</span>
+                <span id="od-total" class="font-bold text-primary text-title-md">₱0.00</span>
+            </div>
+        </div>
+
+        <button type="button" id="od-done" class="w-full py-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-button font-button transition-all">Close</button>
+    </div>
+</div>
 
 <!-- Order Pick-up QR Modal -->
 <div id="order-qr-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">
@@ -420,6 +468,82 @@
     if (qrOverlay) qrOverlay.addEventListener('click', closeQr);
     if (qrClose) qrClose.addEventListener('click', closeQr);
     if (qrDone) qrDone.addEventListener('click', closeQr);
+
+    // Order Details Modal logic
+    var odModal   = document.getElementById('order-details-modal');
+    var odOverlay = document.getElementById('order-details-overlay');
+    var odClose   = document.getElementById('od-close');
+    var odDone    = document.getElementById('od-done');
+    var odNumber  = document.getElementById('od-number');
+    var odShop    = document.getElementById('od-shop');
+    var odDate    = document.getElementById('od-date');
+    var odFulfill = document.getElementById('od-fulfillment');
+    var odPayment = document.getElementById('od-payment');
+    var odItems   = document.getElementById('od-items-list');
+    var odTotal   = document.getElementById('od-total');
+
+    function closeOdModal() {
+        if (odModal) odModal.classList.add('hidden');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        var p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+    }
+
+    if (odOverlay) odOverlay.addEventListener('click', closeOdModal);
+    if (odClose) odClose.addEventListener('click', closeOdModal);
+    if (odDone) odDone.addEventListener('click', closeOdModal);
+
+    document.querySelectorAll('.order-details-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+                var raw = this.getAttribute('data-order');
+                if (!raw) return;
+                var order = JSON.parse(raw);
+                if (odNumber) odNumber.textContent = '#' + (order.order_number || ('ORD-' + order.id));
+                if (odShop) odShop.textContent = order.shop_name || 'Blax Marketplace Merchant';
+                if (odDate) odDate.textContent = order.placed_at || order.created_at || '—';
+                if (odFulfill) odFulfill.textContent = order.fulfillment_method || 'Delivery';
+                if (odPayment) odPayment.textContent = (order.payment_method || 'Cash') + ' (' + (order.payment_status || 'Pending') + ')';
+                if (odTotal) odTotal.textContent = '₱' + parseFloat(order.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+                if (odItems) {
+                    odItems.innerHTML = '';
+                    (order.items || []).forEach(function (it) {
+                        var div = document.createElement('div');
+                        div.className = 'pt-sm flex items-center justify-between gap-sm text-sm';
+                        var nameSpan = document.createElement('div');
+                        nameSpan.className = 'flex-1 min-w-0';
+                        var pName = it.product_name || 'Product Item';
+                        var pHtml = '<p class="font-semibold text-on-surface truncate">' + escapeHtml(pName) + '</p>';
+                        if (it.variant_label) {
+                            pHtml += '<span class="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">' + escapeHtml(it.variant_label) + '</span>';
+                        }
+                        nameSpan.innerHTML = pHtml;
+
+                        var qtyPrice = document.createElement('div');
+                        qtyPrice.className = 'text-right shrink-0';
+                        var qty = parseInt(it.quantity, 10) || 1;
+                        var uPrice = parseFloat(it.unit_price || 0);
+                        var lineTot = parseFloat(it.line_total || (qty * uPrice));
+                        qtyPrice.innerHTML = '<span class="text-xs text-on-surface-variant font-medium">' + qty + ' × ₱' + uPrice.toFixed(2) + '</span><p class="font-bold text-on-surface">₱' + lineTot.toFixed(2) + '</p>';
+
+                        div.appendChild(nameSpan);
+                        div.appendChild(qtyPrice);
+                        odItems.appendChild(div);
+                    });
+                }
+
+                if (odModal) odModal.classList.remove('hidden');
+            } catch (err) {
+                console.error('Failed to parse order details:', err);
+            }
+        });
+    });
 })();
 </script>
 <?php endif; ?>
