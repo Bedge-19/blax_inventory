@@ -16,6 +16,9 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
     protected function tearDown(): void
     {
         \Config\Services::resetSingle('renderer');
+        $db = \Config\Database::connect();
+        $db->table('deliveries')->like('tracking_id', 'TEST-')->delete();
+        $db->table('orders')->like('order_number', 'TEST-PKP')->orLike('order_number', 'TEST-DEL')->delete();
         parent::tearDown();
     }
 
@@ -84,7 +87,7 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
 
         // 1. Create a Store Pick-up order
         $pickupOrderId = $orderModel->insert([
-            'order_number'       => 'TEST-PKP-' . time(),
+            'order_number'       => 'TEST-PKP-' . uniqid('', false) . rand(100, 999),
             'customer_id'        => $customer['id'],
             'shop_id'            => $shop['id'],
             'fulfillment_method' => 'pickup',
@@ -113,7 +116,7 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
 
         // 2. Create a Doorstep Delivery order
         $deliveryOrderId = $orderModel->insert([
-            'order_number'       => 'TEST-DEL-' . time(),
+            'order_number'       => 'TEST-DEL-' . uniqid('', false) . rand(100, 999),
             'customer_id'        => $customer['id'],
             'shop_id'            => $shop['id'],
             'fulfillment_method' => 'delivery',
@@ -153,7 +156,7 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
 
         // 1. Valid Pick-up transition: processing -> ready_for_pickup
         $pickupOrderId = $orderModel->insert([
-            'order_number'       => 'TEST-PKP2-' . time(),
+            'order_number'       => 'TEST-PKP2-' . uniqid('', false) . rand(100, 999),
             'customer_id'        => $customer['id'],
             'shop_id'            => $shop['id'],
             'fulfillment_method' => 'pickup',
@@ -179,7 +182,7 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
 
         // 2. Valid Delivery transition: processing -> shipped
         $deliveryOrderId = $orderModel->insert([
-            'order_number'       => 'TEST-DEL2-' . time(),
+            'order_number'       => 'TEST-DEL2-' . uniqid('', false) . rand(100, 999),
             'customer_id'        => $customer['id'],
             'shop_id'            => $shop['id'],
             'fulfillment_method' => 'delivery',
@@ -257,4 +260,21 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
         $this->assertFalse($res3['success']);
         $this->assertEquals('Printing status does not trigger SMS notification', $res3['error']);
     }
+
+    public function testOrdersSummaryAndRevenueTodayQuery()
+    {
+        $shop = (new ShopModel())->first();
+        $this->assertNotNull($shop);
+
+        $orderModel = new OrderModel();
+        $summary = $orderModel->getOrdersSummary((int) $shop['id']);
+
+        $this->assertIsArray($summary);
+        $this->assertArrayHasKey('total_orders', $summary);
+        $this->assertArrayHasKey('pending_shipments', $summary);
+        $this->assertArrayHasKey('ready_for_pickup', $summary);
+        $this->assertArrayHasKey('revenue_today', $summary);
+        $this->assertIsFloat($summary['revenue_today']);
+    }
 }
+

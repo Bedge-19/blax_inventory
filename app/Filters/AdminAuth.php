@@ -12,10 +12,23 @@ class AdminAuth implements FilterInterface
     {
         $session = session();
         if (!$session->get('isLoggedIn')) {
+            if ($request->isAJAX()) {
+                return service('response')->setStatusCode(401)->setJSON([
+                    'success'  => false,
+                    'error'    => 'Authentication required.',
+                    'redirect' => base_url('login'),
+                ]);
+            }
             return redirect()->to('/login');
         }
 
         if ($session->get('user_role') !== 'admin') {
+            if ($request->isAJAX()) {
+                return service('response')->setStatusCode(403)->setJSON([
+                    'success' => false,
+                    'error'   => 'Access forbidden. Admin privileges required.',
+                ]);
+            }
             return redirect()->to('/');
         }
     }

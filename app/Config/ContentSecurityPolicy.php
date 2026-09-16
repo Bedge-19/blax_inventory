@@ -52,6 +52,9 @@ class ContentSecurityPolicy extends BaseConfig
     public $scriptSrc = [
         'self',
         'https://cdn.tailwindcss.com',
+        'https://unpkg.com',
+        'https://cdnjs.cloudflare.com',
+        'https://cdn.jsdelivr.net',
         'unsafe-inline',
         'unsafe-eval',
     ];
@@ -66,6 +69,7 @@ class ContentSecurityPolicy extends BaseConfig
         'self',
         'data:',
         'https:',
+        'blob:',
     ];
 
     public $baseURI = 'self';
@@ -73,12 +77,17 @@ class ContentSecurityPolicy extends BaseConfig
     public $childSrc = [
         'self',
         'https://checkout.paymongo.com',
+        'blob:',
     ];
 
     public $connectSrc = [
         'self',
         'https://api.paymongo.com',
         'https://checkout.paymongo.com',
+        'https://unpkg.com',
+        'https://cdnjs.cloudflare.com',
+        'blob:',
+        'data:',
     ];
 
     public $fontSrc = [

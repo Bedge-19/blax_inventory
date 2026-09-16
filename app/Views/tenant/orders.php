@@ -74,12 +74,7 @@
                 <input name="from" value="<?= esc($filters['from']) ?>" type="date" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
                 <input name="to" value="<?= esc($filters['to']) ?>" type="date" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
                 <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors">Filter</button>
-                <a href="<?= base_url('tenant/orders') ?>" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</a>
-                <?php $exportUrl = base_url('tenant/orders/export') . (empty(array_filter($filters)) ? '' : '?' . http_build_query(array_filter($filters))); ?>
-                <a id="exportOrdersBtn" href="<?= $exportUrl ?>" onclick="handleExportClick(this, 'Exporting CSV...')" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
-                    <span class="material-symbols-outlined text-[18px]">download</span>
-                    <span>Export</span>
-                </a>
+                <a href="<?= base_url('tenant/orders') ?>" class="text-on-surface-variant hover:text-on-surface text-label-sm font-semibold py-sm transition-colors">Reset</a>
             </form>
         </div>
 
@@ -246,7 +241,7 @@
                                                         '<?= $labelStr ?>',
                                                         '<?= $phoneStr ?>',
                                                         '<?= esc(date('M d, Y h:i A', strtotime($o['placed_at']))) ?>',
-                                                        '<?= esc(base_url('order/' . $o['order_number'])) ?>'
+                                                        '<?= esc($o['order_number']) ?>'
                                                     )" class="w-full text-left px-sm py-sm rounded-lg text-primary text-label-sm font-semibold hover:bg-primary/10 flex items-center gap-xs mt-xs">
                                                         <span class="material-symbols-outlined text-[18px]">qr_code_2</span> Generate & Download QR
                                                     </button>
@@ -616,7 +611,7 @@
         document.getElementById('qrModalAddressLabel').textContent = addressLabel || 'Home';
         document.getElementById('qrModalPhone').textContent = phone || 'N/A';
 
-        const qrContent = verifyUrl || ('https://' + window.location.host + '/order/' + orderNumber);
+        const qrContent = orderNumber;
         const apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=' + encodeURIComponent(qrContent);
 
         document.getElementById('qrModalImg').src = apiUrl;

@@ -16,7 +16,7 @@
             <h2 class="text-headline-md font-bold text-on-surface">Delivery Management</h2>
             <p class="text-body-md text-on-surface-variant">Monitor and manage your deliveries across Polomolok.</p>
         </div>
-        <button type="button" onclick="openScanner()" class="inline-flex items-center gap-sm px-md py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors">
+        <button type="button" id="btnOpenDeliveryScanner" onclick="openScanner()" class="inline-flex items-center gap-sm px-md py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors cursor-pointer">
             <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
             Scan QR Code
         </button>
@@ -63,10 +63,10 @@
     </div>
 
     <!-- Shipments + Fleet Map -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
 
         <!-- Recent Shipments -->
-        <div class="lg:col-span-2 glass-card rounded-xl overflow-hidden shadow-sm">
+        <div class="xl:col-span-8 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-sm">
             <div class="px-lg py-md flex flex-wrap justify-between items-center gap-md border-b border-outline-variant/30">
                 <div>
                     <h3 class="text-title-lg font-bold text-on-surface">Recent Shipments</h3>
@@ -92,8 +92,8 @@
                 </form>
             </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
+            <div class="overflow-x-auto w-full">
+                <table class="min-w-full text-left border-collapse">
                     <thead class="bg-surface-container-low border-b border-outline-variant/30">
                         <tr>
                             <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Tracking ID</th>
@@ -239,11 +239,12 @@
             <?php endif; ?>
         </div>
 
-        <!-- Live Fleet Tracking -->
-        <div class="glass-card rounded-xl overflow-hidden shadow-sm flex flex-col relative">
-            <div class="px-lg py-md border-b border-outline-variant/30 flex flex-wrap items-center justify-between gap-sm">
+        <!-- Right: Live Fleet Tracking Map (4 cols) -->
+        <div class="xl:col-span-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm flex flex-col relative overflow-hidden">
+            <div class="px-2 py-1 border-b border-outline-variant/20 flex flex-wrap items-center justify-between gap-sm mb-3">
                 <div>
-                    <h3 class="text-title-lg font-bold text-on-surface flex items-center gap-2">
+                    <h3 class="text-title-md font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
                         <span>Live Fleet Tracking</span>
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">Polomolok Map</span>
                     </h3>
@@ -251,11 +252,13 @@
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
                     <div id="testRouteControls" class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/30 px-2 py-1 rounded-lg">
-                        <span class="text-[10px] font-bold text-outline uppercase tracking-wider">Test Route:</span>
-                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO1')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Cannery Site">Cannery</button>
-                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO3')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Glamang">Glamang</button>
-                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO2')" class="px-2 py-0.5 text-[11px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Rubber">Rubber</button>
+                        <span class="text-[10px] font-bold text-outline uppercase tracking-wider">Test:</span>
+                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO1')" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Cannery Site">Cannery</button>
+                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO3')" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Glamang">Glamang</button>
                     </div>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span> Live
+                    </span>
                     <button type="button" onclick="resetFleetMapView()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant border border-outline-variant/30 flex items-center gap-1">
                         <span class="material-symbols-outlined text-[14px]">my_location</span> Reset Map
                     </button>
@@ -276,7 +279,7 @@
                 <span id="routeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex-shrink-0">🛵 Active Route</span>
             </div>
 
-            <div id="fleet-map" class="flex-1 min-h-64 md:min-h-[460px] w-full z-0"></div>
+            <div id="fleetMap" class="w-full h-[450px] min-h-[450px] rounded-lg overflow-hidden relative z-0" style="height: 450px; min-height: 450px;"></div>
         </div>
     </div>
 </div>
@@ -317,9 +320,13 @@
             <button onclick="closeScanner()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div id="scanStatus" class="text-label-sm text-on-surface-variant mb-sm">Point your camera at the delivery QR label.</div>
-        <div class="relative rounded-xl overflow-hidden bg-black aspect-square">
-            <video id="scanVideo" class="w-full h-full object-cover" playsinline muted></video>
-            <div class="absolute inset-0 border-2 border-primary/60 rounded-xl pointer-events-none" style="margin:18%;"></div>
+        <div class="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
+            <div id="deliveryQrReader" class="w-full h-full"></div>
+            <div id="deliveryCameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-md text-center bg-black/80 pointer-events-none">
+                <span class="material-symbols-outlined text-4xl mb-1 text-primary">photo_camera</span>
+                <span class="text-xs font-semibold">Starting camera...</span>
+                <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
+            </div>
         </div>
         <div class="mt-md space-y-sm">
             <p class="text-label-sm text-on-surface-variant">Or enter Tracking ID / Order # manually:</p>
@@ -345,10 +352,9 @@
     let activeRouteLine = null;
     let activeRiderMarker = null;
     let riderAnimationTimer = null;
-    let scannerStream = null;
-    let scanLoopId = null;
     let isProcessingScan = false;
     let shouldReloadOnClose = false;
+    let deliveryHtml5QrCode = null;
 
     const STORE_COORDS = [6.2217, 125.0667]; // Shop Base in Polomolok Poblacion
     const pins = <?= json_encode($pins ?? [], JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
@@ -542,7 +548,7 @@
     }
 
     function initMap() {
-        const el = document.getElementById('fleet-map');
+        const el = document.getElementById('fleetMap') || document.getElementById('fleet-map');
         if (!el || typeof L === 'undefined') return;
 
         fleetMap = L.map(el, { zoomControl: true }).setView([6.2136, 125.0661], 13);
@@ -589,8 +595,15 @@
             fleetMap.fitBounds(L.featureGroup(groupList).getBounds(), { padding: [40, 40] });
         }
 
+        // Trigger map.invalidateSize() to prevent gray or blank tiles
+        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 100);
         setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 300);
-        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 800);
+        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 600);
+        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 1200);
+
+        window.addEventListener('resize', () => {
+            if (fleetMap) fleetMap.invalidateSize();
+        });
     }
 
     function resetFleetMapView() {
@@ -927,8 +940,10 @@
         fd.append('tracking_id', trackingId);
         fd.append('csrf_test_name', csrfToken());
 
-        return fetch("<?= base_url('tenant/deliveries/lookup') ?>", {
+        return fetch("<?= site_url('tenant/deliveries/lookup') ?>", {
             method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: fd,
         }).then((r) => r.json());
     }
@@ -1026,42 +1041,74 @@
         const modal = document.getElementById('scannerModal');
         const status = document.getElementById('scanStatus');
         const result = document.getElementById('scanResult');
+        const placeholder = document.getElementById('deliveryCameraPlaceholder');
+
         result.classList.add('hidden');
+        if (placeholder) {
+            placeholder.classList.remove('hidden');
+            placeholder.innerHTML = `
+                <span class="material-symbols-outlined text-4xl mb-1 text-primary">photo_camera</span>
+                <span class="text-xs font-semibold">Starting camera...</span>
+                <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
+            `;
+        }
+        status.textContent = 'Point your camera at the delivery QR label.';
         modal.classList.remove('hidden');
 
-        if (!('mediaDevices' in navigator) || !('getUserMedia' in navigator.mediaDevices)) {
-            status.textContent = 'Camera is not supported in this browser. Enter the tracking ID below instead.';
+        if (typeof Html5Qrcode === 'undefined') {
+            status.textContent = 'Scanner library loading or blocked. Enter tracking ID below.';
+            if (placeholder) placeholder.classList.add('hidden');
             return;
         }
 
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-            .then((stream) => {
-                scannerStream = stream;
-                const video = document.getElementById('scanVideo');
-                video.srcObject = stream;
-                video.play();
+        if (!deliveryHtml5QrCode) {
+            deliveryHtml5QrCode = new Html5Qrcode('deliveryQrReader');
+        }
 
-                if (!('BarcodeDetector' in window)) {
-                    status.textContent = 'Point camera at QR label or enter tracking ID below.';
-                    return;
-                }
-                const detector = new BarcodeDetector({ formats: ['qr_code'] });
-                status.textContent = 'Point your camera at the delivery QR label.';
-                scanLoopId = setInterval(() => {
-                    if (!isProcessingScan && video.readyState === video.HAVE_ENOUGH_DATA) {
-                        detector.detect(video).then((codes) => {
-                            if (codes.length > 0) {
-                                const value = (codes[0].rawValue || '').trim();
-                                if (value !== '') {
-                                    handleScanCode(value);
-                                }
-                            }
-                        }).catch(() => {});
-                    }
-                }, 250);
+        const showCameraError = () => {
+            if (placeholder) {
+                placeholder.innerHTML = `
+                    <span class="material-symbols-outlined text-4xl mb-1 text-amber-400">videocam_off</span>
+                    <span class="text-xs font-semibold">Camera unavailable</span>
+                    <span class="text-[10px] opacity-70 mt-1">Check permissions or enter the tracking ID manually below</span>
+                `;
+            }
+            status.textContent = 'Camera unavailable. Please enter tracking ID below.';
+        };
+
+        const startScanner = (cameraConfig) => {
+            const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+            return deliveryHtml5QrCode.start(
+                cameraConfig,
+                config,
+                (decodedText) => {
+                    stopScannerStream();
+                    handleScanCode(decodedText);
+                },
+                () => {}
+            );
+        };
+
+        startScanner({ facingMode: "environment" })
+            .then(() => {
+                if (placeholder) placeholder.classList.add('hidden');
             })
             .catch(() => {
-                status.textContent = 'Could not access the camera. Enter the tracking ID below instead.';
+                if (Html5Qrcode.getCameras) {
+                    Html5Qrcode.getCameras().then(cameras => {
+                        if (cameras && cameras.length) {
+                            startScanner({ deviceId: { exact: cameras[0].id } })
+                                .then(() => {
+                                    if (placeholder) placeholder.classList.add('hidden');
+                                })
+                                .catch(() => showCameraError());
+                        } else {
+                            showCameraError();
+                        }
+                    }).catch(() => showCameraError());
+                } else {
+                    showCameraError();
+                }
             });
     }
 
@@ -1074,17 +1121,26 @@
         handleScanCode(value);
     }
 
+    const manualTrackingInput = document.getElementById('manualTracking');
+    if (manualTrackingInput) {
+        manualTrackingInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                lookupManual();
+            }
+        });
+    }
+
     function stopScannerStream() {
-        if (scanLoopId) {
-            clearInterval(scanLoopId);
-            scanLoopId = null;
+        if (deliveryHtml5QrCode) {
+            try {
+                if (deliveryHtml5QrCode.isScanning) {
+                    deliveryHtml5QrCode.stop().catch(e => console.error(e));
+                }
+            } catch (e) {
+                console.error(e);
+            }
         }
-        if (scannerStream) {
-            scannerStream.getTracks().forEach((t) => t.stop());
-            scannerStream = null;
-        }
-        const video = document.getElementById('scanVideo');
-        if (video) video.srcObject = null;
     }
 
     function closeScanner() {
@@ -1092,6 +1148,18 @@
         document.getElementById('scannerModal').classList.add('hidden');
         document.getElementById('scanResult').classList.add('hidden');
         document.getElementById('scanStatus').textContent = 'Point your camera at the delivery QR label.';
+    }
+
+    window.openScanner = openScanner;
+    window.closeScanner = closeScanner;
+    window.lookupManual = lookupManual;
+
+    const scanBtn = document.getElementById('btnOpenDeliveryScanner');
+    if (scanBtn) {
+        scanBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            openScanner();
+        });
     }
 
     function ensureLeafletLoaded() {

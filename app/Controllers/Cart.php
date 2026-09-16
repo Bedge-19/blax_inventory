@@ -308,15 +308,16 @@ class Cart extends BaseController
         $fulfillmentMethod = $this->request->getPost('fulfillment_method') ?? ($paymentMethod === 'pickup' ? 'pickup' : 'delivery');
         $addressId         = $this->request->getPost('shipping_address_id') ?? null;
 
-        // Polomolok-only restriction: delivery & printing limited to Polomolok
+        // Polomolok-only restriction & address ownership: delivery & printing limited to Polomolok
         if ($fulfillmentMethod === 'delivery' && $addressId) {
             $addr = (new ShippingAddressModel())->find((int)$addressId);
-            if ($addr) {
-                $cityOk = stripos($addr['city'] ?? '', 'Polomolok') !== false;
-                $provOk = stripos($addr['province'] ?? '', 'South Cotabato') !== false;
-                if (!$cityOk && !$provOk) {
-                    return redirect()->back()->with('error', 'Delivery is available only within Polomolok, South Cotabato.');
-                }
+            if (!$addr || (int) ($addr['user_id'] ?? 0) !== (int) $userId) {
+                return redirect()->back()->with('error', 'Invalid delivery address selected.');
+            }
+            $cityOk = stripos($addr['city'] ?? '', 'Polomolok') !== false;
+            $provOk = stripos($addr['province'] ?? '', 'South Cotabato') !== false;
+            if (!$cityOk && !$provOk) {
+                return redirect()->back()->with('error', 'Delivery is available only within Polomolok, South Cotabato.');
             }
         }
 
@@ -711,22 +712,26 @@ class Cart extends BaseController
             }
 
             $prId = $printingRequestModel->insert([
+                'request_number'       => $pending['request_number'] ?? ('PR-' . strtoupper(substr(md5(uniqid()), 0, 8))),
                 'customer_id'          => $pending['customer_id'],
                 'shop_id'              => $pending['shop_id'],
+                'file_name'            => $pending['file_name'] ?? ($pending['original_filename'] ?? 'document.pdf'),
                 'file_url'             => $pending['file_url'],
-                'original_filename'    => $pending['original_filename'],
-                'page_count'           => $pending['page_count'],
-                'paper_size'           => $pending['paper_size'],
-                'color_mode'           => $pending['color_mode'],
-                'binding_type'         => $pending['binding_type'],
-                'quantity'             => $pending['quantity'],
+                'page_count'           => $pending['page_count'] ?? 1,
+                'paper_size'           => $pending['paper_size'] ?? 'Letter',
+                'color_mode'           => $pending['color_mode'] ?? 'bw',
+                'copies'               => $pending['copies'] ?? ($pending['quantity'] ?? 1),
+                'binding_option'       => $pending['binding_option'] ?? ($pending['binding_type'] ?? 'none'),
+                'paper_stock'          => $pending['paper_stock'] ?? 'standard',
+                'fulfillment_method'   => $pending['fulfillment_method'] ?? 'pickup',
                 'total_price'          => $pending['total_price'],
-                'down_payment_amount'  => $pending['down_payment_amount'],
-                'remaining_balance'    => $pending['remaining_balance'],
-                'status'               => 'confirmed',
+                'down_payment'         => $pending['down_payment'] ?? ($pending['down_payment_amount'] ?? 0.00),
+                'status'               => 'new',
+                'progress_percent'     => 0,
                 'document_type'        => $pending['document_type'] ?? 'pdf',
                 'doc_change_type'      => $pending['doc_change_type'] ?? 'as_is',
                 'special_instructions' => $pending['special_instructions'] ?? null,
+                'created_at'           => date('Y-m-d H:i:s'),
             ]);
 
             // Save reference photo attachments if any

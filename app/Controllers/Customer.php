@@ -336,6 +336,131 @@ class Customer extends BaseController
         ]);
     }
 
+    /**
+     * Dedicated live tracking page for Doorstep Delivery orders.
+     */
+    public function trackOrder($orderRef = null)
+    {
+        $controller = new CustomerOrderController();
+        $controller->initController($this->request, $this->response, $this->logger);
+        return $controller->trackOrder($orderRef);
+    }
+
+    /**
+     * Cancel an active order by customer.
+     * Validates customer ownership, restricts cancellation to pending/processing only,
+     * restores inventory quantities (including variants), and sends notification.
+     */
+    public function cancelOrder(?int $orderId = null)
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized.']);
+            }
+            return redirect()->to('/login');
+        }
+
+        $orderId = $orderId ?? (int) $this->request->getPost('order_id') ?? (int) $this->request->getPost('id');
+        if (!$orderId) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid order ID.']);
+            }
+            return redirect()->back()->with('error', 'Invalid order ID.');
+        }
+
+        $orderModel = new OrderModel();
+        $order      = $orderModel->find($orderId);
+
+        if (!$order || (int) $order['customer_id'] !== (int) $userId) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Order not found.']);
+            }
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        $currentStatus = strtolower(trim((string) $order['status']));
+        if (!in_array($currentStatus, ['pending', 'processing'], true)) {
+            $msg = 'This order is already prepared, shipped, or finalized and can no longer be cancelled.';
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => $msg]);
+            }
+            return redirect()->back()->with('error', $msg);
+        }
+
+        $db = \Config\Database::connect();
+        $db->transStart();
+
+        // 1. Update order status to cancelled
+        $now = date('Y-m-d H:i:s');
+        $orderModel->update($orderId, [
+            'status'        => 'cancelled',
+            'cancelled_at'  => $now,
+            'cancel_reason' => 'Cancelled by customer',
+        ]);
+
+        // 2. Restore inventory stock quantities
+        $orderItemModel = new OrderItemModel();
+        $items = $orderItemModel->where('order_id', $orderId)->findAll();
+        foreach ($items as $item) {
+            $qty = (int) ($item['quantity'] ?? 1);
+            $pId = (int) ($item['product_id'] ?? 0);
+            $vId = (int) ($item['variant_id'] ?? 0);
+
+            if ($pId > 0 && $qty > 0) {
+                // Restore product total stock
+                $db->table('products')
+                    ->where('id', $pId)
+                    ->set('stock_quantity', 'stock_quantity + ' . $qty, false)
+                    ->update();
+
+                // Restore variant stock if item has variant
+                if ($vId > 0) {
+                    $db->table('product_variants')
+                        ->where('id', $vId)
+                        ->set('stock_quantity', 'stock_quantity + ' . $qty, false)
+                        ->update();
+                }
+            }
+        }
+
+        // 3. Notify shop owner
+        $shop = (new \App\Models\ShopModel())->find($order['shop_id']);
+        if ($shop && !empty($shop['owner_id'])) {
+            (new \App\Models\NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'order_cancelled',
+                "Order #{$order['order_number']} Cancelled",
+                "Customer cancelled Order #{$order['order_number']}.",
+                '/tenant/orders'
+            );
+        }
+
+        $db->transComplete();
+
+        if ($db->transStatus() === false) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => 'Database error while cancelling order.']);
+            }
+            return redirect()->back()->with('error', 'Database error while cancelling order.');
+        }
+
+        if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+            return $this->response->setJSON([
+                'success'      => true,
+                'message'      => "Order #{$order['order_number']} was cancelled successfully.",
+                'order_id'     => $orderId,
+                'order_number' => $order['order_number'],
+                'status'       => 'cancelled',
+                'cancelled_at' => $now,
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Order #{$order['order_number']} has been cancelled.");
+    }
+
     public function printingRequests()
     {
         $session = session();

@@ -38,15 +38,16 @@ trait CheckoutProcessorTrait
         string $cancelRedirectUrl = '/cart',
         string $failureRedirectUrl = '/cart'
     ): ResponseInterface {
-        // Polomolok boundary check for deliveries
+        // Polomolok boundary and address ownership check for deliveries
         if ($fulfillmentMethod === 'delivery' && $addressId) {
             $addr = (new ShippingAddressModel())->find((int) $addressId);
-            if ($addr) {
-                $cityOk = stripos($addr['city'] ?? '', 'Polomolok') !== false;
-                $provOk = stripos($addr['province'] ?? '', 'South Cotabato') !== false;
-                if (!$cityOk && !$provOk) {
-                    return redirect()->to($failureRedirectUrl)->with('error', 'Delivery is available only within Polomolok, South Cotabato.');
-                }
+            if (!$addr || (int) ($addr['user_id'] ?? 0) !== (int) $userId) {
+                return redirect()->to($failureRedirectUrl)->with('error', 'Invalid shipping address selected.');
+            }
+            $cityOk = stripos($addr['city'] ?? '', 'Polomolok') !== false;
+            $provOk = stripos($addr['province'] ?? '', 'South Cotabato') !== false;
+            if (!$cityOk && !$provOk) {
+                return redirect()->to($failureRedirectUrl)->with('error', 'Delivery is available only within Polomolok, South Cotabato.');
             }
         }
 

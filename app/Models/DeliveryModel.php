@@ -72,10 +72,17 @@ class DeliveryModel extends Model
             ->get()->getResultArray();
 
         foreach ($prs as $pr) {
+            $trackingId = (string) ($pr['request_number'] ?? ('PR-' . $pr['id']));
             $existing = $this->db->table('deliveries')
                 ->where('deliverable_type', 'printing_request')
                 ->where('deliverable_id', (int) $pr['id'])
                 ->get()->getRowArray();
+
+            if (!$existing) {
+                $existing = $this->db->table('deliveries')
+                    ->where('tracking_id', $trackingId)
+                    ->get()->getRowArray();
+            }
 
             $isDelivery = ($pr['fulfillment_method'] ?? 'pickup') === 'delivery';
             $delStatus = match ($pr['status']) {
@@ -94,7 +101,7 @@ class DeliveryModel extends Model
                 $this->insert([
                     'deliverable_type'    => 'printing_request',
                     'deliverable_id'      => (int) $pr['id'],
-                    'tracking_id'         => (string) ($pr['request_number'] ?? ('PR-' . $pr['id'])),
+                    'tracking_id'         => $trackingId,
                     'courier_name'        => ($pr['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Store Courier' : 'Store Pick-up',
                     'destination_address' => ($pr['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Doorstep Delivery' : 'Store Pick-up (Poblacion, Polomolok)',
                     'status'              => $delStatus,
@@ -109,10 +116,17 @@ class DeliveryModel extends Model
             ->get()->getResultArray();
 
         foreach ($orders as $ord) {
+            $trackingId = (string) ($ord['order_number'] ?? ('ORD-' . $ord['id']));
             $existing = $this->db->table('deliveries')
                 ->where('deliverable_type', 'order')
                 ->where('deliverable_id', (int) $ord['id'])
                 ->get()->getRowArray();
+
+            if (!$existing) {
+                $existing = $this->db->table('deliveries')
+                    ->where('tracking_id', $trackingId)
+                    ->get()->getRowArray();
+            }
 
             $delStatus = match ($ord['status']) {
                 'ready_for_pickup'  => 'ready_for_pickup',
@@ -131,7 +145,7 @@ class DeliveryModel extends Model
                 $this->insert([
                     'deliverable_type'    => 'order',
                     'deliverable_id'      => (int) $ord['id'],
-                    'tracking_id'         => (string) ($ord['order_number'] ?? ('ORD-' . $ord['id'])),
+                    'tracking_id'         => $trackingId,
                     'courier_name'        => ($ord['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Store Courier' : 'Store Pick-up',
                     'destination_address' => ($ord['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Customer Shipping Address' : 'Store Pick-up (Poblacion, Polomolok)',
                     'status'              => $delStatus,
@@ -306,21 +320,37 @@ class DeliveryModel extends Model
 
     public function findByTrackingScoped(string $trackingId, int $shopId): ?array
     {
-        $cleanId = trim($trackingId);
-        if (preg_match('#/order/([A-Za-z0-9_-]+)#', $cleanId, $matches)) {
-            $cleanId = $matches[1];
+        $cleanId = trim(str_replace(['#'], '', $trackingId));
+        if (str_starts_with($cleanId, '{') && str_ends_with($cleanId, '}')) {
+            $decoded = json_decode($cleanId, true);
+            if (is_array($decoded)) {
+                $cleanId = trim((string) ($decoded['order_no'] ?? $decoded['tracking_id'] ?? $decoded['order_number'] ?? $decoded['id'] ?? $cleanId));
+            }
         }
-        $cleanId = ltrim($cleanId, '#');
+
+        if (preg_match('/(ORD-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } elseif (preg_match('/(PR-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } elseif (preg_match('/(TRK-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } elseif (preg_match('#/order/([A-Za-z0-9_-]+)#', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } else {
+            $cleanId = strtoupper(trim(str_replace(['#', ' '], '', $cleanId)));
+        }
 
         $row = $this->db->table('deliveries d')
-            ->select("d.*, COALESCE(o.order_number, pr.request_number) AS ref_number, o.status as order_status, u.first_name, u.last_name, u.profile_image_url, u.email")
+            ->select("d.*, COALESCE(o.order_number, pr.request_number) AS ref_number, COALESCE(o.fulfillment_method, pr.fulfillment_method) AS fulfillment_method, o.status as order_status, u.first_name, u.last_name, u.profile_image_url, u.email")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
             ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
             ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
             ->groupStart()
                 ->where('d.tracking_id', $cleanId)
                 ->orWhere('o.order_number', $cleanId)
+                ->orWhere('o.order_number', 'ORD-' . $cleanId)
                 ->orWhere('pr.request_number', $cleanId)
+                ->orWhere('pr.request_number', 'PR-' . $cleanId)
             ->groupEnd()
             ->groupStart()
                 ->where('o.shop_id', $shopId)
@@ -334,18 +364,25 @@ class DeliveryModel extends Model
 
         // Check if printing request exists for this shop
         $pr = $this->db->table('printing_requests')
-            ->where('request_number', $cleanId)
+            ->groupStart()
+                ->where('request_number', $cleanId)
+                ->orWhere('request_number', 'PR-' . $cleanId)
+                ->orWhere('id', is_numeric($cleanId) ? (int) $cleanId : 0)
+            ->groupEnd()
             ->where('shop_id', $shopId)
             ->get()->getRowArray();
 
         if ($pr) {
-            $newDelId = $this->insert([
+            $courierName = ($pr['fulfillment_method'] ?? '') === 'pickup' ? 'Store Pick-up' : 'In-House Delivery';
+            $destAddr = ($pr['fulfillment_method'] ?? '') === 'pickup' ? 'Store Pick-up (Poblacion, Polomolok)' : 'Delivery (Polomolok, South Cotabato)';
+
+            $this->insert([
                 'deliverable_type'    => 'printing_request',
                 'deliverable_id'      => (int) $pr['id'],
                 'tracking_id'         => (string) $pr['request_number'],
-                'courier_name'        => 'Store Pick-up',
-                'destination_address' => 'Store Pick-up (Poblacion, Polomolok)',
-                'status'              => $pr['status'] === 'completed' ? 'delivered' : ($pr['status'] === 'cancelled' ? 'cancelled' : 'ready_for_pickup'),
+                'courier_name'        => $courierName,
+                'destination_address' => $destAddr,
+                'status'              => $pr['status'] === 'completed' ? 'delivered' : ($pr['status'] === 'cancelled' ? 'cancelled' : 'shipped'),
                 'created_at'          => date('Y-m-d H:i:s'),
             ]);
 
@@ -354,22 +391,105 @@ class DeliveryModel extends Model
 
         // Check if order exists for this shop
         $ord = $this->db->table('orders')
-            ->where('order_number', $cleanId)
+            ->groupStart()
+                ->where('order_number', $cleanId)
+                ->orWhere('order_number', 'ORD-' . $cleanId)
+                ->orWhere('id', is_numeric($cleanId) ? (int) $cleanId : 0)
+            ->groupEnd()
             ->where('shop_id', $shopId)
             ->get()->getRowArray();
 
         if ($ord) {
-            $newDelId = $this->insert([
-                'deliverable_type'    => 'order',
-                'deliverable_id'      => (int) $ord['id'],
-                'tracking_id'         => (string) $ord['order_number'],
-                'courier_name'        => 'Store Pick-up',
-                'destination_address' => 'Store Pick-up (Poblacion, Polomolok)',
-                'status'              => $ord['status'] === 'delivered' ? 'delivered' : ($ord['status'] === 'returned' ? 'returned' : 'ready_for_pickup'),
-                'created_at'          => date('Y-m-d H:i:s'),
-            ]);
+            $destAddr = 'Polomolok, South Cotabato';
+            if (!empty($ord['shipping_address_id'])) {
+                $addr = $this->db->table('shipping_addresses')->where('id', (int) $ord['shipping_address_id'])->get()->getRowArray();
+                if ($addr) {
+                    $destAddr = trim(($addr['street_address'] ?? '') . ', ' . ($addr['barangay'] ?? '') . ', ' . ($addr['city'] ?? '') . ', ' . ($addr['province'] ?? ''));
+                }
+            } elseif (($ord['fulfillment_method'] ?? '') === 'pickup') {
+                $destAddr = 'Store Pick-up (Poblacion, Polomolok)';
+            }
+
+            $courierName = ($ord['fulfillment_method'] ?? '') === 'pickup' ? 'Store Pick-up' : 'In-House Delivery';
+
+            $existingDel = $this->db->table('deliveries')
+                ->groupStart()
+                    ->where('deliverable_type', 'order')
+                    ->where('deliverable_id', (int) $ord['id'])
+                ->groupEnd()
+                ->orWhere('tracking_id', (string) $ord['order_number'])
+                ->get()->getRowArray();
+
+            if (!$existingDel) {
+                $this->insert([
+                    'deliverable_type'    => 'order',
+                    'deliverable_id'      => (int) $ord['id'],
+                    'tracking_id'         => (string) $ord['order_number'],
+                    'courier_name'        => $courierName,
+                    'destination_address' => $destAddr,
+                    'status'              => $ord['status'] === 'delivered' ? 'delivered' : ($ord['status'] === 'returned' ? 'returned' : 'shipped'),
+                    'created_at'          => date('Y-m-d H:i:s'),
+                ]);
+            }
 
             return $this->findByTrackingScoped($cleanId, $shopId);
+        }
+
+        return null;
+    }
+
+    /**
+     * Cross-shop tracking lookup for accurate error reporting.
+     */
+    public function findByTrackingAnyShop(string $trackingId): ?array
+    {
+        $cleanId = trim(str_replace(['#'], '', $trackingId));
+        if (str_starts_with($cleanId, '{') && str_ends_with($cleanId, '}')) {
+            $decoded = json_decode($cleanId, true);
+            if (is_array($decoded)) {
+                $cleanId = trim((string) ($decoded['order_no'] ?? $decoded['tracking_id'] ?? $decoded['order_number'] ?? $decoded['id'] ?? $cleanId));
+            }
+        }
+        if (preg_match('/(ORD-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } elseif (preg_match('/(PR-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } elseif (preg_match('/(TRK-[A-Za-z0-9_-]+)/i', $cleanId, $matches)) {
+            $cleanId = strtoupper($matches[1]);
+        } else {
+            $cleanId = strtoupper(trim(str_replace(['#', ' '], '', $cleanId)));
+        }
+
+        $row = $this->db->table('deliveries d')
+            ->select("d.*, COALESCE(o.order_number, pr.request_number) AS ref_number, COALESCE(o.shop_id, pr.shop_id) AS shop_id")
+            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
+            ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
+            ->groupStart()
+                ->where('d.tracking_id', $cleanId)
+                ->orWhere('o.order_number', $cleanId)
+                ->orWhere('o.order_number', 'ORD-' . $cleanId)
+                ->orWhere('pr.request_number', $cleanId)
+                ->orWhere('pr.request_number', 'PR-' . $cleanId)
+            ->groupEnd()
+            ->get()->getRowArray();
+
+        if ($row) return $row;
+
+        $ord = $this->db->table('orders')
+            ->select("order_number AS ref_number, shop_id")
+            ->groupStart()
+                ->where('order_number', $cleanId)
+                ->orWhere('order_number', 'ORD-' . $cleanId)
+                ->orWhere('id', is_numeric($cleanId) ? (int) $cleanId : 0)
+            ->groupEnd()
+            ->get()->getRowArray();
+
+        if ($ord) {
+            return [
+                'ref_number'  => $ord['ref_number'],
+                'tracking_id' => $ord['ref_number'],
+                'shop_id'     => (int) $ord['shop_id'],
+            ];
         }
 
         return null;

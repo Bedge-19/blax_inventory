@@ -76,7 +76,72 @@ $isShopOwner = ($initialRole ?? 'customer') === 'shop_owner';
         Sign In
     </button>
 
+    <button type="button" id="btn-open-reset-modal" class="w-full bg-surface-container-high/60 hover:bg-surface-container-high text-primary border border-outline-variant/60 font-button text-button rounded-lg py-md transition-all duration-200 uppercase tracking-wider font-semibold flex items-center justify-center gap-1.5 shadow-sm hover:shadow">
+        <span class="material-symbols-outlined text-[18px]">lock_reset</span>
+        Reset Password
+    </button>
+
 </form>
+
+<!-- Reset Password Modal (For testing / quick reset) -->
+<div id="reset-password-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200 p-4">
+    <div class="glass-card bg-surface-container-lowest border border-outline-variant/60 rounded-[24px] p-6 w-full max-w-md shadow-2xl transform scale-95 transition-transform duration-200 relative" id="reset-modal-content">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-[20px]">lock_reset</span>
+                </div>
+                <div>
+                    <h3 class="font-title-sm font-bold text-on-surface">Reset Password</h3>
+                    <p class="text-[12px] text-outline">Enter email & new password</p>
+                </div>
+            </div>
+            <button type="button" id="btn-close-reset-modal" class="text-outline hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container transition-colors" aria-label="Close modal">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <form id="reset-password-form" class="flex flex-col gap-3" action="<?= base_url('reset-password-direct') ?>" method="POST">
+            <?= csrf_field() ?>
+
+            <div class="flex flex-col gap-1">
+                <label class="font-label-sm text-label-sm text-on-surface-variant font-medium" for="reset_email">Email Address</label>
+                <input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-2.5 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-outline/50" id="reset_email" name="email" placeholder="you@example.com" type="email" autocomplete="email" required>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="font-label-sm text-label-sm text-on-surface-variant font-medium" for="reset_password">New Password</label>
+                <div class="relative">
+                    <input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-2.5 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-outline/50 pr-[44px]" id="reset_password" name="password" placeholder="Min. 8 characters" type="password" minlength="8" required>
+                    <button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors" type="button" id="toggle-reset-password" aria-label="Show password">
+                        <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+                <label class="font-label-sm text-label-sm text-on-surface-variant font-medium" for="reset_confirm_password">Confirm New Password</label>
+                <div class="relative">
+                    <input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-2.5 font-body-md text-body-md text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-outline/50 pr-[44px]" id="reset_confirm_password" name="confirm_password" placeholder="••••••••" type="password" minlength="8" required>
+                    <button class="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-primary transition-colors" type="button" id="toggle-reset-confirm" aria-label="Show confirm password">
+                        <span class="material-symbols-outlined text-[18px]">visibility</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 mt-1 border-t border-outline-variant/30">
+                <button type="button" id="btn-cancel-reset" class="px-4 py-2 text-sm font-medium text-on-surface-variant hover:bg-surface-container rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" id="btn-submit-reset" class="px-5 py-2 text-sm font-semibold bg-primary hover:bg-primary-container text-on-primary rounded-lg shadow-md hover:shadow-lg transition-all flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">check</span>
+                    Reset Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?= $this->endSection() ?>
 
@@ -110,15 +175,79 @@ $isShopOwner = ($initialRole ?? 'customer') === 'shop_owner';
 
 <script>
     (function () {
-        // Password toggle
-        var toggle = document.getElementById('toggle-password');
-        if (toggle) {
-            toggle.addEventListener('click', function () {
-                var input = document.getElementById('password');
-                var icon = toggle.querySelector('span');
-                var show = input.type === 'password';
-                input.type = show ? 'text' : 'password';
-                icon.textContent = show ? 'visibility_off' : 'visibility';
+        // Helper function for password show/hide toggle
+        function setupPasswordToggle(toggleId, inputId) {
+            var toggle = document.getElementById(toggleId);
+            var input = document.getElementById(inputId);
+            if (toggle && input) {
+                toggle.addEventListener('click', function () {
+                    var icon = toggle.querySelector('span');
+                    var show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    if (icon) {
+                        icon.textContent = show ? 'visibility_off' : 'visibility';
+                    }
+                });
+            }
+        }
+
+        // Login password toggle
+        setupPasswordToggle('toggle-password', 'password');
+        // Reset modal password toggles
+        setupPasswordToggle('toggle-reset-password', 'reset_password');
+        setupPasswordToggle('toggle-reset-confirm', 'reset_confirm_password');
+
+        // Reset Password Modal logic
+        var resetModal = document.getElementById('reset-password-modal');
+        var resetModalContent = document.getElementById('reset-modal-content');
+        var btnOpenResetModal = document.getElementById('btn-open-reset-modal');
+        var btnCloseResetModal = document.getElementById('btn-close-reset-modal');
+        var btnCancelReset = document.getElementById('btn-cancel-reset');
+        var loginEmailInput = document.getElementById('email');
+        var resetEmailInput = document.getElementById('reset_email');
+
+        function openModal() {
+            if (!resetModal) return;
+            // Pre-fill email from login form if filled
+            if (loginEmailInput && resetEmailInput && loginEmailInput.value.trim() !== '') {
+                resetEmailInput.value = loginEmailInput.value.trim();
+            }
+            resetModal.classList.remove('hidden');
+            requestAnimationFrame(function () {
+                resetModal.classList.remove('opacity-0');
+                if (resetModalContent) {
+                    resetModalContent.classList.remove('scale-95');
+                    resetModalContent.classList.add('scale-100');
+                }
+            });
+        }
+
+        function closeModal() {
+            if (!resetModal) return;
+            resetModal.classList.add('opacity-0');
+            if (resetModalContent) {
+                resetModalContent.classList.remove('scale-100');
+                resetModalContent.classList.add('scale-95');
+            }
+            setTimeout(function () {
+                resetModal.classList.add('hidden');
+            }, 200);
+        }
+
+        if (btnOpenResetModal) {
+            btnOpenResetModal.addEventListener('click', openModal);
+        }
+        if (btnCloseResetModal) {
+            btnCloseResetModal.addEventListener('click', closeModal);
+        }
+        if (btnCancelReset) {
+            btnCancelReset.addEventListener('click', closeModal);
+        }
+        if (resetModal) {
+            resetModal.addEventListener('click', function (e) {
+                if (e.target === resetModal) {
+                    closeModal();
+                }
             });
         }
 

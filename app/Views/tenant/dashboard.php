@@ -142,7 +142,7 @@ $compactMoney = function (float $v): string {
 
                 <h3 class="text-title-lg font-bold text-on-surface">Sales Overview</h3>
 
-                <p class="text-label-sm text-on-surface-variant">Daily revenue from delivered orders & completed printing requests</p>
+                <p class="text-label-sm text-on-surface-variant">Daily revenue from store orders & completed printing requests</p>
 
             </div>
 
@@ -164,49 +164,32 @@ $compactMoney = function (float $v): string {
 
             <h3 id="sales-total" class="text-headline-md font-bold text-primary mb-md">₱<?= number_format($chart_total, 2) ?></h3>
 
-            <?php if ($chart_total > 0): ?>
-
-                <div id="sales-chart" class="flex items-end gap-xs sm:gap-md h-40 sm:h-48">
-
-                    <?php foreach ($chart_labels as $i => $label): ?>
-
-                        <?php $val = (float) $chart_values[$i]; ?>
-
-                        <?php $pct = $chart_max > 0 ? max(2, (int) round($val / $chart_max * 100)) : 2; ?>
-
-                        <div class="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-0">
-
-                            <span class="text-[10px] text-on-surface-variant whitespace-nowrap"><?= $compactMoney($val) ?></span>
-
-                            <div class="w-full max-w-[32px] rounded-t-md <?= $chart_max > 0 && $val === (float) $chart_max ? 'bg-tertiary' : 'bg-primary' ?>" style="height: <?= $pct ?>%" title="<?= esc($label) ?>: ₱<?= number_format($val, 2) ?>"></div>
-
-                        </div>
-
-                    <?php endforeach; ?>
-
+            <div id="sales-error" class="hidden mb-md p-sm rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center justify-between">
+                <div class="flex items-center gap-xs">
+                    <span class="material-symbols-outlined text-[18px]">error</span>
+                    <span id="sales-error-msg">Failed to refresh sales data.</span>
                 </div>
+                <button type="button" id="sales-retry-btn" class="font-bold underline ml-sm hover:text-rose-950">Retry</button>
+            </div>
 
-                <div id="sales-labels" class="flex gap-xs sm:gap-md mt-xs">
+            <div id="sales-chart" class="flex items-end gap-xs sm:gap-md h-40 sm:h-48 transition-opacity duration-200">
+                <?php foreach ($chart_labels as $i => $label): ?>
+                    <?php $val = (float) $chart_values[$i]; ?>
+                    <?php $pct = $chart_max > 0 ? max(4, (int) round($val / $chart_max * 100)) : 4; ?>
+                    <div class="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-0">
+                        <span class="text-[10px] text-on-surface-variant whitespace-nowrap"><?= $val > 0 ? $compactMoney($val) : '' ?></span>
+                        <div class="w-full max-w-[32px] rounded-t-md <?= $chart_max > 0 && $val === (float) $chart_max ? 'bg-tertiary' : ($val > 0 ? 'bg-primary' : 'bg-surface-container-high/60') ?>" style="height: <?= $pct ?>%" title="<?= esc($label) ?>: ₱<?= number_format($val, 2) ?>"></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
 
-                    <?php foreach ($chart_labels as $label): ?>
-
-                        <div class="flex-1 text-center min-w-0">
-
-                            <span class="text-[10px] sm:text-[11px] text-on-surface-variant truncate"><?= esc($label) ?></span>
-
-                        </div>
-
-                    <?php endforeach; ?>
-
-                </div>
-
-            <?php else: ?>
-
-                <div id="sales-chart" class="h-40 flex items-center justify-center rounded-lg bg-surface-container-low/40 text-label-sm text-on-surface-variant">No sales recorded in this period yet.</div>
-
-                <div id="sales-labels" class="hidden"></div>
-
-            <?php endif; ?>
+            <div id="sales-labels" class="flex gap-xs sm:gap-md mt-xs">
+                <?php foreach ($chart_labels as $label): ?>
+                    <div class="flex-1 text-center min-w-0">
+                        <span class="text-[10px] sm:text-[11px] text-on-surface-variant truncate"><?= esc($label) ?></span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
 
         </div>
 
@@ -446,11 +429,15 @@ $compactMoney = function (float $v): string {
 
 <script>
 (function () {
-    const salesEndpoint = '<?= base_url('tenant/dashboard/sales') ?>';
+    const salesEndpoint = '<?= site_url('tenant/dashboard/sales') ?>';
     const salesChart = document.getElementById('sales-chart');
     const salesLabels = document.getElementById('sales-labels');
     const salesTotal = document.getElementById('sales-total');
     const salesRangeLabel = document.getElementById('sales-range-label');
+    const salesError = document.getElementById('sales-error');
+    const salesErrorMsg = document.getElementById('sales-error-msg');
+    const salesRetryBtn = document.getElementById('sales-retry-btn');
+    let lastActiveBtn = document.querySelector('.sales-range-btn.bg-primary') || document.querySelector('.sales-range-btn');
 
     function compactMoney(v) {
         if (v >= 1000) return '₱' + (v / 1000).toFixed(1) + 'k';
@@ -458,59 +445,111 @@ $compactMoney = function (float $v): string {
         return '';
     }
 
+    let lastSaleHandled = localStorage.getItem('blax_last_sale');
+
     function renderSalesChart(data) {
         const total = Number(data.total) || 0;
-        const max = Math.max.apply(null, data.values.length ? data.values : [0]);
+        const validValues = (data.values && Array.isArray(data.values)) ? data.values.map(v => Number(v) || 0) : [];
+        const max = validValues.length ? Math.max.apply(null, validValues) : 0;
         salesTotal.textContent = '₱' + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         salesRangeLabel.textContent = data.range === 'year' ? '(This Year)' : '(Last ' + data.range + ' Days)';
 
-        if (!data.values.length || total <= 0) {
+        if (!validValues.length) {
             salesChart.className = 'h-40 flex items-center justify-center rounded-lg bg-surface-container-low/40 text-label-sm text-on-surface-variant';
-            salesChart.textContent = 'No sales recorded in this period yet.';
+            salesChart.textContent = 'No sales data available for this period.';
             salesLabels.className = 'hidden';
             return;
         }
 
-        salesChart.className = 'flex items-end gap-xs sm:gap-md h-40 sm:h-48';
+        salesChart.className = 'flex items-end gap-xs sm:gap-md h-40 sm:h-48 transition-opacity duration-200';
         salesLabels.className = 'flex gap-xs sm:gap-md mt-xs';
 
         let bars = '';
         let labs = '';
-        data.values.forEach(function (v, i) {
-            const val = Number(v) || 0;
-            const pct = max > 0 ? Math.max(2, Math.round(val / max * 100)) : 2;
-            const cls = (max > 0 && val === max) ? 'bg-tertiary' : 'bg-primary';
+        const scaleMax = max > 0 ? max : 1;
+        validValues.forEach(function (val, i) {
+            const pct = val > 0 ? Math.max(8, Math.round(val / scaleMax * 100)) : 4;
+            const cls = (max > 0 && val === max) ? 'bg-tertiary' : (val > 0 ? 'bg-primary' : 'bg-surface-container-high/60');
+            const lbl = val > 0 ? compactMoney(val) : '';
+            const labelStr = (data.labels && data.labels[i]) ? data.labels[i] : '';
             bars += '<div class="flex-1 flex flex-col items-center justify-end gap-1 h-full min-w-0">'
-                + '<span class="text-[10px] text-on-surface-variant whitespace-nowrap">' + compactMoney(val) + '</span>'
-                + '<div class="w-full max-w-[32px] rounded-t-md ' + cls + '" style="height:' + pct + '%" title="' + data.labels[i] + ': ₱' + val.toFixed(2) + '"></div>'
+                + '<span class="text-[10px] text-on-surface-variant whitespace-nowrap">' + lbl + '</span>'
+                + '<div class="w-full max-w-[32px] rounded-t-md transition-all duration-300 ' + cls + '" style="height:' + pct + '%" title="' + labelStr + ': ₱' + val.toFixed(2) + '"></div>'
                 + '</div>';
-            labs += '<div class="flex-1 text-center min-w-0"><span class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">' + data.labels[i] + '</span></div>';
+            labs += '<div class="flex-1 text-center min-w-0"><span class="text-[10px] sm:text-[11px] text-on-surface-variant truncate">' + labelStr + '</span></div>';
         });
         salesChart.innerHTML = bars;
         salesLabels.innerHTML = labs;
     }
 
-    document.querySelectorAll('.sales-range-btn').forEach(function (btn) {
-        btn.addEventListener('click', async function () {
-            document.querySelectorAll('.sales-range-btn').forEach(function (b) {
-                b.classList.remove('bg-primary', 'text-on-primary');
-                b.classList.add('text-on-surface-variant');
-            });
-            btn.classList.add('bg-primary', 'text-on-primary');
-            btn.classList.remove('text-on-surface-variant');
-
-            try {
-                const res = await fetch(salesEndpoint + '?range=' + btn.dataset.salesRange, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-                const data = await res.json();
-                if (data && data.success) {
-                    renderSalesChart(data);
-                }
-            } catch (err) {
-                // Keep the current chart on failure.
-            }
+    async function loadSalesRange(btn) {
+        if (!btn) btn = lastActiveBtn;
+        lastActiveBtn = btn;
+        document.querySelectorAll('.sales-range-btn').forEach(function (b) {
+            b.classList.remove('bg-primary', 'text-on-primary');
+            b.classList.add('text-on-surface-variant');
         });
+        btn.classList.add('bg-primary', 'text-on-primary');
+        btn.classList.remove('text-on-surface-variant');
+
+        if (salesError) salesError.classList.add('hidden');
+        if (salesChart) salesChart.classList.add('opacity-40', 'pointer-events-none');
+
+        try {
+            const rangeVal = btn.dataset.salesRange || '7';
+            const sep = salesEndpoint.indexOf('?') >= 0 ? '&' : '?';
+            const res = await fetch(salesEndpoint + sep + 'range=' + encodeURIComponent(rangeVal) + '&_t=' + Date.now(), {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if (data && data.success) {
+                renderSalesChart(data);
+                lastSaleHandled = localStorage.getItem('blax_last_sale');
+            } else {
+                throw new Error((data && data.error) ? data.error : 'Invalid response');
+            }
+        } catch (err) {
+            if (salesError) {
+                if (salesErrorMsg) salesErrorMsg.textContent = 'Unable to refresh sales chart (' + (err.message || 'network error') + ').';
+                salesError.classList.remove('hidden');
+            }
+        } finally {
+            if (salesChart) salesChart.classList.remove('opacity-40', 'pointer-events-none');
+        }
+    }
+
+    document.querySelectorAll('.sales-range-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            loadSalesRange(btn);
+        });
+    });
+
+    if (salesRetryBtn) {
+        salesRetryBtn.addEventListener('click', function () {
+            if (lastActiveBtn) loadSalesRange(lastActiveBtn);
+        });
+    }
+
+    // Immediate Cache Invalidation & Refetch when sale is completed in POS or another window
+    window.addEventListener('storage', function (e) {
+        if (e.key === 'blax_last_sale' && e.newValue) {
+            loadSalesRange(lastActiveBtn);
+        }
+    });
+
+    window.addEventListener('blax:sale_completed', function () {
+        loadSalesRange(lastActiveBtn);
+    });
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            const currentSale = localStorage.getItem('blax_last_sale');
+            if (currentSale && currentSale !== lastSaleHandled) {
+                loadSalesRange(lastActiveBtn);
+            }
+        }
     });
 })();
 </script>

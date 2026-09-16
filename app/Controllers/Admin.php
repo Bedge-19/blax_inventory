@@ -10,6 +10,7 @@ use App\Models\AuditLogModel;
 use App\Models\DeliveryModel;
 use App\Models\PayoutModel;
 use App\Models\SiteContentModel;
+use App\Models\NotificationModel;
 
 class Admin extends BaseController
 {
@@ -404,9 +405,14 @@ class Admin extends BaseController
         if (!$file || !$file->isValid()) {
             return redirect()->back()->with('error','Please choose an image.');
         }
-        if ($file->hasMoved()) return redirect()->back()->with('error','Upload failed.');
-        $allowed=['jpg','jpeg','png','webp','gif'];
-        if (!in_array(strtolower($file->getClientExtension()), $allowed, true)) {
+        $mimeMap = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/gif'  => 'gif',
+        ];
+        $mime = $file->getMimeType();
+        if (!isset($mimeMap[$mime])) {
             return redirect()->back()->with('error','Only JPG, PNG, WEBP, GIF allowed.');
         }
         if ($file->getSize() > 3*1024*1024) {
@@ -414,7 +420,7 @@ class Admin extends BaseController
         }
         $uploadPath = ROOTPATH.'public/uploads/cms';
         if (!is_dir($uploadPath)) mkdir($uploadPath,0777,true);
-        $fileName=$file->getRandomName();
+        $fileName = 'cms_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
         $file->move($uploadPath,$fileName);
         // Remove old image if local
         if (!empty($row['image_url']) && strpos($row['image_url'],'uploads/cms/')===0) {
@@ -445,6 +451,12 @@ class Admin extends BaseController
         $newStatus = ($shop['status'] ?? 'active') === 'active' ? 'suspended' : 'active';
         $shopModel->update($tenantId, ['status' => $newStatus]);
 
+        if (!empty($shop['owner_id'])) {
+            $title = 'Shop ' . ucfirst($newStatus);
+            $msg   = 'Your shop "' . ($shop['shop_name'] ?? 'Shop') . '" status has been changed to ' . $newStatus . ' by the administrator.';
+            (new NotificationModel())->create((int) $shop['owner_id'], 'shop_status', $title, $msg, '/tenant/dashboard');
+        }
+
         return redirect()->back()->with('success', 'Tenant status updated to ' . $newStatus . '.');
     }
 
@@ -468,6 +480,10 @@ class Admin extends BaseController
 
         $newStatus = $currentStatus === 'active' ? 'inactive' : 'active';
         $userModel->update($customerId, ['status' => $newStatus]);
+
+        $title = 'Account ' . ucfirst($newStatus);
+        $msg   = 'Your customer account status has been updated to ' . $newStatus . ' by the administrator.';
+        (new NotificationModel())->create($customerId, 'account_status', $title, $msg, '/customer/profile');
 
         return redirect()->back()->with('success', 'Customer account ' . $newStatus . '.');
     }
@@ -553,6 +569,23 @@ class Admin extends BaseController
         }
         $shopModel->update($shopId, $shopUpdate);
 
+        $userModel = new UserModel();
+        $owner = !empty($shop['owner_id']) ? $userModel->find((int) $shop['owner_id']) : null;
+        if ($owner) {
+            (new NotificationModel())->create(
+                (int) $owner['id'],
+                'application',
+                'Tenant Application Rejected',
+                'Your application for "' . ($shop['shop_name'] ?? 'Shop') . '" was not approved: ' . $reason
+            );
+
+            try {
+                service('mailService')->sendTenantRejected($owner, $shop, $reason);
+            } catch (\Throwable $e) {
+                log_message('error', 'Tenant #' . $shopId . ' rejected but email failed: ' . $e->getMessage());
+            }
+        }
+
         return redirect()->back()->with('success', 'Tenant application rejected.');
     }
 
@@ -621,6 +654,17 @@ class Admin extends BaseController
             'completed_at' => date('Y-m-d H:i:s'),
         ]);
 
+        $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        if ($shop && !empty($shop['owner_id'])) {
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'payout',
+                'Payout Completed',
+                'Your GCash payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') has been approved and completed.',
+                '/tenant/withdrawals'
+            );
+        }
+
         return redirect()->back()->with('success', 'GCash payout approved. 3% admin fee recorded.');
     }
 
@@ -638,6 +682,17 @@ class Admin extends BaseController
         }
 
         $payoutModel->update($withdrawalId, ['status' => 'failed']);
+
+        $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        if ($shop && !empty($shop['owner_id'])) {
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'payout',
+                'Payout Rejected',
+                'Your payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') was rejected.',
+                '/tenant/withdrawals'
+            );
+        }
 
         return redirect()->back()->with('success', 'Payout rejected.');
     }
@@ -686,6 +741,17 @@ class Admin extends BaseController
             default      => $status,
         };
 
+        $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        if ($shop && !empty($shop['owner_id'])) {
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'payout',
+                'Payout ' . $statusLabel,
+                'Your payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') is now ' . $statusLabel . '.',
+                '/tenant/withdrawals'
+            );
+        }
+
         return redirect()->back()->with('success', "Payout status updated to {$statusLabel}.");
     }
 
@@ -702,6 +768,17 @@ class Admin extends BaseController
             ->where('status !=', 'resolved')
             ->set(['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')])
             ->update();
+
+        $shop = (new ShopModel())->find($shopId);
+        if ($shop && !empty($shop['owner_id'])) {
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'compliance',
+                'Compliance Issues Resolved',
+                'The compliance reports concerning your shop "' . ($shop['shop_name'] ?? 'Shop') . '" have been resolved by administration.',
+                '/tenant/dashboard'
+            );
+        }
 
         return redirect()->back()->with('success', 'Compliance issues resolved.');
     }

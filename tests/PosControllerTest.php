@@ -13,6 +13,66 @@ class PosControllerTest extends CIUnitTestCase
         parent::tearDown();
     }
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $db = \Config\Database::connect();
+        
+        // Ensure ORD-88102 (belongs to shop 12)
+        if (!$db->table('orders')->where('order_number', 'ORD-88102')->get()->getRowArray()) {
+            $db->table('orders')->insert([
+                'order_number'       => 'ORD-88102',
+                'customer_id'        => 3,
+                'shop_id'            => 12,
+                'fulfillment_method' => 'pickup',
+                'payment_method'     => 'counter_cash',
+                'subtotal'           => 200.00,
+                'shipping_fee'       => 0.00,
+                'tax_amount'         => 0.00,
+                'total_amount'       => 200.00,
+                'status'             => 'processing',
+                'payment_status'     => 'unpaid',
+                'placed_at'          => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // Ensure ORD-0922 (delivery order for shop 1)
+        if (!$db->table('orders')->where('order_number', 'ORD-0922')->get()->getRowArray()) {
+            $db->table('orders')->insert([
+                'order_number'       => 'ORD-0922',
+                'customer_id'        => 3,
+                'shop_id'            => 1,
+                'fulfillment_method' => 'delivery',
+                'payment_method'     => 'cod',
+                'subtotal'           => 150.00,
+                'shipping_fee'       => 50.00,
+                'tax_amount'         => 0.00,
+                'total_amount'       => 200.00,
+                'status'             => 'processing',
+                'payment_status'     => 'unpaid',
+                'placed_at'          => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // Ensure ORD-90097 (pending order for shop 1)
+        if (!$db->table('orders')->where('order_number', 'ORD-90097')->get()->getRowArray()) {
+            $db->table('orders')->insert([
+                'order_number'       => 'ORD-90097',
+                'customer_id'        => 3,
+                'shop_id'            => 1,
+                'fulfillment_method' => 'pickup',
+                'payment_method'     => 'counter_cash',
+                'subtotal'           => 100.00,
+                'shipping_fee'       => 0.00,
+                'tax_amount'         => 0.00,
+                'total_amount'       => 100.00,
+                'status'             => 'pending',
+                'payment_status'     => 'unpaid',
+                'placed_at'          => date('Y-m-d H:i:s'),
+            ]);
+        }
+    }
+
     private function asTenant(): self
     {
         $hash = csrf_hash();

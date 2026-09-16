@@ -6,7 +6,7 @@ use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 
-class TenantAuth implements FilterInterface
+class CustomerAuth implements FilterInterface
 {
     public function before(RequestInterface $request, $arguments = null)
     {
@@ -14,20 +14,20 @@ class TenantAuth implements FilterInterface
         if (!$session->get('isLoggedIn')) {
             if ($request->isAJAX()) {
                 return service('response')->setStatusCode(401)->setJSON([
-                    'success'  => false,
-                    'error'    => 'Authentication required.',
-                    'redirect' => base_url('login'),
+                    'success' => false,
+                    'error'   => 'Authentication required.',
+                    'redirect'=> base_url('login'),
                 ]);
             }
             return redirect()->to('/login');
         }
 
         $userRole = $session->get('user_role');
-        if ($userRole !== 'shop_owner' && $userRole !== 'admin') {
+        if ($userRole !== 'customer' && $userRole !== 'admin') {
             if ($request->isAJAX()) {
                 return service('response')->setStatusCode(403)->setJSON([
                     'success' => false,
-                    'error'   => 'Access forbidden. Tenant access required.',
+                    'error'   => 'Access forbidden.',
                 ]);
             }
             return redirect()->to('/');

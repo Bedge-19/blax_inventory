@@ -604,7 +604,7 @@ $orderItems = $orderItems ?? [];
     const onlineOrderBaseAmount = <?= (float) $baseOnlineAmount ?>;
     const isOnlinePaid = <?= $isOnlinePaid ? 'true' : 'false' ?>;
 
-    const BASE_URL = '<?= rtrim(base_url(), '/') ?>';
+    const BASE_URL = '<?= rtrim(site_url(), '/') ?>';
     const CSRF_TOKEN_NAME = '<?= csrf_token() ?>';
     let CSRF_HASH_VAL = '<?= csrf_hash() ?>';
 
@@ -1001,6 +1001,11 @@ $orderItems = $orderItems ?? [];
     }
 
     function showSuccessReceipt(data, paymentMethod, dueAmount) {
+        try {
+            localStorage.setItem('blax_last_sale', JSON.stringify({ time: Date.now(), shop_id: <?= (int) ($shop['id'] ?? 0) ?>, order_id: data.order_id }));
+            window.dispatchEvent(new CustomEvent('blax:sale_completed', { detail: data }));
+        } catch (e) {}
+
         successMessage.textContent = data.message || 'Sale processed successfully.';
 
         const tendered = parseFloat(cashInput.value) || dueAmount;
@@ -1110,20 +1115,7 @@ $orderItems = $orderItems ?? [];
                 html5QrCode = new Html5Qrcode("posQrReader");
             }
 
-            const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-            html5QrCode.start(
-                { facingMode: "environment" },
-                config,
-                (decodedText) => {
-                    stopQrScanner();
-                    sendVerifyQrRequest(decodedText);
-                },
-                (errorMessage) => {
-                    // Ignore frame scan failures
-                }
-            ).then(() => {
-                if (placeholder) placeholder.classList.add('hidden');
-            }).catch(err => {
+            const showCameraError = () => {
                 if (placeholder) {
                     placeholder.classList.remove('hidden');
                     placeholder.innerHTML = `
@@ -1132,7 +1124,42 @@ $orderItems = $orderItems ?? [];
                         <span class="text-[10px] opacity-70 mt-1">Enter order number manually below</span>
                     `;
                 }
-            });
+            };
+
+            const startScanner = (cameraConfig) => {
+                const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+                return html5QrCode.start(
+                    cameraConfig,
+                    config,
+                    (decodedText) => {
+                        stopQrScanner();
+                        sendVerifyQrRequest(decodedText);
+                    },
+                    () => {}
+                );
+            };
+
+            startScanner({ facingMode: "environment" })
+                .then(() => {
+                    if (placeholder) placeholder.classList.add('hidden');
+                })
+                .catch(() => {
+                    if (Html5Qrcode.getCameras) {
+                        Html5Qrcode.getCameras().then(cameras => {
+                            if (cameras && cameras.length) {
+                                startScanner({ deviceId: { exact: cameras[0].id } })
+                                    .then(() => {
+                                        if (placeholder) placeholder.classList.add('hidden');
+                                    })
+                                    .catch(() => showCameraError());
+                            } else {
+                                showCameraError();
+                            }
+                        }).catch(() => showCameraError());
+                    } else {
+                        showCameraError();
+                    }
+                });
         }
     };
 
@@ -1200,6 +1227,7 @@ $orderItems = $orderItems ?? [];
 
         fetch(`${BASE_URL}/tenant/pos/verify-qr`, {
             method: 'POST',
+            credentials: 'same-origin',
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: fd
         })

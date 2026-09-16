@@ -15,6 +15,7 @@ $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::login', ['filter' => 'authThrottle']);
 $routes->get('forgot-password', 'Auth::forgotPassword');
 $routes->post('forgot-password', 'Auth::forgotPassword', ['filter' => 'authThrottle']);
+$routes->post('reset-password-direct', 'Auth::directResetPassword', ['filter' => 'authThrottle']);
 $routes->get('reset-password/(:any)', 'Auth::resetPassword/$1');
 $routes->post('reset-password/(:any)', 'Auth::resetPassword/$1', ['filter' => 'authThrottle']);
 $routes->get('signup', 'Auth::signup');
@@ -37,7 +38,7 @@ $routes->get('shops', 'Customer::shops');
 $routes->get('shop/(:segment)', 'Customer::shop/$1');
 $routes->get('product/(:num)', 'Customer::product/$1');
 $routes->get('printing-services', 'Customer::printingServices');
-$routes->post('printing/request', 'Customer::submitPrintingRequest');
+$routes->post('printing/request', 'Customer::submitPrintingRequest', ['filter' => 'actionThrottle']);
 $routes->post('printing/count-pages', 'Customer::countPrintingPages');
 $routes->post('printing/cancel', 'Customer::cancelPrintingRequest');
 $routes->get('printing/callback', 'Customer::printingPaymentCallback');
@@ -47,31 +48,38 @@ $routes->get('cart', 'Cart::index');
 $routes->post('cart/add', 'Cart::add');
 $routes->post('cart/update', 'Cart::updateQuantity');
 $routes->post('cart/remove-selected', 'Cart::removeSelected');
-$routes->post('cart/checkout', 'Cart::checkout');
+$routes->post('cart/checkout', 'Cart::checkout', ['filter' => 'actionThrottle']);
 $routes->get('cart/payment/callback', 'Cart::paymentCallback');
 $routes->post('payment/webhook', 'Cart::paymongoWebhook');
 $routes->get('cart/remove/(:num)', 'Cart::remove/$1');
 $routes->get('buy-now', 'Checkout::direct');
-$routes->post('buy-now/place', 'Checkout::placeOrder');
+$routes->post('buy-now/place', 'Checkout::placeOrder', ['filter' => 'actionThrottle']);
 
 // Customer Dashboard / Account
-$routes->get('customer/orders', 'Customer::orders');
-$routes->get('customer/printing', 'Customer::printingRequests');
-$routes->get('customer/favorites', 'Customer::favorites');
-$routes->get('customer/addresses', 'Customer::addresses');
-$routes->get('customer/profile', 'Customer::profile');
-$routes->post('customer/profile/update', 'Customer::updateProfile');
-$routes->post('customer/addresses/save', 'Customer::saveAddress');
-$routes->post('customer/addresses/delete', 'Customer::deleteAddress');
-$routes->post('customer/addresses/set-default', 'Customer::setDefaultAddress');
-$routes->post('customer/favorites/remove', 'Customer::unfavoriteShop');
+$routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
+    $routes->get('orders', 'Customer::orders');
+    $routes->get('orders/track/(:any)', 'Customer::trackOrder/$1');
+    $routes->post('orders/(:num)/cancel', 'Customer::cancelOrder/$1');
+    $routes->post('orders/cancel', 'Customer::cancelOrder');
+    $routes->get('printing', 'Customer::printingRequests');
+    $routes->get('favorites', 'Customer::favorites');
+    $routes->get('addresses', 'Customer::addresses');
+    $routes->get('profile', 'Customer::profile');
+    $routes->post('profile/update', 'Customer::updateProfile');
+    $routes->post('addresses/save', 'Customer::saveAddress');
+    $routes->post('addresses/delete', 'Customer::deleteAddress');
+    $routes->post('addresses/set-default', 'Customer::setDefaultAddress');
+    $routes->post('favorites/remove', 'Customer::unfavoriteShop');
+});
 
 // Rating & Review Routes
-$routes->post('reviews/product/save', 'Customer::saveProductReview');
-$routes->post('reviews/shop/save', 'Customer::saveShopReview');
+$routes->group('reviews', ['filter' => 'customerAuth'], function ($routes) {
+    $routes->post('product/save', 'Customer::saveProductReview');
+    $routes->post('shop/save', 'Customer::saveShopReview');
+});
 
 // AI Assistant AJAX Endpoint
-$routes->post('ai-assistant/chat', 'AiAssistant::chat');
+$routes->post('ai-assistant/chat', 'AiAssistant::chat', ['filter' => 'actionThrottle']);
 
 // Tenant Routes
 $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
@@ -83,9 +91,11 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->get('orders/items/(:num)', 'Tenant::orderItems/$1');
     $routes->get('printing', 'Tenant::printing');
     $routes->get('deliveries', 'Tenant::deliveries');
+    $routes->get('delivery', 'Tenant::deliveries');
     $routes->get('deliveries/export', 'Tenant::deliveriesExport');
     $routes->get('withdrawals', 'Tenant::withdrawals');
     $routes->get('analytics', 'Tenant::analytics');
+    $routes->get('analytics/data', 'Tenant::analyticsData');
     $routes->get('settings', 'Tenant::settings');
     $routes->get('archive', 'Tenant::archive');
     $routes->get('dashboard/sales', 'Tenant::dashboardSalesData');

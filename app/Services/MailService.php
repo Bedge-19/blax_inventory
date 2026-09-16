@@ -44,4 +44,35 @@ class MailService
 
         return true;
     }
+
+    /**
+     * Send rejection notification using the DB-backed recipient.
+     */
+    public function sendTenantRejected(array $user, array $shop, string $reason): bool
+    {
+        $recipient = trim((string) ($user['email'] ?? ''));
+        if ($recipient === '' || ! filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Tenant email address is invalid.');
+        }
+        if (trim($this->config->fromEmail) === '') {
+            throw new RuntimeException('Email sender is not configured.');
+        }
+
+        $email = service('email');
+        $email->clear(true);
+        $email->setFrom($this->config->fromEmail, $this->config->fromName ?: 'RHK General Merchandise');
+        $email->setTo($recipient);
+        $email->setSubject('Update regarding your merchant application');
+        $email->setMessage(view('emails/tenant_rejected', [
+            'firstName' => (string) ($user['first_name'] ?? 'Applicant'),
+            'shopName'  => (string) ($shop['shop_name'] ?? 'your shop'),
+            'reason'    => $reason,
+        ]));
+
+        if (! $email->send(false)) {
+            throw new RuntimeException('Email service could not send the rejection message.');
+        }
+
+        return true;
+    }
 }

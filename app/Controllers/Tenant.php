@@ -174,9 +174,15 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
-        $shopId = (int) $res['shopId'];
-        $range  = (string) $this->request->getGet('range');
-        $range  = in_array($range, ['7', '30', 'year'], true) ? $range : '7';
+        $shopId   = (int) $res['shopId'];
+        $rawParam = (string) ($this->request->getGet('range') ?? $this->request->getGet('period') ?? '7');
+        $clean    = strtolower(trim($rawParam));
+
+        $range = match ($clean) {
+            'year', '1y', '12m', 'this_year' => 'year',
+            '30', '30d', '30_days', 'month'  => '30',
+            default                          => '7',
+        };
 
         $orderModel = new OrderModel();
         $chart      = $orderModel->getSalesChartData($shopId, $range);
@@ -184,9 +190,54 @@ class Tenant extends BaseController
         return $this->response->setJSON([
             'success' => true,
             'range'   => $range,
+            'period'  => $clean !== '' ? $clean : ($range . 'd'),
             'labels'  => $chart['labels'],
-            'values'  => $chart['values'],
+            'values'  => array_map('floatval', $chart['values']),
             'total'   => round(array_sum($chart['values']), 2),
+        ]);
+    }
+
+    /**
+     * AJAX endpoint returning JSON sales chart and comparative previous period
+     * metrics for the Analytics dashboard line chart.
+     */
+    public function analyticsData()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId   = (int) $res['shopId'];
+        $rawParam = (string) ($this->request->getGet('range') ?? $this->request->getGet('period') ?? '30');
+        $clean    = strtolower(trim($rawParam));
+
+        $range = match ($clean) {
+            'year', '1y', '12m', 'this_year' => 'year',
+            '7', '7d', '7_days', 'week'      => '7',
+            default                          => '30',
+        };
+
+        $orderModel = new OrderModel();
+        $chart      = $orderModel->getSalesChartData($shopId, $range, true);
+
+        $chartTotal    = array_sum($chart['values']);
+        $previousTotal = (float) ($chart['previous_total'] ?? 0.0);
+        $growthPct     = 0.0;
+        if ($previousTotal > 0) {
+            $growthPct = round((($chartTotal - $previousTotal) / $previousTotal) * 100, 1);
+        }
+
+        return $this->response->setJSON([
+            'success'          => true,
+            'range'            => $range,
+            'period'           => $clean !== '' ? $clean : ($range . 'd'),
+            'labels'           => $chart['labels'],
+            'values'           => array_map('floatval', $chart['values']),
+            'previous_values'  => array_map('floatval', $chart['previous_values'] ?? []),
+            'total'            => round($chartTotal, 2),
+            'previous_total'   => round($previousTotal, 2),
+            'growth_pct'       => $growthPct,
         ]);
     }
 
@@ -646,13 +697,41 @@ class Tenant extends BaseController
         $rawCode    = trim((string) $this->request->getPost('tracking_id'));
 
         if ($rawCode === '') {
-            return $this->response->setJSON(['success' => false, 'error' => 'Enter a tracking ID or scan a QR code.']);
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => 'Enter a tracking ID or scan a QR code.',
+                'message' => 'Enter a tracking ID or scan a QR code.',
+            ]);
         }
 
         $deliveryModel = new DeliveryModel();
         $row           = $deliveryModel->findByTrackingScoped($rawCode, $shopId);
         if (!$row) {
-            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'No delivery found for scanned code "' . esc($rawCode) . '" in your shop.']);
+            $crossCheck = $deliveryModel->findByTrackingAnyShop($rawCode);
+            if ($crossCheck && (int) ($crossCheck['shop_id'] ?? 0) !== $shopId) {
+                $ref = $crossCheck['ref_number'] ?: $crossCheck['tracking_id'];
+                return $this->response->setStatusCode(403)->setJSON([
+                    'success' => false,
+                    'error'   => "Order #{$ref} belongs to another shop, not your shop.",
+                    'message' => "Order #{$ref} belongs to another shop, not your shop.",
+                ]);
+            }
+
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'error'   => 'No delivery or order found for scanned code "' . esc($rawCode) . '" in your shop.',
+                'message' => 'No delivery or order found for scanned code "' . esc($rawCode) . '" in your shop.',
+            ]);
+        }
+
+        // Fulfillment check: Reject Store Pick-up orders in Delivery scanner
+        if (($row['fulfillment_method'] ?? '') === 'pickup') {
+            $ref = $row['ref_number'] ?: $row['tracking_id'];
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => "Wrong fulfillment type: Order #{$ref} was placed for Store Pick-up. Please process it at the counter via POS.",
+                'message' => "Wrong fulfillment type: Order #{$ref} was placed for Store Pick-up. Please process it at the counter via POS.",
+            ]);
         }
 
         $currentStatus = $row['status'] ?? 'ready_for_pickup';
@@ -660,10 +739,19 @@ class Tenant extends BaseController
         $statusMsg     = '';
         $actionType    = '';
 
+        if ($currentStatus === 'cancelled') {
+            $ref = $row['ref_number'] ?: $row['tracking_id'];
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => "Order #{$ref} has been cancelled.",
+                'message' => "Order #{$ref} has been cancelled.",
+            ]);
+        }
+
         // Status transition on QR Scan:
-        // 1. If currently shipped / in_transit / ready_for_pickup -> automatically change to 'delivered'!
-        // 2. If currently delivered -> automatically change to 'returned'!
-        if (in_array($currentStatus, ['shipped', 'in_transit', 'ready_for_pickup'], true)) {
+        // 1. If currently shipped / in_transit / ready_for_pickup / processing / pending -> automatically mark as 'delivered'!
+        // 2. If already delivered -> inform user that it is verified as delivered
+        if (in_array($currentStatus, ['shipped', 'in_transit', 'ready_for_pickup', 'processing', 'pending'], true)) {
             $newStatus = 'delivered';
             $now = date('Y-m-d H:i:s');
             
@@ -689,32 +777,13 @@ class Tenant extends BaseController
             $currentStatus = 'delivered';
             $row['delivered_at'] = $now;
             $actionType = 'delivered';
-            $statusMsg = 'Order #' . ($row['ref_number'] ?: $row['tracking_id']) . ' has been automatically marked as DELIVERED!';
+            $statusMsg = 'Order #' . ($row['ref_number'] ?: $row['tracking_id']) . ' has been verified and marked as DELIVERED!';
         } elseif ($currentStatus === 'delivered') {
-            $newStatus = 'returned';
-
-            // Update delivery record to returned
-            $deliveryModel->update($row['id'], [
-                'status' => 'returned',
-            ]);
-
-            // Update linked order or printing request to returned
-            if ($row['deliverable_type'] === 'order') {
-                (new OrderModel())->update($row['deliverable_id'], [
-                    'status' => 'returned',
-                ]);
-            } elseif ($row['deliverable_type'] === 'printing_request') {
-                (new PrintingRequestModel())->update($row['deliverable_id'], [
-                    'status' => 'cancelled',
-                ]);
-            }
-
-            $currentStatus = 'returned';
-            $actionType = 'returned';
-            $statusMsg = 'Order/Request #' . ($row['ref_number'] ?: $row['tracking_id']) . ' was previously marked delivered and has now been updated to RETURNED!';
+            $actionType = 'already_delivered';
+            $statusMsg = 'Order #' . ($row['ref_number'] ?: $row['tracking_id']) . ' is already verified as DELIVERED.';
         } elseif ($currentStatus === 'returned') {
             $actionType = 'already_returned';
-            $statusMsg = 'Order/Request #' . ($row['ref_number'] ?: $row['tracking_id']) . ' is currently RETURNED.';
+            $statusMsg = 'Order/Request #' . ($row['ref_number'] ?: $row['tracking_id']) . ' is currently marked as RETURNED.';
         }
 
         // Send customer notification on QR status update
@@ -1723,8 +1792,14 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Logo upload failed. Please try again.');
         }
 
-        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-        if (!in_array(strtolower($file->getClientExtension()), $allowed, true)) {
+        $mimeMap = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            'image/gif'  => 'gif',
+        ];
+        $mime = $file->getMimeType();
+        if (!isset($mimeMap[$mime])) {
             return redirect()->back()->with('error', 'Only JPG, PNG, WEBP or GIF images are allowed for the shop logo.');
         }
         if ($file->getSize() > 2097152) {
@@ -1736,7 +1811,7 @@ class Tenant extends BaseController
             mkdir($uploadPath, 0777, true);
         }
 
-        $fileName = $file->getRandomName();
+        $fileName = 'logo_' . $shopId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
         $file->move($uploadPath, $fileName);
 
         if (!empty($shop['logo_url']) && strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
@@ -1844,7 +1919,12 @@ class Tenant extends BaseController
             mkdir($uploadPath, 0755, true);
         }
 
-        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        $mimeMap = [
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+        ];
+        $allowedMimes = array_keys($mimeMap);
         $maxBytes     = 5 * 1024 * 1024; // 5MB
 
         $existingCount = $imageModel->where('product_id', $productId)->countAllResults();
@@ -1861,11 +1941,12 @@ class Tenant extends BaseController
                 if (!$file || !$file->isValid() || $file->hasMoved()) {
                     continue;
                 }
-                if (!in_array($file->getMimeType(), $allowedMimes, true) || $file->getSize() > $maxBytes) {
+                $mime = $file->getMimeType();
+                if (!isset($mimeMap[$mime]) || $file->getSize() > $maxBytes) {
                     continue;
                 }
 
-                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientExtension();
+                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
                 $file->move($uploadPath, $fileName);
 
                 $isPrimary = ($existingCount === 0) ? 1 : 0;
@@ -1883,8 +1964,9 @@ class Tenant extends BaseController
         // 2. Single file input fallback (product_image)
         $single = $this->request->getFile('product_image');
         if ($single && $single->isValid() && !$single->hasMoved()) {
-            if (in_array($single->getMimeType(), $allowedMimes, true) && $single->getSize() <= $maxBytes) {
-                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $single->getClientExtension();
+            $mime = $single->getMimeType();
+            if (isset($mimeMap[$mime]) && $single->getSize() <= $maxBytes) {
+                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
                 $single->move($uploadPath, $fileName);
 
                 $isPrimary = ($existingCount === 0) ? 1 : 0;
@@ -2290,7 +2372,7 @@ class Tenant extends BaseController
         $productModel = new ProductModel();
         $product      = $productModel->find((int) $productId);
 
-        if (!$product || $product['shop_id'] !== $res['shopId']) {
+        if (!$product || (int) $product['shop_id'] !== (int) $res['shopId']) {
             return redirect()->back()->with('error', 'Product not found.');
         }
 
@@ -2419,29 +2501,46 @@ class Tenant extends BaseController
 
         $rawCode = trim((string) ($this->request->getPost('qr_code') ?? $this->request->getPost('order_number') ?? ''));
         if ($rawCode === '') {
-            return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'No QR code or order number provided.']);
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => 'No QR code or order number provided.',
+                'message' => 'No QR code or order number provided.',
+            ]);
+        }
+
+        $search = trim(str_replace(['#'], '', $rawCode));
+        if (str_starts_with($search, '{') && str_ends_with($search, '}')) {
+            $decoded = json_decode($search, true);
+            if (is_array($decoded)) {
+                $search = trim((string) ($decoded['order_no'] ?? $decoded['order_number'] ?? $decoded['id'] ?? $search));
+            }
         }
 
         // Clean and extract order number: matches 'ORD-XXXXX' or raw order code
-        $orderNumber = $rawCode;
-        if (preg_match('/(ORD-[A-Za-z0-9]+)/i', $rawCode, $matches)) {
+        $orderNumber = $search;
+        if (preg_match('/(ORD-[A-Za-z0-9_-]+)/i', $search, $matches)) {
+            $orderNumber = strtoupper($matches[1]);
+        } elseif (preg_match('#/order/([A-Za-z0-9_-]+)#', $search, $matches)) {
             $orderNumber = strtoupper($matches[1]);
         } else {
-            $orderNumber = strtoupper(ltrim($rawCode, '#'));
+            $orderNumber = strtoupper(trim(str_replace(['#', ' '], '', $search)));
         }
 
         $orderModel = new OrderModel();
-        $order = $orderModel->where('order_number', $orderNumber)->first();
-
-        // Fallback: If not found by order_number and code is numeric, check ID
-        if (!$order && is_numeric($orderNumber)) {
-            $order = $orderModel->find((int) $orderNumber);
-        }
+        // Match exact order_number, prefixed 'ORD-', or numeric ID
+        $order = $orderModel
+            ->groupStart()
+                ->where('order_number', $orderNumber)
+                ->orWhere('order_number', 'ORD-' . $orderNumber)
+                ->orWhere('id', is_numeric($orderNumber) ? (int) $orderNumber : 0)
+            ->groupEnd()
+            ->first();
 
         if (!$order) {
             return $this->response->setStatusCode(404)->setJSON([
                 'success' => false,
                 'error'   => "Order #{$orderNumber} was not found in the system.",
+                'message' => "Order #{$orderNumber} was not found in the system.",
             ]);
         }
 
@@ -2450,29 +2549,33 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(403)->setJSON([
                 'success' => false,
                 'error'   => "Order #{$order['order_number']} belongs to another shop, not {$shop['shop_name']}.",
+                'message' => "Order #{$order['order_number']} belongs to another shop, not {$shop['shop_name']}.",
             ]);
         }
 
-        // Fulfillment check (Store Pick-up ONLY)
+        // Fulfillment check (Store Pick-up)
         if (($order['fulfillment_method'] ?? '') !== 'pickup') {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
-                'error'   => "Order #{$order['order_number']} is for Doorstep Delivery, not Store Pick-up.",
+                'error'   => "Wrong fulfillment type: Order #{$order['order_number']} was placed for Doorstep Delivery. Please use the Deliveries scanner to process deliveries.",
+                'message' => "Wrong fulfillment type: Order #{$order['order_number']} was placed for Doorstep Delivery. Please use the Deliveries scanner to process deliveries.",
             ]);
         }
 
-        // Order eligibility check
+        // Order eligibility check: reject pending orders (must be accepted/processing first)
         if ($order['status'] === 'pending') {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
                 'error'   => "Order #{$order['order_number']} is still pending. Please accept and process the order before using POS.",
+                'message' => "Order #{$order['order_number']} is still pending. Please accept and process the order before using POS.",
             ]);
         }
 
         if (in_array($order['status'], ['completed', 'delivered'], true)) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
-                'error'   => "Order #{$order['order_number']} has already been fulfilled/completed.",
+                'error'   => "Order #{$order['order_number']} has already been completed / released.",
+                'message' => "Order #{$order['order_number']} has already been completed / released.",
             ]);
         }
 
@@ -2480,6 +2583,7 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
                 'error'   => "Order #{$order['order_number']} has been cancelled.",
+                'message' => "Order #{$order['order_number']} has been cancelled.",
             ]);
         }
 
@@ -2502,7 +2606,7 @@ class Tenant extends BaseController
             'order_id'     => (int) $order['id'],
             'order_number' => $order['order_number'],
             'customer_id'  => (int) $order['customer_id'],
-            'redirect_url' => base_url('tenant/pos?order_id=' . $order['id']),
+            'redirect_url' => site_url('tenant/pos?order_id=' . $order['id']),
         ]);
     }
 
@@ -2935,16 +3039,17 @@ class Tenant extends BaseController
                 return redirect()->back()->with('error', 'POS additions are only permitted for Store Pick-up orders.');
             }
             if ($order['status'] === 'pending') {
-                return redirect()->back()->with('error', 'This order is still pending. Please accept and process the order before opening POS.');
+                $orderModel->update((int) $order['id'], ['status' => 'processing']);
+                $order['status'] = 'processing';
             }
             $orderItems = (new OrderItemModel())->where('order_id', $order['id'])->findAll();
         }
 
-        // Available store-pickup orders for quick selection (excluding pending, completed, delivered, cancelled)
+        // Available store-pickup orders for quick selection (excluding completed, delivered, cancelled)
         $pickupOrders = $orderModel
             ->where('shop_id', $shopId)
             ->where('fulfillment_method', 'pickup')
-            ->whereNotIn('status', ['pending', 'completed', 'delivered', 'cancelled'])
+            ->whereNotIn('status', ['completed', 'delivered', 'cancelled'])
             ->orderBy('placed_at', 'DESC')
             ->findAll();
 

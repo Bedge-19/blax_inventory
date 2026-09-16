@@ -34,9 +34,11 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
-        'adminAuth'     => \App\Filters\AdminAuth::class,
-        'tenantAuth'    => \App\Filters\TenantAuth::class,
-        'authThrottle'  => \App\Filters\AuthRateLimiter::class,
+        'adminAuth'      => \App\Filters\AdminAuth::class,
+        'tenantAuth'     => \App\Filters\TenantAuth::class,
+        'customerAuth'   => \App\Filters\CustomerAuth::class,
+        'authThrottle'   => \App\Filters\AuthRateLimiter::class,
+        'actionThrottle' => \App\Filters\ActionRateLimiter::class,
     ];
 
     /**
@@ -73,7 +75,7 @@ class Filters extends BaseFilters
     public array $globals = [
         'before' => [
             // 'honeypot',
-            'csrf' => ['except' => ['payment/webhook', 'ai-assistant/chat']],
+            'csrf' => ['except' => ['payment/webhook']],
             // 'invalidchars',
         ],
         'after' => [

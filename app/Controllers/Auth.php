@@ -243,6 +243,38 @@ class Auth extends BaseController
         return view('auth/reset_password', ['token' => $token]);
     }
 
+    public function directResetPassword()
+    {
+        $email    = trim((string) $this->request->getPost('email'));
+        $password = trim((string) $this->request->getPost('password'));
+        $confirm  = trim((string) $this->request->getPost('confirm_password'));
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->to('/login')->with('error', 'Please enter a valid email address.');
+        }
+
+        if (strlen($password) < 8) {
+            return redirect()->to('/login')->with('error', 'Password must be at least 8 characters long.');
+        }
+
+        if ($password !== $confirm) {
+            return redirect()->to('/login')->with('error', 'New password and confirm password do not match.');
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->findByEmail($email);
+
+        if (!$user) {
+            return redirect()->to('/login')->with('error', 'No user found with email: ' . esc($email));
+        }
+
+        $userModel->update($user['id'], [
+            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+        ]);
+
+        return redirect()->to('/login')->with('success', 'Password reset successfully for ' . esc($email) . '. You can now sign in with your new password.');
+    }
+
     public function registerShop()
     {
         $session = session();

@@ -36,7 +36,7 @@ class OrderModel extends Model
     public function getOrdersByCustomer(int $customerId)
     {
         return $this->db->table('orders o')
-            ->select('o.*, s.shop_name, s.logo_url as shop_logo')
+            ->select('o.*, s.shop_name, s.logo_url as shop_logo, s.address_line as shop_address, s.city as shop_city, s.province as shop_province')
             ->join('shops s', 's.id = o.shop_id', 'left')
             ->where('o.customer_id', $customerId)
             ->orderBy('o.placed_at', 'DESC')
@@ -49,6 +49,15 @@ class OrderModel extends Model
             ->select('o.*, u.first_name, u.last_name, u.email')
             ->join('users u', 'u.id = o.customer_id', 'left')
             ->where('o.shop_id', $shopId)
+            ->orderBy("CASE 
+                WHEN LOWER(o.status) = 'pending' THEN 1 
+                WHEN LOWER(o.status) IN ('processing', 'in_progress') THEN 2 
+                WHEN LOWER(o.status) = 'ready_for_pickup' THEN 3
+                WHEN LOWER(o.status) = 'shipped' THEN 4
+                WHEN LOWER(o.status) = 'delivered' THEN 5
+                WHEN LOWER(o.status) = 'completed' THEN 6 
+                ELSE 7 
+            END", 'ASC', false)
             ->orderBy('o.placed_at', 'DESC')
             ->get()->getResultArray();
     }
@@ -119,6 +128,15 @@ class OrderModel extends Model
         string $group = 'orders'
     ): array {
         $this->buildOrderQuery($shopId, $search, $status, $dateFrom, $dateTo)
+            ->orderBy("CASE 
+                WHEN LOWER(orders.status) = 'pending' THEN 1 
+                WHEN LOWER(orders.status) IN ('processing', 'in_progress') THEN 2 
+                WHEN LOWER(orders.status) = 'ready_for_pickup' THEN 3
+                WHEN LOWER(orders.status) = 'shipped' THEN 4
+                WHEN LOWER(orders.status) = 'delivered' THEN 5
+                WHEN LOWER(orders.status) = 'completed' THEN 6 
+                ELSE 7 
+            END", 'ASC', false)
             ->orderBy('orders.placed_at', 'DESC');
 
         $orders = $this->paginate($perPage, $group, $page);
@@ -137,6 +155,15 @@ class OrderModel extends Model
         ?string $dateTo = null
     ): array {
         return $this->buildOrderQuery($shopId, $search, $status, $dateFrom, $dateTo)
+            ->orderBy("CASE 
+                WHEN LOWER(orders.status) = 'pending' THEN 1 
+                WHEN LOWER(orders.status) IN ('processing', 'in_progress') THEN 2 
+                WHEN LOWER(orders.status) = 'ready_for_pickup' THEN 3
+                WHEN LOWER(orders.status) = 'shipped' THEN 4
+                WHEN LOWER(orders.status) = 'delivered' THEN 5
+                WHEN LOWER(orders.status) = 'completed' THEN 6 
+                ELSE 7 
+            END", 'ASC', false)
             ->orderBy('orders.placed_at', 'DESC')
             ->get()->getResultArray();
     }
@@ -164,8 +191,70 @@ class OrderModel extends Model
             'total_orders'     => $totalOrders,
             'pending_shipments' => $pendingShip,
             'ready_for_pickup' => $readyPickup,
-            'revenue_today'    => $this->getRevenueForShop($shopId, $today . ' 00:00:00'),
+            'revenue_today'    => $this->getRevenueTodayForShop($shopId),
         ];
+    }
+
+    /**
+     * Compute today's revenue for a tenant shop within the full 24-hour window
+     * of the local store date (Asia/Manila).
+     * Includes:
+     * - Orders completed today (e.g. store pickups fulfilled today, walk-ins, delivered orders).
+     * - Orders placed today that are paid or delivered.
+     * - Printing requests completed today or created today with paid status.
+     */
+    public function getRevenueTodayForShop(int $shopId): float
+    {
+        $today = date('Y-m-d');
+        $startOfDay = $today . ' 00:00:00';
+        $endOfDay   = $today . ' 23:59:59';
+
+        $orderBuilder = $this->db->table('orders')
+            ->selectSum('total_amount', 'rev')
+            ->where('shop_id', $shopId)
+            ->where('status !=', 'cancelled')
+            ->groupStart()
+                ->groupStart()
+                    ->where('completed_at >=', $startOfDay)
+                    ->where('completed_at <=', $endOfDay)
+                    ->whereIn('status', ['completed', 'delivered'])
+                ->groupEnd()
+                ->orGroupStart()
+                    ->where('placed_at >=', $startOfDay)
+                    ->where('placed_at <=', $endOfDay)
+                    ->groupStart()
+                        ->where('payment_status', 'paid')
+                        ->orWhereIn('status', ['completed', 'delivered'])
+                    ->groupEnd()
+                ->groupEnd()
+            ->groupEnd();
+
+        $orderRev = (float) ($orderBuilder->get()->getRow()->rev ?? 0.0);
+
+        // Printing requests revenue today
+        $prBuilder = $this->db->table('printing_requests')
+            ->selectSum('total_price', 'rev')
+            ->where('shop_id', $shopId)
+            ->where('status !=', 'cancelled')
+            ->groupStart()
+                ->groupStart()
+                    ->where('completed_at >=', $startOfDay)
+                    ->where('completed_at <=', $endOfDay)
+                    ->where('status', 'completed')
+                ->groupEnd()
+                ->orGroupStart()
+                    ->where('created_at >=', $startOfDay)
+                    ->where('created_at <=', $endOfDay)
+                    ->groupStart()
+                        ->where('down_payment >', 0)
+                        ->orWhere('status', 'completed')
+                    ->groupEnd()
+                ->groupEnd()
+            ->groupEnd();
+
+        $prRev = (float) ($prBuilder->get()->getRow()->rev ?? 0.0);
+
+        return round($orderRev + $prRev, 2);
     }
 
     /**
@@ -242,28 +331,34 @@ class OrderModel extends Model
         $builder = $this->db->table('orders')
             ->selectSum('total_amount', 'rev')
             ->where('shop_id', $shopId)
-            ->whereIn('status', ['delivered', 'completed']);
+            ->groupStart()
+                ->whereIn('orders.status', ['completed', 'paid', 'delivered', 'COMPLETED', 'PAID', 'DELIVERED'])
+                ->orWhere('orders.payment_status', 'paid')
+                ->orWhere('orders.pos_payment_status', 'paid')
+            ->groupEnd()
+            ->whereNotIn('orders.status', ['cancelled']);
 
         if ($from !== null) {
-            $builder->where('placed_at >=', $from);
+            $builder->where('COALESCE(orders.completed_at, orders.placed_at) >=', $from);
         }
         if ($to !== null) {
-            $builder->where('placed_at <', $to);
+            $builder->where('COALESCE(orders.completed_at, orders.placed_at) <', $to);
         }
 
         $orderRev = (float) ($builder->get()->getRow()->rev ?? 0.0);
 
-        // Include completed printing requests
+        // Include completed and active printing requests
         $prBuilder = $this->db->table('printing_requests')
             ->selectSum('total_price', 'rev')
             ->where('shop_id', $shopId)
-            ->where('status', 'completed');
+            ->whereIn('printing_requests.status', ['completed', 'paid', 'released', 'COMPLETED', 'PAID', 'RELEASED'])
+            ->whereNotIn('printing_requests.status', ['cancelled']);
 
         if ($from !== null) {
-            $prBuilder->where('created_at >=', $from);
+            $prBuilder->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) >=', $from);
         }
         if ($to !== null) {
-            $prBuilder->where('created_at <', $to);
+            $prBuilder->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) <', $to);
         }
 
         $prRev = (float) ($prBuilder->get()->getRow()->rev ?? 0.0);
@@ -293,17 +388,16 @@ class OrderModel extends Model
     }
 
     /**
-     * Current calendar date in the database server's local timezone, so
-     * date-window boundaries always align with the stored timestamps.
+     * Current calendar date in the application's timezone (Asia/Manila).
      */
     public function getLocalToday(): string
     {
-        return (string) $this->db->query('SELECT CURDATE() AS d')->getRow()->d;
+        return date('Y-m-d');
     }
 
     /**
      * Daily/monthly revenue aggregates for the Sales Overview chart.
-     * Counts only delivered/completed orders and completed print requests.
+     * Combines completed product orders and completed printing requests.
      * Range: '7' (last 7 calendar days), '30' (last 30), 'year' (current year by month).
      * When $withPrevious is true, also returns 'previous_values' and
      * 'previous_total' for the immediately preceding equal-length window.
@@ -311,21 +405,39 @@ class OrderModel extends Model
     public function getSalesChartData(int $shopId, string $range = '7', bool $withPrevious = false): array
     {
         $today = $this->getLocalToday();
+        if (empty($today)) {
+            $today = date('Y-m-d');
+        }
 
-        if ($range === 'year') {
+        $normalizedRange = match (strtolower(trim($range))) {
+            'year', '1y', '12m', 'this_year' => 'year',
+            '30', '30d', '30_days', 'month'  => '30',
+            default                          => '7',
+        };
+
+        if ($normalizedRange === 'year') {
+            $curYear = (int) date('Y', strtotime($today));
+            $prevYear = $curYear - 1;
+
             $rows = $this->db->table('orders')
-                ->select('MONTH(placed_at) AS m, SUM(total_amount) AS rev')
+                ->select('MONTH(COALESCE(orders.completed_at, orders.placed_at)) AS m, SUM(total_amount) AS rev')
                 ->where('shop_id', $shopId)
-                ->whereIn('status', ['delivered', 'completed'])
-                ->where('YEAR(placed_at) = YEAR(CURDATE())', null, false)
+                ->groupStart()
+                    ->whereIn('orders.status', ['completed', 'paid', 'delivered', 'COMPLETED', 'PAID', 'DELIVERED'])
+                    ->orWhere('orders.payment_status', 'paid')
+                    ->orWhere('orders.pos_payment_status', 'paid')
+                ->groupEnd()
+                ->whereNotIn('orders.status', ['cancelled'])
+                ->where('YEAR(COALESCE(orders.completed_at, orders.placed_at))', $curYear)
                 ->groupBy('m')
                 ->get()->getResultArray();
 
             $prRows = $this->db->table('printing_requests')
-                ->select('MONTH(created_at) AS m, SUM(total_price) AS rev')
+                ->select('MONTH(COALESCE(printing_requests.completed_at, printing_requests.created_at)) AS m, SUM(total_price) AS rev')
                 ->where('shop_id', $shopId)
-                ->where('status', 'completed')
-                ->where('YEAR(created_at) = YEAR(CURDATE())', null, false)
+                ->whereIn('printing_requests.status', ['completed', 'paid', 'released', 'COMPLETED', 'PAID', 'RELEASED'])
+                ->whereNotIn('printing_requests.status', ['cancelled'])
+                ->where('YEAR(COALESCE(printing_requests.completed_at, printing_requests.created_at))', $curYear)
                 ->groupBy('m')
                 ->get()->getResultArray();
 
@@ -333,18 +445,24 @@ class OrderModel extends Model
             $prevPrRows = [];
             if ($withPrevious) {
                 $prevRows = $this->db->table('orders')
-                    ->select('MONTH(placed_at) AS m, SUM(total_amount) AS rev')
+                    ->select('MONTH(COALESCE(orders.completed_at, orders.placed_at)) AS m, SUM(total_amount) AS rev')
                     ->where('shop_id', $shopId)
-                    ->whereIn('status', ['delivered', 'completed'])
-                    ->where('YEAR(placed_at) = YEAR(CURDATE()) - 1', null, false)
+                    ->groupStart()
+                        ->whereIn('orders.status', ['completed', 'paid', 'delivered', 'COMPLETED', 'PAID', 'DELIVERED'])
+                        ->orWhere('orders.payment_status', 'paid')
+                        ->orWhere('orders.pos_payment_status', 'paid')
+                    ->groupEnd()
+                    ->whereNotIn('orders.status', ['cancelled'])
+                    ->where('YEAR(COALESCE(orders.completed_at, orders.placed_at))', $prevYear)
                     ->groupBy('m')
                     ->get()->getResultArray();
 
                 $prevPrRows = $this->db->table('printing_requests')
-                    ->select('MONTH(created_at) AS m, SUM(total_price) AS rev')
+                    ->select('MONTH(COALESCE(printing_requests.completed_at, printing_requests.created_at)) AS m, SUM(total_price) AS rev')
                     ->where('shop_id', $shopId)
-                    ->where('status', 'completed')
-                    ->where('YEAR(created_at) = YEAR(CURDATE()) - 1', null, false)
+                    ->whereIn('printing_requests.status', ['completed', 'paid', 'released', 'COMPLETED', 'PAID', 'RELEASED'])
+                    ->whereNotIn('printing_requests.status', ['cancelled'])
+                    ->where('YEAR(COALESCE(printing_requests.completed_at, printing_requests.created_at))', $prevYear)
                     ->groupBy('m')
                     ->get()->getResultArray();
             }
@@ -370,36 +488,47 @@ class OrderModel extends Model
             $previous = [];
             for ($m = 1; $m <= 12; $m++) {
                 $labels[]   = date('M', mktime(0, 0, 0, $m, 1));
-                $values[]   = $byMonth[$m] ?? 0.0;
-                $previous[] = $byPrevMonth[$m] ?? 0.0;
+                $values[]   = round((float) ($byMonth[$m] ?? 0.0), 2);
+                $previous[] = round((float) ($byPrevMonth[$m] ?? 0.0), 2);
             }
 
             $out = ['labels' => $labels, 'values' => $values];
             if ($withPrevious) {
                 $out['previous_values'] = $previous;
-                $out['previous_total']  = array_sum($previous);
+                $out['previous_total']  = round(array_sum($previous), 2);
             }
 
             return $out;
         }
 
-        $days      = $range === '30' ? 30 : 7;
-        $start     = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
-        $prevStart = date('Y-m-d', strtotime($start . ' -' . $days . ' days'));
+        $days               = $normalizedRange === '30' ? 30 : 7;
+        $start              = date('Y-m-d', strtotime($today . ' -' . ($days - 1) . ' days'));
+        $startInclusive     = $start . ' 00:00:00';
+        $endExclusive       = date('Y-m-d 00:00:00', strtotime($today . ' +1 day'));
+        $prevStart          = date('Y-m-d', strtotime($start . ' -' . $days . ' days'));
+        $prevStartInclusive = $prevStart . ' 00:00:00';
 
         $rows = $this->db->table('orders')
-            ->select('DATE(placed_at) AS d, SUM(total_amount) AS rev')
+            ->select('DATE(COALESCE(orders.completed_at, orders.placed_at)) AS d, SUM(total_amount) AS rev')
             ->where('shop_id', $shopId)
-            ->whereIn('status', ['delivered', 'completed'])
-            ->where('placed_at >=', $start . ' 00:00:00')
+            ->groupStart()
+                ->whereIn('orders.status', ['completed', 'paid', 'delivered', 'COMPLETED', 'PAID', 'DELIVERED'])
+                ->orWhere('orders.payment_status', 'paid')
+                ->orWhere('orders.pos_payment_status', 'paid')
+            ->groupEnd()
+            ->whereNotIn('orders.status', ['cancelled'])
+            ->where('COALESCE(orders.completed_at, orders.placed_at) >=', $startInclusive)
+            ->where('COALESCE(orders.completed_at, orders.placed_at) <', $endExclusive)
             ->groupBy('d')
             ->get()->getResultArray();
 
         $prRows = $this->db->table('printing_requests')
-            ->select('DATE(created_at) AS d, SUM(total_price) AS rev')
+            ->select('DATE(COALESCE(printing_requests.completed_at, printing_requests.created_at)) AS d, SUM(total_price) AS rev')
             ->where('shop_id', $shopId)
-            ->where('status', 'completed')
-            ->where('created_at >=', $start . ' 00:00:00')
+            ->whereIn('printing_requests.status', ['completed', 'paid', 'released', 'COMPLETED', 'PAID', 'RELEASED'])
+            ->whereNotIn('printing_requests.status', ['cancelled'])
+            ->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) >=', $startInclusive)
+            ->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) <', $endExclusive)
             ->groupBy('d')
             ->get()->getResultArray();
 
@@ -407,20 +536,26 @@ class OrderModel extends Model
         $prevPrRows = [];
         if ($withPrevious) {
             $prevRows = $this->db->table('orders')
-                ->select('DATE(placed_at) AS d, SUM(total_amount) AS rev')
+                ->select('DATE(COALESCE(orders.completed_at, orders.placed_at)) AS d, SUM(total_amount) AS rev')
                 ->where('shop_id', $shopId)
-                ->whereIn('status', ['delivered', 'completed'])
-                ->where('placed_at >=', $prevStart . ' 00:00:00')
-                ->where('placed_at <', $start . ' 00:00:00')
+                ->groupStart()
+                    ->whereIn('orders.status', ['completed', 'paid', 'delivered', 'COMPLETED', 'PAID', 'DELIVERED'])
+                    ->orWhere('orders.payment_status', 'paid')
+                    ->orWhere('orders.pos_payment_status', 'paid')
+                ->groupEnd()
+                ->whereNotIn('orders.status', ['cancelled'])
+                ->where('COALESCE(orders.completed_at, orders.placed_at) >=', $prevStartInclusive)
+                ->where('COALESCE(orders.completed_at, orders.placed_at) <', $startInclusive)
                 ->groupBy('d')
                 ->get()->getResultArray();
 
             $prevPrRows = $this->db->table('printing_requests')
-                ->select('DATE(created_at) AS d, SUM(total_price) AS rev')
+                ->select('DATE(COALESCE(printing_requests.completed_at, printing_requests.created_at)) AS d, SUM(total_price) AS rev')
                 ->where('shop_id', $shopId)
-                ->where('status', 'completed')
-                ->where('created_at >=', $prevStart . ' 00:00:00')
-                ->where('created_at <', $start . ' 00:00:00')
+                ->whereIn('printing_requests.status', ['completed', 'paid', 'released', 'COMPLETED', 'PAID', 'RELEASED'])
+                ->whereNotIn('printing_requests.status', ['cancelled'])
+                ->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) >=', $prevStartInclusive)
+                ->where('COALESCE(printing_requests.completed_at, printing_requests.created_at) <', $startInclusive)
                 ->groupBy('d')
                 ->get()->getResultArray();
         }
@@ -445,17 +580,17 @@ class OrderModel extends Model
         $values   = [];
         $previous = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $d        = date('Y-m-d', strtotime($today . ' -' . $i . ' days'));
-            $pd       = date('Y-m-d', strtotime($today . ' -' . ($i + $days) . ' days'));
-            $labels[] = date('M d', strtotime($d));
-            $values[] = $byDay[$d] ?? 0.0;
-            $previous[] = $byPrevDay[$pd] ?? 0.0;
+            $d          = date('Y-m-d', strtotime($today . ' -' . $i . ' days'));
+            $pd         = date('Y-m-d', strtotime($today . ' -' . ($i + $days) . ' days'));
+            $labels[]   = date('M d', strtotime($d));
+            $values[]   = round((float) ($byDay[$d] ?? 0.0), 2);
+            $previous[] = round((float) ($byPrevDay[$pd] ?? 0.0), 2);
         }
 
         $out = ['labels' => $labels, 'values' => $values];
         if ($withPrevious) {
             $out['previous_values'] = $previous;
-            $out['previous_total']  = array_sum($previous);
+            $out['previous_total']  = round(array_sum($previous), 2);
         }
 
         return $out;

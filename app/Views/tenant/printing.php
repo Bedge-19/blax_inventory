@@ -134,18 +134,6 @@ $nextStates = [
                     <?php if (!empty($requests)): ?>
                         <?php foreach ($requests as $r): ?>
                             <?php
-$fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
-                            $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'GU';
-                            $profileImage = trim((string) ($r['profile_image_url'] ?? ''));
-                            ?>
-                            <tr class="hover:bg-surface-container-low/50 transition-colors">
-                                <td class="px-lg py-md">
-                                    <span class="font-mono text-body-md font-semibold text-primary">#<?= esc($r['request_number']) ?></span>
-                                </td>
-                                <td class="px-lg py-md">
-                                    <div class="flex items-center gap-sm">
-                                        <div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-label-sm font-bold <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?>">
-                                            <span><?= esc($initials) ?></span>
                             $fullName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? ''));
                             $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'GU';
                             $profileImage = trim((string) ($r['profile_image_url'] ?? ''));

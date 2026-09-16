@@ -86,6 +86,12 @@
 
                                         </span>
 
+                                        <?php $isPickupCard = (($order['fulfillment_method'] ?? 'delivery') === 'pickup'); ?>
+                                        <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border <?= $isPickupCard ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60' : 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60' ?>">
+                                            <span class="material-symbols-outlined text-[13px]"><?= $isPickupCard ? 'storefront' : 'local_shipping' ?></span>
+                                            <span><?= $isPickupCard ? 'Store Pick-up' : 'Doorstep Delivery' ?></span>
+                                        </span>
+
                                         <span class="text-on-surface-variant text-label-sm">Ordered on <?= esc($orderedOn) ?></span>
 
                                     </div>
@@ -235,7 +241,7 @@
 
                         </div>
 
-                        <div class="flex md:flex-col justify-end gap-sm md:w-48">
+                        <div class="flex md:flex-col justify-end gap-sm md:w-52 shrink-0">
 
                             <?php if ($orderStatus !== 'cancelled'): ?>
 
@@ -245,27 +251,50 @@
 
                                 <?php elseif (($order['fulfillment_method'] ?? 'delivery') === 'pickup'): ?>
 
-                                    <?php if ($orderStatus !== 'pending'): ?>
+                                    <?php 
+                                        $shopLoc = trim(($order['shop_address'] ?? '') . ' ' . ($order['shop_city'] ?? ''));
+                                        if ($shopLoc === '') $shopLoc = 'Poblacion, Polomolok';
+                                    ?>
+                                    <?php if ($orderStatus === 'ready_for_pickup'): ?>
                                         <button type="button" 
                                                 class="order-qr-btn flex-1 md:flex-none bg-primary text-on-primary py-sm px-md rounded-lg font-button text-button hover:bg-primary-container transition-all flex items-center justify-center gap-xs shadow-sm active:scale-95"
                                                 data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>"
-                                                data-shop="<?= esc($order['shop_name'] ?? 'Shop') ?>"
+                                                data-shop="<?= esc($order['shop_name'] ?? 'Storefront') ?>"
+                                                data-location="<?= esc($shopLoc) ?>"
                                                 data-status="<?= esc(humanize_status($orderStatus)) ?>"
                                                 data-date="<?= esc($orderedOn) ?>"
                                                 data-paid="<?= ($order['payment_status'] ?? '') === 'paid' ? 'PAID' : 'UNPAID' ?>">
                                             <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
-                                            <span>Pick-up QR</span>
+                                            <span>View Pick-up QR Code</span>
                                         </button>
                                     <?php else: ?>
-                                        <span class="text-xs text-on-surface-variant font-medium text-center py-sm px-md bg-surface-container rounded-lg">Awaiting Confirmation</span>
+                                        <span class="text-xs text-on-surface-variant/70 font-medium text-center py-sm px-md bg-surface-container/70 border border-outline-variant/30 rounded-lg flex items-center justify-center gap-1">
+                                            <span class="material-symbols-outlined text-[15px] text-outline">schedule</span>
+                                            <span>QR available when ready</span>
+                                        </span>
                                     <?php endif; ?>
 
                                 <?php else: ?>
 
-                                    <button type="button" class="flex-1 md:flex-none bg-primary text-on-primary py-sm px-md rounded-lg font-button text-button hover:bg-primary-container transition-colors">Track Order</button>
+                                    <a href="<?= base_url('customer/orders/track/' . esc($order['order_number'] ?? $order['id'])) ?>" 
+                                       class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition gap-1.5 flex-1 md:flex-none">
+                                        <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                                        <span>Track Order</span>
+                                    </a>
 
                                 <?php endif; ?>
 
+                            <?php endif; ?>
+
+                            <!-- Cancel Order Button: only visible strictly if status is pending or processing -->
+                            <?php if (in_array($orderStatus, ['pending', 'processing'], true)): ?>
+                                <button type="button" 
+                                        class="cancel-order-btn flex-1 md:flex-none border border-error/50 text-error hover:bg-error-container/20 py-sm px-md rounded-lg font-button text-button transition-colors flex items-center justify-center gap-xs"
+                                        data-id="<?= (int) $order['id'] ?>"
+                                        data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>">
+                                    <span class="material-symbols-outlined text-[16px]">close</span>
+                                    <span>Cancel Order</span>
+                                </button>
                             <?php endif; ?>
 
                             <button type="button" class="order-details-btn flex-1 md:flex-none border border-outline-variant text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-surface-container-high transition-colors" data-order='<?= esc(json_encode($order), 'attr') ?>'>Order Details</button>
@@ -360,29 +389,76 @@
         <div class="flex justify-between items-center w-full border-b border-outline-variant/20 pb-md">
             <div class="flex items-center gap-xs text-primary font-bold">
                 <span class="material-symbols-outlined text-2xl">qr_code_2</span>
-                <span class="text-title-md">Store Pick-up QR</span>
+                <span class="text-title-md">Store Pick-up Pass</span>
             </div>
             <button type="button" id="order-qr-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
                 <span class="material-symbols-outlined">close</span>
             </button>
         </div>
         
-        <div class="flex flex-col items-center justify-center bg-white p-6 rounded-2xl shadow-inner border border-slate-100">
-            <div id="order-qr-canvas" class="flex justify-center items-center min-w-[200px] min-h-[200px]"></div>
+        <div class="flex flex-col items-center justify-center bg-white p-6 rounded-2xl shadow-inner border border-slate-100 w-full max-w-[240px] aspect-square mx-auto">
+            <div id="order-qr-canvas" class="flex justify-center items-center w-full h-full"></div>
         </div>
         
-        <div class="flex flex-col items-center w-full">
-            <span class="text-[10px] uppercase tracking-widest text-outline font-bold">Order Number</span>
-            <span id="order-qr-number" class="text-headline-sm font-mono font-bold text-primary mt-0.5">#ORD-00000</span>
+        <div class="flex flex-col items-center w-full space-y-1">
+            <span class="text-[10px] uppercase tracking-widest text-outline font-bold">Order Identifier</span>
+            <span id="order-qr-number" class="text-headline-sm font-mono font-bold text-primary">#ORD-00000</span>
+            
             <div class="flex items-center justify-center gap-2 mt-1">
                 <span id="order-qr-shop" class="text-xs font-semibold text-on-surface"></span>
                 <span class="text-on-surface-variant/40">•</span>
                 <span id="order-qr-payment" class="text-[11px] font-bold px-2 py-0.5 rounded-full"></span>
             </div>
-            <p class="text-xs text-on-surface-variant/80 mt-3 leading-relaxed">Present this QR code to the store attendant upon pick-up.</p>
+
+            <div id="order-qr-location-box" class="text-[11px] text-on-surface-variant/90 mt-1 flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
+                <span id="order-qr-location">Poblacion, Polomolok</span>
+            </div>
+
+            <p id="order-qr-instructions" class="text-xs text-on-surface-variant/80 mt-2.5 leading-relaxed italic px-2">
+                Present this QR code to the cashier at <span id="order-qr-inst-shop" class="font-semibold text-on-surface not-italic">the store</span> to verify and collect your order.
+            </p>
+
+            <div class="mt-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-1.5 text-amber-800 text-[11px] font-medium text-left w-full">
+                <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">brightness_high</span>
+                <span>Turn up screen brightness for fast mobile scanner reading</span>
+            </div>
         </div>
 
         <button type="button" id="order-qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+    </div>
+</div>
+
+<!-- Cancel Order Confirmation Modal -->
+<div id="cancel-order-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="cancel-order-overlay"></div>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-md p-lg md:p-xl flex flex-col gap-md z-10">
+        <div class="flex items-center gap-sm">
+            <div class="w-12 h-12 rounded-2xl bg-error-container/20 flex items-center justify-center shrink-0 text-error">
+                <span class="material-symbols-outlined text-2xl">warning</span>
+            </div>
+            <div>
+                <h3 class="text-title-lg font-bold text-on-surface" id="cancel-modal-title">Cancel Order?</h3>
+                <p class="text-xs text-on-surface-variant font-medium">Permanent Action</p>
+            </div>
+        </div>
+
+        <p class="text-body-md text-on-surface-variant leading-relaxed">
+            Are you sure you want to cancel this order? This action cannot be undone.
+        </p>
+
+        <div id="cancel-modal-error" class="hidden p-sm bg-error-container/20 border border-error-container/50 rounded-xl text-xs text-error font-semibold flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">error</span>
+            <span id="cancel-error-text">Failed to cancel order.</span>
+        </div>
+
+        <div class="flex items-center gap-sm pt-sm border-t border-outline-variant/20">
+            <button type="button" id="cancel-modal-keep" class="flex-1 py-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-button text-button transition-all font-semibold">Keep Order</button>
+            <button type="button" id="cancel-modal-confirm" class="flex-1 py-md bg-error hover:bg-error/90 text-white rounded-xl font-button text-button transition-all font-semibold flex items-center justify-center gap-xs shadow-md active:scale-95">
+                <span id="cancel-spinner" class="material-symbols-outlined text-[16px] animate-spin hidden">progress_activity</span>
+                <span id="cancel-confirm-text">Yes, Cancel Order</span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -414,20 +490,24 @@
         });
     });
 
-    // QR Modal logic
-    var qrModal   = document.getElementById('order-qr-modal');
-    var qrOverlay = document.getElementById('order-qr-overlay');
-    var qrClose   = document.getElementById('order-qr-close');
-    var qrDone    = document.getElementById('order-qr-done');
-    var qrCanvas  = document.getElementById('order-qr-canvas');
-    var qrNumber  = document.getElementById('order-qr-number');
-    var qrShop    = document.getElementById('order-qr-shop');
-    var qrPayment = document.getElementById('order-qr-payment');
+    // Store Pick-up QR Modal logic
+    var qrModal    = document.getElementById('order-qr-modal');
+    var qrOverlay  = document.getElementById('order-qr-overlay');
+    var qrClose    = document.getElementById('order-qr-close');
+    var qrDone     = document.getElementById('order-qr-done');
+    var qrCanvas   = document.getElementById('order-qr-canvas');
+    var qrNumber   = document.getElementById('order-qr-number');
+    var qrShop     = document.getElementById('order-qr-shop');
+    var qrPayment  = document.getElementById('order-qr-payment');
+    var qrLocation = document.getElementById('order-qr-location');
+    var qrInstShop = document.getElementById('order-qr-inst-shop');
 
-    function openQr(orderNum, shopName, isPaid) {
+    function openQr(orderNum, shopName, isPaid, locationText) {
         if (!qrModal) return;
         qrNumber.textContent = '#' + orderNum;
         qrShop.textContent = shopName || 'Storefront';
+        if (qrInstShop) qrInstShop.textContent = shopName || 'the store attendant';
+        if (qrLocation) qrLocation.textContent = locationText || 'Poblacion, Polomolok';
         
         if (isPaid === 'PAID') {
             qrPayment.textContent = 'PAID ONLINE';
@@ -443,7 +523,7 @@
                 text: orderNum,
                 width: 200,
                 height: 200,
-                colorDark: '#1e293b',
+                colorDark: '#0f172a',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
             });
@@ -461,13 +541,117 @@
     document.querySelectorAll('.order-qr-btn').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
-            openQr(btn.dataset.number, btn.dataset.shop, btn.dataset.paid);
+            openQr(btn.dataset.number, btn.dataset.shop, btn.dataset.paid, btn.dataset.location);
         });
     });
 
     if (qrOverlay) qrOverlay.addEventListener('click', closeQr);
     if (qrClose) qrClose.addEventListener('click', closeQr);
     if (qrDone) qrDone.addEventListener('click', closeQr);
+
+    // Cancel Order modal logic
+    var cancelModal   = document.getElementById('cancel-order-modal');
+    var cancelOverlay = document.getElementById('cancel-order-overlay');
+    var cancelKeep    = document.getElementById('cancel-modal-keep');
+    var cancelConfirm = document.getElementById('cancel-modal-confirm');
+    var cancelTitle   = document.getElementById('cancel-modal-title');
+    var cancelErr     = document.getElementById('cancel-modal-error');
+    var cancelErrText = document.getElementById('cancel-error-text');
+    var cancelSpinner = document.getElementById('cancel-spinner');
+    var cancelText    = document.getElementById('cancel-confirm-text');
+
+    var currentCancelId = null;
+
+    function openCancelModal(orderId, orderNumber) {
+        currentCancelId = orderId;
+        if (cancelTitle) {
+            cancelTitle.textContent = 'Cancel Order #' + orderNumber + '?';
+        }
+        if (cancelErr) {
+            cancelErr.classList.add('hidden');
+        }
+        if (cancelModal) {
+            cancelModal.classList.remove('hidden');
+        }
+    }
+
+    function closeCancelModal() {
+        if (cancelModal) {
+            cancelModal.classList.add('hidden');
+        }
+        currentCancelId = null;
+    }
+
+    if (cancelOverlay) cancelOverlay.addEventListener('click', closeCancelModal);
+    if (cancelKeep) cancelKeep.addEventListener('click', closeCancelModal);
+
+    document.querySelectorAll('.cancel-order-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openCancelModal(this.getAttribute('data-id'), this.getAttribute('data-number'));
+        });
+    });
+
+    if (cancelConfirm) {
+        cancelConfirm.addEventListener('click', function() {
+            if (!currentCancelId) return;
+
+            cancelSpinner.classList.remove('hidden');
+            cancelText.textContent = 'Cancelling...';
+            cancelConfirm.disabled = true;
+
+            var csrfToken = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+            var csrfHeader = (typeof window.getCsrfHeader === 'function') ? window.getCsrfHeader() : 'X-CSRF-TOKEN';
+
+            fetch('<?= base_url('customer/orders') ?>/' + currentCancelId + '/cancel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    [csrfHeader]: csrfToken
+                },
+                body: new URLSearchParams({
+                    'order_id': currentCancelId
+                })
+            })
+            .then(function(res) {
+                return res.json().then(function(data) {
+                    return { ok: res.ok, status: res.status, data: data };
+                });
+            })
+            .then(function(result) {
+                cancelSpinner.classList.add('hidden');
+                cancelText.textContent = 'Yes, Cancel Order';
+                cancelConfirm.disabled = false;
+
+                if (result.ok && result.data && result.data.success) {
+                    closeCancelModal();
+                    if (typeof showToast === 'function') {
+                        showToast(result.data.message || 'Order cancelled successfully.', 'success');
+                    }
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 400);
+                } else {
+                    var errorMsg = (result.data && result.data.error) ? result.data.error : 'Failed to cancel order.';
+                    if (cancelErr && cancelErrText) {
+                        cancelErrText.textContent = errorMsg;
+                        cancelErr.classList.remove('hidden');
+                    }
+                }
+            })
+            .catch(function(err) {
+                cancelSpinner.classList.add('hidden');
+                cancelText.textContent = 'Yes, Cancel Order';
+                cancelConfirm.disabled = false;
+                if (cancelErr && cancelErrText) {
+                    cancelErrText.textContent = 'Network error. Please try again.';
+                    cancelErr.classList.remove('hidden');
+                }
+            });
+        });
+    }
 
     // Order Details Modal logic
     var odModal   = document.getElementById('order-details-modal');
