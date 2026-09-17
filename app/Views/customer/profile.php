@@ -266,7 +266,7 @@
 
         </div>
 
-        <form action="<?= base_url('customer/profile/update') ?>" method="POST" enctype="multipart/form-data" class="p-lg space-y-lg overflow-y-auto max-h-[calc(100vh-160px)]">
+        <form action="<?= base_url('customer/profile/update') ?>" method="POST" enctype="multipart/form-data" class="p-lg space-y-lg overflow-y-auto max-h-[calc(100vh_-_160px)]">
 
             <?= csrf_field() ?>
 

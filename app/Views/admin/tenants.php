@@ -180,7 +180,7 @@
 
 <div id="permit-preview-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md" role="dialog" aria-modal="true" aria-labelledby="permit-preview-title" aria-hidden="true">
     <div class="absolute inset-0 bg-black/50" data-permit-modal-close></div>
-    <div class="relative flex h-[calc(100vh-2rem)] max-h-[850px] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-2xl">
+    <div class="relative flex h-[calc(100vh_-_2rem)] max-h-[850px] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-2xl">
         <div class="flex flex-wrap items-center justify-between gap-sm border-b border-outline-variant/20 px-md py-sm">
             <h3 id="permit-preview-title" class="text-title-lg font-bold text-on-surface">Business Permit</h3>
             <div class="flex items-center gap-xs">

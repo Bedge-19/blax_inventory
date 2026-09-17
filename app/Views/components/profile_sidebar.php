@@ -12,7 +12,7 @@
 </div>
 
 <!-- Desktop Sidebar -->
-<aside class="w-64 flex-shrink-0 hidden md:block sticky top-20 h-[calc(100vh-80px)] bg-surface-container-lowest border-r border-outline-variant/30 py-lg">
+<aside class="w-64 flex-shrink-0 hidden md:block sticky top-20 h-[calc(100vh_-_80px)] bg-surface-container-lowest border-r border-outline-variant/30 py-lg">
 
     <div class="px-lg mb-lg">
 

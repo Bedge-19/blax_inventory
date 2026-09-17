@@ -105,25 +105,40 @@
                 </a>
 
                 <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'withdrawals' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/withdrawals') ?>">
-
                     <span class="material-symbols-outlined <?= $activeNav === 'withdrawals' ? 'fill-icon' : '' ?>">payments</span>
                     <span class="text-label-sm">Transfer & Withdrawal</span>
+                </a>
 
+                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'settings' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/settings') ?>">
+                    <span class="material-symbols-outlined <?= $activeNav === 'settings' ? 'fill-icon' : '' ?>">settings</span>
+                    <span class="text-label-sm">Settings</span>
                 </a>
 
             </nav>
 
-            <div class="mt-auto pt-xl space-y-1 border-t border-outline-variant/10">
-
-
-
-                <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
-
-                    <span class="material-symbols-outlined">logout</span>
-                    <span class="text-label-sm">Sign Out</span>
-
+            <div class="mt-auto pt-md space-y-2 border-t border-outline-variant/10">
+                <!-- Merchant Profile Widget -->
+                <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-3 p-2 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-high border border-outline-variant/30 transition-all group shadow-2xs">
+                    <div class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-primary/20">
+                        <?php if (!empty($shop['logo_url'])): ?>
+                            <img src="<?= base_url($shop['logo_url']) ?>" alt="<?= esc($shopName) ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <span><?= esc(strtoupper(substr($shopName, 0, 2))) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors"><?= esc($shopName) ?></p>
+                        <p class="text-[10px] text-on-surface-variant/80 truncate flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active Merchant
+                        </p>
+                    </div>
+                    <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-transform group-hover:translate-x-0.5">chevron_right</span>
                 </a>
 
+                <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
+                    <span class="material-symbols-outlined text-[18px]">logout</span>
+                    <span class="text-label-sm font-semibold">Sign Out</span>
+                </a>
             </div>
 
         </aside>
@@ -165,7 +180,7 @@
 
                         </button>
 
-                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 z-50 overflow-hidden">
+                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 z-50 overflow-hidden">
 
                             <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between">
 

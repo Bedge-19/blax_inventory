@@ -24,6 +24,12 @@
     /* Map Container Style overrides */
     .leaflet-container {
         font-family: inherit;
+        width: 100%;
+        height: 100%;
+        background-color: #f8fafc;
+    }
+    .leaflet-tile {
+        visibility: inherit !important;
     }
     .track-popup .leaflet-popup-content-wrapper {
         border-radius: 12px;
@@ -197,53 +203,7 @@
                     </div>
                 </div>
 
-                <!-- 3. Courier / Driver Info Card (if assigned) -->
-                <?php if (!empty($courierName) && strtolower($order['status'] ?? '') !== 'cancelled'): ?>
-                    <div class="bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 rounded-2xl p-4 md:p-5 shadow-xs">
-                        <div class="flex items-center justify-between mb-3.5">
-                            <span class="text-xs uppercase font-medium text-on-surface-variant/70 tracking-wider">Assigned Delivery Rider</span>
-                            <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
-                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                                Active on Route
-                            </span>
-                        </div>
-
-                        <div class="flex items-center gap-3.5">
-                            <!-- Avatar -->
-                            <div class="relative w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border border-primary/20 shrink-0">
-                                <span class="material-symbols-outlined text-[26px]">sports_motorsports</span>
-                                <span class="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
-                            </div>
-
-                            <!-- Driver & Vehicle Details -->
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-sm font-bold text-on-surface truncate">
-                                    <?= esc($courierName) ?>
-                                </h3>
-                                <div class="text-xs text-on-surface-variant/80 flex items-center gap-1 mt-0.5">
-                                    <span class="material-symbols-outlined text-[14px] text-outline">two_wheeler</span>
-                                    <span class="truncate"><?= esc($courierVehicle) ?></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Quick Actions: Call & Message -->
-                        <div class="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-outline-variant/20">
-                            <a href="tel:<?= esc($courierPhone) ?>" 
-                               class="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-surface-container-highest hover:bg-outline-variant text-on-surface text-xs font-semibold rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-[16px] text-primary">call</span>
-                                <span>Call Driver</span>
-                            </a>
-                            <a href="sms:<?= esc($courierPhone) ?>" 
-                               class="inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors">
-                                <span class="material-symbols-outlined text-[16px]">chat</span>
-                                <span>Message</span>
-                            </a>
-                        </div>
-                    </div>
-                <?php endif; ?>
-
-                <!-- 4. Vertical Milestone Stepper -->
+                <!-- Milestone Stepper -->
                 <div class="bg-surface-container-lowest dark:bg-surface-container-low border border-outline-variant/30 rounded-2xl p-5 shadow-xs">
                     <h2 class="text-sm font-bold text-on-surface tracking-tight mb-4 flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px] text-primary">timeline</span>
@@ -379,8 +339,11 @@
                 <div class="sticky top-20">
                     
                     <!-- Map Card Container -->
-                    <div class="relative w-full rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 bg-surface-container-lowest dark:bg-surface-container-low min-h-[500px] h-[calc(100vh-140px)] flex flex-col">
+                    <div class="relative w-full rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 bg-slate-100 min-h-[550px] h-[calc(100vh_-_140px)] flex flex-col">
                         
+                        <!-- The Actual Leaflet Map Element -->
+                        <div id="trackMap" class="w-full h-full flex-grow z-[1]" style="min-height:400px;"></div>
+
                         <!-- Floating Header Controls -->
                         <div class="absolute top-4 left-4 right-4 z-[400] flex items-center justify-between pointer-events-none">
                             
@@ -404,9 +367,6 @@
                             </button>
                         </div>
 
-                        <!-- The Actual Leaflet Map Element -->
-                        <div id="trackMap" class="w-full h-full flex-grow z-[1]"></div>
-
                         <!-- Floating Footer Map Legend & Route Details -->
                         <div class="absolute bottom-4 left-4 right-4 z-[400] bg-white/95 dark:bg-gray-900/90 backdrop-blur-md p-3 rounded-xl border border-outline-variant/30 shadow-md">
                             <div class="grid grid-cols-3 gap-2 text-center divide-x divide-outline-variant/30">
@@ -415,7 +375,7 @@
                                         <span class="w-2.5 h-2.5 rounded-full bg-slate-900 dark:bg-slate-300 inline-block"></span>
                                         <span>Store Hub</span>
                                     </div>
-                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
                                         <?= esc($shop['shop_name'] ?? 'Merchant') ?>
                                     </span>
                                 </div>
@@ -425,7 +385,7 @@
                                         <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
                                         <span>Courier</span>
                                     </div>
-                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
                                         <?= esc($courierName) ?>
                                     </span>
                                 </div>
@@ -435,7 +395,7 @@
                                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
                                         <span>Destination</span>
                                     </div>
-                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full">
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
                                         Customer Address
                                     </span>
                                 </div>
@@ -516,20 +476,33 @@
         });
     }
 
+    function triggerInvalidate() {
+        if (trackMap) {
+            trackMap.invalidateSize({ pan: false, debounceMoveend: true });
+        }
+    }
+
     function initTrackMap() {
         const container = document.getElementById('trackMap');
         if (!container || typeof L === 'undefined') return;
 
+        if (trackMap) {
+            trackMap.remove();
+            trackMap = null;
+        }
+
         // Initialize map centered on courier coordinates
         trackMap = L.map('trackMap', {
             zoomControl: true,
-            scrollWheelZoom: true
+            scrollWheelZoom: true,
+            fadeAnimation: false
         }).setView(COURIER_COORDS, 14);
 
         // OpenStreetMap Tile Layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19
+            maxZoom: 19,
+            subdomains: ['a', 'b', 'c']
         }).addTo(trackMap);
 
         // 1. Store Marker
@@ -581,15 +554,11 @@
         // Open courier popup by default on load
         setTimeout(() => {
             if (courierMarker) courierMarker.openPopup();
-        }, 500);
+        }, 400);
 
-        // Invalidate size to guarantee crisp tile rendering without blank spots
-        [100, 300, 600, 1000, 1500].forEach(delay => {
-            setTimeout(() => { 
-                if (trackMap) {
-                    trackMap.invalidateSize();
-                }
-            }, delay);
+        // Invalidate size on multiple progressive ticks to guarantee full tile grid coverage
+        [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
+            setTimeout(triggerInvalidate, delay);
         });
     }
 
@@ -624,9 +593,7 @@
         initTrackMap();
     }
 
-    window.addEventListener('resize', () => {
-        if (trackMap) trackMap.invalidateSize();
-    });
+    window.addEventListener('resize', triggerInvalidate);
 </script>
 
 <?= $this->endSection() ?>

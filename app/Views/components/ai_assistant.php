@@ -14,7 +14,7 @@
 <!-- AI Assistant Floating Widget -->
 <div id="ai-modal" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 pointer-events-none hidden justify-end items-end p-0">
 
-    <div class="glass-panel w-[calc(100vw-32px)] sm:w-[380px] h-[500px] max-h-[calc(100vh-80px)] rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] flex flex-col pointer-events-auto transition-all duration-300 border border-outline-variant/30">
+    <div class="glass-panel w-[calc(100vw_-_32px)] sm:w-[380px] h-[500px] max-h-[calc(100vh_-_80px)] rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] flex flex-col pointer-events-auto transition-all duration-300 border border-outline-variant/30">
 
         <div class="px-md py-sm border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest/60 rounded-t-2xl">
 
@@ -41,6 +41,36 @@
 
             </button>
 
+        </div>
+
+        <!-- FAQ & Quick Help Bar -->
+        <div class="px-md py-1.5 bg-surface-container/60 border-b border-outline-variant/20 flex items-center justify-between text-xs">
+            <button type="button" id="toggle-ai-faq" class="text-primary font-semibold flex items-center gap-1 hover:underline">
+                <span class="material-symbols-outlined text-[15px]">help_outline</span>
+                <span>FAQ & Suggested Prompts</span>
+                <span id="faq-chevron" class="material-symbols-outlined text-[14px]">expand_more</span>
+            </button>
+            <span class="text-[10px] text-outline">Tap prompt to ask</span>
+        </div>
+
+        <!-- Collapsible FAQ Drawer -->
+        <div id="ai-faq-drawer" class="hidden bg-surface-container-low p-3 border-b border-outline-variant/30 space-y-1.5 text-xs max-h-44 overflow-y-auto">
+            <button type="button" class="faq-prompt-btn w-full text-left p-2 rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2" data-prompt="How do I search or ask about a product?">
+                <span class="material-symbols-outlined text-[15px] text-primary">search</span>
+                <span class="font-medium">How do I ask about a product?</span>
+            </button>
+            <button type="button" class="faq-prompt-btn w-full text-left p-2 rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2" data-prompt="How do I track my order and get my store pickup QR code?">
+                <span class="material-symbols-outlined text-[15px] text-primary">qr_code_2</span>
+                <span class="font-medium">How do I track orders or use pickup QR?</span>
+            </button>
+            <button type="button" class="faq-prompt-btn w-full text-left p-2 rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2" data-prompt="How does document printing and downpayment work?">
+                <span class="material-symbols-outlined text-[15px] text-primary">print</span>
+                <span class="font-medium">How do PDF printing services work?</span>
+            </button>
+            <button type="button" class="faq-prompt-btn w-full text-left p-2 rounded-lg bg-surface-container hover:bg-primary/10 hover:text-primary transition-colors flex items-center gap-2" data-prompt="How do I report a suspicious or fraudulent shop?">
+                <span class="material-symbols-outlined text-[15px] text-primary">flag</span>
+                <span class="font-medium">How do I report a store or fake item?</span>
+            </button>
         </div>
 
         <!-- Chat History -->
@@ -288,6 +318,30 @@
             busy = false;
             input.focus();
         }
+    });
+
+    // FAQ Drawer Toggle & Prompt Dispatch
+    const faqToggleBtn = document.getElementById('toggle-ai-faq');
+    const faqDrawer = document.getElementById('ai-faq-drawer');
+    const faqChevron = document.getElementById('faq-chevron');
+
+    if (faqToggleBtn && faqDrawer) {
+        faqToggleBtn.addEventListener('click', () => {
+            faqDrawer.classList.toggle('hidden');
+            if (faqChevron) faqChevron.classList.toggle('rotate-180');
+        });
+    }
+
+    document.querySelectorAll('.faq-prompt-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const prompt = btn.dataset.prompt;
+            if (prompt && input) {
+                input.value = prompt;
+                if (faqDrawer) faqDrawer.classList.add('hidden');
+                if (faqChevron) faqChevron.classList.remove('rotate-180');
+                form.dispatchEvent(new Event('submit', { cancelable: true }));
+            }
+        });
     });
 })();
 </script>

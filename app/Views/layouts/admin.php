@@ -188,7 +188,7 @@
                             <?php endif; ?>
                         </button>
 
-                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/30 z-50 overflow-hidden">
+                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/30 z-50 overflow-hidden">
                             <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between">
                                 <div class="flex items-center gap-xs">
                                     <span class="text-label-sm font-semibold text-on-surface">Admin Alerts</span>
