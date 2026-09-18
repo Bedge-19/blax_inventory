@@ -55,6 +55,9 @@ $routes->get('cart/remove/(:num)', 'Cart::remove/$1');
 $routes->get('buy-now', 'Checkout::direct');
 $routes->post('buy-now/place', 'Checkout::placeOrder', ['filter' => 'actionThrottle']);
 
+// Dedicated Search Page
+$routes->get('search', 'Customer::search');
+
 // Customer Dashboard / Account
 $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
     $routes->get('orders', 'Customer::orders');
@@ -70,6 +73,8 @@ $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
     $routes->post('addresses/delete', 'Customer::deleteAddress');
     $routes->post('addresses/set-default', 'Customer::setDefaultAddress');
     $routes->post('favorites/remove', 'Customer::unfavoriteShop');
+    $routes->post('favorites/add', 'Customer::favoriteShop');
+    $routes->post('shop/report', 'Customer::reportShop', ['filter' => 'actionThrottle']);
 });
 
 // Rating & Review Routes
@@ -90,6 +95,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->get('orders/export', 'Tenant::ordersExport');
     $routes->get('orders/items/(:num)', 'Tenant::orderItems/$1');
     $routes->get('printing', 'Tenant::printing');
+    $routes->get('printing/view/(:num)', 'Tenant::viewPrintFile/$1');
     $routes->get('deliveries', 'Tenant::deliveries');
     $routes->get('delivery', 'Tenant::deliveries');
     $routes->get('deliveries/export', 'Tenant::deliveriesExport');
@@ -125,6 +131,9 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('pos/complete-pickup', 'Tenant::posCompletePickup');
     $routes->post('pos/complete-walkin', 'Tenant::posCompleteWalkin');
     $routes->get('pos', 'Tenant::pos');
+    $routes->get('deliveries/(:num)', 'Tenant::deliveryDetail/$1');
+    $routes->get('orders/detail-json/(:num)', 'Tenant::orderDetailJson/$1');
+    $routes->post('compliance/report-customer', 'Tenant::reportCustomer');
 });
 
 // Admin Routes
@@ -146,8 +155,12 @@ $routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->post('tenants/approve', 'Admin::approveTenant');
     $routes->post('tenants/reject', 'Admin::rejectTenant');
     $routes->get('tenants/permit/(:num)', 'Admin::tenantPermit/$1');
-$routes->post('payments/update-status', 'Admin::updatePayoutStatus');
+    $routes->post('payments/update-status', 'Admin::updatePayoutStatus');
+    $routes->post('payments/deduction', 'Admin::updateDeductionPercent');
     $routes->post('compliance/resolve', 'Admin::resolveCompliance');
+    $routes->post('compliance/warn', 'Admin::warnCompliance');
+    $routes->post('compliance/suspend', 'Admin::suspendCompliance');
+    $routes->post('compliance/deactivate', 'Admin::suspendCompliance');
     $routes->post('content/save', 'Admin::saveContent');
     $routes->post('content/upload', 'Admin::uploadContentImage');
 });

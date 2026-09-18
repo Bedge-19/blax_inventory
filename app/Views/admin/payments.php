@@ -23,9 +23,16 @@
             <p class="text-xs text-on-surface-variant mt-xs">Total disbursed via GCash</p>
         </div>
         <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow">
-            <div class="flex justify-between items-start mb-2"><p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Admin Fee (3%)</p><span class="material-symbols-outlined text-primary">payments</span></div>
-            <h3 class="text-headline-md font-bold text-primary">3%</h3>
-            <p class="text-xs text-on-surface-variant mt-xs">Deducted on each GCash withdrawal</p>
+            <div class="flex justify-between items-start mb-2"><p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Platform Deduction</p><span class="material-symbols-outlined text-primary">percent</span></div>
+            <div class="flex items-baseline gap-2">
+                <h3 class="text-headline-md font-bold text-primary"><?= number_format($deduction_percent ?? 3.00, 2) ?>%</h3>
+                <span class="text-xs text-on-surface-variant">Fee rate</span>
+            </div>
+            <form action="<?= base_url('admin/payments/deduction') ?>" method="POST" class="mt-2 flex items-center gap-1.5">
+                <?= csrf_field() ?>
+                <input type="number" step="0.01" min="0" max="50" name="deduction_percent" value="<?= esc($deduction_percent ?? 3.00) ?>" class="w-20 px-2 py-1 text-xs bg-surface-container-low border border-outline-variant rounded-lg font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-none">
+                <button type="submit" class="px-2.5 py-1 text-xs font-bold bg-primary text-on-primary rounded-lg hover:bg-primary/90 transition-all">Save %</button>
+            </form>
         </div>
     </section>
 
@@ -54,15 +61,22 @@
         <div class="responsive-table">
             <table class="w-full text-left border-collapse">
                 <thead><tr class="bg-surface-container-low/50 text-label-sm text-on-surface-variant/70 uppercase">
-                    <th class="py-sm px-md">Request ID</th><th class="py-sm px-md">Merchant</th><th class="py-sm px-md">Amount</th><th class="py-sm px-md">GCash Fee (3%)</th><th class="py-sm px-md">Method</th><th class="py-sm px-md">Date Requested</th><th class="py-sm px-md">Status</th><th class="py-sm px-md text-right">Actions</th>
+                    <th class="py-sm px-md">Request ID</th><th class="py-sm px-md">Merchant</th><th class="py-sm px-md">Gross Amount</th><th class="py-sm px-md">Deduction %</th><th class="py-sm px-md">Admin Fee</th><th class="py-sm px-md">Net Disbursed</th><th class="py-sm px-md">Method</th><th class="py-sm px-md">Date Requested</th><th class="py-sm px-md">Status</th><th class="py-sm px-md text-right">Actions</th>
                 </tr></thead>
                 <tbody>
                     <?php if (!empty($payment_requests)): foreach ($payment_requests as $p): ?>
+                        <?php
+                            $rate = (float)($p['deduction_percent'] ?? $deduction_percent ?? 3.00);
+                            $fee = (float)(($p['fee'] ?? 0) > 0 ? $p['fee'] : round($p['amount'] * ($rate / 100), 2));
+                            $net = max(0, $p['amount'] - $fee);
+                        ?>
                         <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low">
                             <td class="py-md px-md font-mono text-sm font-semibold text-primary">#<?= esc($p['reference_number'] ?? ('WD-'.$p['id'])) ?></td>
                             <td class="py-md px-md text-sm"><?= esc($p['shop_name'] ?? 'Merchant') ?></td>
                             <td class="py-md px-md font-bold text-on-surface">₱<?= number_format($p['amount'],2) ?></td>
-                            <td class="py-md px-md text-xs text-tertiary font-semibold">₱<?= number_format(($p['fee'] ?? 0) >0 ? $p['fee'] : $p['amount']*0.03,2) ?></td>
+                            <td class="py-md px-md text-xs font-mono font-semibold text-on-surface-variant"><?= number_format($rate, 2) ?>%</td>
+                            <td class="py-md px-md text-xs text-amber-700 font-semibold">-₱<?= number_format($fee, 2) ?></td>
+                            <td class="py-md px-md text-xs text-emerald-700 font-bold">₱<?= number_format($net, 2) ?></td>
                             <td class="py-md px-md"><span class="inline-flex items-center gap-xs px-sm py-xs bg-primary-container/30 text-on-primary-container rounded-full text-xs font-bold"><span class="material-symbols-outlined text-xs">phone_iphone</span> GCash</span></td>
                             <td class="py-md px-md text-xs text-on-surface-variant"><?= date('M d, Y H:i', strtotime($p['requested_at'] ?? $p['created_at'] ?? 'now')) ?></td>
                             <td class="py-md px-md"><?= status_badge($p['status'] ?? 'pending') ?></td>
@@ -103,7 +117,7 @@
                         </tr>
                     <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="8" class="py-lg text-center text-on-surface-variant">No GCash payment requests found.</td></tr>
+                        <tr><td colspan="10" class="py-lg text-center text-on-surface-variant">No GCash payment requests found.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

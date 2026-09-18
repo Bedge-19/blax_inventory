@@ -148,13 +148,14 @@ class Admin extends BaseController
         $pendingCount = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->countAllResults();
 
         return view('admin/payments', [
-            'payment_requests' => $paymentRequests,
-            'payments'         => $paymentRequests,
-            'pager'            => $result['pager'],
-            'filters'          => ['q'=>$search,'status'=>$status],
-            'pending_total'    => (float)$pendingTotal,
-            'completed_total'  => (float)$completedTotal,
-            'pending_count'    => (int)$pendingCount,
+            'payment_requests'  => $paymentRequests,
+            'payments'          => $paymentRequests,
+            'pager'             => $result['pager'],
+            'filters'           => ['q'=>$search,'status'=>$status],
+            'pending_total'     => (float)$pendingTotal,
+            'completed_total'   => (float)$completedTotal,
+            'pending_count'     => (int)$pendingCount,
+            'deduction_percent' => (new SiteContentModel())->getPlatformDeductionPercent(),
         ]);
     }
 
@@ -329,22 +330,42 @@ class Admin extends BaseController
         if ($auth !== true) return $auth;
 
         $model = new SiteContentModel();
-        // Ensure table exists — if migration not run, create via db forge fallback
         $db = \Config\Database::connect();
         if (!$db->tableExists('site_contents')) {
-            // Auto-create minimal table
             $db->query("CREATE TABLE IF NOT EXISTS site_contents (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, page VARCHAR(60) NOT NULL, content_key VARCHAR(100) NOT NULL, label VARCHAR(150) NULL, content_type ENUM('text','textarea','image') DEFAULT 'text', text_value TEXT NULL, image_url VARCHAR(500) NULL, sort_order INT DEFAULT 0, updated_by BIGINT UNSIGNED NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, UNIQUE KEY uq_page_key (page,content_key))");
-            $db->table('site_contents')->ignore(true)->insertBatch([
-                ['page'=>'home','content_key'=>'hero_badge','label'=>'Hero Badge','content_type'=>'text','text_value'=>'Seasonal Event','sort_order'=>1],
-                ['page'=>'home','content_key'=>'hero_title','label'=>'Hero Title','content_type'=>'text','text_value'=>'The Ultimate Merchandise Selection','sort_order'=>2],
-                ['page'=>'home','content_key'=>'hero_subtitle','label'=>'Hero Subtitle','content_type'=>'textarea','text_value'=>'Discover premium goods, exclusive deals, and top-tier printing services all in one place.','sort_order'=>3],
-                ['page'=>'home','content_key'=>'hero_image','label'=>'Hero Image','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80','sort_order'=>4],
-            ]);
+        }
+
+        // Seed default structured entries if missing
+        $defaults = [
+            ['page'=>'home_banners','content_key'=>'hero_badge','label'=>'Hero Badge Text','content_type'=>'text','text_value'=>'Seasonal Event','sort_order'=>1],
+            ['page'=>'home_banners','content_key'=>'hero_title','label'=>'Hero Main Headline','content_type'=>'text','text_value'=>'The Ultimate Merchandise & Printing Hub','sort_order'=>2],
+            ['page'=>'home_banners','content_key'=>'hero_subtitle','label'=>'Hero Subtitle Description','content_type'=>'textarea','text_value'=>'Discover premium goods, exclusive deals, and top-tier printing services all in one place across Polomolok.','sort_order'=>3],
+            ['page'=>'home_banners','content_key'=>'hero_image','label'=>'Hero Banner Background','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80','sort_order'=>4],
+            ['page'=>'home_banners','content_key'=>'hero_cta_text','label'=>'Hero CTA Button Text','content_type'=>'text','text_value'=>'Explore Marketplace','sort_order'=>5],
+
+            ['page'=>'announcement_bar','content_key'=>'announcement_text','label'=>'Top Bar Announcement Text','content_type'=>'text','text_value'=>'🚀 Free doorstep delivery on orders over ₱500 within Polomolok! Use code BLAXSHIP','sort_order'=>1],
+            ['page'=>'announcement_bar','content_key'=>'announcement_active','label'=>'Announcement Bar Active (1 or 0)','content_type'=>'text','text_value'=>'1','sort_order'=>2],
+
+            ['page'=>'promotional_blocks','content_key'=>'promo_title','label'=>'Promotional Block Title','content_type'=>'text','text_value'=>'Featured Flash Sale & Printing Deals','sort_order'=>1],
+            ['page'=>'promotional_blocks','content_key'=>'promo_tagline','label'=>'Promotional Tagline','content_type'=>'textarea','text_value'=>'High-definition apparel printing, custom document binding, and top-rated merchant products.','sort_order'=>2],
+            ['page'=>'promotional_blocks','content_key'=>'promo_banner_image','label'=>'Promo Banner Image','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1440&q=80','sort_order'=>3],
+
+            ['page'=>'footer_info','content_key'=>'footer_contact_email','label'=>'Contact Email','content_type'=>'text','text_value'=>'support@blaxinventory.com','sort_order'=>1],
+            ['page'=>'footer_info','content_key'=>'footer_phone','label'=>'Customer Hotline','content_type'=>'text','text_value'=>'+63 917 123 4567','sort_order'=>2],
+            ['page'=>'footer_info','content_key'=>'footer_address','label'=>'Hub Office Location','content_type'=>'text','text_value'=>'Poblacion, Polomolok, South Cotabato, Philippines 9504','sort_order'=>3],
+            ['page'=>'footer_info','content_key'=>'footer_copyright','label'=>'Copyright Notice','content_type'=>'text','text_value'=>'© 2026 Blax Multi-Tenant Inventory & Printing Platform. All rights reserved.','sort_order'=>4],
+        ];
+
+        foreach ($defaults as $d) {
+            $existing = $db->table('site_contents')->where('page', $d['page'])->where('content_key', $d['content_key'])->countAllResults();
+            if ($existing === 0) {
+                $db->table('site_contents')->insert($d);
+            }
         }
 
         $grouped = $model->getAllGrouped();
         if (empty($grouped)) {
-            $grouped = ['home'=>[]];
+            $grouped = ['home_banners'=>[]];
         }
 
         return view('admin/content', [
@@ -755,31 +776,147 @@ class Admin extends BaseController
         return redirect()->back()->with('success', "Payout status updated to {$statusLabel}.");
     }
 
-    public function resolveCompliance()
+    /**
+     * Update the platform withdrawal deduction percentage.
+     */
+    public function updateDeductionPercent()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $percent = (float) $this->request->getPost('deduction_percent');
+        $siteContentModel = new SiteContentModel();
+        $siteContentModel->setPlatformDeductionPercent($percent);
+
+        (new AuditLogModel())->log(
+            (int) session()->get('user_id'),
+            'admin',
+            'Updated Platform Deduction Fee',
+            "Set platform withdrawal deduction percentage to {$percent}%",
+            'success'
+        );
+
+        return redirect()->back()->with('success', "Platform withdrawal deduction set to " . number_format($percent, 2) . "%.");
+    }
+
+    public function warnCompliance()
     {
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
         $shopId = (int) $this->request->getPost('shop_id');
-        $db     = \Config\Database::connect();
+        $reportId = (int) $this->request->getPost('report_id');
+        $warningMsg = trim((string) $this->request->getPost('warning_message'));
 
-        $db->table('compliance_reports')
-            ->where('reported_shop_id', $shopId)
-            ->where('status !=', 'resolved')
-            ->set(['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')])
-            ->update();
+        if (empty($warningMsg)) {
+            $warningMsg = 'Your shop has received a formal warning regarding compliance and service policy standards. Please review your store operations immediately.';
+        }
+
+        $db = \Config\Database::connect();
+        if ($reportId > 0) {
+            $db->table('compliance_reports')
+                ->where('id', $reportId)
+                ->set(['status' => 'flagged'])
+                ->update();
+        } else {
+            $db->table('compliance_reports')
+                ->where('reported_shop_id', $shopId)
+                ->where('status !=', 'resolved')
+                ->set(['status' => 'flagged'])
+                ->update();
+        }
 
         $shop = (new ShopModel())->find($shopId);
         if ($shop && !empty($shop['owner_id'])) {
             (new NotificationModel())->create(
                 (int) $shop['owner_id'],
-                'compliance',
-                'Compliance Issues Resolved',
-                'The compliance reports concerning your shop "' . ($shop['shop_name'] ?? 'Shop') . '" have been resolved by administration.',
+                'compliance_warning',
+                '⚠️ Formal Compliance Warning Issued',
+                $warningMsg,
                 '/tenant/dashboard'
             );
         }
 
-        return redirect()->back()->with('success', 'Compliance issues resolved.');
+        return redirect()->back()->with('success', 'Formal compliance warning issued to merchant.');
+    }
+
+    public function suspendCompliance()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $shopId = (int) $this->request->getPost('shop_id');
+        $reason = trim((string) $this->request->getPost('suspension_reason'));
+        if (empty($reason)) {
+            $reason = 'Shop suspended due to repeated or severe compliance policy violations.';
+        }
+
+        $shopModel = new ShopModel();
+        $shop = $shopModel->find($shopId);
+        if (!$shop) {
+            return redirect()->back()->with('error', 'Shop not found.');
+        }
+
+        $shopModel->update($shopId, [
+            'status' => 'suspended',
+            'is_active' => 0
+        ]);
+
+        $db = \Config\Database::connect();
+        $db->table('compliance_reports')
+            ->where('reported_shop_id', $shopId)
+            ->where('status !=', 'resolved')
+            ->set(['status' => 'under_review'])
+            ->update();
+
+        if (!empty($shop['owner_id'])) {
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'compliance_suspension',
+                '🚫 Shop Suspended for Compliance Violations',
+                'Your shop "' . ($shop['shop_name'] ?? 'Shop') . '" has been deactivated/suspended: ' . $reason,
+                '/tenant/dashboard'
+            );
+        }
+
+        return redirect()->back()->with('success', 'Shop suspended and deactivated successfully.');
+    }
+
+    public function resolveCompliance()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $shopId   = (int) $this->request->getPost('shop_id');
+        $reportId = (int) $this->request->getPost('report_id');
+        $db       = \Config\Database::connect();
+
+        if ($reportId > 0) {
+            $db->table('compliance_reports')
+                ->where('id', $reportId)
+                ->set(['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')])
+                ->update();
+        }
+
+        if ($shopId > 0) {
+            $db->table('compliance_reports')
+                ->where('reported_shop_id', $shopId)
+                ->where('status !=', 'resolved')
+                ->set(['status' => 'resolved', 'resolved_at' => date('Y-m-d H:i:s')])
+                ->update();
+
+            $shop = (new ShopModel())->find($shopId);
+            if ($shop && !empty($shop['owner_id'])) {
+                (new NotificationModel())->create(
+                    (int) $shop['owner_id'],
+                    'compliance',
+                    'Compliance Issues Resolved',
+                    'The compliance reports concerning your shop "' . ($shop['shop_name'] ?? 'Shop') . '" have been resolved by administration.',
+                    '/tenant/dashboard'
+                );
+            }
+        }
+
+        return redirect()->back()->with('success', 'Compliance issue resolved.');
     }
 }

@@ -92,6 +92,14 @@ class PrintingRequestModel extends Model
             ->select('printing_requests.*, u.first_name, u.last_name, u.profile_image_url')
             ->join('users u', 'u.id = printing_requests.customer_id', 'left')
             ->where('printing_requests.shop_id', $shopId)
+            ->orderBy("CASE 
+                WHEN LOWER(printing_requests.status) = 'new' THEN 1 
+                WHEN LOWER(printing_requests.status) = 'in_production' THEN 2 
+                WHEN LOWER(printing_requests.status) = 'ready_for_pickup' THEN 3 
+                WHEN LOWER(printing_requests.status) = 'ready_for_delivery' THEN 4 
+                WHEN LOWER(printing_requests.status) = 'completed' THEN 5 
+                ELSE 6 
+            END", 'ASC', false)
             ->orderBy('printing_requests.created_at', 'DESC');
 
         $archived = $this->db->table('archived_items')

@@ -98,7 +98,7 @@
     <div class="glass-card rounded-2xl p-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md border border-outline-variant/30">
         <div>
             <h3 class="text-title-lg font-bold text-on-surface">Merchant Payouts</h3>
-            <p class="text-xs text-on-surface-variant mt-0.5">Withdraw earnings to your registered GCash account. Standard 3% administrative fee applies to cover gateway disbursement.</p>
+            <p class="text-xs text-on-surface-variant mt-0.5">Withdraw earnings to your registered GCash account. Standard <?= number_format($deduction_percent ?? 3.00, 2) ?>% administrative fee applies to cover gateway disbursement.</p>
         </div>
         <button onclick="document.getElementById('withdrawModal').classList.remove('hidden')" class="px-xl py-md bg-primary text-on-primary rounded-xl font-bold text-xs hover:bg-primary/90 transition-colors shadow-md flex items-center gap-xs whitespace-nowrap active:scale-95">
             <span class="material-symbols-outlined text-[18px]">payments</span>
@@ -166,8 +166,9 @@
             <thead>
                 <tr class="border-b border-outline-variant/30 text-label-sm text-on-surface-variant uppercase">
                     <th class="py-sm px-md">Request ID</th>
-                    <th class="py-sm px-md">Amount</th>
-                    <th class="py-sm px-md">Method</th>
+                    <th class="py-sm px-md">Gross Amount</th>
+                    <th class="py-sm px-md">Admin Fee (<?= number_format($deduction_percent ?? 3.00, 2) ?>%)</th>
+                    <th class="py-sm px-md">Net Payout</th>
                     <th class="py-sm px-md">Account / Phone</th>
                     <th class="py-sm px-md text-center">Status</th>
                     <th class="py-sm px-md text-right">Date</th>
@@ -176,23 +177,30 @@
             <tbody>
                 <?php if (!empty($withdrawals)): ?>
                     <?php foreach ($withdrawals as $w): ?>
+                        <?php 
+                            $gross = (float)$w['amount'];
+                            $feeRate = (float)($w['deduction_percent'] ?? $deduction_percent ?? 3.00) / 100;
+                            $fee = (float)($w['fee'] ?? ($gross * $feeRate));
+                            $net = max(0, $gross - $fee);
+                        ?>
                         <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low/60 transition-colors">
                             <td class="py-md px-md font-mono font-semibold text-primary">#<?= esc($w['reference_number'] ?? ('WD-' . $w['id'])) ?></td>
-                            <td class="py-md px-md font-bold font-mono text-on-surface">₱<?= number_format($w['amount'], 2) ?></td>
-                            <td class="py-md px-md text-xs text-on-surface font-semibold uppercase">
+                            <td class="py-md px-md font-bold font-mono text-on-surface">₱<?= number_format($gross, 2) ?></td>
+                            <td class="py-md px-md text-xs font-mono text-amber-800 font-semibold">-₱<?= number_format($fee, 2) ?></td>
+                            <td class="py-md px-md font-bold font-mono text-emerald-700">₱<?= number_format($net, 2) ?></td>
+                            <td class="py-md px-md text-xs font-mono text-on-surface-variant">
                                 <span class="inline-flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[15px] text-primary">smartphone</span>
-                                    <?= esc($w['method'] ?? 'GCash') ?>
+                                    <span class="material-symbols-outlined text-[14px] text-primary">phone_iphone</span>
+                                    <?= esc($w['account_details'] ?? '—') ?>
                                 </span>
                             </td>
-                            <td class="py-md px-md text-xs font-mono text-on-surface-variant"><?= esc($w['account_details'] ?? '—') ?></td>
                             <td class="py-md px-md text-center"><?= status_badge($w['status'] ?? 'pending') ?></td>
                             <td class="py-md px-md text-xs text-on-surface-variant text-right"><?= date('M d, Y h:i A', strtotime($w['created_at'])) ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" class="py-xl text-center">
+                        <td colspan="7" class="py-xl text-center">
                             <div class="flex flex-col items-center gap-xs">
                                 <span class="material-symbols-outlined text-4xl text-outline-variant">payments</span>
                                 <span class="text-sm font-semibold text-on-surface">No withdrawal requests yet</span>
@@ -248,7 +256,7 @@
 <!-- Withdraw Modal -->
 <div id="withdrawModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md">
 
-    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-md w-full space-y-md border border-outline-variant/30">
+    <div class="bg-surface-container-lowest rounded-2xl p-xl max-w-md w-full space-y-md border border-outline-variant/30 shadow-2xl">
 
         <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
 
@@ -263,32 +271,48 @@
             <?= csrf_field() ?>
 
             <div>
+                <div class="flex justify-between items-center">
+                    <label class="text-label-sm font-bold text-on-surface-variant">Withdrawal Amount (₱)</label>
+                    <span class="text-xs text-primary font-bold">Max: ₱<?= number_format($available_balance ?? 0, 2) ?></span>
+                </div>
+                <input type="number" step="0.01" min="50" max="<?= $available_balance ?? 0 ?>" name="amount" id="withdrawAmountInput" oninput="updateWithdrawalBreakdown(this.value)" required placeholder="e.g. 500.00" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs font-mono font-bold text-base focus:ring-2 focus:ring-primary">
+            </div>
 
-                <label class="text-label-sm font-bold text-on-surface-variant">Withdrawal Amount (₱)</label>
-                <input type="number" step="0.01" name="amount" max="<?= $available_balance ?? 0 ?>" required class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs">
-
+            <!-- Live Calculation Breakdown -->
+            <div class="p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl space-y-1.5 text-xs">
+                <div class="flex justify-between text-on-surface-variant">
+                    <span>Gross Withdrawal:</span>
+                    <span id="breakdownGross" class="font-mono font-semibold">₱0.00</span>
+                </div>
+                <div class="flex justify-between text-amber-700">
+                    <span>Platform Admin Fee (<?= number_format($deduction_percent ?? 3.00, 2) ?>%):</span>
+                    <span id="breakdownFee" class="font-mono font-semibold">-₱0.00</span>
+                </div>
+                <div class="flex justify-between text-on-surface border-t border-outline-variant/20 pt-1.5 font-bold">
+                    <span>Net Disbursed to GCash:</span>
+                    <span id="breakdownNet" class="font-mono text-sm text-emerald-700">₱0.00</span>
+                </div>
             </div>
 
             <div>
 
                 <label class="text-label-sm font-bold text-on-surface-variant">Payment Method</label>
                 <div class="w-full p-md bg-primary-container/20 border border-outline-variant rounded-xl mt-xs flex items-center gap-sm text-sm font-semibold text-primary">
-                    <span class="material-symbols-outlined text-[18px]">phone_iphone</span> GCash — 3% admin fee applies
+                    <span class="material-symbols-outlined text-[18px]">phone_iphone</span> GCash (Standard <?= number_format($deduction_percent ?? 3.00, 2) ?>% Fee)
                 </div>
                 <input type="hidden" name="method" value="GCash">
-                <p class="text-xs text-on-surface-variant mt-xs">Only GCash withdrawals are supported. A 3% fee is deducted and recorded as admin revenue.</p>
 
             </div>
 
             <div>
 
-                <label class="text-label-sm font-bold text-on-surface-variant">GCash Number</label>
-                <input type="text" name="account_details" placeholder="09XXXXXXXXX" pattern="09[0-9]{9}" required class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs">
-                <p class="text-xs text-on-surface-variant mt-xs">Format: 09XXXXXXXXX (11 digits)</p>
+                <label class="text-label-sm font-bold text-on-surface-variant">GCash Account Number</label>
+                <input type="text" name="account_details" placeholder="09XXXXXXXXX" pattern="09[0-9]{9}" required class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs font-mono">
+                <p class="text-[11px] text-on-surface-variant mt-xs">Format: 09XXXXXXXXX (11 digits)</p>
 
             </div>
 
-            <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90">Submit Request</button>
+            <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">Submit Request</button>
 
         </form>
 
@@ -304,6 +328,17 @@
             detailsInput.value = gcashNumber;
         }
     })();
+
+    function updateWithdrawalBreakdown(val) {
+        const gross = parseFloat(val) || 0;
+        const feeRate = <?= json_encode((float)($deduction_percent ?? 3.00)) ?> / 100;
+        const fee = Math.round(gross * feeRate * 100) / 100;
+        const net = Math.max(0, gross - fee);
+
+        document.getElementById('breakdownGross').textContent = '₱' + gross.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('breakdownFee').textContent = '-₱' + fee.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('breakdownNet').textContent = '₱' + net.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 </script>
 
 <?= $this->endSection() ?>

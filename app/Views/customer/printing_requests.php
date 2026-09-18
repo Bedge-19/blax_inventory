@@ -249,7 +249,13 @@
             <p class="text-xs text-on-surface-variant/80 mt-2 leading-relaxed">Present this QR code to the store attendant upon pick-up.</p>
         </div>
 
-        <button type="button" id="qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        <div class="grid grid-cols-2 gap-2 w-full">
+            <button type="button" id="qr-download" class="w-full py-md bg-surface-container-highest hover:bg-outline-variant text-on-surface rounded-xl text-button font-button transition-all flex items-center justify-center gap-xs">
+                <span class="material-symbols-outlined text-[18px]">download</span>
+                <span>Download QR</span>
+            </button>
+            <button type="button" id="qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        </div>
     </div>
 </div>
 
@@ -384,6 +390,28 @@
             if (qrOverlay) qrOverlay.addEventListener('click', closeQrModal);
             if (qrClose) qrClose.addEventListener('click', closeQrModal);
             if (qrDone) qrDone.addEventListener('click', closeQrModal);
+
+            var qrDlBtn = document.getElementById('qr-download');
+            if (qrDlBtn) {
+                qrDlBtn.addEventListener('click', function () {
+                    var canvas = qrContainer.querySelector('canvas');
+                    var img = qrContainer.querySelector('img');
+                    var dataUrl = null;
+                    if (canvas) {
+                        dataUrl = canvas.toDataURL('image/png');
+                    } else if (img && img.src) {
+                        dataUrl = img.src;
+                    }
+                    if (dataUrl) {
+                        var a = document.createElement('a');
+                        a.href = dataUrl;
+                        a.download = 'BLAX-Pickup-QR-' + (qrNumEl.textContent.replace('#', '') || 'document') + '.png';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    }
+                });
+            }
         })();
     </script>
 <?php endif; ?>

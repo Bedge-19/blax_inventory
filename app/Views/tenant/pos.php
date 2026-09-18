@@ -50,7 +50,7 @@ $orderItems = $orderItems ?? [];
                     onclick="openPickupSelectorModal()" 
                     class="px-md py-sm rounded-xl text-label-sm font-bold flex items-center gap-xs transition-all shadow-sm <?= $isStorePickup ? 'bg-secondary text-on-secondary shadow-md' : 'border border-outline-variant hover:bg-surface-container text-on-surface' ?>">
                 <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
-                <span>Store Pickup <?= $isStorePickup ? '(Active)' : (!empty($pickupOrders) ? '(' . count($pickupOrders) . ' Pending)' : '') ?></span>
+                <span>Select Product Pending <?= $isStorePickup ? '(Active)' : (!empty($pickupOrders) ? '(' . count($pickupOrders) . ')' : '') ?></span>
             </button>
 
             <button type="button" 
@@ -76,9 +76,12 @@ $orderItems = $orderItems ?? [];
                         <span class="material-symbols-outlined text-xl">local_mall</span>
                     </div>
                     <div>
-                        <span class="text-xs text-on-surface-variant font-bold uppercase tracking-wider">Store Pick-up Order</span>
-                        <div class="text-title-md font-bold text-on-surface font-mono">
-                            #<?= esc($order['order_number']) ?>
+                        <span class="text-xs text-secondary font-bold uppercase tracking-wider"><?= esc($customerFullName ?: 'Online Customer') ?></span>
+                        <h2 class="text-title-md sm:text-title-lg font-extrabold text-on-surface leading-tight">
+                            <?= !empty($orderItems) ? esc($orderItems[0]['product_name']) . (count($orderItems) > 1 ? ' <span class="text-xs text-outline font-semibold">+' . (count($orderItems) - 1) . ' more</span>' : '') : 'Pick-up Products' ?>
+                        </h2>
+                        <div class="text-xs text-on-surface-variant font-mono mt-0.5">
+                            Order Reference #<?= esc($order['order_number']) ?>
                         </div>
                     </div>
                 </div>
@@ -447,8 +450,8 @@ $orderItems = $orderItems ?? [];
                     <span class="material-symbols-outlined text-xl">storefront</span>
                 </div>
                 <div>
-                    <h3 class="text-title-lg font-bold text-on-surface">Select Store Pick-up Order</h3>
-                    <p class="text-xs text-on-surface-variant">Select an active online order to fulfill at your counter</p>
+                    <h3 class="text-title-lg font-bold text-on-surface">Select Product Pending</h3>
+                    <p class="text-xs text-on-surface-variant">Select an active online pick-up order with products to fulfill at counter</p>
                 </div>
             </div>
             <button type="button" onclick="closePickupSelectorModal()" class="text-outline hover:text-on-surface p-1 rounded-full hover:bg-surface-container">
@@ -461,7 +464,7 @@ $orderItems = $orderItems ?? [];
             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
             <input type="text" 
                    id="posPickupFilterInput" 
-                   placeholder="Filter by order number or customer name..." 
+                   placeholder="Filter by order number, customer name, or product..." 
                    oninput="filterPickupOrders(this.value)"
                    class="w-full pl-10 pr-md py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary focus:border-primary">
         </div>
@@ -473,26 +476,29 @@ $orderItems = $orderItems ?? [];
                     <?php 
                     $poName = trim(($po['first_name'] ?? '') . ' ' . ($po['last_name'] ?? ''));
                     $isPoPaid = ($po['payment_status'] ?? '') === 'paid';
+                    $itemsSummary = trim((string) ($po['items_summary'] ?? ''));
                     ?>
                     <div class="pos-pickup-row p-md bg-surface-container-low hover:bg-surface-container border border-outline-variant/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-sm transition-all"
-                         data-search="<?= strtolower(esc($po['order_number'] . ' ' . $poName)) ?>">
-                        <div class="min-w-0">
+                         data-search="<?= strtolower(esc($po['order_number'] . ' ' . $poName . ' ' . $itemsSummary)) ?>">
+                        <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-xs flex-wrap">
-                                <span class="font-mono font-bold text-sm text-on-surface">#<?= esc($po['order_number']) ?></span>
+                                <h4 class="font-bold text-sm text-on-surface truncate max-w-[320px]">
+                                    <?= esc($itemsSummary !== '' ? $itemsSummary : 'Pick-up Items') ?>
+                                </h4>
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold <?= $isPoPaid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800' ?>">
                                     <?= $isPoPaid ? 'PAID ONLINE' : 'UNPAID' ?>
                                 </span>
-                                <span class="text-xs text-outline">• <?= esc(date('M d, Y h:i A', strtotime($po['placed_at']))) ?></span>
                             </div>
                             <p class="text-xs text-on-surface-variant font-medium mt-0.5">
                                 Customer: <strong class="text-on-surface"><?= esc($poName ?: 'Online Customer') ?></strong>
-                                <?php if (!empty($po['phone'])): ?> (<?= esc($po['phone']) ?>)<?php endif; ?>
+                                <span class="font-mono text-outline ml-1.5">#<?= esc($po['order_number']) ?></span>
+                                <span class="text-xs text-outline ml-1">• <?= esc(date('M d, Y h:i A', strtotime($po['placed_at']))) ?></span>
                             </p>
                         </div>
                         <div class="flex items-center justify-between sm:justify-end gap-md shrink-0 pt-xs sm:pt-0 border-t sm:border-t-0 border-outline-variant/10">
                             <span class="font-mono font-bold text-sm text-primary">₱<?= number_format((float) $po['total_amount'], 2) ?></span>
                             <a href="<?= base_url('tenant/pos?order_id=' . $po['id']) ?>" 
-                               class="px-md py-1.5 bg-secondary text-on-secondary hover:bg-secondary/90 rounded-lg text-xs font-bold transition-all flex items-center gap-xs shadow-sm">
+                                class="px-md py-1.5 bg-secondary text-on-secondary hover:bg-secondary/90 rounded-lg text-xs font-bold transition-all flex items-center gap-xs shadow-sm">
                                 <span class="material-symbols-outlined text-[16px]">point_of_sale</span>
                                 Open in POS
                             </a>
@@ -544,14 +550,14 @@ $orderItems = $orderItems ?? [];
 </div>
 
 <!-- Customer QR Scanner Modal -->
-<div id="posQrScannerModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-md">
+<div id="posQrScannerModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-md">
     <div class="glass-card bg-surface-container-lowest rounded-2xl p-lg max-w-md w-full border border-outline-variant/30 shadow-2xl space-y-md">
         <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
             <div class="flex items-center gap-xs text-secondary font-bold">
                 <span class="material-symbols-outlined text-2xl">qr_code_scanner</span>
                 <div>
-                    <h3 class="text-title-md text-on-surface">Scan Customer Pick-up QR</h3>
-                    <p class="text-[11px] text-on-surface-variant font-normal">Scan phone screen or type order number</p>
+                    <h3 class="text-title-md text-on-surface">Scan Pick-up &amp; Order QR</h3>
+                    <p class="text-[11px] text-on-surface-variant font-normal">Live camera, scan from photo, or enter code</p>
                 </div>
             </div>
             <button type="button" onclick="closeQrScannerModal()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container transition-colors">
@@ -561,23 +567,57 @@ $orderItems = $orderItems ?? [];
 
         <div id="posScanFeedback" class="hidden text-xs rounded-xl p-sm font-medium"></div>
 
-        <!-- Camera Container -->
-        <div class="rounded-xl overflow-hidden bg-black aspect-square relative flex items-center justify-center">
-            <div id="posQrReader" class="w-full h-full"></div>
-            <div id="posQrCameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-md text-center bg-black/80">
-                <span class="material-symbols-outlined text-4xl mb-1 text-secondary">photo_camera</span>
-                <span class="text-xs font-semibold">Starting camera...</span>
-                <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
+        <!-- Scan Mode Tabs -->
+        <div class="flex items-center gap-xs p-1 bg-surface-container-low rounded-xl border border-outline-variant/20">
+            <button type="button" id="posTabCameraBtn" onclick="switchPosScanMode('camera')" class="flex-1 py-1.5 px-sm rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-sm flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+                <span>Live Camera</span>
+            </button>
+            <button type="button" id="posTabFileBtn" onclick="switchPosScanMode('file')" class="flex-1 py-1.5 px-sm rounded-lg text-xs font-bold transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                <span>Scan from Photo</span>
+            </button>
+        </div>
+
+        <!-- Mode 1: Live Camera (Unobstructed, No Dark Box) -->
+        <div id="posCameraContainer" class="space-y-sm">
+            <div class="rounded-2xl overflow-hidden bg-black aspect-square relative flex items-center justify-center border border-outline-variant/30 shadow-inner">
+                <div id="posQrReader" class="w-full h-full"></div>
+                <!-- Clean, non-blocking transparent corner reticle -->
+                <div class="qr-viewfinder-overlay pointer-events-none absolute inset-4 border border-white/20 rounded-xl">
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-secondary rounded-tl-lg"></div>
+                    <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-secondary rounded-tr-lg"></div>
+                    <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-secondary rounded-bl-lg"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-secondary rounded-br-lg"></div>
+                    <div class="pos-qr-laser-line"></div>
+                </div>
+                <div id="posQrCameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-md text-center bg-black/80">
+                    <span class="material-symbols-outlined text-4xl mb-1 text-secondary">photo_camera</span>
+                    <span class="text-xs font-semibold">Starting camera...</span>
+                    <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
+                </div>
             </div>
+            <p class="text-xs text-center text-on-surface-variant font-medium">Point camera directly at customer phone or ticket QR</p>
+        </div>
+
+        <!-- Mode 2: Scan from Photo / Image File -->
+        <div id="posFileContainer" class="hidden space-y-sm">
+            <label for="posPhotoUpload" class="flex flex-col items-center justify-center p-xl border-2 border-dashed border-secondary/40 hover:border-secondary rounded-2xl bg-secondary/5 hover:bg-secondary/10 transition-all cursor-pointer text-center group">
+                <span class="p-3 bg-secondary/10 text-secondary rounded-2xl material-symbols-outlined text-3xl group-hover:scale-110 transition-transform mb-2">image_search</span>
+                <span class="text-xs font-bold text-on-surface">Click to Select QR Photo / Image</span>
+                <span class="text-[11px] text-on-surface-variant mt-1">Upload picture of completed order or ticket</span>
+                <input id="posPhotoUpload" type="file" accept="image/*" class="hidden" onchange="handlePosPhotoUpload(this)">
+            </label>
+            <p id="posPhotoScanStatus" class="text-xs text-center text-on-surface-variant font-medium hidden"></p>
         </div>
 
         <!-- Manual Lookup Fallback -->
         <div class="space-y-xs pt-xs border-t border-outline-variant/20">
             <label for="posManualOrderCode" class="text-xs font-bold text-on-surface uppercase tracking-wider block">
-                Manual Order Code / Number
+                Manual Order / Request Code or ID
             </label>
             <div class="flex gap-xs">
-                <input type="text" id="posManualOrderCode" placeholder="e.g. ORD-88102" class="flex-1 px-md py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-primary focus:border-primary">
+                <input type="text" id="posManualOrderCode" placeholder="e.g. ORD-88102, PR-190, or 190" class="flex-1 px-md py-2 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-primary focus:border-primary">
                 <button type="button" id="posManualLookupBtn" onclick="verifyManualOrderCode()" class="bg-primary hover:bg-primary/90 text-on-primary px-md py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-xs">
                     <span class="material-symbols-outlined text-[16px]">search</span>
                     <span>Verify</span>
@@ -592,6 +632,35 @@ $orderItems = $orderItems ?? [];
         </div>
     </div>
 </div>
+
+<style>
+/* Remove Html5Qrcode blocking dark region box in POS */
+#posQrReader #qr-shaded-region {
+    display: none !important;
+}
+#posQrReader {
+    border: none !important;
+}
+#posQrReader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0.875rem !important;
+}
+.pos-qr-laser-line {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #eab308, transparent);
+    box-shadow: 0 0 10px #eab308;
+    animation: posQrLaserScan 2s ease-in-out infinite alternate;
+}
+@keyframes posQrLaserScan {
+    0% { top: 12px; }
+    100% { top: calc(100% - 14px); }
+}
+</style>
 
 <?= $this->endSection() ?>
 
@@ -1084,21 +1153,41 @@ $orderItems = $orderItems ?? [];
 
     // QR Scanner & Verification Handlers
     let html5QrCode = null;
+    let currentPosScanMode = 'camera';
 
-    window.openQrScannerModal = function() {
-        const modal = document.getElementById('posQrScannerModal');
-        const feedback = document.getElementById('posScanFeedback');
-        const manualInput = document.getElementById('posManualOrderCode');
+    window.switchPosScanMode = function(mode) {
+        currentPosScanMode = mode;
+        const camBtn = document.getElementById('posTabCameraBtn');
+        const fileBtn = document.getElementById('posTabFileBtn');
+        const camBox = document.getElementById('posCameraContainer');
+        const fileBox = document.getElementById('posFileContainer');
+
+        if (mode === 'camera') {
+            camBtn.classList.remove('text-on-surface-variant');
+            camBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            fileBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            fileBtn.classList.add('text-on-surface-variant');
+            camBox.classList.remove('hidden');
+            fileBox.classList.add('hidden');
+            startPosCamera();
+        } else {
+            fileBtn.classList.remove('text-on-surface-variant');
+            fileBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            camBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            camBtn.classList.add('text-on-surface-variant');
+            fileBox.classList.remove('hidden');
+            camBox.classList.add('hidden');
+            stopQrScanner();
+        }
+    };
+
+    function startPosCamera() {
+        if (!window.Html5Qrcode) return;
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("posQrReader");
+        }
+
         const placeholder = document.getElementById('posQrCameraPlaceholder');
-
-        if (feedback) {
-            feedback.classList.add('hidden');
-            feedback.textContent = '';
-        }
-        if (manualInput) {
-            manualInput.value = '';
-            manualInput.disabled = false;
-        }
         if (placeholder) {
             placeholder.classList.remove('hidden');
             placeholder.innerHTML = `
@@ -1108,59 +1197,73 @@ $orderItems = $orderItems ?? [];
             `;
         }
 
-        if (modal) modal.classList.remove('hidden');
-
-        if (window.Html5Qrcode) {
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("posQrReader");
+        const showCameraError = () => {
+            if (placeholder) {
+                placeholder.classList.remove('hidden');
+                placeholder.innerHTML = `
+                    <span class="material-symbols-outlined text-3xl mb-1 text-amber-400">videocam_off</span>
+                    <span class="text-xs font-semibold">Camera unavailable or blocked</span>
+                    <span class="text-[10px] opacity-70 mt-1">Upload a photo or enter code manually below</span>
+                `;
             }
+        };
 
-            const showCameraError = () => {
-                if (placeholder) {
-                    placeholder.classList.remove('hidden');
-                    placeholder.innerHTML = `
-                        <span class="material-symbols-outlined text-3xl mb-1 text-amber-400">videocam_off</span>
-                        <span class="text-xs font-semibold">Camera unavailable or blocked</span>
-                        <span class="text-[10px] opacity-70 mt-1">Enter order number manually below</span>
-                    `;
-                }
-            };
-
-            const startScanner = (cameraConfig) => {
-                const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-                return html5QrCode.start(
-                    cameraConfig,
-                    config,
-                    (decodedText) => {
-                        stopQrScanner();
-                        sendVerifyQrRequest(decodedText);
-                    },
-                    () => {}
-                );
-            };
-
-            startScanner({ facingMode: "environment" })
-                .then(() => {
-                    if (placeholder) placeholder.classList.add('hidden');
-                })
-                .catch(() => {
-                    if (Html5Qrcode.getCameras) {
-                        Html5Qrcode.getCameras().then(cameras => {
-                            if (cameras && cameras.length) {
-                                startScanner({ deviceId: { exact: cameras[0].id } })
-                                    .then(() => {
-                                        if (placeholder) placeholder.classList.add('hidden');
-                                    })
-                                    .catch(() => showCameraError());
-                            } else {
-                                showCameraError();
-                            }
+        const config = { fps: 12 };
+        html5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+                stopQrScanner();
+                sendVerifyQrRequest(decodedText);
+            },
+            () => {}
+        ).then(() => {
+            if (placeholder) placeholder.classList.add('hidden');
+        }).catch(() => {
+            if (Html5Qrcode.getCameras) {
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length) {
+                        html5QrCode.start(
+                            { deviceId: { exact: cameras[0].id } },
+                            config,
+                            (decodedText) => {
+                                stopQrScanner();
+                                sendVerifyQrRequest(decodedText);
+                            },
+                            () => {}
+                        ).then(() => {
+                            if (placeholder) placeholder.classList.add('hidden');
                         }).catch(() => showCameraError());
                     } else {
                         showCameraError();
                     }
-                });
+                }).catch(() => showCameraError());
+            } else {
+                showCameraError();
+            }
+        });
+    }
+
+    window.openQrScannerModal = function() {
+        const modal = document.getElementById('posQrScannerModal');
+        const feedback = document.getElementById('posScanFeedback');
+        const manualInput = document.getElementById('posManualOrderCode');
+        const photoStatus = document.getElementById('posPhotoScanStatus');
+
+        if (feedback) {
+            feedback.classList.add('hidden');
+            feedback.textContent = '';
         }
+        if (manualInput) {
+            manualInput.value = '';
+            manualInput.disabled = false;
+        }
+        if (photoStatus) {
+            photoStatus.classList.add('hidden');
+        }
+
+        if (modal) modal.classList.remove('hidden');
+        switchPosScanMode('camera');
     };
 
     window.stopQrScanner = function() {
@@ -1181,6 +1284,37 @@ $orderItems = $orderItems ?? [];
         if (modal) modal.classList.add('hidden');
     };
 
+    window.handlePosPhotoUpload = function(input) {
+        if (!input || !input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const statusEl = document.getElementById('posPhotoScanStatus');
+        if (statusEl) {
+            statusEl.className = 'text-xs text-center text-primary font-bold animate-pulse';
+            statusEl.textContent = 'Scanning image for QR code...';
+            statusEl.classList.remove('hidden');
+        }
+
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("posQrReader");
+        }
+
+        html5QrCode.scanFile(file, true)
+            .then(decodedText => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-green-700 font-bold';
+                    statusEl.textContent = 'QR Code detected! Verifying...';
+                }
+                sendVerifyQrRequest(decodedText);
+            })
+            .catch(err => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-red-600 font-bold';
+                    statusEl.textContent = 'Could not detect a clear QR code in this photo. Please ensure good lighting or enter the code manually.';
+                    statusEl.classList.remove('hidden');
+                }
+            });
+    };
+
     window.verifyManualOrderCode = function() {
         const input = document.getElementById('posManualOrderCode');
         const val = input ? input.value.trim() : '';
@@ -1188,7 +1322,7 @@ $orderItems = $orderItems ?? [];
             const feedback = document.getElementById('posScanFeedback');
             if (feedback) {
                 feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-amber-100 text-amber-900 border border-amber-300';
-                feedback.textContent = 'Please enter an order number or scan a QR code.';
+                feedback.textContent = 'Please enter an order/request number or scan a QR code.';
                 feedback.classList.remove('hidden');
             }
             return;
@@ -1215,7 +1349,7 @@ $orderItems = $orderItems ?? [];
 
         if (feedback) {
             feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-primary/10 text-primary border border-primary/20 flex items-center gap-xs';
-            feedback.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Verifying Store Pick-up Order...';
+            feedback.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Verifying Order / Request #' + code + '...';
             feedback.classList.remove('hidden');
         }
         if (manualBtn) manualBtn.disabled = true;
@@ -1240,11 +1374,11 @@ $orderItems = $orderItems ?? [];
             if (data.success) {
                 if (feedback) {
                     feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-green-100 text-green-900 border border-green-300';
-                    feedback.textContent = `${data.message} Customer notified. Loading order...`;
+                    feedback.textContent = `${data.message} Redirecting...`;
                 }
                 setTimeout(() => {
                     window.location.href = data.redirect_url;
-                }, 600);
+                }, 700);
             } else {
                 if (feedback) {
                     feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-red-100 text-red-900 border border-red-300';
@@ -1257,7 +1391,7 @@ $orderItems = $orderItems ?? [];
             if (manualInput) manualInput.disabled = false;
             if (feedback) {
                 feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-red-100 text-red-900 border border-red-300';
-                feedback.textContent = 'Server or network error while verifying order.';
+                feedback.textContent = 'Server or network error while verifying code.';
             }
         });
     }

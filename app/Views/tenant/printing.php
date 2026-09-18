@@ -113,6 +113,11 @@ $nextStates = [
                     <option value="completed" <?= $filters['status'] === 'completed' ? 'selected' : '' ?>>Completed</option>
                     <option value="cancelled" <?= $filters['status'] === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
                 </select>
+                <select name="per_page" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="10" <?= (isset($_GET['per_page']) && $_GET['per_page'] == '10') ? 'selected' : '' ?>>10 / page</option>
+                    <option value="20" <?= (isset($_GET['per_page']) && $_GET['per_page'] == '20') ? 'selected' : '' ?>>20 / page</option>
+                    <option value="50" <?= (isset($_GET['per_page']) && $_GET['per_page'] == '50') ? 'selected' : '' ?>>50 / page</option>
+                </select>
                 <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors">Filter</button>
                 <a href="<?= base_url('tenant/printing') ?>" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</a>
             </form>
@@ -190,62 +195,85 @@ $nextStates = [
                                     </div>
                                 </td>
                                 <td class="px-lg py-md text-right">
-                                    <div class="flex justify-end items-center gap-md">
-                                         <button type="button"
-                                                 onclick="openRequestDetails(this)"
-                                                 class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
-                                                 title="View Details"
-                                                 data-request="<?= esc($r['request_number']) ?>"
-                                                 data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
-                                                 data-file="<?= esc($r['file_name']) ?>"
-                                                 data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
-                                                 data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
-                                                 data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
-                                                 data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
-                                                 data-specs="<?= esc(pr_spec_line($r)) ?>"
-                                                 data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
-                                                 data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
-                                                 data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
-                                                 data-progress="<?= (int) $r['progress_percent'] ?>"
-                                                 data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
-                                                 data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
-                                                 data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
-                                             <span class="material-symbols-outlined">visibility</span>
-                                         </button>
-                                         <button type="button"
-                                                 onclick="openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
-                                                 class="p-xs hover:bg-surface-container-high rounded text-secondary"
-                                                 title="View QR Code">
-                                             <span class="material-symbols-outlined">qr_code_2</span>
-                                         </button>
-                                         <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" class="p-xs hover:bg-surface-container-high rounded text-primary" title="Download File">
-                                             <span class="material-symbols-outlined">download</span>
-                                         </a>
+                                    <div class="flex justify-end items-center">
                                         <div class="relative">
-                                            <button type="button" data-row="<?= (int) $r['id'] ?>" onclick="toggleDropdown(this)" class="more-toggle p-xs hover:bg-surface-container-high rounded text-on-surface-variant" title="More Actions" aria-haspopup="true" aria-expanded="false">
-                                                <span class="material-symbols-outlined">more_vert</span>
+                                            <button type="button" data-row="<?= (int) $r['id'] ?>" onclick="toggleDropdown(this)" class="more-toggle p-2 hover:bg-surface-container-high rounded-xl text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Actions" aria-haspopup="true" aria-expanded="false">
+                                                <span class="material-symbols-outlined text-[20px]">more_vert</span>
                                             </button>
-                                            <div id="more-menu-<?= (int) $r['id'] ?>" class="hidden more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-lg p-sm min-w-[220px]" role="menu">
-                                                <p class="text-label-sm font-bold text-on-surface-variant px-sm pb-xs">Update Status</p>
+                                            <div id="more-menu-<?= (int) $r['id'] ?>" class="hidden more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-xl p-1.5 min-w-[220px] text-left" role="menu">
+                                                <div class="px-sm py-1 border-b border-outline-variant/15 mb-1">
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Request Actions</span>
+                                                </div>
+                                                <button type="button"
+                                                        onclick="closeMenus(); openRequestDetails(this)"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors"
+                                                        data-request="<?= esc($r['request_number']) ?>"
+                                                        data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
+                                                        data-file="<?= esc($r['file_name']) ?>"
+                                                        data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
+                                                        data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
+                                                        data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
+                                                        data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
+                                                        data-specs="<?= esc(pr_spec_line($r)) ?>"
+                                                        data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
+                                                        data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
+                                                        data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
+                                                        data-progress="<?= (int) $r['progress_percent'] ?>"
+                                                        data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
+                                                        data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
+                                                        data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">visibility</span>
+                                                    <span>View Details</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/view/' . (int) $r['id']) ?>" target="_blank" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">preview</span>
+                                                    <span>View in Browser</span>
+                                                </a>
+
+                                                <button type="button"
+                                                        onclick="closeMenus(); openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-secondary">qr_code_2</span>
+                                                    <span>View QR Code</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">download</span>
+                                                    <span>Download File</span>
+                                                </a>
+
+                                                <?php if ($r['status'] === 'ready_for_pickup'): ?>
+                                                    <a href="<?= base_url('tenant/pos') ?>" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-emerald-700 text-label-sm font-bold hover:bg-emerald-50 flex items-center gap-2.5 transition-colors">
+                                                        <span class="material-symbols-outlined text-[18px] text-emerald-600">point_of_sale</span>
+                                                        <span>Complete in POS</span>
+                                                    </a>
+                                                <?php endif; ?>
+
+                                                <div class="border-t border-outline-variant/15 my-1"></div>
+
+                                                <p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant px-sm pt-1 pb-xs">Update Status</p>
                                                 <?php if (!empty($nextStates[$r['status']])): ?>
                                                     <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="space-y-xs px-sm pb-sm">
                                                         <?= csrf_field() ?>
                                                         <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
-                                                        <select name="status" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-lg text-label-sm font-label-sm">
+                                                        <select name="status" class="w-full p-2 bg-surface-container-low border border-outline-variant/40 rounded-lg text-label-sm font-label-sm">
                                                             <?php foreach ($nextStates[$r['status']] as $val => $label): ?>
                                                                 <option value="<?= $val ?>"><?= esc($label) ?></option>
                                                             <?php endforeach; ?>
                                                         </select>
-                                                        <button type="submit" class="w-full py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90">Apply Status</button>
+                                                        <button type="submit" class="w-full py-1.5 bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-all">Apply Status</button>
                                                     </form>
                                                 <?php else: ?>
-                                                    <p class="text-label-sm text-on-surface-variant px-sm pb-sm">This request is <?= esc($r['status']) ?> and can no longer be updated.</p>
+                                                    <p class="text-xs text-on-surface-variant px-sm pb-sm">Request is <?= esc($r['status']) ?>.</p>
                                                 <?php endif; ?>
-                                                <div class="border-t border-outline-variant/20 my-xs"></div>
+
+                                                <div class="border-t border-outline-variant/15 my-1"></div>
                                                 <form action="<?= base_url('tenant/printing/archive/' . (int) $r['id']) ?>" method="POST" onsubmit="return confirm('Archive this request?')">
                                                     <?= csrf_field() ?>
-                                                    <button type="submit" class="w-full text-left px-sm py-sm rounded-lg text-error text-label-sm font-semibold hover:bg-error-container/20 flex items-center gap-xs">
-                                                        <span class="material-symbols-outlined text-[18px]">archive</span> Archive
+                                                    <button type="submit" class="w-full text-left px-sm py-2 rounded-xl text-error text-label-sm font-semibold hover:bg-error-container/20 flex items-center gap-2.5 transition-colors">
+                                                        <span class="material-symbols-outlined text-[18px]">archive</span>
+                                                        <span>Archive Request</span>
                                                     </button>
                                                 </form>
                                             </div>
@@ -417,43 +445,64 @@ $nextStates = [
                                     </div>
                                 </td>
                                 <td class="px-lg py-md text-right">
-                                    <div class="flex justify-end items-center gap-md">
-                                        <button type="button"
-                                                onclick="openRequestDetails(this)"
-                                                class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
-                                                title="View Details"
-                                                data-request="<?= esc($r['request_number']) ?>"
-                                                data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
-                                                data-file="<?= esc($r['file_name']) ?>"
-                                                data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
-                                                data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
-                                                data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
-                                                data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
-                                                data-specs="<?= esc(pr_spec_line($r)) ?>"
-                                                data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
-                                                data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
-                                                data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
-                                                data-progress="<?= (int) $r['progress_percent'] ?>"
-                                                data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
-                                                data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
-                                                data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
-                                            <span class="material-symbols-outlined">visibility</span>
-                                        </button>
-                                        <button type="button"
-                                                onclick="openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
-                                                class="p-xs hover:bg-surface-container-high rounded text-secondary"
-                                                title="View QR Code">
-                                            <span class="material-symbols-outlined">qr_code_2</span>
-                                        </button>
-                                        <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" class="p-xs hover:bg-surface-container-high rounded text-primary" title="Download File">
-                                            <span class="material-symbols-outlined">download</span>
-                                        </a>
-                                        <form action="<?= base_url('tenant/printing/archive/' . (int) $r['id']) ?>" method="POST" onsubmit="return confirm('Archive this request?')">
-                                            <?= csrf_field() ?>
-                                            <button type="submit" class="p-xs hover:bg-error-container/20 rounded text-error" title="Archive">
-                                                <span class="material-symbols-outlined">archive</span>
+                                    <div class="flex justify-end items-center">
+                                        <div class="relative">
+                                            <button type="button" data-row="comp-<?= (int) $r['id'] ?>" onclick="toggleDropdown(this)" class="more-toggle p-2 hover:bg-surface-container-high rounded-xl text-on-surface-variant hover:text-on-surface transition-colors flex items-center justify-center" title="Actions" aria-haspopup="true" aria-expanded="false">
+                                                <span class="material-symbols-outlined text-[20px]">more_vert</span>
                                             </button>
-                                        </form>
+                                            <div id="more-menu-comp-<?= (int) $r['id'] ?>" class="hidden more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-xl p-1.5 min-w-[220px] text-left" role="menu">
+                                                <div class="px-sm py-1 border-b border-outline-variant/15 mb-1">
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">Completed Actions</span>
+                                                </div>
+                                                <button type="button"
+                                                        onclick="closeMenus(); openRequestDetails(this)"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors"
+                                                        data-request="<?= esc($r['request_number']) ?>"
+                                                        data-customer="<?= esc($fullName !== '' ? $fullName : 'Customer') ?>"
+                                                        data-file="<?= esc($r['file_name']) ?>"
+                                                        data-doctype="<?= esc(strtoupper($r['document_type'] ?? 'PDF')) ?>"
+                                                        data-changetype="<?= esc(($r['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>"
+                                                        data-instructions="<?= esc($r['special_instructions'] ?? '') ?>"
+                                                        data-attachments="<?= esc(json_encode($r['attachments'] ?? []), 'attr') ?>"
+                                                        data-specs="<?= esc(pr_spec_line($r)) ?>"
+                                                        data-color="<?= esc(strtoupper($r['color_mode'] === 'color' ? 'Color' : 'B&W')) ?> • <?= esc(ucfirst($r['paper_size'] ?? 'A4')) ?>"
+                                                        data-fulfillment="<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'delivery'))) ?>"
+                                                        data-printer="<?= esc($r['printer_assigned'] ?? 'Not assigned') ?>"
+                                                        data-progress="<?= (int) $r['progress_percent'] ?>"
+                                                        data-amount="<?= esc(number_format((float) $r['total_price'], 2)) ?>"
+                                                        data-down="<?= esc(number_format((float) $r['down_payment'], 2)) ?>"
+                                                        data-date="<?= esc(date('M d, Y h:i A', strtotime($r['created_at']))) ?>">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">visibility</span>
+                                                    <span>View Details</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/view/' . (int) $r['id']) ?>" target="_blank" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">preview</span>
+                                                    <span>View in Browser</span>
+                                                </a>
+
+                                                <button type="button"
+                                                        onclick="closeMenus(); openTenantQrModal('<?= esc($r['request_number']) ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>')"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-secondary">qr_code_2</span>
+                                                    <span>View QR Code</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">download</span>
+                                                    <span>Download File</span>
+                                                </a>
+
+                                                <div class="border-t border-outline-variant/15 my-1"></div>
+                                                <form action="<?= base_url('tenant/printing/archive/' . (int) $r['id']) ?>" method="POST" onsubmit="return confirm('Archive this request?')">
+                                                    <?= csrf_field() ?>
+                                                    <button type="submit" class="w-full text-left px-sm py-2 rounded-xl text-error text-label-sm font-semibold hover:bg-error-container/20 flex items-center gap-2.5 transition-colors">
+                                                        <span class="material-symbols-outlined text-[18px]">archive</span>
+                                                        <span>Archive Request</span>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </td>
                             </tr>

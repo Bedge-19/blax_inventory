@@ -18,6 +18,7 @@ class PayoutModel extends Model
         'destination_method',
         'destination_detail',
         'fee',
+        'deduction_percent',
         'status',
         'requested_at',
         'completed_at',

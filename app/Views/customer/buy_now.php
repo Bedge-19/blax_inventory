@@ -218,6 +218,49 @@
 
 </main>
 
+<!-- GCash Fulfillment Choice Modal -->
+<div id="gcash-fulfillment-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden p-4">
+    <div class="glass-card bg-surface-container-lowest border border-outline-variant/50 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
+            <div class="flex items-center gap-2 text-[#007DFE]">
+                <span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+                <h3 class="font-title-md font-bold text-on-surface">GCash Order Fulfillment</h3>
+            </div>
+            <button type="button" id="btn-close-gcash-modal" class="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <p class="text-xs text-on-surface-variant mb-4">
+            How would you like to receive your item from <strong><?= esc($shop['shop_name'] ?? 'the store') ?></strong>?
+        </p>
+
+        <div class="flex flex-col gap-3">
+            <button type="button" id="btn-choose-delivery" class="p-4 rounded-xl border-2 border-primary/40 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-start gap-3 group">
+                <span class="material-symbols-outlined text-primary text-2xl group-hover:scale-110 transition-transform">local_shipping</span>
+                <div class="flex-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-on-surface">Doorstep Delivery</span>
+                        <span class="text-xs font-bold text-primary">₱<?= number_format($shipping, 2) ?></span>
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5">Delivered straight to your address in Polomolok</p>
+                </div>
+            </button>
+
+            <button type="button" id="btn-choose-pickup" class="p-4 rounded-xl border-2 border-outline-variant hover:border-secondary hover:bg-secondary/5 transition-all text-left flex items-start gap-3 group">
+                <span class="material-symbols-outlined text-secondary text-2xl group-hover:scale-110 transition-transform">storefront</span>
+                <div class="flex-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-bold text-on-surface">Store Pick-up</span>
+                        <span class="text-xs font-bold text-emerald-600">FREE</span>
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5">Pick up at store counter with your digital QR pass</p>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Floating Go Back Button -->
 <a href="<?= base_url('product/' . $product['id']) ?>" aria-label="Go Back" class="fixed bottom-8 left-8 w-14 h-14 bg-surface-container-lowest text-primary rounded-full shadow-lg flex items-center justify-center z-40 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
     <span class="material-symbols-outlined text-[28px]">arrow_back</span>
@@ -231,6 +274,7 @@
     var subtotal = <?= json_encode((float) $subtotal) ?>;
     var baseShipping = <?= json_encode((float) $shipping) ?>;
 
+    var form = document.getElementById('buy-now-form');
     var paymentRadios = document.querySelectorAll('.payment-radio');
     var fulfillmentInput = document.getElementById('form-fulfillment-method');
     var addressSection = document.getElementById('address-section');
@@ -239,16 +283,25 @@
     var totalDisplay = document.getElementById('total-display');
     var placeOrderBtnText = document.getElementById('place-order-btn-text');
 
+    var gcashModal = document.getElementById('gcash-fulfillment-modal');
+    var btnCloseGcash = document.getElementById('btn-close-gcash-modal');
+    var btnChooseDelivery = document.getElementById('btn-choose-delivery');
+    var btnChoosePickup = document.getElementById('btn-choose-pickup');
+
     function formatMoney(amount) {
         return '₱' + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
-    function updateFulfillmentAndTotals() {
-        var selectedMethod = 'gcash';
+    function getSelectedPayment() {
+        var selected = 'gcash';
         paymentRadios.forEach(function (r) {
-            if (r.checked) selectedMethod = r.value;
+            if (r.checked) selected = r.value;
         });
+        return selected;
+    }
 
+    function updateFulfillmentAndTotals() {
+        var selectedMethod = getSelectedPayment();
         var isPickup = (selectedMethod === 'pickup');
         var shippingFee = isPickup ? 0.00 : baseShipping;
         var total = subtotal + shippingFee;
@@ -294,6 +347,44 @@
     });
 
     updateFulfillmentAndTotals();
+
+    // GCash Modal Intercept
+    var gcashFulfillmentChosen = false;
+
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            var method = getSelectedPayment();
+            if (method === 'gcash' && !gcashFulfillmentChosen) {
+                e.preventDefault();
+                if (gcashModal) gcashModal.classList.remove('hidden');
+            }
+        });
+    }
+
+    if (btnCloseGcash) {
+        btnCloseGcash.addEventListener('click', function () {
+            if (gcashModal) gcashModal.classList.add('hidden');
+        });
+    }
+
+    if (btnChooseDelivery) {
+        btnChooseDelivery.addEventListener('click', function () {
+            gcashFulfillmentChosen = true;
+            if (fulfillmentInput) fulfillmentInput.value = 'delivery';
+            if (gcashModal) gcashModal.classList.add('hidden');
+            form.submit();
+        });
+    }
+
+    if (btnChoosePickup) {
+        btnChoosePickup.addEventListener('click', function () {
+            gcashFulfillmentChosen = true;
+            if (fulfillmentInput) fulfillmentInput.value = 'pickup';
+            if (addressSelect) addressSelect.removeAttribute('required');
+            if (gcashModal) gcashModal.classList.add('hidden');
+            form.submit();
+        });
+    }
 })();
 </script>
 <?= $this->endSection() ?>

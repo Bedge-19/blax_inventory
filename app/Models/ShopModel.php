@@ -18,6 +18,8 @@ class ShopModel extends Model
         'description',
         'logo_url',
         'address_line',
+        'street',
+        'barangay',
         'city',
         'province',
         'business_permit_url',

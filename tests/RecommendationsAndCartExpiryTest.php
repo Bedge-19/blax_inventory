@@ -34,6 +34,9 @@ final class RecommendationsAndCartExpiryTest extends CIUnitTestCase
     {
         $db = \Config\Database::connect();
         
+        // Ensure slot is clean for dummy expired item
+        $db->table('cart_items')->where('cart_id', 1)->where('product_id', 1)->delete();
+
         // Insert dummy expired item
         $db->table('cart_items')->insert([
             'cart_id'       => 1,

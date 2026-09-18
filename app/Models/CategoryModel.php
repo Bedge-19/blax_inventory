@@ -17,6 +17,7 @@ class CategoryModel extends Model
         'slug',
         'image_url',
         'sort_order',
+        'view_count',
     ];
 
     /**
@@ -37,8 +38,7 @@ class CategoryModel extends Model
     }
 
     /**
-     * Trending categories ranked by the number of products they contain,
-     * capped at $limit. Returns real categories with a derived product_count.
+     * Trending categories ranked by view_count, capped at $limit.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -48,6 +48,7 @@ class CategoryModel extends Model
             ->select('c.*, COUNT(p.id) AS product_count')
             ->join('products p', 'p.category_id = c.id', 'left')
             ->groupBy('c.id')
+            ->orderBy('c.view_count', 'DESC')
             ->orderBy('product_count', 'DESC')
             ->orderBy('c.sort_order', 'ASC')
             ->limit($limit)

@@ -29,6 +29,28 @@ $compactMoney = function (float $v): string {
 
 <div class="flex-1 space-y-gutter">
 
+    <?php if (!empty($active_warning)): ?>
+        <!-- Formal Compliance Warning Banner -->
+        <div class="rounded-2xl p-md lg:p-lg bg-red-500/10 border-2 border-red-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md shadow-sm">
+            <div class="flex items-center gap-md">
+                <span class="w-10 h-10 rounded-xl bg-red-500/20 text-red-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-2xl">error</span>
+                </span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-bold text-red-800 dark:text-red-300 text-body-md sm:text-body-lg"><?= esc($active_warning['title'] ?? 'Formal Compliance Warning') ?></h4>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-red-200 text-red-900 uppercase">Attention Required</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-1"><?= esc($active_warning['message'] ?? 'Your shop has been flagged for a policy review. Please ensure all store activities comply with marketplace standards.') ?></p>
+                </div>
+            </div>
+            <a href="<?= base_url('tenant/settings') ?>" class="inline-flex items-center gap-xs px-md py-2 bg-red-600 text-white text-xs font-bold rounded-xl hover:bg-red-700 transition-colors shadow-sm whitespace-nowrap">
+                <span>View Settings & Policies</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </a>
+        </div>
+    <?php endif; ?>
+
     <?php if (!empty($low_stock_count) && $low_stock_count > 0): ?>
         <!-- Low Stock / Out of Stock Alert Banner -->
         <div class="rounded-2xl p-md lg:p-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md shadow-sm">

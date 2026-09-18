@@ -64,6 +64,11 @@ class Customer extends BaseController
         if (!$category) {
             $result = ['products' => [], 'pager' => null];
         } else {
+            try {
+                $categoryModel->builder()->where('id', $category['id'])->increment('view_count', 1);
+            } catch (\Throwable $e) {
+                // Ignore silent counter increment error
+            }
             $result = $productModel->getGlobalProductsPaginated((int) $category['id'], null, $perPage, $page);
         }
 
@@ -157,10 +162,12 @@ class Customer extends BaseController
         $businessHours   = (new ShopBusinessHourModel())->getGroupedForShop((int) $shop['id']);
 
         $userShopReview = null;
+        $isFavorite = false;
         $session = session();
         if ($session->get('isLoggedIn')) {
-            $userId = $session->get('user_id');
+            $userId = (int) $session->get('user_id');
             $userShopReview = $reviewModel->getUserReview($userId, null, $shop['id']);
+            $isFavorite = (new FavoriteShopModel())->where('user_id', $userId)->where('shop_id', $shop['id'])->first() !== null;
         }
 
         $paperSizes       = (new \App\Models\ShopPaperSizeSettingModel())->getForShop((int) $shop['id']);
@@ -178,9 +185,45 @@ class Customer extends BaseController
             'shopReviews'      => $shopReviews,
             'shopReviewCount'  => $shopReviewCount,
             'userShopReview'   => $userShopReview,
+            'isFavorite'       => $isFavorite,
             'businessHours'    => $businessHours,
             'paperSizes'       => $paperSizes,
             'printingSettings' => $printingSettings,
+        ]);
+    }
+
+    /**
+     * Dedicated Search Results Page
+     */
+    public function search()
+    {
+        $productModel  = new ProductModel();
+        $categoryModel = new CategoryModel();
+
+        $search   = trim((string) ($this->request->getGet('q') ?? $this->request->getGet('search') ?? ''));
+        $catId    = (int) $this->request->getGet('category_id');
+        $page     = max(1, (int) $this->request->getGet('page'));
+        $perPage  = 24;
+
+        $result = $productModel->getGlobalProductsPaginated($catId > 0 ? $catId : null, $search !== '' ? $search : null, $perPage, $page);
+
+        $pager = $result['pager'];
+        $total = $pager ? (int) $pager->getTotal() : count($result['products']);
+        $totalPages = max(1, (int) ceil($total / $perPage));
+
+        $categories = $categoryModel->orderBy('name', 'ASC')->findAll();
+
+        return view('customer/search_results', [
+            'title'         => $search !== '' ? 'Search: ' . esc($search) : 'Search Products',
+            'searchQuery'   => $search,
+            'categoryId'    => $catId,
+            'categories'    => $categories,
+            'products'      => $result['products'],
+            'pager'         => $result['pager'],
+            'totalPages'    => $totalPages,
+            'currentPage'   => $page,
+            'perPage'       => $perPage,
+            'totalProducts' => $total,
         ]);
     }
 
@@ -191,6 +234,14 @@ class Customer extends BaseController
 
         if (!$product) {
             return redirect()->to('/');
+        }
+
+        if (!empty($product['category_id'])) {
+            try {
+                (new CategoryModel())->builder()->where('id', (int) $product['category_id'])->increment('view_count', 1);
+            } catch (\Throwable $e) {
+                // Ignore silent counter increment error
+            }
         }
 
         $relatedProducts = $productModel->getRelatedProducts((int) $product['category_id'], (int) $product['id'], 12);
@@ -330,6 +381,19 @@ class Customer extends BaseController
             unset($item);
         }
         unset($order);
+
+        // Filter out completed, delivered, and cancelled orders older than 2 days
+        $cutoff2Days = date('Y-m-d H:i:s', time() - 2 * 86400);
+        $orders = array_values(array_filter($orders, static function ($o) use ($cutoff2Days) {
+            $status = $o['status'] ?? 'pending';
+            if (in_array($status, ['completed', 'delivered', 'cancelled'], true)) {
+                $checkDate = $o['completed_at'] ?? $o['cancelled_at'] ?? $o['updated_at'] ?? $o['placed_at'] ?? $o['created_at'] ?? null;
+                if ($checkDate && $checkDate < $cutoff2Days) {
+                    return false;
+                }
+            }
+            return true;
+        }));
 
         return view('customer/orders', [
             'orders' => $orders,
@@ -472,6 +536,19 @@ class Customer extends BaseController
 
         $prModel  = new PrintingRequestModel();
         $requests = $prModel->getRequestsByCustomer($userId);
+
+        // Filter out cancelled printing requests older than 5 days
+        $cutoff5Days = date('Y-m-d H:i:s', time() - 5 * 86400);
+        $requests = array_values(array_filter($requests, static function ($r) use ($cutoff5Days) {
+            $status = $r['status'] ?? 'new';
+            if ($status === 'cancelled') {
+                $checkDate = $r['updated_at'] ?? $r['created_at'] ?? null;
+                if ($checkDate && $checkDate < $cutoff5Days) {
+                    return false;
+                }
+            }
+            return true;
+        }));
 
         return view('customer/printing_requests', [
             'requests' => $requests,
@@ -669,6 +746,226 @@ class Customer extends BaseController
 
         $favModel->delete($row['id']);
         session()->setFlashdata('success', 'Shop removed from favorites.');
+        return redirect()->back();
+    }
+
+    public function favoriteShop()
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            return redirect()->to('/login')->with('error', 'Please sign in to follow this store.');
+        }
+
+        $shopId = (int) $this->request->getPost('shop_id');
+        if ($shopId <= 0) {
+            session()->setFlashdata('error', 'Invalid shop.');
+            return redirect()->back();
+        }
+
+        $favModel = new FavoriteShopModel();
+        $existing = $favModel->where('user_id', $userId)->where('shop_id', $shopId)->first();
+        if (!$existing) {
+            $favModel->insert([
+                'user_id'    => $userId,
+                'shop_id'    => $shopId,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            session()->setFlashdata('success', 'Store added to your favorite shops.');
+        } else {
+            session()->setFlashdata('info', 'You are already following this store.');
+        }
+
+        return redirect()->back();
+    }
+
+    public function reportShop()
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            return redirect()->to('/login')->with('error', 'Please log in to submit a report.');
+        }
+
+        $shopId      = (int) $this->request->getPost('shop_id');
+        $issueType   = trim((string) $this->request->getPost('issue_type'));
+        $description = trim((string) $this->request->getPost('description'));
+
+        $validReasons = [
+            'Counterfeit/Fake Product',
+            'Item Not as Described',
+            'Harassment/Abusive Behavior',
+            'Scam/Fraud',
+            'Other',
+        ];
+
+        if ($shopId <= 0 || !in_array($issueType, $validReasons, true)) {
+            session()->setFlashdata('error', 'Please select a valid reason for reporting this shop.');
+            return redirect()->back();
+        }
+
+        $shopModel = new ShopModel();
+        $shop      = $shopModel->find($shopId);
+        if (!$shop) {
+            session()->setFlashdata('error', 'Shop not found.');
+            return redirect()->back();
+        }
+
+        $complianceModel = new \App\Models\ComplianceModel();
+        $reportNumber    = 'CR-' . date('Ymd') . '-' . strtoupper(substr(uniqid('', false), -4));
+
+        $complianceModel->insert([
+            'report_number'    => $reportNumber,
+            'reporter_id'      => $userId,
+            'reported_shop_id' => $shopId,
+            'reported_user_id' => $shop['owner_id'] ?? null,
+            'issue_type'       => $issueType,
+            'description'      => $description !== '' ? $description : 'Reported by customer for: ' . $issueType,
+            'status'           => 'pending',
+            'created_at'       => date('Y-m-d H:i:s'),
+        ]);
+
+        session()->setFlashdata('success', 'Your report has been submitted for review. Thank you for helping keep Blax safe.');
+        return redirect()->back();
+    }
+
+    public function saveProductReview()
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Please sign in.']);
+            }
+            return redirect()->to('/login');
+        }
+
+        $productId = (int) $this->request->getPost('product_id');
+        $orderId   = (int) $this->request->getPost('order_id');
+        $rating    = max(1, min(5, (int) ($this->request->getPost('rating') ?? 5)));
+        $comment   = trim((string) $this->request->getPost('comment'));
+
+        if ($productId <= 0) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid product.']);
+            }
+            return redirect()->back()->with('error', 'Invalid product.');
+        }
+
+        $reviewModel = new ReviewModel();
+        $existing = $reviewModel->where('user_id', $userId)->where('product_id', $productId)->first();
+
+        if ($existing) {
+            $reviewModel->update($existing['id'], [
+                'rating'     => $rating,
+                'comment'    => $comment,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            $reviewModel->insert([
+                'user_id'    => $userId,
+                'product_id' => $productId,
+                'order_id'   => $orderId > 0 ? $orderId : null,
+                'rating'     => $rating,
+                'comment'    => $comment,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // Recalculate product rating average and count
+        $avg = $reviewModel->where('product_id', $productId)->selectAvg('rating')->first();
+        $cnt = $reviewModel->countProductReviews($productId);
+        (new ProductModel())->update($productId, [
+            'rating_average' => (float) ($avg['rating'] ?? 5.0),
+            'rating_count'   => $cnt,
+        ]);
+
+        // Task 3: After product review, prompt customer to also rate the shop
+        $product = (new ProductModel())->find($productId);
+        if ($product && !empty($product['shop_id'])) {
+            $existingShopReview = $reviewModel->getUserReview($userId, null, (int) $product['shop_id']);
+            if (!$existingShopReview) {
+                $shopName = (new ShopModel())->find($product['shop_id'])['shop_name'] ?? 'the shop';
+                (new \App\Models\NotificationModel())->create(
+                    $userId,
+                    'review_prompt',
+                    '🏪 Rate the Shop Too!',
+                    "You rated a product from {$shopName}. How was your overall experience with this shop?",
+                    '/customer/orders'
+                );
+            }
+        }
+
+        if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+            return $this->response->setJSON(['success' => true, 'message' => 'Product review saved successfully!']);
+        }
+
+        session()->setFlashdata('success', 'Product review submitted!');
+        return redirect()->back();
+    }
+
+    public function saveShopReview()
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Please sign in.']);
+            }
+            return redirect()->to('/login');
+        }
+
+        $shopId  = (int) $this->request->getPost('shop_id');
+        $orderId = (int) $this->request->getPost('order_id');
+        $rating  = max(1, min(5, (int) ($this->request->getPost('rating') ?? 5)));
+        $comment = trim((string) $this->request->getPost('comment'));
+
+        if ($shopId <= 0) {
+            if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid shop.']);
+            }
+            return redirect()->back()->with('error', 'Invalid shop.');
+        }
+
+        $reviewModel = new ReviewModel();
+        $existing = $reviewModel->where('user_id', $userId)->where('shop_id', $shopId)->first();
+
+        if ($existing) {
+            $reviewModel->update($existing['id'], [
+                'rating'     => $rating,
+                'comment'    => $comment,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        } else {
+            $reviewModel->insert([
+                'user_id'    => $userId,
+                'shop_id'    => $shopId,
+                'order_id'   => $orderId > 0 ? $orderId : null,
+                'rating'     => $rating,
+                'comment'    => $comment,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+
+        // Recalculate shop rating average and count
+        $avg = $reviewModel->where('shop_id', $shopId)->selectAvg('rating')->first();
+        $cnt = $reviewModel->countShopReviews($shopId);
+        (new ShopModel())->update($shopId, [
+            'rating_average' => (float) ($avg['rating'] ?? 5.0),
+            'rating_count'   => $cnt,
+        ]);
+
+        if ($this->request->isAJAX() || $this->request->getHeaderLine('Accept') === 'application/json') {
+            return $this->response->setJSON(['success' => true, 'message' => 'Shop review saved successfully!']);
+        }
+
+        session()->setFlashdata('success', 'Shop review submitted!');
         return redirect()->back();
     }
 
@@ -1235,102 +1532,5 @@ class Customer extends BaseController
 
         session()->setFlashdata('success', 'Profile updated successfully.');
         return redirect()->to('/customer/profile');
-    }
-
-    /**
-     * Save or update a product review.
-     * POST reviews/product/save
-     */
-    public function saveProductReview()
-    {
-        $session = session();
-        $userId  = $session->get('user_id');
-
-        if (!$userId) {
-            return redirect()->to('/login')->with('error', 'You must be logged in to submit a review.');
-        }
-
-        $productId = (int) $this->request->getPost('product_id');
-        $shopId    = (int) $this->request->getPost('shop_id');
-        $rating    = (int) $this->request->getPost('rating');
-        $comment   = trim((string) $this->request->getPost('comment'));
-
-        if ($productId <= 0 || $shopId <= 0) {
-            return redirect()->back()->with('error', 'Invalid product or shop.');
-        }
-        if ($rating < 1 || $rating > 5) {
-            return redirect()->back()->with('error', 'Rating must be between 1 and 5 stars.');
-        }
-        if ($comment !== '' && mb_strlen($comment) > 2000) {
-            return redirect()->back()->with('error', 'Review text is too long (max 2000 characters).');
-        }
-
-        try {
-            $reviewService = service('reviewService');
-            $reviewService->saveProductReview($userId, $productId, $shopId, $rating, $comment);
-
-            session()->setFlashdata('success', 'Your review has been submitted!');
-        } catch (\RuntimeException $e) {
-            session()->setFlashdata('error', $e->getMessage());
-        } catch (\Throwable $e) {
-            log_message('error', 'Failed to save product review: ' . $e->getMessage());
-            session()->setFlashdata('error', 'An unexpected error occurred. Please try again.');
-        }
-
-        return redirect()->back();
-    }
-
-    /**
-     * Save or update a shop review.
-     * POST reviews/shop/save
-     */
-    public function saveShopReview()
-    {
-        $session = session();
-        $userId  = $session->get('user_id');
-
-        if (!$userId) {
-            return redirect()->to('/login')->with('error', 'You must be logged in to submit a review.');
-        }
-
-        $shopId  = (int) $this->request->getPost('shop_id');
-        $rating  = (int) $this->request->getPost('rating');
-        $comment = trim((string) $this->request->getPost('comment'));
-
-        if ($shopId <= 0) {
-            return redirect()->back()->with('error', 'Invalid shop.');
-        }
-        if ($rating < 1 || $rating > 5) {
-            return redirect()->back()->with('error', 'Rating must be between 1 and 5 stars.');
-        }
-        if ($comment !== '' && mb_strlen($comment) > 2000) {
-            return redirect()->back()->with('error', 'Review text is too long (max 2000 characters).');
-        }
-
-        try {
-            $reviewService = service('reviewService');
-            $reviewService->saveShopReview($this->getCurrentUserId(), $shopId, $rating, $comment);
-
-            session()->setFlashdata('success', 'Your shop review has been submitted!');
-        } catch (\RuntimeException $e) {
-            session()->setFlashdata('error', $e->getMessage());
-        } catch (\Throwable $e) {
-            log_message('error', 'Failed to save shop review: ' . $e->getMessage());
-            session()->setFlashdata('error', 'An unexpected error occurred. Please try again.');
-        }
-
-        return redirect()->back();
-    }
-
-    /**
-     * Helper to get the current user ID, throwing if not logged in.
-     */
-    private function getCurrentUserId(): int
-    {
-        $userId = session()->get('user_id');
-        if (!$userId) {
-            throw new \RuntimeException('You must be logged in to submit a review.');
-        }
-        return (int) $userId;
     }
 }

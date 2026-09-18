@@ -246,6 +246,10 @@
                                                         <span class="material-symbols-outlined text-[18px]">qr_code_2</span> Generate & Download QR
                                                     </button>
                                                 <?php endif; ?>
+                                                <div class="border-t border-outline-variant/20 my-xs"></div>
+                                                <button type="button" onclick="openReportCustomerModal(<?= (int) ($o['customer_id'] ?? 0) ?>, '<?= esc($fullName !== '' ? $fullName : 'Customer', 'js') ?>', '<?= esc($o['order_number'], 'js') ?>')" class="w-full text-left px-sm py-sm rounded-lg text-error text-label-sm font-semibold hover:bg-error-container/20 flex items-center gap-xs">
+                                                    <span class="material-symbols-outlined text-[18px]">flag</span> Report Customer
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -302,7 +306,7 @@
             <button onclick="document.getElementById('orderModal').classList.add('hidden')" class="text-on-surface-variant hover:text-on-surface"><span class="material-symbols-outlined">close</span></button>
         </div>
         <div class="space-y-sm mb-md">
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Customer</span><span id="omCustomer" class="text-body-md font-semibold text-on-surface"></span></div>
+            <div class="flex justify-between items-center"><span class="text-label-sm text-on-surface-variant">Customer</span><div class="flex items-center gap-2"><span id="omCustomer" class="text-body-md font-semibold text-on-surface"></span><button type="button" id="omReportCustomerBtn" class="text-[11px] font-bold text-error hover:underline flex items-center gap-0.5"><span class="material-symbols-outlined text-[14px]">flag</span> Report</button></div></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Status</span><span id="omStatus" class="text-body-md text-on-surface"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Date</span><span id="omDate" class="text-body-md text-on-surface"></span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Payment</span><span id="omPayment" class="text-body-md text-on-surface uppercase"></span></div>
@@ -326,6 +330,12 @@
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Shipping</span><span id="omShipping" class="text-body-md text-on-surface">₱0.00</span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Tax</span><span id="omTax" class="text-body-md text-on-surface">₱0.00</span></div>
             <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Total</span><span id="omTotal" class="text-body-md font-bold text-primary">₱0.00</span></div>
+        </div>
+        <div id="omAcceptContainer" class="hidden mt-md pt-md border-t border-outline-variant/20">
+            <button type="button" id="omAcceptBtn" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-all flex items-center justify-center gap-xs text-sm shadow-md active:scale-95">
+                <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                <span>Accept &amp; Set to Processing</span>
+            </button>
         </div>
         <div id="omQrContainer" class="hidden mt-md pt-md border-t border-outline-variant/20">
             <button type="button" id="omQrBtn" class="w-full py-sm bg-primary/10 text-primary border border-primary/30 rounded-xl font-semibold hover:bg-primary/20 transition-all flex items-center justify-center gap-xs text-label-sm">
@@ -510,6 +520,19 @@
                 const o = data.order;
                 document.getElementById('omNumber').textContent = '#' + (o.order_number || '');
                 document.getElementById('omCustomer').textContent = o.customer || 'Customer';
+
+                const reportBtn = document.getElementById('omReportCustomerBtn');
+                if (reportBtn) {
+                    if (o.customer_id) {
+                        reportBtn.classList.remove('hidden');
+                        reportBtn.onclick = function() {
+                            openReportCustomerModal(o.customer_id, o.customer, o.order_number);
+                        };
+                    } else {
+                        reportBtn.classList.add('hidden');
+                    }
+                }
+
                 document.getElementById('omStatus').textContent = o.status || '';
                 document.getElementById('omDate').textContent = o.placed_at || '';
                 document.getElementById('omPayment').textContent = o.payment_method || '';
@@ -523,27 +546,91 @@
                 tbody.innerHTML = '';
                 (data.items || []).forEach((it) => {
                     const tr = document.createElement('tr');
-                    const cells = [
-                        ['product_name', 'text-left'],
-                        ['quantity', 'text-right'],
-                        ['unit_price', 'text-right'],
-                        ['line_total', 'text-right'],
-                    ];
-                    cells.forEach(([key, cls]) => {
-                        const td = document.createElement('td');
-                        td.className = 'px-md py-sm text-body-md ' + cls + (key === 'product_name' ? ' font-medium text-on-surface' : ' text-on-surface-variant');
-                        if (key === 'product_name' && it.variant_label) {
-                            td.innerHTML = escapeHtml(it.product_name) + ' <span class="inline-block text-xs font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-1">' + escapeHtml(it.variant_label) + '</span>';
-                        } else {
-                            td.textContent = key === 'unit_price' || key === 'line_total' ? money(it[key]) : it[key];
-                        }
-                        tr.appendChild(td);
-                    });
+                    
+                    // Product cell with image thumbnail
+                    const prodTd = document.createElement('td');
+                    prodTd.className = 'px-md py-sm text-body-md text-left font-medium text-on-surface';
+                    
+                    let imgTag = '';
+                    if (it.image_url) {
+                        imgTag = `<img src="${escapeHtml(it.image_url)}" class="w-10 h-10 object-cover rounded-lg border border-outline-variant/30 shrink-0 bg-surface-container" alt="${escapeHtml(it.product_name)}">`;
+                    } else {
+                        imgTag = `<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-outline shrink-0"><span class="material-symbols-outlined text-[18px]">inventory_2</span></div>`;
+                    }
+
+                    let nameHtml = `<div><p class="font-semibold text-on-surface leading-snug">${escapeHtml(it.product_name)}</p>`;
+                    if (it.variant_label) {
+                        nameHtml += `<span class="inline-block text-[11px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded mt-0.5">${escapeHtml(it.variant_label)}</span>`;
+                    }
+                    nameHtml += `</div>`;
+
+                    prodTd.innerHTML = `<div class="flex items-center gap-sm">${imgTag}${nameHtml}</div>`;
+                    tr.appendChild(prodTd);
+
+                    // Qty cell
+                    const qtyTd = document.createElement('td');
+                    qtyTd.className = 'px-md py-sm text-body-md text-right text-on-surface-variant font-semibold';
+                    qtyTd.textContent = it.quantity;
+                    tr.appendChild(qtyTd);
+
+                    // Unit price cell
+                    const unitTd = document.createElement('td');
+                    unitTd.className = 'px-md py-sm text-body-md text-right text-on-surface-variant';
+                    unitTd.textContent = money(it.unit_price);
+                    tr.appendChild(unitTd);
+
+                    // Line total cell
+                    const lineTd = document.createElement('td');
+                    lineTd.className = 'px-md py-sm text-body-md text-right font-bold text-on-surface';
+                    lineTd.textContent = money(it.line_total);
+                    tr.appendChild(lineTd);
+
                     tbody.appendChild(tr);
                 });
                 if (!data.items || data.items.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="4" class="py-md text-center text-on-surface-variant">No items recorded for this order.</td></tr>';
                 }
+
+                // Accept & Set to Processing Button (for pending orders)
+                const acceptContainer = document.getElementById('omAcceptContainer');
+                const acceptBtn = document.getElementById('omAcceptBtn');
+                if (acceptContainer && acceptBtn) {
+                    if (o.raw_status === 'pending') {
+                        acceptContainer.classList.remove('hidden');
+                        acceptBtn.onclick = function() {
+                            acceptBtn.disabled = true;
+                            acceptBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Updating...';
+
+                            const form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = '<?= base_url('tenant/orders/update-status') ?>';
+                            
+                            const csrfInput = document.createElement('input');
+                            csrfInput.type = 'hidden';
+                            csrfInput.name = '<?= csrf_token() ?>';
+                            csrfInput.value = document.querySelector('input[name="<?= csrf_token() ?>"]')?.value || '<?= csrf_hash() ?>';
+                            form.appendChild(csrfInput);
+
+                            const orderIdInput = document.createElement('input');
+                            orderIdInput.type = 'hidden';
+                            orderIdInput.name = 'order_id';
+                            orderIdInput.value = id;
+                            form.appendChild(orderIdInput);
+
+                            const statusInput = document.createElement('input');
+                            statusInput.type = 'hidden';
+                            statusInput.name = 'status';
+                            statusInput.value = 'processing';
+                            form.appendChild(statusInput);
+
+                            document.body.appendChild(form);
+                            form.submit();
+                        };
+                    } else {
+                        acceptContainer.classList.add('hidden');
+                    }
+                }
+
                 const qrContainer = document.getElementById('omQrContainer');
                 const qrBtn = document.getElementById('omQrBtn');
                 if (qrContainer && qrBtn) {
@@ -768,6 +855,58 @@
             btn.classList.remove('opacity-75', 'pointer-events-none');
         }, 3500);
     }
+
+    function openReportCustomerModal(customerId, customerName, orderNumber) {
+        document.getElementById('rcCustomerId').value = customerId;
+        document.getElementById('rcCustomerName').textContent = customerName + (orderNumber ? ' (Order #' + orderNumber + ')' : '');
+        document.getElementById('reportCustomerModal').classList.remove('hidden');
+    }
+    function closeReportCustomerModal() {
+        document.getElementById('reportCustomerModal').classList.add('hidden');
+    }
 </script>
+
+<!-- Modal: Report Customer -->
+<div id="reportCustomerModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-md">
+    <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-lg shadow-2xl space-y-md">
+        <div class="flex items-center justify-between border-b border-outline-variant/20 pb-sm">
+            <div class="flex items-center gap-sm">
+                <span class="p-2 bg-error-container/30 text-error rounded-xl material-symbols-outlined">flag</span>
+                <div>
+                    <h3 class="text-title-md font-bold text-on-surface">Report Customer</h3>
+                    <p id="rcCustomerName" class="text-xs text-on-surface-variant font-semibold">Customer Name</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeReportCustomerModal()" class="text-outline hover:text-on-surface p-1 rounded-full"><span class="material-symbols-outlined">close</span></button>
+        </div>
+
+        <form action="<?= base_url('tenant/compliance/report-customer') ?>" method="POST" class="space-y-md">
+            <?= csrf_field() ?>
+            <input type="hidden" name="customer_id" id="rcCustomerId">
+
+            <div>
+                <label class="text-xs font-bold text-on-surface-variant uppercase">Issue Type</label>
+                <select name="issue_type" required class="w-full mt-1 p-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary">
+                    <option value="Bogus Buyer / Refused Order">Bogus Buyer / Refused Order</option>
+                    <option value="Unresponsive Customer">Unresponsive Customer</option>
+                    <option value="Abusive Language / Harassment">Abusive Language / Harassment</option>
+                    <option value="Payment Dispute">Payment Dispute</option>
+                    <option value="Suspicious / Fraudulent Account">Suspicious / Fraudulent Account</option>
+                    <option value="Other Policy Violation">Other Policy Violation</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-on-surface-variant uppercase">Incident Description & Evidence</label>
+                <textarea name="description" rows="4" required class="w-full mt-1 p-3 bg-surface-container-low border border-outline-variant rounded-xl text-xs focus:ring-2 focus:ring-primary" placeholder="Detail the incident, dates, messages, or order reference..."></textarea>
+            </div>
+
+            <div class="flex gap-sm pt-sm border-t border-outline-variant/20">
+                <button type="button" onclick="closeReportCustomerModal()" class="flex-1 py-2 rounded-xl text-xs font-bold border border-outline-variant hover:bg-surface-container">Cancel</button>
+                <button type="submit" class="flex-1 py-2 rounded-xl text-xs font-bold bg-error text-on-error hover:bg-error/90 shadow-sm">Submit Report</button>
+            </div>
+        </form>
+    </div>
+</div>
 
 <?= $this->endSection() ?>

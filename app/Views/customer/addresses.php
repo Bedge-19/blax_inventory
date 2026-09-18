@@ -432,6 +432,12 @@
         document.getElementById('addr-overlay').addEventListener('click', closeModal);
         document.getElementById('addr-modal-close').addEventListener('click', closeModal);
         document.getElementById('addr-modal-cancel').addEventListener('click', closeModal);
+
+        // Auto-open modal if redirected with ?open_add=1 or no saved address
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('open_add') === '1' || window.location.hash === '#add' || <?= empty($addresses) ? 'true' : 'false' ?>) {
+            openAdd();
+        }
     })();
 </script>
 

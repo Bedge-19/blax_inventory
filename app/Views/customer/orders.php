@@ -247,7 +247,14 @@
 
                                 <?php if ($orderStatus === 'delivered' || $orderStatus === 'completed'): ?>
 
-                                    <button type="button" class="flex-1 md:flex-none bg-surface-container-highest text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-outline-variant transition-colors">Buy Again</button>
+                                    <button type="button" 
+                                            class="rate-order-btn flex-1 md:flex-none bg-amber-500 hover:bg-amber-600 text-white py-sm px-md rounded-lg font-button text-button transition-colors flex items-center justify-center gap-xs shadow-sm"
+                                            data-order='<?= esc(json_encode($order), 'attr') ?>'>
+                                        <span class="material-symbols-outlined text-[16px]">star</span>
+                                        <span>Rate Product & Shop</span>
+                                    </button>
+
+                                    <a href="<?= base_url('shop/' . url_title($order['shop_name'] ?? 'rhk', '-', true)) ?>" class="flex-1 md:flex-none text-center bg-surface-container-highest text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-outline-variant transition-colors">Buy Again</a>
 
                                 <?php elseif (($order['fulfillment_method'] ?? 'delivery') === 'pickup'): ?>
 
@@ -425,7 +432,82 @@
             </div>
         </div>
 
-        <button type="button" id="order-qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        <div class="grid grid-cols-2 gap-2 w-full">
+            <button type="button" id="order-qr-download" class="w-full py-md bg-surface-container-highest hover:bg-outline-variant text-on-surface rounded-xl text-button font-button transition-all flex items-center justify-center gap-xs">
+                <span class="material-symbols-outlined text-[18px]">download</span>
+                <span>Download QR</span>
+            </button>
+            <button type="button" id="order-qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rate Order / Product & Shop Modal -->
+<div id="rate-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="rate-overlay"></div>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-md">
+            <div>
+                <span class="text-[10px] uppercase font-bold text-outline tracking-wider">Leave Feedback</span>
+                <h3 class="text-title-lg font-bold text-on-surface" id="rate-title">Rate Your Order</h3>
+            </div>
+            <button type="button" id="rate-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <form id="rate-form" class="space-y-lg">
+            <input type="hidden" id="rate-shop-id" value="">
+            <input type="hidden" id="rate-product-id" value="">
+            <input type="hidden" id="rate-order-id" value="">
+
+            <!-- Shop Rating -->
+            <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/20 space-y-xs">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Shop Rating: <span id="rate-shop-name" class="text-primary font-semibold">Store</span></label>
+                    <span id="rate-shop-val-text" class="text-xs font-bold text-amber-500">5 / 5</span>
+                </div>
+                <div class="flex items-center gap-1" id="shop-star-group">
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="shop-star text-amber-400 hover:scale-110 transition-transform" data-val="<?= $i ?>">
+                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </button>
+                    <?php endfor; ?>
+                </div>
+                <input type="hidden" id="rate-shop-score" value="5">
+                <textarea id="rate-shop-comment" rows="2" placeholder="How was the seller's service and order packaging?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+            </div>
+
+            <!-- Product Rating -->
+            <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/20 space-y-xs" id="product-rating-section">
+                <div class="flex justify-between items-center">
+                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Product Rating: <span id="rate-product-name" class="text-primary font-semibold">Product</span></label>
+                    <span id="rate-prod-val-text" class="text-xs font-bold text-amber-500">5 / 5</span>
+                </div>
+                <div class="flex items-center gap-1" id="prod-star-group">
+                    <?php for ($i = 1; $i <= 5; $i++): ?>
+                        <button type="button" class="prod-star text-amber-400 hover:scale-110 transition-transform" data-val="<?= $i ?>">
+                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </button>
+                    <?php endfor; ?>
+                </div>
+                <input type="hidden" id="rate-prod-score" value="5">
+                <textarea id="rate-prod-comment" rows="2" placeholder="How was the quality of the item received?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+            </div>
+
+            <div id="rate-error" class="hidden p-sm bg-error-container/20 border border-error-container/50 rounded-xl text-xs text-error font-semibold flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">error</span>
+                <span id="rate-error-text">Failed to submit review.</span>
+            </div>
+
+            <div class="flex justify-end gap-sm pt-xs border-t border-outline-variant/20">
+                <button type="button" id="rate-cancel" class="py-sm px-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-button text-button transition-all font-semibold">Cancel</button>
+                <button type="submit" id="rate-submit-btn" class="py-sm px-xl bg-primary hover:bg-primary-container text-on-primary rounded-xl font-button text-button transition-all font-semibold flex items-center justify-center gap-xs shadow-md active:scale-95">
+                    <span class="material-symbols-outlined text-[18px]">send</span>
+                    <span>Submit Reviews</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -548,6 +630,181 @@
     if (qrOverlay) qrOverlay.addEventListener('click', closeQr);
     if (qrClose) qrClose.addEventListener('click', closeQr);
     if (qrDone) qrDone.addEventListener('click', closeQr);
+
+    var qrDownloadBtn = document.getElementById('order-qr-download');
+    if (qrDownloadBtn) {
+        qrDownloadBtn.addEventListener('click', function () {
+            var canvas = qrCanvas.querySelector('canvas');
+            var img = qrCanvas.querySelector('img');
+            var dataUrl = null;
+            if (canvas) {
+                dataUrl = canvas.toDataURL('image/png');
+            } else if (img && img.src) {
+                dataUrl = img.src;
+            }
+            if (dataUrl) {
+                var a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'BLAX-Pickup-QR-' + (qrNumber.textContent.replace('#', '') || 'order') + '.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        });
+    }
+
+    // Rate Order / Product Modal Logic
+    var rateModal      = document.getElementById('rate-modal');
+    var rateOverlay    = document.getElementById('rate-overlay');
+    var rateClose      = document.getElementById('rate-close');
+    var rateCancel     = document.getElementById('rate-cancel');
+    var rateForm       = document.getElementById('rate-form');
+    var rateTitle      = document.getElementById('rate-title');
+    var rateShopName   = document.getElementById('rate-shop-name');
+    var rateProdName   = document.getElementById('rate-product-name');
+    var rateShopId     = document.getElementById('rate-shop-id');
+    var rateProdId     = document.getElementById('rate-product-id');
+    var rateOrderId    = document.getElementById('rate-order-id');
+    var rateShopScore  = document.getElementById('rate-shop-score');
+    var rateProdScore  = document.getElementById('rate-prod-score');
+    var rateShopComment= document.getElementById('rate-shop-comment');
+    var rateProdComment= document.getElementById('rate-prod-comment');
+    var rateShopValText= document.getElementById('rate-shop-val-text');
+    var rateProdValText= document.getElementById('rate-prod-val-text');
+    var rateErr        = document.getElementById('rate-error');
+    var rateErrText    = document.getElementById('rate-error-text');
+
+    function closeRateModal() {
+        if (rateModal) rateModal.classList.add('hidden');
+    }
+
+    if (rateOverlay) rateOverlay.addEventListener('click', closeRateModal);
+    if (rateClose) rateClose.addEventListener('click', closeRateModal);
+    if (rateCancel) rateCancel.addEventListener('click', closeRateModal);
+
+    function updateStars(containerSelector, score, textEl) {
+        var stars = document.querySelectorAll(containerSelector + ' .shop-star, ' + containerSelector + ' .prod-star');
+        stars.forEach(function (s) {
+            var val = parseInt(s.dataset.val, 10);
+            var icon = s.querySelector('.material-symbols-outlined');
+            if (icon) {
+                if (val <= score) {
+                    icon.style.fontVariationSettings = "'FILL' 1";
+                    s.classList.remove('opacity-40');
+                } else {
+                    icon.style.fontVariationSettings = "'FILL' 0";
+                    s.classList.add('opacity-40');
+                }
+            }
+        });
+        if (textEl) textEl.textContent = score + ' / 5';
+    }
+
+    document.querySelectorAll('#shop-star-group .shop-star').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var val = parseInt(this.dataset.val, 10) || 5;
+            rateShopScore.value = val;
+            updateStars('#shop-star-group', val, rateShopValText);
+        });
+    });
+
+    document.querySelectorAll('#prod-star-group .prod-star').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var val = parseInt(this.dataset.val, 10) || 5;
+            rateProdScore.value = val;
+            updateStars('#prod-star-group', val, rateProdValText);
+        });
+    });
+
+    document.querySelectorAll('.rate-order-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            try {
+                var order = JSON.parse(this.getAttribute('data-order'));
+                if (!order) return;
+                rateOrderId.value = order.id || '';
+                rateShopId.value = order.shop_id || '';
+                rateShopName.textContent = order.shop_name || 'Store';
+                
+                var firstItem = (order.items && order.items.length > 0) ? order.items[0] : null;
+                if (firstItem) {
+                    rateProdId.value = firstItem.product_id || '';
+                    rateProdName.textContent = firstItem.product_name || 'Product';
+                    document.getElementById('product-rating-section').classList.remove('hidden');
+                } else {
+                    rateProdId.value = '';
+                    document.getElementById('product-rating-section').classList.add('hidden');
+                }
+
+                rateShopScore.value = '5';
+                rateProdScore.value = '5';
+                rateShopComment.value = '';
+                rateProdComment.value = '';
+                updateStars('#shop-star-group', 5, rateShopValText);
+                updateStars('#prod-star-group', 5, rateProdValText);
+                if (rateErr) rateErr.classList.add('hidden');
+
+                if (rateModal) rateModal.classList.remove('hidden');
+            } catch (err) {
+                console.error('Failed to open rate modal:', err);
+            }
+        });
+    });
+
+    if (rateForm) {
+        rateForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var csrfToken = (typeof window.getCsrfToken === 'function') ? window.getCsrfToken() : '';
+            var csrfHeader = (typeof window.getCsrfHeader === 'function') ? window.getCsrfHeader() : 'X-CSRF-TOKEN';
+            var submitBtn = document.getElementById('rate-submit-btn');
+            if (submitBtn) submitBtn.disabled = true;
+
+            var promises = [];
+            if (rateShopId.value) {
+                var shopData = new URLSearchParams({
+                    shop_id: rateShopId.value,
+                    rating: rateShopScore.value,
+                    review: rateShopComment.value,
+                    order_id: rateOrderId.value
+                });
+                promises.push(fetch('<?= base_url('customer/reviews/shop') ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', [csrfHeader]: csrfToken },
+                    body: shopData
+                }).then(function(res) { return res.json(); }));
+            }
+
+            if (rateProdId.value) {
+                var prodData = new URLSearchParams({
+                    product_id: rateProdId.value,
+                    rating: rateProdScore.value,
+                    review: rateProdComment.value,
+                    order_id: rateOrderId.value
+                });
+                promises.push(fetch('<?= base_url('customer/reviews/product') ?>', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest', [csrfHeader]: csrfToken },
+                    body: prodData
+                }).then(function(res) { return res.json(); }));
+            }
+
+            Promise.all(promises).then(function () {
+                if (submitBtn) submitBtn.disabled = false;
+                closeRateModal();
+                if (typeof showToast === 'function') {
+                    showToast('Thank you! Your reviews have been submitted.', 'success');
+                } else {
+                    alert('Thank you! Your reviews have been submitted.');
+                }
+            }).catch(function (err) {
+                if (submitBtn) submitBtn.disabled = false;
+                if (rateErr && rateErrText) {
+                    rateErrText.textContent = 'Failed to submit reviews. Please try again.';
+                    rateErr.classList.remove('hidden');
+                }
+            });
+        });
+    }
 
     // Cancel Order modal logic
     var cancelModal   = document.getElementById('cancel-order-modal');

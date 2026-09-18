@@ -217,6 +217,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                                 data-compare="<?= esc($p['compare_at_price'] ?? '') ?>"
                                                 data-stock="<?= (int) $p['stock_quantity'] ?>"
                                                 data-threshold="<?= (int) ($p['low_stock_threshold'] ?? 5) ?>"
+                                                data-shipping-fee="<?= esc($p['shipping_fee'] ?? '0.00') ?>"
                                                 data-description="<?= esc($p['description'] ?? '') ?>"
                                                 data-image="<?= esc(!empty($p['image_url']) ? (str_starts_with($p['image_url'], 'http') ? $p['image_url'] : base_url($p['image_url'])) : '') ?>"
                                                 data-images="<?= esc(json_encode($productImages[$p['id']] ?? []), 'attr') ?>"
@@ -369,14 +370,18 @@ function inv_stock_pill(int $stock, int $threshold): array {
                     </select>
                 </div>
             </div>
-            <div class="grid grid-cols-2 gap-md">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-md">
                 <div>
                     <label class="text-label-sm font-bold text-on-surface-variant">Price (₱)</label>
                     <input type="number" step="0.01" min="0" name="price" id="p_price" required class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl">
                 </div>
                 <div>
                     <label class="text-label-sm font-bold text-on-surface-variant">Compare-at Price (₱)</label>
-                    <input type="number" step="0.01" min="0" name="compare_at_price" id="p_compare" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl">
+                    <input type="number" step="0.01" min="0" name="compare_at_price" id="p_compare" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl" placeholder="Optional">
+                </div>
+                <div>
+                    <label class="text-label-sm font-bold text-on-surface-variant">Standard Shipping (₱)</label>
+                    <input type="number" step="0.01" min="0" name="shipping_fee" id="p_shipping_fee" value="0.00" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl" placeholder="0.00">
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-md">
@@ -586,6 +591,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
         document.getElementById('p_compare').value = '';
         document.getElementById('p_stock').value = '';
         document.getElementById('p_threshold').value = '5';
+        document.getElementById('p_shipping_fee').value = '0.00';
         document.getElementById('p_description').value = '';
         
         // Reset file inputs and preview lists
@@ -604,6 +610,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
             document.getElementById('p_category').value = btn.dataset.category || '0';
             document.getElementById('p_price').value = btn.dataset.price || '';
             document.getElementById('p_compare').value = btn.dataset.compare || '';
+            document.getElementById('p_shipping_fee').value = btn.dataset.shippingFee || '0.00';
             document.getElementById('p_stock').value = btn.dataset.stock || '';
             document.getElementById('p_threshold').value = btn.dataset.threshold || '5';
             document.getElementById('p_description').value = btn.dataset.description || '';
@@ -639,7 +646,59 @@ function inv_stock_pill(int $stock, int $threshold): array {
         modal.classList.remove('hidden');
     }
 
+    let newSelectedFiles = [];
+
+    function syncFileInput() {
+        const fileInput = document.getElementById('p_images');
+        if (!fileInput) return;
+        const dt = new DataTransfer();
+        newSelectedFiles.forEach(f => dt.items.add(f));
+        fileInput.files = dt.files;
+    }
+
+    function renderNewImagePreviews() {
+        const previewContainer = document.getElementById('p_new_preview_container');
+        const list = document.getElementById('p_new_preview_list');
+        if (!previewContainer || !list) return;
+
+        list.innerHTML = '';
+        if (newSelectedFiles.length === 0) {
+            previewContainer.classList.add('hidden');
+            syncFileInput();
+            return;
+        }
+
+        previewContainer.classList.remove('hidden');
+        newSelectedFiles.forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const item = document.createElement('div');
+                item.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant/40 bg-surface-variant group';
+                item.innerHTML = `
+                    <img src="${ev.target.result}" class="w-full h-full object-cover">
+                    <span class="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white text-center py-0.5 truncate px-1">${escapeHtml(file.name)}</span>
+                    <button type="button" onclick="removeNewSelectedImage(${index})" class="absolute top-0.5 right-0.5 bg-error text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow hover:scale-110 transition-transform" title="Cancel upload">
+                        <span class="material-symbols-outlined text-[12px]">close</span>
+                    </button>
+                `;
+                list.appendChild(item);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        syncFileInput();
+    }
+
+    function removeNewSelectedImage(index) {
+        if (index >= 0 && index < newSelectedFiles.length) {
+            newSelectedFiles.splice(index, 1);
+            renderNewImagePreviews();
+        }
+    }
+
     function resetProductImages() {
+        newSelectedFiles = [];
+        syncFileInput();
         const fileInput = document.getElementById('p_images');
         if (fileInput) fileInput.value = '';
         const previewContainer = document.getElementById('p_new_preview_container');
@@ -941,28 +1000,13 @@ function inv_stock_pill(int $stock, int $threshold): array {
     });
 
     document.getElementById('p_images')?.addEventListener('change', function(e) {
-        const previewContainer = document.getElementById('p_new_preview_container');
-        const list = document.getElementById('p_new_preview_list');
-        if (!previewContainer || !list) return;
-
-        list.innerHTML = '';
         if (this.files && this.files.length > 0) {
-            previewContainer.classList.remove('hidden');
-            Array.from(this.files).forEach((file) => {
-                const reader = new FileReader();
-                reader.onload = function(ev) {
-                    const item = document.createElement('div');
-                    item.className = 'relative w-16 h-16 rounded-lg overflow-hidden border border-outline-variant/40 bg-surface-variant';
-                    item.innerHTML = `
-                        <img src="${ev.target.result}" class="w-full h-full object-cover">
-                        <span class="absolute bottom-0 inset-x-0 bg-black/60 text-[8px] text-white text-center py-0.5 truncate px-1">${escapeHtml(file.name)}</span>
-                    `;
-                    list.appendChild(item);
-                };
-                reader.readAsDataURL(file);
+            Array.from(this.files).forEach(file => {
+                if (!newSelectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+                    newSelectedFiles.push(file);
+                }
             });
-        } else {
-            previewContainer.classList.add('hidden');
+            renderNewImagePreviews();
         }
     });
 

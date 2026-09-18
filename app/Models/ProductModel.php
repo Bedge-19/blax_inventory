@@ -18,6 +18,7 @@ class ProductModel extends Model
         'name',
         'description',
         'price',
+        'shipping_fee',
         'compare_at_price',
         'stock_quantity',
         'low_stock_threshold',

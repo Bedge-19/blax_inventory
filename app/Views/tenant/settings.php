@@ -74,9 +74,38 @@
                         <textarea name="description" id="description" rows="4" maxlength="500" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl"><?= esc($shop['description'] ?? '') ?></textarea>
                     </div>
 
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                        <div>
+                            <label class="text-label-sm font-bold text-on-surface-variant block mb-xs" for="street">Street Address</label>
+                            <input type="text" name="street" id="street" value="<?= esc($shop['street'] ?? '') ?>" placeholder="House No., Street Name, Purok / Bldg" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary font-medium">
+                        </div>
+
+                        <div>
+                            <label class="text-label-sm font-bold text-on-surface-variant block mb-xs" for="barangay">Barangay (Polomolok)</label>
+                            <select name="barangay" id="barangay" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary font-medium">
+                                <option value="">-- Select Barangay --</option>
+                                <?php
+                                $validBarangays = [
+                                    'Bentung', 'Cannery Site', 'Crossing Palkan', 'Glamang', 'Kinilis',
+                                    'Klinan 6', 'Koronadal Proper', 'Lam-Caliaf', 'Landan', 'Lumakil',
+                                    'Maligo', 'Palkan', 'Poblacion', 'Polo', 'Pula Bato', 'Rubber',
+                                    'Silway 7', 'Silway 8', 'Sulit', 'Sumbakil', 'Upper Klinan',
+                                    'Pagalungan', 'Magsaysay'
+                                ];
+                                $curBrgy = $shop['barangay'] ?? '';
+                                foreach ($validBarangays as $b): ?>
+                                    <option value="<?= esc($b) ?>" <?= ($curBrgy === $b) ? 'selected' : '' ?>><?= esc($b) ?></option>
+                                <?php endforeach; ?>
+                                <?php if ($curBrgy !== '' && !in_array($curBrgy, $validBarangays, true)): ?>
+                                    <option value="<?= esc($curBrgy) ?>" selected><?= esc($curBrgy) ?></option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+
                     <div>
-                        <label class="text-label-sm font-bold text-on-surface-variant block mb-xs" for="address_line">Address</label>
-                        <input type="text" name="address_line" id="address_line" value="<?= esc($shop['address_line'] ?? '') ?>" placeholder="e.g. Polomolok, South Cotabato" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl">
+                        <label class="text-label-sm font-bold text-on-surface-variant block mb-xs" for="address_line">Address Details / Full Address</label>
+                        <input type="text" name="address_line" id="address_line" value="<?= esc($shop['address_line'] ?? '') ?>" placeholder="e.g. Polomolok, South Cotabato" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary font-medium">
                     </div>
 
                     <label class="flex items-center gap-md cursor-pointer">
@@ -348,6 +377,33 @@
                 document.getElementById('logoForm').submit();
             }
         });
+    }
+
+    // Auto-sync Street & Barangay to Address Line when not customized
+    var streetEl = document.getElementById('street');
+    var brgyEl = document.getElementById('barangay');
+    var addrEl = document.getElementById('address_line');
+    if (streetEl && brgyEl && addrEl) {
+        var userModifiedAddr = false;
+        addrEl.addEventListener('input', function() {
+            userModifiedAddr = true;
+        });
+
+        function syncAddressLine() {
+            if (userModifiedAddr) return;
+            var st = streetEl.value.trim();
+            var bg = brgyEl.value.trim();
+            var parts = [];
+            if (st) parts.push(st);
+            if (bg) parts.push(bg);
+            parts.push('Polomolok', 'South Cotabato');
+            if (st || bg) {
+                addrEl.value = parts.join(', ');
+            }
+        }
+
+        streetEl.addEventListener('input', syncAddressLine);
+        brgyEl.addEventListener('change', syncAddressLine);
     }
 
     wireHours();

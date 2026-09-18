@@ -46,12 +46,9 @@
         <aside id="admin-sidebar" class="bg-surface-container-lowest hidden md:flex flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen transition-transform duration-300">
 
             <div class="px-sm mb-xl flex justify-between items-start">
-                <div class="flex items-center gap-sm">
-                    <img src="<?= base_url('icon.png') ?>" alt="Blax" class="w-8 h-8 rounded-lg object-contain">
-                    <div>
-                        <h1 class="text-headline-md font-bold text-primary">Blax Console</h1>
-                        <p class="text-label-sm text-on-surface-variant/60">Platform Master Console</p>
-                    </div>
+                <div>
+                    <h1 class="text-headline-md font-bold text-primary">Blax Console</h1>
+                    <p class="text-label-sm text-on-surface-variant/60">Platform Master Console</p>
                 </div>
                 <button id="admin-sidebar-close" type="button" class="md:hidden text-on-surface-variant p-1 -mr-2">
                     <span class="material-symbols-outlined">close</span>

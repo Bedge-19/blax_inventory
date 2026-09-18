@@ -49,4 +49,32 @@ class SiteContentModel extends Model
         }
         return $grouped;
     }
+
+    public function getPlatformDeductionPercent(): float
+    {
+        $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();
+        if ($row && is_numeric($row['text_value'])) {
+            return (float) $row['text_value'];
+        }
+        return 3.00;
+    }
+
+    public function setPlatformDeductionPercent(float $percent): bool
+    {
+        $percent = round(max(0, min(50, $percent)), 2);
+        $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();
+        if ($row) {
+            return (bool) $this->update($row['id'], [
+                'text_value' => number_format($percent, 2, '.', ''),
+            ]);
+        }
+        return (bool) $this->insert([
+            'page'         => 'platform',
+            'content_key'  => 'withdrawal_deduction_percent',
+            'label'        => 'Withdrawal Deduction Percentage',
+            'content_type' => 'text',
+            'text_value'   => number_format($percent, 2, '.', ''),
+            'sort_order'   => 1,
+        ]);
+    }
 }

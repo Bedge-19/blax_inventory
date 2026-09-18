@@ -178,12 +178,7 @@ class CustomerOrderTrackingTest extends CIUnitTestCase
         $this->assertStringContainsString('Arrival Estimate', $body);
         $this->assertStringContainsString('Fulfillment Progress', $body);
 
-        // 3. Courier Rider info
-        $this->assertStringContainsString('Ronel Macaraeg', $body);
-        $this->assertStringContainsString('Call Driver', $body);
-        $this->assertStringContainsString('Message', $body);
-
-        // 4. Milestone stepper
+        // 3. Milestone stepper
         $this->assertStringContainsString('Order Placed', $body);
         $this->assertStringContainsString('Order Confirmed &amp; Packed by Store', $body);
         $this->assertStringContainsString('Handed to Delivery Courier', $body);

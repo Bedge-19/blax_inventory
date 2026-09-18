@@ -1,443 +1,502 @@
 <?= $this->extend('layouts/tenant') ?>
 <?= $this->section('content') ?>
 
-<div class="flex-1 space-y-lg">
+<div class="flex-1 space-y-lg max-w-7xl mx-auto pb-xl">
 
     <?php if (session()->getFlashdata('success')): ?>
-        <div class="p-md rounded-xl bg-green-100 text-green-800 text-sm font-medium mb-lg"><?= session()->getFlashdata('success') ?></div>
+        <div class="p-md rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 text-sm font-semibold flex items-center gap-sm">
+            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+            <span><?= session()->getFlashdata('success') ?></span>
+        </div>
     <?php endif; ?>
     <?php if (session()->getFlashdata('error')): ?>
-        <div class="p-md rounded-xl bg-error-container/40 text-on-error-container text-sm font-medium mb-lg"><?= session()->getFlashdata('error') ?></div>
+        <div class="p-md rounded-xl bg-error-container/40 border border-error/30 text-on-error-container text-sm font-semibold flex items-center gap-sm">
+            <span class="material-symbols-outlined text-[20px]">error</span>
+            <span><?= session()->getFlashdata('error') ?></span>
+        </div>
     <?php endif; ?>
 
-    <!-- Header + Scan QR -->
-    <div class="flex flex-wrap justify-between items-center gap-md">
+    <!-- Header + Actions -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-md">
         <div>
-            <h2 class="text-headline-md font-bold text-on-surface">Delivery Management</h2>
-            <p class="text-body-md text-on-surface-variant">Monitor and manage your deliveries across Polomolok.</p>
+            <h1 class="text-headline-sm font-extrabold text-on-surface tracking-tight">Delivery Management</h1>
+            <p class="text-body-md text-on-surface-variant mt-0.5">Track, search, and manage your shipments across Polomolok.</p>
         </div>
-        <button type="button" id="btnOpenDeliveryScanner" onclick="openScanner()" class="inline-flex items-center gap-sm px-md py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors cursor-pointer">
-            <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
-            Scan QR Code
-        </button>
+        <div class="flex items-center gap-sm flex-wrap">
+            <button type="button" id="btnOpenDeliveryScanner" onclick="openScanner()" class="inline-flex items-center gap-sm px-md py-sm bg-primary text-on-primary rounded-xl text-label-sm font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
+                <span>Scan QR Code</span>
+            </button>
+        </div>
     </div>
 
     <!-- Metrics Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-md">
-        <div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 shadow-sm">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-md">
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-primary/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-xs bg-primary-container/10 rounded-lg">
-                    <span class="material-symbols-outlined text-primary">local_shipping</span>
+                <div class="p-2 bg-primary-container/20 text-primary rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">local_shipping</span>
                 </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full">Active</span>
             </div>
-            <h3 class="text-label-sm text-on-surface-variant font-medium">Active Deliveries</h3>
-            <p class="text-headline-md font-bold mt-xs"><?= number_format((int) $kpis['active']) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">Active Deliveries</h3>
+            <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['active'] ?? 0)) ?></p>
         </div>
-        <div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 shadow-sm">
+
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-secondary/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-xs bg-secondary-container/30 rounded-lg">
-                    <span class="material-symbols-outlined text-secondary">storefront</span>
+                <div class="p-2 bg-secondary-container/30 text-secondary rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">storefront</span>
                 </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-secondary bg-secondary-container/20 px-2 py-0.5 rounded-full">Pick-up</span>
             </div>
-            <h3 class="text-label-sm text-on-surface-variant font-medium">Ready for Pick-up</h3>
-            <p class="text-headline-md font-bold mt-xs"><?= number_format((int) $kpis['ready_for_pickup']) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">Ready for Pick-up</h3>
+            <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['ready_for_pickup'] ?? 0)) ?></p>
         </div>
-        <div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 shadow-sm">
+
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-tertiary/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-xs bg-tertiary-container/10 rounded-lg">
-                    <span class="material-symbols-outlined text-tertiary">flight_takeoff</span>
+                <div class="p-2 bg-tertiary-container/20 text-tertiary rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
                 </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full">Dispatched</span>
             </div>
-            <h3 class="text-label-sm text-on-surface-variant font-medium">Shipped</h3>
-            <p class="text-headline-md font-bold mt-xs"><?= number_format((int) $kpis['shipped']) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">Shipped &bull; In Transit</h3>
+            <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['shipped'] ?? 0)) ?></p>
         </div>
-        <div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant/20 shadow-sm">
+
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-emerald-500/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-xs bg-[#dcfce7] rounded-lg">
-                    <span class="material-symbols-outlined text-[#166534]">check_circle</span>
+                <div class="p-2 bg-emerald-100 text-emerald-800 rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">check_circle</span>
                 </div>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">Today</span>
             </div>
-            <h3 class="text-label-sm text-on-surface-variant font-medium">Completed Today</h3>
-            <p class="text-headline-md font-bold mt-xs"><?= number_format((int) $kpis['completed_today']) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">Completed Today</h3>
+            <p class="text-headline-md font-extrabold text-emerald-700 mt-xs font-mono"><?= number_format((int) ($kpis['completed_today'] ?? 0)) ?></p>
         </div>
     </div>
 
-    <!-- Shipments + Fleet Map -->
-    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 w-full items-start">
-
-        <!-- Recent Shipments -->
-        <div class="xl:col-span-8 overflow-hidden rounded-xl border border-outline-variant/30 bg-surface-container-lowest shadow-sm">
-            <div class="px-lg py-md flex flex-wrap justify-between items-center gap-md border-b border-outline-variant/30">
-                <div>
-                    <h3 class="text-title-lg font-bold text-on-surface">Recent Shipments</h3>
-                    <p class="text-xs text-on-surface-variant">Type any reference or customer to filter in real time, or click to view live route</p>
-                </div>
-                <form method="get" action="<?= base_url('tenant/deliveries') ?>" class="flex flex-wrap items-center gap-sm" onsubmit="return false;">
-                    <div class="relative min-w-[240px]">
-                        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-                        <input id="liveShipmentSearch" name="q" value="<?= esc($filters['q']) ?>" placeholder="Instant search ref, customer, tracking..." class="w-full pl-xl pr-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary" type="text" autocomplete="off">
-                    </div>
-                    <select id="liveStatusFilter" name="status" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">All Statuses</option>
-                        <?php foreach ($statusOptions as $val => $label): ?>
-                            <option value="<?= esc($val) ?>" <?= $filters['status'] === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button type="button" onclick="resetLiveFilters()" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</button>
-                    <?php $exportUrl = base_url('tenant/deliveries/export') . (empty(array_filter($filters)) ? '' : '?' . http_build_query(array_filter($filters))); ?>
-                    <a id="exportDeliveriesBtn" href="<?= $exportUrl ?>" onclick="handleExportClick(this, 'Exporting CSV...')" class="flex items-center gap-xs px-md py-sm border border-outline-variant rounded-lg text-label-sm font-bold hover:bg-surface-container-high transition-colors">
-                        <span class="material-symbols-outlined text-[18px]">download</span>
-                        <span>Export</span>
-                    </a>
-                </form>
+    <!-- Search & Filter Controls -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-md shadow-2xs space-y-md">
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-md">
+            <!-- Live Search Input -->
+            <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-outline text-[20px]">search</span>
+                <input id="liveShipmentSearch" 
+                       type="text" 
+                       placeholder="Search by product name, order #, tracking ID, customer, or destination..." 
+                       value="<?= esc($filters['q'] ?? '') ?>"
+                       autocomplete="off"
+                       class="w-full pl-11 pr-md py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all">
             </div>
 
-            <div class="overflow-x-auto w-full">
-                <table class="min-w-full text-left border-collapse">
-                    <thead class="bg-surface-container-low border-b border-outline-variant/30">
-                        <tr>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Tracking ID</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Reference</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Customer</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Destination</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Status</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Updated</th>
-                            <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="shipmentTableBody" class="divide-y divide-outline-variant/20">
-                        <?php if (!empty($deliveries)): ?>
-                            <?php foreach ($deliveries as $d): ?>
-                                <?php
-                                $fullName = trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? ''));
-                                $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'CU';
-                                $profileImage = trim((string) ($d['profile_image_url'] ?? ''));
-                                $updatedAt = !empty($d['shipped_at']) ? $d['shipped_at'] : (!empty($d['delivered_at']) ? $d['delivered_at'] : $d['created_at']);
-                                $trackingClean = esc($d['tracking_id']);
-                                $refClean = esc($d['ref_number'] ?? '-');
-                                ?>
-                                <tr class="shipment-row hover:bg-surface-container-low/60 transition-colors cursor-pointer"
-                                    data-tracking="<?= $trackingClean ?>"
-                                    data-ref="<?= $refClean ?>"
-                                    data-customer="<?= esc(strtolower($fullName)) ?>"
-                                    data-dest="<?= esc(strtolower($d['destination_address'] ?? '')) ?>"
-                                    data-status="<?= esc(strtolower($d['status'])) ?>"
-                                    onclick="focusShipmentOnMap('<?= $trackingClean ?>', event)">
-                                    <td class="px-lg py-md">
-                                        <button type="button" onclick="focusShipmentOnMap('<?= $trackingClean ?>', event)" class="font-mono text-body-md font-bold text-primary hover:underline flex items-center gap-1 text-left">
-                                            <span class="material-symbols-outlined text-[16px] text-primary/70">pin_drop</span>
-                                            #<?= $trackingClean ?>
-                                        </button>
-                                    </td>
-                                    <td class="px-lg py-md">
-                                        <button type="button" onclick="focusShipmentOnMap('<?= $trackingClean ?>', event)" class="text-body-md font-bold text-on-surface hover:text-primary transition-colors flex items-center gap-1 text-left">
-                                            <span class="material-symbols-outlined text-[16px] text-secondary">receipt_long</span>
-                                            #<?= $refClean ?>
-                                        </button>
-                                        <p class="text-[11px] text-on-surface-variant"><?= esc(ucfirst(str_replace('_', ' ', $d['deliverable_type']))) ?></p>
-                                    </td>
-                                    <td class="px-lg py-md">
-                                        <div class="flex items-center gap-sm">
-                                            <div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-label-sm font-bold <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?>">
-                                                <span><?= esc($initials) ?></span>
-                                                <?php if ($profileImage !== ''): ?>
-                                                    <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
-                                                <?php endif; ?>
-                                            </div>
-                                            <span class="text-body-md text-on-surface font-medium"><?= esc($fullName !== '' ? $fullName : 'Customer') ?></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-lg py-md text-xs text-on-surface-variant max-w-[200px] truncate" title="<?= esc($d['destination_address'] ?? '') ?>">
-                                        <div class="flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-[14px] text-on-surface-variant">home</span>
-                                            <span><?= esc($d['destination_address'] ?? 'N/A') ?></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-lg py-md"><?= status_badge($d['status']) ?></td>
-                                    <td class="px-lg py-md text-xs text-on-surface-variant"><?= date('M d, Y h:i A', strtotime($updatedAt)) ?></td>
-                                    <td class="px-lg py-md text-right" onclick="event.stopPropagation()">
-                                        <div class="flex justify-end items-center gap-md">
-                                            <button type="button"
-                                                    onclick="focusShipmentOnMap('<?= $trackingClean ?>', event)"
-                                                    class="p-xs hover:bg-surface-container-high rounded text-primary"
-                                                    title="Track on Live Map">
-                                                <span class="material-symbols-outlined text-[20px]">two_wheeler</span>
-                                            </button>
-                                            <button type="button"
-                                                    onclick="openDeliveryLookup('<?= $trackingClean ?>')"
-                                                    class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
-                                                    title="View Details">
-                                                <span class="material-symbols-outlined">visibility</span>
-                                            </button>
-                                            <div class="relative">
-                                                <button type="button" data-row="<?= (int) $d['id'] ?>" onclick="toggleDropdown(this)" class="more-toggle p-xs hover:bg-surface-container-high rounded text-on-surface-variant" title="More Actions" aria-haspopup="true" aria-expanded="false">
-                                                    <span class="material-symbols-outlined">more_vert</span>
-                                                </button>
-                                                <div id="more-menu-<?= (int) $d['id'] ?>" class="hidden more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-lg p-sm min-w-[220px]" role="menu">
-                                                    <p class="text-label-sm font-bold text-on-surface-variant px-sm pb-xs">Update Status</p>
-                                                    <form action="<?= base_url('tenant/deliveries/update-status') ?>" method="POST" class="space-y-xs px-sm pb-sm">
-                                                        <?= csrf_field() ?>
-                                                        <input type="hidden" name="delivery_id" value="<?= (int) $d['id'] ?>">
-                                                        <select name="delivery_status" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-lg text-label-sm font-label-sm">
-                                                            <?php foreach ($statusOptions as $val => $label): ?>
-                                                                 <option value="<?= esc($val) ?>" <?= $d['status'] === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
-                                                            <?php endforeach; ?>
-                                                        </select>
-                                                        <button type="submit" class="w-full py-sm bg-primary text-on-primary rounded-lg text-label-sm font-semibold hover:bg-primary/90">Apply Status</button>
-                                                    </form>
-                                                    <div class="border-t border-outline-variant/20 my-xs"></div>
-                                                    <button type="button" onclick="focusShipmentOnMap('<?= $trackingClean ?>', event)" class="w-full text-left px-sm py-sm rounded-lg text-primary text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-xs">
-                                                        <span class="material-symbols-outlined text-[18px]">two_wheeler</span> Show Live Route
-                                                    </button>
-                                                    <button type="button" onclick="openDeliveryLookup('<?= $trackingClean ?>')" class="w-full text-left px-sm py-sm rounded-lg text-on-surface-variant text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-xs">
-                                                        <span class="material-symbols-outlined text-[18px]">visibility</span> View Details
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr id="noShipmentsRow">
-                                <td colspan="7" class="py-lg text-center text-on-surface-variant">No deliveries match your filters.</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+            <!-- Status Dropdown Filter -->
+            <div class="flex items-center gap-xs flex-wrap shrink-0">
+                <select id="liveStatusFilter" 
+                        onchange="applyStatusFilter(this.value)"
+                        class="px-md py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">All Statuses</option>
+                    <?php foreach ($statusOptions as $val => $label): ?>
+                        <option value="<?= esc($val) ?>" <?= ($filters['status'] ?? '') === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
+                    <?php endforeach; ?>
+                </select>
 
+                <button type="button" onclick="resetShipmentFilters()" class="px-md py-2.5 text-xs font-bold rounded-xl border border-outline-variant/40 hover:bg-surface-container transition-colors text-on-surface-variant">
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Status Pills -->
+        <div class="flex items-center gap-xs overflow-x-auto pb-1 text-xs font-semibold custom-scrollbar">
             <?php
-            $dTot  = (int) $pager->getTotal('deliveries');
-            $dCur  = (int) $pager->getCurrentPage('deliveries');
-            $dPag  = (int) $pager->getPageCount('deliveries');
+                $activeFilter = $filters['status'] ?? '';
+                $pills = [
+                    ''                 => 'All Shipments',
+                    'ready_for_pickup' => 'Ready for Pickup',
+                    'shipped'          => 'Shipped',
+                    'in_transit'       => 'In Transit',
+                    'delivered'        => 'Delivered',
+                    'cancelled'        => 'Cancelled',
+                ];
+            ?>
+            <?php foreach ($pills as $pkey => $plabel): ?>
+                <button type="button" 
+                        onclick="quickFilterStatus('<?= esc($pkey) ?>')" 
+                        class="status-pill px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap <?= $activeFilter === $pkey ? 'bg-primary text-on-primary border-primary font-bold shadow-xs' : 'bg-surface-container-low border-outline-variant/30 text-on-surface-variant hover:bg-surface-container' ?>"
+                        data-status="<?= esc($pkey) ?>">
+                    <?= esc($plabel) ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Section Heading & Realtime Count -->
+    <div class="flex items-center justify-between px-1">
+        <div>
+            <h2 class="text-title-md font-bold text-on-surface flex items-center gap-sm">
+                <span>Shipment Packages</span>
+                <span id="shipmentCountBadge" class="text-xs px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-mono font-semibold">
+                    <?= count($deliveries ?? []) ?> package(s)
+                </span>
+            </h2>
+            <p class="text-xs text-on-surface-variant mt-0.5">Click any shipment card to open its dedicated live route &amp; GPS mapping page.</p>
+        </div>
+    </div>
+
+    <!-- Shipment Cards Grid (Replaces old table & side map) -->
+    <div id="shipmentsGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-md lg:gap-lg">
+        <?php if (!empty($deliveries)): ?>
+            <?php foreach ($deliveries as $d): ?>
+                <?php
+                    $fullName = trim(($d['first_name'] ?? '') . ' ' . ($d['last_name'] ?? ''));
+                    $initials = $fullName !== '' ? mb_strtoupper(mb_substr($fullName, 0, 2)) : 'CU';
+                    $profileImage = trim((string) ($d['profile_image_url'] ?? ''));
+                    $trackingClean = esc($d['tracking_id']);
+                    $refClean = esc($d['ref_number'] ?? ('ID #' . $d['id']));
+                    $isPickup = ($d['fulfillment_method'] ?? '') === 'pickup';
+                    $destAddress = esc($d['destination_address'] ?: ($isPickup ? 'Storefront Collection, Polomolok' : 'Customer Address, Polomolok'));
+                    $productName = esc($d['product_name'] ?? 'Order Item');
+                    $allProductsList = esc($d['all_products_list'] ?? $productName);
+                    $extraItems = (int) ($d['extra_items_count'] ?? 0);
+                    $totalQty = (int) ($d['total_qty'] ?? 1);
+                    $variantLabel = esc($d['variant_label'] ?? '');
+                    $searchIndex = strtolower($productName . ' ' . $allProductsList . ' ' . $trackingClean . ' ' . $refClean . ' ' . $fullName . ' ' . $destAddress . ' ' . $d['status']);
+                ?>
+                <div class="shipment-card bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md sm:p-lg shadow-2xs hover:shadow-md hover:border-primary/50 transition-all flex flex-col justify-between group relative"
+                     data-tracking="<?= $trackingClean ?>"
+                     data-status="<?= esc($d['status']) ?>"
+                     data-search="<?= esc($searchIndex) ?>">
+
+                    <!-- Top Bar: Status Badge & Fulfillment Badge -->
+                    <div>
+                        <div class="flex items-center justify-between gap-sm mb-sm">
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                                <?= status_badge($d['status']) ?>
+                                <?php if ($isPickup): ?>
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/30 border border-secondary/20 px-2 py-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-[13px]">storefront</span>
+                                        <span>Pick-up</span>
+                                    </span>
+                                <?php else: ?>
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                                        <span class="material-symbols-outlined text-[13px]">local_shipping</span>
+                                        <span>Delivery</span>
+                                    </span>
+                                <?php endif; ?>
+                            </div>
+
+                            <!-- More Menu / Quick Status Dropdown -->
+                            <div class="relative">
+                                <button type="button" 
+                                        data-row="<?= (int) $d['id'] ?>" 
+                                        onclick="toggleDropdown(this, event)" 
+                                        class="more-toggle p-1 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
+                                        title="Quick Actions">
+                                    <span class="material-symbols-outlined text-[18px]">more_vert</span>
+                                </button>
+                                <div id="more-menu-<?= (int) $d['id'] ?>" class="hidden more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-xl p-sm min-w-[200px] absolute right-0 top-full mt-1" role="menu">
+                                    <p class="text-label-sm font-bold text-on-surface-variant px-sm pb-xs">Change Status</p>
+                                    <form action="<?= base_url('tenant/deliveries/update-status') ?>" method="POST" class="space-y-xs px-sm pb-sm" onclick="event.stopPropagation();">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="delivery_id" value="<?= (int) $d['id'] ?>">
+                                        <select name="delivery_status" class="w-full p-2 bg-surface-container-low border border-outline-variant rounded-lg text-xs font-semibold">
+                                            <?php foreach ($statusOptions as $val => $label): ?>
+                                                <option value="<?= esc($val) ?>" <?= $d['status'] === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="submit" class="w-full py-1.5 bg-primary text-on-primary rounded-lg text-xs font-bold hover:bg-primary/90 transition-colors mt-1">Apply</button>
+                                    </form>
+                                    <div class="border-t border-outline-variant/20 my-xs"></div>
+                                    <a href="<?= base_url('tenant/deliveries/' . (int) $d['id']) ?>" class="w-full text-left px-sm py-1.5 rounded-lg text-primary text-xs font-bold hover:bg-primary/10 flex items-center gap-xs">
+                                        <span class="material-symbols-outlined text-[16px]">near_me</span> View Full Map
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Product Name & Order ID Header -->
+                        <div class="space-y-1.5 border-b border-outline-variant/20 pb-sm mb-sm">
+                            <div class="flex items-start justify-between gap-sm">
+                                <div class="min-w-0 flex-1">
+                                    <!-- Primary Product Name Header -->
+                                    <a href="<?= base_url('tenant/deliveries/' . (int) $d['id']) ?>" 
+                                       class="text-title-sm font-extrabold text-on-surface hover:text-primary transition-colors flex items-center gap-1.5 leading-snug group/title" 
+                                       title="<?= $allProductsList ?>">
+                                        <span class="material-symbols-outlined text-[19px] text-primary shrink-0">inventory_2</span>
+                                        <span class="truncate"><?= $productName ?></span>
+                                    </a>
+
+                                    <!-- Product Quantities / Extra Items Pill -->
+                                    <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
+                                        <?php if ($extraItems > 0): ?>
+                                            <span class="inline-flex items-center text-[10px] font-extrabold text-primary bg-primary/10 border border-primary/20 px-1.5 py-0.5 rounded-md" title="<?= $allProductsList ?>">
+                                                +<?= $extraItems ?> more item<?= $extraItems > 1 ? 's' : '' ?> (<?= $totalQty ?> total pcs)
+                                            </span>
+                                        <?php elseif ($totalQty > 0): ?>
+                                            <span class="text-[11px] font-medium text-on-surface-variant">
+                                                Qty: <strong class="text-on-surface"><?= $totalQty ?></strong><?= $variantLabel !== '' ? ' &bull; ' . $variantLabel : '' ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+
+                                <!-- Order ID / Reference is retained here ("hindi total na mawawala ang order id nandyan parin") -->
+                                <div class="flex flex-col items-end shrink-0">
+                                    <span class="text-[11px] font-mono font-extrabold text-on-surface bg-surface-container border border-outline-variant/40 px-2 py-0.5 rounded-md" title="Order Reference Number">
+                                        <?= $refClean ?>
+                                    </span>
+                                    <span class="text-[9px] uppercase tracking-wider text-outline font-bold mt-0.5">Order Ref</span>
+                                </div>
+                            </div>
+
+                            <!-- Tracking ID and Deliverable Type Row -->
+                            <div class="flex items-center justify-between gap-sm text-[11px] pt-1 text-on-surface-variant font-medium">
+                                <a href="<?= base_url('tenant/deliveries/' . (int) $d['id']) ?>" class="font-mono font-bold text-primary hover:underline flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[15px]">local_shipping</span>
+                                    <span>#<?= $trackingClean ?></span>
+                                </a>
+                                <span class="text-[11px] text-outline">
+                                    <?= esc(ucfirst(str_replace('_', ' ', $d['deliverable_type'] ?? 'order'))) ?> &bull; <?= date('M d, Y h:i A', strtotime($d['created_at'])) ?>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Customer & Destination Information -->
+                        <div class="space-y-2 text-xs">
+                            <!-- Customer Row -->
+                            <div class="flex items-center gap-sm">
+                                <?php if ($profileImage !== ''): ?>
+                                    <img src="<?= base_url($profileImage) ?>" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0" alt="Customer">
+                                <?php else: ?>
+                                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                                        <?= esc($initials) ?>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="min-w-0 flex-1">
+                                    <p class="font-bold text-on-surface truncate"><?= esc($fullName ?: 'Online Customer') ?></p>
+                                    <?php if (!empty($d['customer_phone'])): ?>
+                                        <p class="text-[11px] text-on-surface-variant flex items-center gap-0.5 font-mono">
+                                            <span class="material-symbols-outlined text-[13px] text-primary">phone</span>
+                                            <span><?= esc($d['customer_phone']) ?></span>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <!-- Destination Address Row -->
+                            <div class="flex items-start gap-1.5 p-2 bg-surface-container-low/70 rounded-xl border border-outline-variant/20">
+                                <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0 mt-0.5">location_on</span>
+                                <p class="text-[11px] text-on-surface leading-tight line-clamp-2" title="<?= $destAddress ?>">
+                                    <?= $destAddress ?>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Action Footer: Direct Navigation to Dedicated Live Route Map -->
+                    <div class="mt-md pt-sm border-t border-outline-variant/20">
+                        <a href="<?= base_url('tenant/deliveries/' . (int) $d['id']) ?>" 
+                           class="w-full py-2.5 px-md rounded-xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-2 hover:bg-primary/90 shadow-sm transition-all group-hover:scale-[1.01] active:scale-95">
+                            <span class="material-symbols-outlined text-[18px]">near_me</span>
+                            <span>View Live Route &amp; Map</span>
+                            <span class="material-symbols-outlined text-[16px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </a>
+                    </div>
+
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div class="col-span-full py-2xl text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-xl space-y-sm">
+                <span class="w-16 h-16 rounded-full bg-surface-container text-outline flex items-center justify-center mx-auto text-3xl material-symbols-outlined">
+                    local_shipping
+                </span>
+                <h3 class="text-title-md font-bold text-on-surface">No Deliveries Found</h3>
+                <p class="text-xs text-on-surface-variant max-w-sm mx-auto">There are currently no shipment records matching your filter. Orders marked for delivery or ready for pickup will appear here.</p>
+                <button type="button" onclick="resetShipmentFilters()" class="mt-2 px-md py-sm bg-primary text-on-primary text-xs font-bold rounded-xl hover:bg-primary/90">
+                    Clear Filters
+                </button>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- No Match Dynamic Message for Client Filtering -->
+    <div id="noMatchMessage" class="hidden py-2xl text-center bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-xl space-y-sm">
+        <span class="material-symbols-outlined text-3xl text-outline">search_off</span>
+        <h3 class="text-title-md font-bold text-on-surface">No matching shipments</h3>
+        <p class="text-xs text-on-surface-variant">Try searching for a different product, order reference, customer, or status.</p>
+        <button type="button" onclick="resetShipmentFilters()" class="px-md py-sm bg-primary text-on-primary text-xs font-bold rounded-xl hover:bg-primary/90">
+            Reset Filters
+        </button>
+    </div>
+
+    <!-- Modern Styled Pagination Bar -->
+    <?php if (isset($pager)): ?>
+        <?php
+            $dTot   = (int) $pager->getTotal('deliveries');
+            $dCur   = (int) $pager->getCurrentPage('deliveries');
+            $dPag   = (int) $pager->getPageCount('deliveries');
             $dStart = $dTot === 0 ? 0 : ($dCur - 1) * 12 + 1;
             $dEnd   = min($dCur * 12, $dTot);
-            ?>
+        ?>
+        <div class="mt-lg pt-md flex flex-col sm:flex-row items-center justify-between gap-md border-t border-outline-variant/30">
+            <p class="text-xs text-on-surface-variant font-medium">
+                Showing <span class="font-bold text-on-surface"><?= number_format($dStart) ?></span> to <span class="font-bold text-on-surface"><?= number_format($dEnd) ?></span> of <span class="font-bold text-on-surface"><?= number_format($dTot) ?></span> deliveries
+            </p>
             <?php if ($dPag > 1): ?>
-                <div class="px-lg py-md bg-surface-container-low flex justify-between items-center border-t border-outline-variant/30 flex-wrap gap-sm">
-                    <p class="text-label-sm font-label-sm text-on-surface-variant">Showing <?= number_format($dStart) ?> to <?= number_format($dEnd) ?> of <?= number_format($dTot) ?> shipments</p>
-                    <div class="flex items-center gap-xs">
-                        <a class="p-sm rounded hover:bg-surface-container-high <?= $dCur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('deliveries') ?>">
-                            <span class="material-symbols-outlined">chevron_left</span>
-                        </a>
-                        <?php
-                        $w = [];
-                        for ($i = 1; $i <= $dPag; $i++) {
-                            if ($i === 1 || $i === $dPag || abs($i - $dCur) <= 2) { $w[] = $i; }
-                        }
-                        $pv = 0;
-                        foreach ($w as $n):
-                            if ($n - $pv > 1): ?><span class="px-xs text-outline">...</span><?php endif; ?>
-                            <a class="w-8 h-8 rounded flex items-center justify-center text-label-sm <?= $dCur === $n ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high' ?>" href="<?= $pager->getPageURI($n, 'deliveries') ?>"><?= $n ?></a>
-                        <?php $pv = $n; endforeach; ?>
-                        <a class="p-sm rounded hover:bg-surface-container-high <?= $dCur >= $dPag ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('deliveries') ?>">
-                            <span class="material-symbols-outlined">chevron_right</span>
-                        </a>
-                    </div>
+                <div class="flex items-center gap-xs">
+                    <a class="w-8 h-8 rounded-xl border border-outline-variant/40 hover:bg-surface-container text-on-surface flex items-center justify-center transition-all <?= $dCur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('deliveries') ?>" title="Previous">
+                        <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </a>
+                    <?php
+                    $w = [];
+                    for ($i = 1; $i <= $dPag; $i++) {
+                        if ($i === 1 || $i === $dPag || abs($i - $dCur) <= 2) { $w[] = $i; }
+                    }
+                    $pv = 0;
+                    foreach ($w as $n):
+                        if ($n - $pv > 1): ?><span class="px-xs text-outline font-bold">...</span><?php endif; ?>
+                        <a class="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold transition-all <?= $dCur === $n ? 'bg-primary text-on-primary shadow-xs' : 'hover:bg-surface-container text-on-surface border border-outline-variant/20' ?>" href="<?= $pager->getPageURI($n, 'deliveries') ?>"><?= $n ?></a>
+                    <?php $pv = $n; endforeach; ?>
+                    <a class="w-8 h-8 rounded-xl border border-outline-variant/40 hover:bg-surface-container text-on-surface flex items-center justify-center transition-all <?= $dCur >= $dPag ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('deliveries') ?>" title="Next">
+                        <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </a>
                 </div>
             <?php endif; ?>
         </div>
+    <?php endif; ?>
 
-        <!-- Right: Live Fleet Tracking Map (4 cols) -->
-        <div class="xl:col-span-4 rounded-xl border border-outline-variant/30 bg-surface-container-lowest p-4 shadow-sm flex flex-col relative overflow-hidden">
-            <div class="px-2 py-1 border-b border-outline-variant/20 flex flex-wrap items-center justify-between gap-sm mb-3">
+</div>
+
+<!-- QR Code Scanner Modal -->
+<div id="deliveryScannerModal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-md backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-2xl p-lg sm:p-xl max-w-md w-full border border-outline-variant/30 shadow-2xl space-y-md relative">
+        <div class="flex items-center justify-between border-b border-outline-variant/20 pb-sm">
+            <div class="flex items-center gap-sm">
+                <span class="p-2 bg-primary/10 text-primary rounded-xl material-symbols-outlined text-[20px]">qr_code_scanner</span>
                 <div>
-                    <h3 class="text-title-md font-bold text-on-surface flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary text-[20px]">near_me</span>
-                        <span>Live Fleet Tracking</span>
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary uppercase">Polomolok Map</span>
-                    </h3>
-                    <p id="mapActiveSub" class="text-[11px] text-on-surface-variant font-medium">Real-time GPS delivery routes across Polomolok</p>
-                </div>
-                <div class="flex items-center gap-2 flex-wrap">
-                    <div id="testRouteControls" class="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant/30 px-2 py-1 rounded-lg">
-                        <span class="text-[10px] font-bold text-outline uppercase tracking-wider">Test:</span>
-                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO1')" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Cannery Site">Cannery</button>
-                        <button type="button" onclick="focusShipmentOnMap('TRK-TEST-POLO3')" class="px-1.5 py-0.5 text-[10px] font-bold rounded bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all shadow-xs" title="Test route to Glamang">Glamang</button>
-                    </div>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">
-                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1 animate-ping"></span> Live
-                    </span>
-                    <button type="button" onclick="resetFleetMapView()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface-variant border border-outline-variant/30 flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px]">my_location</span> Reset Map
-                    </button>
+                    <h3 class="text-title-md font-bold text-on-surface">Scan Delivery &amp; Order QR</h3>
+                    <p class="text-xs text-on-surface-variant">Live camera or scan from saved photo</p>
                 </div>
             </div>
+            <button type="button" onclick="closeScanner()" class="p-1 text-outline hover:text-on-surface rounded-full hover:bg-surface-container">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
 
-            <!-- Route Active Info Floating Bar -->
-            <div id="routeInfoBar" class="hidden absolute top-16 left-4 right-4 z-[400] bg-surface-container-lowest/95 backdrop-blur border border-primary/30 p-2.5 rounded-xl shadow-lg flex items-center justify-between">
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0 animate-pulse">
-                        <span class="material-symbols-outlined text-[18px]">two_wheeler</span>
-                    </span>
-                    <div class="min-w-0">
-                        <p id="routeTitle" class="text-xs font-bold text-on-surface truncate">Tracking Order</p>
-                        <p id="routeSubtitle" class="text-[10px] text-on-surface-variant truncate">Rider on way to destination</p>
-                    </div>
+        <!-- Scan Mode Tabs: Live Camera vs Photo Upload -->
+        <div class="flex items-center gap-xs p-1 bg-surface-container-low rounded-xl border border-outline-variant/20">
+            <button type="button" id="deliveryTabCameraBtn" onclick="switchDeliveryScanMode('camera')" class="flex-1 py-2 px-sm rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-sm flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+                <span>Live Camera</span>
+            </button>
+            <button type="button" id="deliveryTabFileBtn" onclick="switchDeliveryScanMode('file')" class="flex-1 py-2 px-sm rounded-lg text-xs font-bold transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                <span>Scan from Photo</span>
+            </button>
+        </div>
+
+        <!-- Mode 1: Live Camera Viewfinder (Unobstructed, No Dark Box) -->
+        <div id="deliveryCameraContainer" class="space-y-sm">
+            <div class="rounded-2xl overflow-hidden bg-black aspect-square relative flex items-center justify-center border border-outline-variant/30 shadow-inner">
+                <div id="qr-reader" class="w-full h-full"></div>
+                <!-- Clean, non-blocking transparent corner reticle -->
+                <div class="qr-viewfinder-overlay pointer-events-none absolute inset-4 border border-white/20 rounded-xl">
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                    <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                    <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                    <div class="qr-laser-line"></div>
                 </div>
-                <span id="routeBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex-shrink-0">🛵 Active Route</span>
             </div>
+            <p id="scannerStatus" class="text-xs text-center text-on-surface-variant font-medium">Point camera directly at QR code or phone screen</p>
+        </div>
 
-            <div id="fleetMap" class="w-full h-[450px] min-h-[450px] rounded-lg overflow-hidden relative z-0" style="height: 450px; min-height: 450px;"></div>
+        <!-- Mode 2: Scan from Photo / Image File -->
+        <div id="deliveryFileContainer" class="hidden space-y-sm">
+            <label for="deliveryPhotoUpload" class="flex flex-col items-center justify-center p-xl border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer text-center group">
+                <span class="p-3 bg-primary/10 text-primary rounded-2xl material-symbols-outlined text-3xl group-hover:scale-110 transition-transform mb-2">image_search</span>
+                <span class="text-xs font-bold text-on-surface">Click to Select QR Photo / Take Photo</span>
+                <span class="text-[11px] text-on-surface-variant mt-1">Upload the photo of the completed order/slip</span>
+                <input id="deliveryPhotoUpload" type="file" accept="image/*" class="hidden" onchange="handleDeliveryPhotoUpload(this)">
+            </label>
+            <p id="photoScanStatus" class="text-xs text-center text-on-surface-variant font-medium hidden"></p>
         </div>
-    </div>
-</div>
-<div id="deliveryModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-md backdrop-blur-sm">
-    <div class="glass-card bg-surface-container-lowest rounded-2xl p-xl max-w-lg w-full border border-outline-variant/30 shadow-2xl max-h-[90vh] overflow-y-auto relative">
-        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm mb-md">
-            <div>
-                <h3 class="text-title-lg font-bold">Delivery <span id="dmTracking" class="text-primary"></span></h3>
-                <p id="dmActionBanner" class="hidden text-xs font-bold px-2 py-0.5 rounded-full mt-1 inline-block"></p>
-            </div>
-            <button onclick="closeDeliveryModal()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"><span class="material-symbols-outlined">close</span></button>
-        </div>
-        <div id="dmBody" class="space-y-sm mb-md">
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Reference</span><span id="dmReference" class="text-body-md font-semibold text-on-surface"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Type</span><span id="dmType" class="text-body-md text-on-surface"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Customer</span><span id="dmCustomer" class="text-body-md text-on-surface"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Destination</span><span id="dmDestination" class="text-body-md text-on-surface text-right max-w-[70%]"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Courier</span><span id="dmCourier" class="text-body-md text-on-surface"></span></div>
-            <div class="flex justify-between items-center"><span class="text-label-sm text-on-surface-variant">Current Status</span><span id="dmStatus"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Created</span><span id="dmCreated" class="text-body-md text-on-surface"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Shipped</span><span id="dmShipped" class="text-body-md text-on-surface"></span></div>
-            <div class="flex justify-between"><span class="text-label-sm text-on-surface-variant">Delivered</span><span id="dmDelivered" class="text-body-md text-on-surface"></span></div>
-        </div>
-        <div class="pt-sm border-t border-outline-variant/20 flex gap-sm">
-            <button type="button" onclick="closeDeliveryModal(true)" class="w-full py-sm bg-primary text-on-primary rounded-xl font-semibold hover:bg-primary/90 transition-all">Done / Refresh Page</button>
-        </div>
-    </div>
-</div>
 
-<!-- QR Scanner Modal -->
-<div id="scannerModal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-md backdrop-blur-sm">
-    <div class="glass-card bg-surface-container-lowest rounded-2xl p-xl max-w-md w-full border border-outline-variant/30 shadow-2xl">
-        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm mb-md">
-            <div>
-                <h3 class="text-title-lg font-bold">Scan QR Code</h3>
-                <p class="text-xs text-on-surface-variant">Auto-updates Shipped ➔ Delivered / Delivered ➔ Returned</p>
+        <!-- Result Box with Direct Route Map Link -->
+        <div id="scanResultBox" class="hidden p-md rounded-xl border space-y-sm transition-all">
+            <div class="flex items-start gap-sm">
+                <span id="scanResultIcon" class="material-symbols-outlined text-[22px] mt-0.5">check_circle</span>
+                <div class="flex-1 min-w-0">
+                    <p id="scanResultMessage" class="text-xs font-bold leading-relaxed"></p>
+                    <p id="scanResultSub" class="text-[11px] text-on-surface-variant mt-0.5"></p>
+                </div>
             </div>
-            <button onclick="closeScanner()" class="text-on-surface-variant hover:text-on-surface p-1 rounded-full hover:bg-surface-container"><span class="material-symbols-outlined">close</span></button>
+            <div id="scanActionBtnContainer" class="pt-1"></div>
         </div>
-        <div id="scanStatus" class="text-label-sm text-on-surface-variant mb-sm">Point your camera at the delivery QR label.</div>
-        <div class="relative rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center">
-            <div id="deliveryQrReader" class="w-full h-full"></div>
-            <div id="deliveryCameraPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-md text-center bg-black/80 pointer-events-none">
-                <span class="material-symbols-outlined text-4xl mb-1 text-primary">photo_camera</span>
-                <span class="text-xs font-semibold">Starting camera...</span>
-                <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
+
+        <!-- Manual Tracking ID Input -->
+        <div class="pt-sm border-t border-outline-variant/20 space-y-xs">
+            <label class="text-[11px] font-bold text-outline uppercase tracking-wider">Manual Code / Order Entry</label>
+            <div class="flex items-center gap-xs">
+                <input id="manualTrackingInput" 
+                       type="text" 
+                       placeholder="e.g. TRK-F7E82B04, ORD-88460, PR-190, or 190" 
+                       class="flex-1 px-md py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-none">
+                <button type="button" onclick="submitManualTracking()" class="px-md py-2 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all">
+                    Lookup
+                </button>
             </div>
-        </div>
-        <div class="mt-md space-y-sm">
-            <p class="text-label-sm text-on-surface-variant">Or enter Tracking ID / Order # manually:</p>
-            <div class="flex gap-sm">
-                <input id="manualTracking" type="text" placeholder="e.g. TRK-F7E82B04 or ORD-88460" class="flex-1 px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary">
-                <button type="button" onclick="lookupManual()" class="bg-primary text-on-primary px-md py-sm rounded-lg text-label-sm font-semibold hover:bg-primary/90">Scan / Look Up</button>
-            </div>
-            <div id="scanResult" class="hidden text-label-sm rounded-lg p-sm"></div>
         </div>
     </div>
 </div>
 
-<form id="deliveryCsrfForm" class="hidden"><?= csrf_field() ?></form>
+<style>
+/* Remove Html5Qrcode blocking dark region box */
+#qr-reader #qr-shaded-region,
+#posQrReader #qr-shaded-region {
+    display: none !important;
+}
+#qr-reader, #posQrReader {
+    border: none !important;
+}
+#qr-reader video, #posQrReader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 0.875rem !important;
+}
+.qr-laser-line {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    box-shadow: 0 0 10px #3b82f6;
+    animation: qrLaserScan 2s ease-in-out infinite alternate;
+}
+@keyframes qrLaserScan {
+    0% { top: 12px; }
+    100% { top: calc(100% - 14px); }
+}
+</style>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <script>
     let activeMenu = null;
-    let fleetMap = null;
-    let mapMarkers = {};
-    let activeRouteLine = null;
-    let activeRiderMarker = null;
-    let riderAnimationTimer = null;
-    let isProcessingScan = false;
-    let shouldReloadOnClose = false;
     let deliveryHtml5QrCode = null;
-
-    const STORE_COORDS = [6.2217, 125.0667]; // Shop Base in Polomolok Poblacion
-    const pins = <?= json_encode($pins ?? [], JSON_UNESCAPED_SLASHES | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_TAG | JSON_HEX_AMP) ?>;
-
-    // Temporary Polomolok sample test pins for testing map, routes, and rider movement
-    const samplePolomolokPins = [
-        {
-            id: 991,
-            tracking_id: 'TRK-TEST-POLO1',
-            ref_number: 'ORD-TEST-8801',
-            first_name: 'Maria',
-            last_name: 'Santos',
-            customer_phone: '09171234567',
-            status: 'in_transit',
-            destination_address: 'Purok 4, Brgy. Cannery Site, Polomolok',
-            current_lat: 6.2418,
-            current_lng: 125.0782,
-            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
-            is_test_pin: true
-        },
-        {
-            id: 992,
-            tracking_id: 'TRK-TEST-POLO2',
-            ref_number: 'ORD-TEST-8802',
-            first_name: 'Juan',
-            last_name: 'Dela Cruz',
-            customer_phone: '09189876543',
-            status: 'shipped',
-            destination_address: 'Crossing Rubber, Brgy. Rubber, Polomolok',
-            current_lat: 6.1950,
-            current_lng: 125.0920,
-            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
-            is_test_pin: true
-        },
-        {
-            id: 993,
-            tracking_id: 'TRK-TEST-POLO3',
-            ref_number: 'ORD-TEST-8803',
-            first_name: 'Analyn',
-            last_name: 'Flores',
-            customer_phone: '09205551234',
-            status: 'in_transit',
-            destination_address: 'Purok Pag-asa, Brgy. Glamang, Polomolok',
-            current_lat: 6.1823,
-            current_lng: 125.0456,
-            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
-            is_test_pin: true
-        },
-        {
-            id: 994,
-            tracking_id: 'TRK-TEST-POLO4',
-            ref_number: 'PR-TEST-8804',
-            first_name: 'Rico',
-            last_name: 'Magbanua',
-            customer_phone: '09224448888',
-            status: 'ready_for_pickup',
-            destination_address: 'Storefront Collection, Poblacion, Polomolok',
-            current_lat: 6.2217,
-            current_lng: 125.0667,
-            shop_name: '<?= esc($shop['shop_name'] ?? 'Storefront') ?>',
-            is_test_pin: true
-        }
-    ];
-
-    // Combine pins with sample pins for testing & inspection
-    let activePins = (pins && pins.length > 0) ? [...pins] : [...samplePolomolokPins];
-    if (pins && pins.length > 0) {
-        samplePolomolokPins.forEach(sp => {
-            if (!activePins.some(ap => ap.tracking_id === sp.tracking_id)) {
-                activePins.push(sp);
-            }
-        });
-    }
 
     function closeMenus() {
         if (activeMenu) {
             activeMenu.classList.add('hidden');
             activeMenu = null;
         }
-        document.querySelectorAll('.more-toggle[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
     }
 
-    function toggleDropdown(btn) {
+    function toggleDropdown(btn, e) {
+        if (e) e.stopPropagation();
         const id   = btn.dataset.row;
         const menu = document.getElementById('more-menu-' + id);
         if (!menu) return;
@@ -447,33 +506,8 @@
             return;
         }
         closeMenus();
-
-        document.body.appendChild(menu);
         menu.classList.remove('hidden');
-        menu.style.position = 'fixed';
-        menu.style.left = '';
-        menu.style.right = '';
-        menu.style.top = '';
-        menu.style.bottom = '';
-
-        const rect       = btn.getBoundingClientRect();
-        const gap        = 8;
-        const menuWidth  = menu.offsetWidth;
-        const menuHeight = menu.offsetHeight;
-
-        const left = rect.left + menuWidth <= window.innerWidth - gap
-            ? rect.left
-            : Math.max(gap, window.innerWidth - menuWidth - gap);
-        menu.style.left = left + 'px';
-
-        if (rect.bottom + gap + menuHeight <= window.innerHeight - gap) {
-            menu.style.top = (rect.bottom + gap) + 'px';
-        } else {
-            menu.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
-        }
-
         activeMenu = menu;
-        btn.setAttribute('aria-expanded', 'true');
     }
 
     document.addEventListener('click', (e) => {
@@ -481,730 +515,303 @@
             closeMenus();
         }
     });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeMenus();
-    });
-    window.addEventListener('scroll', closeMenus, true);
-    window.addEventListener('resize', closeMenus);
 
-    function csrfToken() {
-        const el = document.querySelector('#deliveryCsrfForm [name="csrf_test_name"]');
-        return el ? el.value : '';
-    }
-
-    // ==========================================
-    // 🗺️ MAP & LIVE ROUTE WITH MOTORCYCLE ICON
-    // ==========================================
-    function createMotorcycleIcon(angle = 0) {
-        return L.divIcon({
-            className: 'motor-rider-pin',
-            html: `
-                <div style="position:relative;display:flex;align-items:center;justify-content:center;width:44px;height:44px;">
-                    <div style="position:absolute;width:44px;height:44px;border-radius:50%;background:rgba(37,99,235,0.3);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;"></div>
-                    <div style="position:absolute;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg, #2563eb, #1d4ed8);border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;">
-                        <span class="material-symbols-outlined" style="font-size:20px;line-height:1;">two_wheeler</span>
-                    </div>
-                </div>
-            `,
-            iconSize: [44, 44],
-            iconAnchor: [22, 22],
-        });
-    }
-
-    function createCustomerIcon(status) {
-        const colors = {
-            ready_for_pickup: '#f59e0b',
-            shipped: '#2563eb',
-            in_transit: '#7c3aed',
-            delivered: '#10b981',
-            returned: '#8b5cf6',
-        };
-        const color = colors[status] || '#2563eb';
-        return L.divIcon({
-            className: 'dest-customer-pin',
-            html: `
-                <div style="position:relative;display:flex;align-items:center;justify-content:center;width:32px;height:32px;">
-                    <div style="width:28px;height:28px;border-radius:50%;background:${color};border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff;">
-                        <span class="material-symbols-outlined" style="font-size:16px;line-height:1;">home</span>
-                    </div>
-                </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-        });
-    }
-
-    function createStoreIcon() {
-        return L.divIcon({
-            className: 'store-pin',
-            html: `
-                <div style="width:32px;height:32px;border-radius:50%;background:#0f172a;border:2px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;color:#fff;">
-                    <span class="material-symbols-outlined" style="font-size:16px;line-height:1;">storefront</span>
-                </div>
-            `,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16],
-        });
-    }
-
-    function initMap() {
-        const el = document.getElementById('fleetMap') || document.getElementById('fleet-map');
-        if (!el || typeof L === 'undefined') return;
-
-        fleetMap = L.map(el, { zoomControl: true }).setView([6.2136, 125.0661], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18,
-        }).addTo(fleetMap);
-
-        // Add Store Base Marker
-        const storeMarker = L.marker(STORE_COORDS, { icon: createStoreIcon() }).addTo(fleetMap);
-        storeMarker.bindPopup('<strong>🏪 Store Dispatch Hub</strong><br>Poblacion, Polomolok');
-
-        mapMarkers = {};
-        const groupList = [storeMarker];
-
-        (activePins || []).forEach((p) => {
-            const lat = parseFloat(p.current_lat);
-            const lng = parseFloat(p.current_lng);
-            if (isNaN(lat) || isNaN(lng)) return;
-
-            const customer = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Customer';
-            const m = L.marker([lat, lng], { icon: createCustomerIcon(p.status) }).addTo(fleetMap);
-            
-            const isTestBadge = p.is_test_pin ? '<span style="font-size:9px;font-weight:bold;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;margin-left:4px;">DEMO PIN</span>' : '';
-
-            const popupContent = `
-                <div style="min-width:180px;font-family:inherit;">
-                    <div style="font-weight:bold;font-size:13px;color:#2563eb;margin-bottom:2px;">#${p.ref_number ? p.ref_number : p.tracking_id} ${isTestBadge}</div>
-                    <div style="font-size:11px;color:#64748b;margin-bottom:4px;">Tracking: #${p.tracking_id}</div>
-                    <div style="font-size:12px;font-weight:600;color:#0f172a;">👤 ${customer}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">📍 ${p.destination_address || 'Polomolok'}</div>
-                    <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:10px;font-weight:bold;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:#e0f2fe;color:#0369a1;">${p.status.replace(/_/g, ' ')}</span>
-                        <button onclick="focusShipmentOnMap('${p.tracking_id}')" style="font-size:11px;color:#2563eb;font-weight:bold;background:none;border:none;cursor:pointer;">🛵 Route</button>
-                    </div>
-                </div>
-            `;
-            m.bindPopup(popupContent);
-            mapMarkers[p.tracking_id] = { marker: m, data: p };
-            groupList.push(m);
-        });
-
-        if (groupList.length > 1) {
-            fleetMap.fitBounds(L.featureGroup(groupList).getBounds(), { padding: [40, 40] });
-        }
-
-        // Trigger map.invalidateSize() to prevent gray or blank tiles
-        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 100);
-        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 300);
-        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 600);
-        setTimeout(() => { if (fleetMap) fleetMap.invalidateSize(); }, 1200);
-
-        window.addEventListener('resize', () => {
-            if (fleetMap) fleetMap.invalidateSize();
-        });
-    }
-
-    function resetFleetMapView() {
-        if (activeRouteLine) {
-            fleetMap.removeLayer(activeRouteLine);
-            activeRouteLine = null;
-        }
-        if (activeRiderMarker) {
-            fleetMap.removeLayer(activeRiderMarker);
-            activeRiderMarker = null;
-        }
-        if (riderAnimationTimer) {
-            clearInterval(riderAnimationTimer);
-            riderAnimationTimer = null;
-        }
-        document.getElementById('routeInfoBar').classList.add('hidden');
-        document.getElementById('mapActiveSub').textContent = 'Real-time GPS delivery routes across Polomolok';
-
-        const allMarkers = Object.values(mapMarkers).map(o => o.marker);
-        if (allMarkers.length > 0) {
-            fleetMap.fitBounds(L.featureGroup(allMarkers).getBounds(), { padding: [40, 40] });
-        } else {
-            fleetMap.setView([6.2136, 125.0661], 13);
-        }
-    }
-
-    let liveGpsWatchId = null;
-    let isRiderMoving = false;
-    let activeRouteCoordinates = [];
-    let currentRiderIndex = 0;
-
-    function fetchRealRoadRoute(start, end) {
-        // OSRM Driving & Shortest Road Route API
-        const url = `https://router.project-osrm.org/route/v1/driving/${start[1]},${start[0]};${end[1]},${end[0]}?overview=full&geometries=geojson`;
-        return fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                if (data && data.routes && data.routes.length > 0) {
-                    const coords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
-                    const distanceKm = (data.routes[0].distance / 1000).toFixed(1);
-                    const durationMins = Math.ceil(data.routes[0].duration / 60);
-                    return { coords, distanceKm, durationMins, success: true };
-                }
-                throw new Error('No OSRM route');
-            })
-            .catch(() => {
-                // Realistic Polomolok street shortcut waypoint fallback
-                const midLat = (start[0] + end[0]) / 2 + (end[1] > start[1] ? 0.0012 : -0.0012);
-                const midLng = (start[1] + end[1]) / 2;
-                return {
-                    coords: [start, [midLat, midLng], end],
-                    distanceKm: '1.5',
-                    durationMins: 5,
-                    success: false
-                };
-            });
-    }
-
-    function toggleRiderMovement(trackingId) {
-        if (isRiderMoving) {
-            // Stop movement
-            if (riderAnimationTimer) {
-                clearInterval(riderAnimationTimer);
-                riderAnimationTimer = null;
-            }
-            if (liveGpsWatchId) {
-                navigator.geolocation.clearWatch(liveGpsWatchId);
-                liveGpsWatchId = null;
-            }
-            isRiderMoving = false;
-            const btn = document.getElementById('btnToggleMovement');
-            if (btn) {
-                btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">play_arrow</span> Start Moving';
-                btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-primary text-on-primary hover:bg-primary/90 flex items-center gap-1';
-            }
-            const badge = document.getElementById('routeBadge');
-            if (badge) badge.textContent = '🛵 Ready (Stationary)';
-            return;
-        }
-
-        // Start movement along the real street shortcut
-        if (!activeRouteCoordinates || activeRouteCoordinates.length < 2) return;
-        isRiderMoving = true;
-        const btn = document.getElementById('btnToggleMovement');
-        if (btn) {
-            btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">pause</span> Pause Movement';
-            btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-500 text-white hover:bg-amber-600 flex items-center gap-1';
-        }
-        const badge = document.getElementById('routeBadge');
-        if (badge) badge.textContent = '🛵 Moving (Real-Time)';
-
-        // If mobile GPS is available, listen to real GPS updates
-        if ('geolocation' in navigator) {
-            liveGpsWatchId = navigator.geolocation.watchPosition((pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                if (activeRiderMarker) {
-                    activeRiderMarker.setLatLng([lat, lng]);
-                }
-            }, () => {}, { enableHighAccuracy: true });
-        }
-
-        // Advance along real street geometry
-        if (riderAnimationTimer) clearInterval(riderAnimationTimer);
-        riderAnimationTimer = setInterval(() => {
-            if (currentRiderIndex < activeRouteCoordinates.length - 1) {
-                currentRiderIndex++;
-                const pt = activeRouteCoordinates[currentRiderIndex];
-                if (activeRiderMarker) {
-                    activeRiderMarker.setLatLng(pt);
-                }
-            } else {
-                // Arrived at destination
-                clearInterval(riderAnimationTimer);
-                riderAnimationTimer = null;
-                isRiderMoving = false;
-                if (btn) {
-                    btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">check_circle</span> Arrived';
-                    btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 text-white flex items-center gap-1';
-                }
-                if (badge) badge.textContent = '✓ Arrived at Destination';
-            }
-        }, 1200);
-    }
-
-    function focusShipmentOnMap(trackingId, e) {
-        if (e && e.stopPropagation) e.stopPropagation();
-
-        const match = mapMarkers[trackingId];
-        if (!match || !fleetMap) return;
-
-        const p = match.data;
-        const destCoords = [parseFloat(p.current_lat), parseFloat(p.current_lng)];
-        const storeCoords = STORE_COORDS;
-
-        // Reset previous route, timer, & movement state
-        if (activeRouteLine) fleetMap.removeLayer(activeRouteLine);
-        if (activeRiderMarker) fleetMap.removeLayer(activeRiderMarker);
-        if (riderAnimationTimer) {
-            clearInterval(riderAnimationTimer);
-            riderAnimationTimer = null;
-        }
-        if (liveGpsWatchId) {
-            navigator.geolocation.clearWatch(liveGpsWatchId);
-            liveGpsWatchId = null;
-        }
-        isRiderMoving = false;
-        currentRiderIndex = 0;
-
-        // For Store Pick-up items, do NOT track motorcycle delivery mapping
-        const isPickup = p.status === 'ready_for_pickup' || (p.destination_address && p.destination_address.toLowerCase().includes('pick-up'));
-        if (isPickup) {
-            fleetMap.setView(STORE_COORDS, 16);
-
-            const infoBar = document.getElementById('routeInfoBar');
-            infoBar.classList.remove('hidden');
-            infoBar.innerHTML = `
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-8 h-8 rounded-full bg-amber-500 text-white flex items-center justify-center flex-shrink-0">
-                        <span class="material-symbols-outlined text-[18px]">storefront</span>
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold text-on-surface truncate">#${p.ref_number || p.tracking_id} · ${p.first_name ? p.first_name + ' ' + (p.last_name || '') : 'Customer'}</p>
-                        <p class="text-[10px] text-on-surface-variant truncate">🏪 <strong>STORE PICK-UP</strong> · Customer goes to shop for collection (No motorcycle route mapping required)</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1.5 flex-shrink-0">
-                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">🏪 Store Pick-up</span>
-                    <button type="button" onclick="resetFleetMapView()" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-surface-container-high text-on-surface hover:bg-surface-variant transition-all">Close</button>
-                </div>
-            `;
-            return;
-        }
-
-        // Fetch real street road shortcut via OSRM for doorstep deliveries
-        fetchRealRoadRoute(storeCoords, destCoords).then(routeData => {
-            activeRouteCoordinates = routeData.coords;
-
-            // Draw clean road-following route line
-            activeRouteLine = L.polyline(activeRouteCoordinates, {
-                color: '#2563eb',
-                weight: 4.5,
-                opacity: 0.9,
-                lineCap: 'round',
-                lineJoin: 'round',
-            }).addTo(fleetMap);
-
-            // Place stationary Motorcycle / Rider Icon at start of route (Store/Dispatch Hub)
-            const initialRiderPos = activeRouteCoordinates[0];
-            activeRiderMarker = L.marker(initialRiderPos, {
-                icon: createMotorcycleIcon(),
-                zIndexOffset: 1000
-            }).addTo(fleetMap);
-
-            activeRiderMarker.bindPopup(`
-                <div style="text-align:center;padding:4px;font-family:inherit;">
-                    <div style="font-weight:bold;color:#2563eb;font-size:13px;">🛵 Delivery Rider</div>
-                    <div style="font-size:11px;color:#64748b;">Order #${p.ref_number || p.tracking_id}</div>
-                    <div style="font-size:11px;color:#0f172a;margin-top:2px;">🛣️ Shortest Shortcut: ${routeData.distanceKm} km · ~${routeData.durationMins} mins</div>
-                </div>
-            `);
-
-            // Update floating route bar with start movement control
-            const infoBar = document.getElementById('routeInfoBar');
-            infoBar.classList.remove('hidden');
-            infoBar.innerHTML = `
-                <div class="flex items-center gap-2 min-w-0">
-                    <span class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center flex-shrink-0">
-                        <span class="material-symbols-outlined text-[18px]">two_wheeler</span>
-                    </span>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold text-on-surface truncate">#${p.ref_number || p.tracking_id} · ${p.first_name ? p.first_name + ' ' + (p.last_name || '') : 'Customer'}</p>
-                        <p class="text-[10px] text-on-surface-variant truncate">📍 ${p.destination_address || 'Polomolok'} · <strong>${routeData.distanceKm} km (${routeData.durationMins} mins shortcut)</strong></p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-1.5 flex-shrink-0">
-                    <span id="routeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800">🛵 Ready</span>
-                    <button id="btnToggleMovement" type="button" onclick="toggleRiderMovement('${trackingId}')" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-primary text-on-primary hover:bg-primary/90 flex items-center gap-1 transition-all">
-                        <span class="material-symbols-outlined text-[15px]">play_arrow</span> Move
-                    </button>
-                </div>
-            `;
-
-            // Fit route in view
-            fleetMap.fitBounds(activeRouteLine.getBounds(), { padding: [50, 50] });
-            setTimeout(() => {
-                match.marker.openPopup();
-            }, 300);
-        });
-
-        // Highlight selected row in table
-        document.querySelectorAll('.shipment-row').forEach(r => {
-            if (r.dataset.tracking === trackingId) {
-                r.classList.add('bg-primary/10', 'ring-1', 'ring-primary');
-            } else {
-                r.classList.remove('bg-primary/10', 'ring-1', 'ring-primary');
-            }
-        });
-    }
-
-    // ==========================================
-    // ⚡ REAL-TIME INSTANT SEARCH & FILTER
-    // ==========================================
+    // Realtime Client-Side Filtering
     const searchInput = document.getElementById('liveShipmentSearch');
-    const statusFilter = document.getElementById('liveStatusFilter');
+    const statusSelect = document.getElementById('liveStatusFilter');
+    const cards = document.querySelectorAll('.shipment-card');
+    const noMatchMessage = document.getElementById('noMatchMessage');
+    const countBadge = document.getElementById('shipmentCountBadge');
 
-    function applyLiveFiltering() {
-        const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
-        const status = (statusFilter ? statusFilter.value : '').toLowerCase().trim();
-        const rows = document.querySelectorAll('.shipment-row');
-        let matchCount = 0;
-        let firstMatchTracking = null;
+    function filterShipments() {
+        const query = (searchInput.value || '').trim().toLowerCase();
+        const status = (statusSelect.value || '').trim().toLowerCase();
+        let visibleCount = 0;
 
-        rows.forEach((row) => {
-            const tracking = (row.dataset.tracking || '').toLowerCase();
-            const ref      = (row.dataset.ref || '').toLowerCase();
-            const customer = (row.dataset.customer || '').toLowerCase();
-            const dest     = (row.dataset.dest || '').toLowerCase();
-            const rowStatus = (row.dataset.status || '').toLowerCase();
+        cards.forEach(card => {
+            const cardSearch = (card.dataset.search || '').toLowerCase();
+            const cardStatus = (card.dataset.status || '').toLowerCase();
 
-            const matchesQuery = query === '' || 
-                tracking.includes(query) || 
-                ref.includes(query) || 
-                customer.includes(query) || 
-                dest.includes(query);
+            const matchQuery = query === '' || cardSearch.includes(query);
+            const matchStatus = status === '' || cardStatus === status;
 
-            const matchesStatus = status === '' || rowStatus === status;
-
-            if (matchesQuery && matchesStatus) {
-                row.classList.remove('hidden');
-                matchCount++;
-                if (!firstMatchTracking) firstMatchTracking = row.dataset.tracking;
+            if (matchQuery && matchStatus) {
+                card.classList.remove('hidden');
+                visibleCount++;
             } else {
-                row.classList.add('hidden');
+                card.classList.add('hidden');
             }
         });
 
-        // Show/hide empty row indicator
-        let noRow = document.getElementById('noShipmentsRow');
-        if (matchCount === 0) {
-            if (!noRow) {
-                const tbody = document.getElementById('shipmentTableBody');
-                if (tbody) {
-                    noRow = document.createElement('tr');
-                    noRow.id = 'noShipmentsRow';
-                    noRow.innerHTML = '<td colspan="7" class="py-lg text-center text-on-surface-variant font-medium">No shipments matching "' + query + '".</td>';
-                    tbody.appendChild(noRow);
-                }
-            } else {
-                noRow.classList.remove('hidden');
-            }
-        } else if (noRow) {
-            noRow.classList.add('hidden');
+        if (countBadge) {
+            countBadge.textContent = visibleCount + ' package(s)';
         }
 
-        // If typing a specific reference and single exact/close match is found, auto-focus map
-        if (query.length >= 3 && firstMatchTracking && matchCount === 1) {
-            focusShipmentOnMap(firstMatchTracking);
+        if (noMatchMessage) {
+            if (visibleCount === 0 && cards.length > 0) {
+                noMatchMessage.classList.remove('hidden');
+            } else {
+                noMatchMessage.classList.add('hidden');
+            }
         }
+
+        // Update pills
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            if (pill.dataset.status === status) {
+                pill.classList.remove('bg-surface-container-low', 'text-on-surface-variant');
+                pill.classList.add('bg-primary', 'text-on-primary', 'font-bold', 'border-primary', 'shadow-xs');
+            } else {
+                pill.classList.remove('bg-primary', 'text-on-primary', 'font-bold', 'border-primary', 'shadow-xs');
+                pill.classList.add('bg-surface-container-low', 'text-on-surface-variant');
+            }
+        });
     }
 
     if (searchInput) {
-        searchInput.addEventListener('input', applyLiveFiltering);
-    }
-    if (statusFilter) {
-        statusFilter.addEventListener('change', applyLiveFiltering);
+        searchInput.addEventListener('input', filterShipments);
     }
 
-    function resetLiveFilters() {
+    function applyStatusFilter(val) {
+        statusSelect.value = val;
+        filterShipments();
+    }
+
+    function quickFilterStatus(val) {
+        statusSelect.value = val;
+        filterShipments();
+    }
+
+    function resetShipmentFilters() {
         if (searchInput) searchInput.value = '';
-        if (statusFilter) statusFilter.value = '';
-        applyLiveFiltering();
-        resetFleetMapView();
+        if (statusSelect) statusSelect.value = '';
+        filterShipments();
     }
 
-    // ==========================================
-    // 📷 SCANNER & DETAILS MODAL
-    // ==========================================
-    function showScanResult(success, message, actionType) {
-        const box = document.getElementById('scanResult');
-        box.classList.remove('hidden');
-        let bgClass = 'bg-green-100 text-green-800';
-        if (!success) {
-            bgClass = 'bg-error-container/40 text-on-error-container';
-        } else if (actionType === 'returned') {
-            bgClass = 'bg-purple-100 text-purple-900';
-        }
-        box.className = 'text-label-sm font-semibold rounded-lg p-sm ' + bgClass;
-        box.textContent = message;
-    }
+    // QR Code Scanner Handlers
+    let currentDeliveryScanMode = 'camera';
 
-    function lookupByTracking(trackingId) {
-        const fd = new FormData();
-        fd.append('tracking_id', trackingId);
-        fd.append('csrf_test_name', csrfToken());
+    function switchDeliveryScanMode(mode) {
+        currentDeliveryScanMode = mode;
+        const camBtn = document.getElementById('deliveryTabCameraBtn');
+        const fileBtn = document.getElementById('deliveryTabFileBtn');
+        const camBox = document.getElementById('deliveryCameraContainer');
+        const fileBox = document.getElementById('deliveryFileContainer');
 
-        return fetch("<?= site_url('tenant/deliveries/lookup') ?>", {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            body: fd,
-        }).then((r) => r.json());
-    }
-
-    function openDeliveryLookup(trackingId, autoUpdatedData) {
-        const processData = (data) => {
-            if (!data.success || !data.delivery) {
-                document.getElementById('dmTracking').textContent = '';
-                document.getElementById('dmBody').innerHTML = '<p class="text-body-md text-error">' + (data.error || 'Could not load delivery.') + '</p>';
-                document.getElementById('deliveryModal').classList.remove('hidden');
-                return;
-            }
-            const d = data.delivery;
-            document.getElementById('dmTracking').textContent = '#' + d.tracking_id;
-            document.getElementById('dmReference').textContent = '#' + (d.ref_number || '-');
-            document.getElementById('dmType').textContent = d.deliverable_type.replace(/_/g, ' ');
-            document.getElementById('dmCustomer').textContent = d.customer || 'Customer';
-            document.getElementById('dmDestination').textContent = d.destination || 'N/A';
-            document.getElementById('dmCourier').textContent = d.courier_name || 'N/A';
-
-            const banner = document.getElementById('dmActionBanner');
-            if (data.status_updated) {
-                shouldReloadOnClose = true;
-                banner.classList.remove('hidden');
-                if (data.action_type === 'delivered') {
-                    banner.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 uppercase inline-block';
-                    banner.textContent = '✓ AUTO-MARKED AS DELIVERED';
-                } else if (data.action_type === 'returned') {
-                    banner.className = 'text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 uppercase inline-block';
-                    banner.textContent = '↺ AUTO-MARKED AS RETURNED';
-                }
-            } else {
-                banner.classList.add('hidden');
-            }
-
-            let statusPill = '<span class="px-2 py-1 rounded-full text-xs font-bold uppercase ' + 
-                (d.status_key === 'delivered' ? 'bg-emerald-100 text-emerald-800' : 
-                (d.status_key === 'returned' ? 'bg-purple-100 text-purple-800' : 
-                (d.status_key === 'shipped' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'))) + 
-                '">' + (d.status || d.status_key) + '</span>';
-            document.getElementById('dmStatus').innerHTML = statusPill;
-
-            document.getElementById('dmCreated').textContent = d.created_at || '';
-            document.getElementById('dmShipped').textContent = d.shipped_at || '—';
-            document.getElementById('dmDelivered').textContent = d.delivered_at || '—';
-            document.getElementById('deliveryModal').classList.remove('hidden');
-        };
-
-        if (autoUpdatedData) {
-            processData(autoUpdatedData);
+        if (mode === 'camera') {
+            camBtn.classList.remove('text-on-surface-variant');
+            camBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            fileBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            fileBtn.classList.add('text-on-surface-variant');
+            camBox.classList.remove('hidden');
+            fileBox.classList.add('hidden');
+            startDeliveryCamera();
         } else {
-            lookupByTracking(trackingId)
-                .then(processData)
-                .catch(() => {
-                    document.getElementById('dmBody').innerHTML = '<p class="text-body-md text-error">Could not load delivery.</p>';
-                    document.getElementById('deliveryModal').classList.remove('hidden');
-                });
+            fileBtn.classList.remove('text-on-surface-variant');
+            fileBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            camBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm');
+            camBtn.classList.add('text-on-surface-variant');
+            fileBox.classList.remove('hidden');
+            camBox.classList.add('hidden');
+            stopDeliveryCamera();
         }
     }
 
-    function closeDeliveryModal(forceReload = false) {
-        document.getElementById('deliveryModal').classList.add('hidden');
-        if (shouldReloadOnClose || forceReload) {
-            window.location.reload();
-        }
-    }
-
-    function handleScanCode(value) {
-        if (isProcessingScan) return;
-        isProcessingScan = true;
-
-        const status = document.getElementById('scanStatus');
-        const result = document.getElementById('scanResult');
-        result.classList.add('hidden');
-        status.textContent = 'Processing scanned code "' + value + '"...';
-
-        lookupByTracking(value)
-            .then((data) => {
-                if (data.success) {
-                    closeScanner();
-                    openDeliveryLookup(value, data);
-                } else {
-                    showScanResult(false, data.error || 'Tracking ID / Order not found.');
-                    setTimeout(() => { isProcessingScan = false; }, 1500);
-                }
-            })
-            .catch(() => {
-                showScanResult(false, 'Could not reach the server.');
-                setTimeout(() => { isProcessingScan = false; }, 1500);
-            });
-    }
-
-    function openScanner() {
-        isProcessingScan = false;
-        const modal = document.getElementById('scannerModal');
-        const status = document.getElementById('scanStatus');
-        const result = document.getElementById('scanResult');
-        const placeholder = document.getElementById('deliveryCameraPlaceholder');
-
-        result.classList.add('hidden');
-        if (placeholder) {
-            placeholder.classList.remove('hidden');
-            placeholder.innerHTML = `
-                <span class="material-symbols-outlined text-4xl mb-1 text-primary">photo_camera</span>
-                <span class="text-xs font-semibold">Starting camera...</span>
-                <span class="text-[10px] opacity-70 mt-1">Please allow camera permissions if prompted</span>
-            `;
-        }
-        status.textContent = 'Point your camera at the delivery QR label.';
-        modal.classList.remove('hidden');
-
-        if (typeof Html5Qrcode === 'undefined') {
-            status.textContent = 'Scanner library loading or blocked. Enter tracking ID below.';
-            if (placeholder) placeholder.classList.add('hidden');
-            return;
-        }
-
+    function startDeliveryCamera() {
+        if (typeof Html5Qrcode === 'undefined') return;
         if (!deliveryHtml5QrCode) {
-            deliveryHtml5QrCode = new Html5Qrcode('deliveryQrReader');
+            deliveryHtml5QrCode = new Html5Qrcode("qr-reader");
         }
-
-        const showCameraError = () => {
-            if (placeholder) {
-                placeholder.innerHTML = `
-                    <span class="material-symbols-outlined text-4xl mb-1 text-amber-400">videocam_off</span>
-                    <span class="text-xs font-semibold">Camera unavailable</span>
-                    <span class="text-[10px] opacity-70 mt-1">Check permissions or enter the tracking ID manually below</span>
-                `;
-            }
-            status.textContent = 'Camera unavailable. Please enter tracking ID below.';
-        };
-
-        const startScanner = (cameraConfig) => {
-            const config = { fps: 10, qrbox: { width: 220, height: 220 } };
-            return deliveryHtml5QrCode.start(
-                cameraConfig,
-                config,
-                (decodedText) => {
-                    stopScannerStream();
-                    handleScanCode(decodedText);
-                },
-                () => {}
-            );
-        };
-
-        startScanner({ facingMode: "environment" })
-            .then(() => {
-                if (placeholder) placeholder.classList.add('hidden');
-            })
-            .catch(() => {
-                if (Html5Qrcode.getCameras) {
-                    Html5Qrcode.getCameras().then(cameras => {
-                        if (cameras && cameras.length) {
-                            startScanner({ deviceId: { exact: cameras[0].id } })
-                                .then(() => {
-                                    if (placeholder) placeholder.classList.add('hidden');
-                                })
-                                .catch(() => showCameraError());
-                        } else {
-                            showCameraError();
-                        }
-                    }).catch(() => showCameraError());
-                } else {
-                    showCameraError();
-                }
-            });
-    }
-
-    function lookupManual() {
-        const value = document.getElementById('manualTracking').value.trim();
-        if (value === '') {
-            showScanResult(false, 'Please enter a tracking ID or Order #.');
-            return;
-        }
-        handleScanCode(value);
-    }
-
-    const manualTrackingInput = document.getElementById('manualTracking');
-    if (manualTrackingInput) {
-        manualTrackingInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                lookupManual();
+        
+        // Scan full viewfinder without dark restrictive box overlay
+        const config = { fps: 12 };
+        deliveryHtml5QrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => {
+                handleScannedCode(decodedText);
+            },
+            () => {}
+        ).catch(err => {
+            // If environment camera fails, try any available camera
+            if (Html5Qrcode.getCameras) {
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length > 0) {
+                        deliveryHtml5QrCode.start(
+                            cameras[0].id,
+                            config,
+                            (decodedText) => handleScannedCode(decodedText),
+                            () => {}
+                        ).catch(() => {
+                            document.getElementById('scannerStatus').textContent = 'Camera unavailable. Please upload a photo or enter code manually.';
+                        });
+                    } else {
+                        document.getElementById('scannerStatus').textContent = 'No camera found. Please upload a photo or enter code manually.';
+                    }
+                }).catch(() => {
+                    document.getElementById('scannerStatus').textContent = 'Camera permission denied or unavailable.';
+                });
+            } else {
+                document.getElementById('scannerStatus').textContent = 'Camera unavailable. Please upload a photo or enter code manually.';
             }
         });
     }
 
-    function stopScannerStream() {
+    function stopDeliveryCamera() {
         if (deliveryHtml5QrCode) {
             try {
                 if (deliveryHtml5QrCode.isScanning) {
-                    deliveryHtml5QrCode.stop().catch(e => console.error(e));
+                    deliveryHtml5QrCode.stop().catch(() => {});
                 }
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) {}
         }
+    }
+
+    function openScanner() {
+        const modal = document.getElementById('deliveryScannerModal');
+        modal.classList.remove('hidden');
+        resetScanResult();
+        switchDeliveryScanMode('camera');
     }
 
     function closeScanner() {
-        stopScannerStream();
-        document.getElementById('scannerModal').classList.add('hidden');
-        document.getElementById('scanResult').classList.add('hidden');
-        document.getElementById('scanStatus').textContent = 'Point your camera at the delivery QR label.';
+        const modal = document.getElementById('deliveryScannerModal');
+        modal.classList.add('hidden');
+        stopDeliveryCamera();
+        deliveryHtml5QrCode = null;
     }
 
-    window.openScanner = openScanner;
-    window.closeScanner = closeScanner;
-    window.lookupManual = lookupManual;
+    function resetScanResult() {
+        const box = document.getElementById('scanResultBox');
+        box.classList.add('hidden');
+        const sub = document.getElementById('scanResultSub');
+        if (sub) sub.textContent = '';
+        const photoStatus = document.getElementById('photoScanStatus');
+        if (photoStatus) photoStatus.classList.add('hidden');
+    }
 
-    const scanBtn = document.getElementById('btnOpenDeliveryScanner');
-    if (scanBtn) {
-        scanBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            openScanner();
+    function handleScannedCode(code) {
+        if (!code) return;
+        if (deliveryHtml5QrCode) {
+            try { deliveryHtml5QrCode.pause(); } catch (e) {}
+        }
+        lookupTracking(code);
+    }
+
+    function handleDeliveryPhotoUpload(input) {
+        if (!input || !input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const statusEl = document.getElementById('photoScanStatus');
+        if (statusEl) {
+            statusEl.className = 'text-xs text-center text-primary font-bold animate-pulse';
+            statusEl.textContent = 'Scanning image for QR code...';
+            statusEl.classList.remove('hidden');
+        }
+
+        if (!deliveryHtml5QrCode) {
+            deliveryHtml5QrCode = new Html5Qrcode("qr-reader");
+        }
+
+        deliveryHtml5QrCode.scanFile(file, true)
+            .then(decodedText => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-emerald-600 font-bold';
+                    statusEl.textContent = 'QR Code detected! Looking up details...';
+                }
+                handleScannedCode(decodedText);
+            })
+            .catch(err => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-red-600 font-bold';
+                    statusEl.textContent = 'Could not detect a QR code in this photo. Please ensure good lighting or enter the code manually.';
+                    statusEl.classList.remove('hidden');
+                }
+            });
+    }
+
+    function submitManualTracking() {
+        const val = (document.getElementById('manualTrackingInput').value || '').trim();
+        if (!val) return;
+        lookupTracking(val);
+    }
+
+    function lookupTracking(trackingCode) {
+        const resultBox = document.getElementById('scanResultBox');
+        const msgEl = document.getElementById('scanResultMessage');
+        const subEl = document.getElementById('scanResultSub');
+        const iconEl = document.getElementById('scanResultIcon');
+        const btnContainer = document.getElementById('scanActionBtnContainer');
+
+        resultBox.classList.remove('hidden', 'bg-red-50', 'text-red-800', 'border-red-200', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-blue-50', 'text-blue-800', 'border-blue-200');
+        resultBox.classList.add('bg-surface-container', 'text-on-surface', 'border-outline-variant');
+        iconEl.textContent = 'progress_activity';
+        iconEl.classList.add('animate-spin');
+        msgEl.textContent = 'Looking up code: ' + trackingCode + '...';
+        if (subEl) subEl.textContent = 'Checking orders, printing requests, and delivery records...';
+        btnContainer.innerHTML = '';
+
+        const fd = new FormData();
+        fd.append('tracking_id', trackingCode);
+        const csrfToken = '<?= csrf_token() ?>';
+        const csrfHash  = '<?= csrf_hash() ?>';
+        fd.append(csrfToken, csrfHash);
+
+        fetch('<?= base_url('tenant/deliveries/lookup') ?>', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            iconEl.classList.remove('animate-spin');
+            if (data.success && data.delivery) {
+                const isDelivered = data.action_type === 'delivered' || data.action_type === 'already_delivered' || data.delivery.status === 'delivered' || data.delivery.status === 'completed';
+                resultBox.classList.remove('bg-surface-container', 'text-on-surface', 'border-outline-variant');
+                
+                if (isDelivered) {
+                    resultBox.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+                    iconEl.textContent = 'check_circle';
+                } else {
+                    resultBox.classList.add('bg-blue-50', 'text-blue-800', 'border-blue-200');
+                    iconEl.textContent = 'local_shipping';
+                }
+
+                const pName = data.delivery.product_name ? ('"' + data.delivery.product_name + '" • ') : '';
+                msgEl.textContent = data.message || ('Found: ' + pName + '#' + (data.delivery.tracking_id || trackingCode));
+                
+                if (subEl) {
+                    const recipient = data.delivery.recipient_name ? ('Recipient: ' + data.delivery.recipient_name + ' • ') : '';
+                    const fulfillment = data.delivery.fulfillment_method ? ('Fulfillment: ' + data.delivery.fulfillment_method.toUpperCase() + ' • ') : '';
+                    subEl.textContent = `${recipient}${fulfillment}Status: ${(data.delivery.status || 'Active').toUpperCase()}`;
+                }
+
+                const targetUrl = '<?= base_url('tenant/deliveries') ?>/' + data.delivery.id;
+                btnContainer.innerHTML = `
+                    <div class="flex items-center gap-xs mt-1">
+                        <a href="${targetUrl}" class="flex-1 py-2 bg-primary text-on-primary font-bold text-xs rounded-xl flex items-center justify-center gap-1 shadow-sm hover:bg-primary/90 transition-all">
+                            <span class="material-symbols-outlined text-[16px]">map</span>
+                            <span>Open Route &amp; Shipment →</span>
+                        </a>
+                        <button type="button" onclick="closeScanner(); location.reload();" class="px-md py-2 border border-outline-variant font-bold text-xs rounded-xl hover:bg-surface-container transition-all">
+                            Done
+                        </button>
+                    </div>
+                `;
+            } else {
+                resultBox.classList.remove('bg-surface-container', 'text-on-surface', 'border-outline-variant');
+                resultBox.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+                iconEl.textContent = 'error';
+                msgEl.textContent = data.error || data.message || 'No matching order or request found.';
+                if (subEl) subEl.textContent = 'Please check the order number or take a clearer picture.';
+            }
+        })
+        .catch(() => {
+            iconEl.classList.remove('animate-spin');
+            resultBox.classList.remove('bg-surface-container', 'text-on-surface', 'border-outline-variant');
+            resultBox.classList.add('bg-red-50', 'text-red-800', 'border-red-200');
+            iconEl.textContent = 'error';
+            msgEl.textContent = 'Server connection error during lookup.';
+            if (subEl) subEl.textContent = 'Please try again or enter the code manually.';
         });
-    }
-
-    function ensureLeafletLoaded() {
-        if (typeof L !== 'undefined') {
-            initMap();
-            return;
-        }
-        let attempts = 0;
-        const interval = setInterval(() => {
-            attempts++;
-            if (typeof L !== 'undefined') {
-                clearInterval(interval);
-                initMap();
-            } else if (attempts > 60) {
-                clearInterval(interval);
-                console.warn('Leaflet map library timed out.');
-            }
-        }, 80);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', ensureLeafletLoaded);
-    } else {
-        ensureLeafletLoaded();
-    }
-
-    function handleExportClick(btn, label) {
-        const icon = btn.querySelector('.material-symbols-outlined');
-        const textSpan = btn.querySelector('span:not(.material-symbols-outlined)');
-        const origIcon = icon ? icon.textContent : 'download';
-        const origText = textSpan ? textSpan.textContent : 'Export';
-        if (icon) {
-            icon.textContent = 'progress_activity';
-            icon.classList.add('animate-spin');
-        }
-        if (textSpan) textSpan.textContent = label || 'Exporting...';
-        btn.classList.add('opacity-75', 'pointer-events-none');
-        setTimeout(() => {
-            if (icon) {
-                icon.textContent = origIcon;
-                icon.classList.remove('animate-spin');
-            }
-            if (textSpan) textSpan.textContent = origText;
-            btn.classList.remove('opacity-75', 'pointer-events-none');
-        }, 3500);
     }
 </script>
 

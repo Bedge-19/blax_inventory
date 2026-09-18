@@ -36,9 +36,10 @@ class ComplianceModel extends Model
         string $group = 'compliance'
     ): array {
         $this->builder()
-            ->select("compliance_reports.*, compliance_reports.reported_shop_id as shop_id, compliance_reports.issue_type as issue, compliance_reports.status as compliance_status, s.shop_name, (SELECT COUNT(*) FROM compliance_reports c2 WHERE c2.reported_shop_id = compliance_reports.reported_shop_id AND c2.status != 'resolved') as flag_count, u.first_name as reporter_first, u.last_name as reporter_last")
+            ->select("compliance_reports.*, compliance_reports.reported_shop_id as shop_id, compliance_reports.issue_type as issue, compliance_reports.status as compliance_status, s.shop_name, (SELECT COUNT(*) FROM compliance_reports c2 WHERE c2.reported_shop_id = compliance_reports.reported_shop_id AND c2.status != 'resolved') as flag_count, u.first_name as reporter_first, u.last_name as reporter_last, ru.first_name as reported_customer_first, ru.last_name as reported_customer_last")
             ->join('shops s', 's.id = compliance_reports.reported_shop_id', 'left')
             ->join('users u', 'u.id = compliance_reports.reporter_id', 'left')
+            ->join('users ru', 'ru.id = compliance_reports.reported_user_id', 'left')
             ->orderBy('compliance_reports.created_at', 'DESC');
 
         if ($search !== null && $search !== '') {
@@ -46,6 +47,8 @@ class ComplianceModel extends Model
                 ->like('compliance_reports.report_number', $search)
                 ->orLike('compliance_reports.issue_type', $search)
                 ->orLike('s.shop_name', $search)
+                ->orLike('ru.first_name', $search)
+                ->orLike('ru.last_name', $search)
                 ->groupEnd();
         }
 

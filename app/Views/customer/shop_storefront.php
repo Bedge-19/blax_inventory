@@ -45,18 +45,31 @@
 
             </p>
 
-            <div class="mt-md flex gap-sm">
+            <div class="mt-md flex items-center gap-sm flex-wrap">
 
-                <button class="px-lg py-sm bg-primary text-on-primary rounded-lg font-button text-button hover:opacity-90 transition-all flex items-center gap-xs">
+                <?php if (!empty($isFavorite)): ?>
+                    <form action="<?= base_url('customer/favorites/remove') ?>" method="POST" class="inline">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
+                        <button type="submit" class="px-lg py-sm bg-error-container text-error rounded-xl font-button text-button hover:bg-error-container/80 transition-all flex items-center gap-xs font-semibold shadow-sm">
+                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                            Following Store
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <form action="<?= base_url('customer/favorites/add') ?>" method="POST" class="inline">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
+                        <button type="submit" class="px-lg py-sm bg-primary text-on-primary rounded-xl font-button text-button hover:bg-primary-container transition-all flex items-center gap-xs font-semibold shadow-sm">
+                            <span class="material-symbols-outlined text-[18px]">favorite_border</span>
+                            Follow Store
+                        </button>
+                    </form>
+                <?php endif; ?>
 
-                    <span class="material-symbols-outlined">mail</span> Contact Shop
-
-                </button>
-
-                <button class="px-lg py-sm border border-outline text-on-surface rounded-lg font-button text-button hover:bg-surface-container transition-all">
-
-                    Follow Store
-
+                <button type="button" id="btn-open-report-modal" class="px-md py-sm border border-outline-variant/60 text-outline hover:text-error hover:border-error/50 rounded-xl font-button text-button transition-all flex items-center gap-xs text-xs font-semibold">
+                    <span class="material-symbols-outlined text-[16px]">flag</span>
+                    Report Shop
                 </button>
 
             </div>
@@ -66,29 +79,95 @@
     </section>
 
     <?php if (!empty($businessHours)): ?>
-
-        <!-- Business Hours -->
-        <section class="mb-xxl max-w-3xl bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-lg md:p-xl">
-
-            <div class="flex items-center gap-sm border-b border-outline-variant/30 pb-md mb-md">
-                <span class="material-symbols-outlined text-primary">schedule</span>
-                <h2 class="text-title-lg font-bold text-on-surface">Business Hours</h2>
+        <?php
+            $todayName = strtolower(date('l'));
+            $currentStatusText = 'Open Today';
+            $isOpenNow = true;
+            foreach ($businessHours as $h) {
+                $label = strtolower($h['label'] ?? '');
+                if (str_contains($label, $todayName) || $label === 'daily') {
+                    if (!empty($h['is_closed'])) {
+                        $currentStatusText = 'Closed Today';
+                        $isOpenNow = false;
+                    } else {
+                        $currentStatusText = 'Open Today • ' . ($h['open'] ?? '8:00 AM') . ' – ' . ($h['close'] ?? '5:00 PM');
+                        $isOpenNow = true;
+                    }
+                    break;
+                }
+            }
+        ?>
+        <!-- Compact Business Hours Widget -->
+        <section class="mb-xl max-w-xl bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-md shadow-sm">
+            <div class="flex items-center justify-between cursor-pointer select-none" onclick="document.getElementById('full-business-hours').classList.toggle('hidden'); document.getElementById('hours-chevron').classList.toggle('rotate-180');">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full <?= $isOpenNow ? 'bg-green-500 animate-pulse' : 'bg-error' ?>"></span>
+                    <span class="text-sm font-semibold text-on-surface"><?= esc($currentStatusText) ?></span>
+                </div>
+                <button type="button" class="text-xs font-semibold text-primary flex items-center gap-1 hover:underline">
+                    <span>Weekly Schedule</span>
+                    <span id="hours-chevron" class="material-symbols-outlined text-[18px] transition-transform duration-200">expand_more</span>
+                </button>
             </div>
 
-            <dl class="space-y-sm">
+            <div id="full-business-hours" class="hidden mt-3 pt-3 border-t border-outline-variant/20 space-y-1.5 text-xs">
                 <?php foreach ($businessHours as $hours): ?>
-                    <div class="flex items-center justify-between gap-md text-body-md">
-                        <dt class="font-medium text-on-surface"><?= esc($hours['label']) ?></dt>
-                        <dd class="text-on-surface-variant <?= $hours['is_closed'] ? 'font-medium text-error' : '' ?>">
+                    <div class="flex items-center justify-between py-1 text-on-surface-variant">
+                        <span class="font-medium text-on-surface"><?= esc($hours['label']) ?></span>
+                        <span class="<?= $hours['is_closed'] ? 'text-error font-medium' : '' ?>">
                             <?= $hours['is_closed'] ? 'Closed' : esc($hours['open'] . ' – ' . $hours['close']) ?>
-                        </dd>
+                        </span>
                     </div>
                 <?php endforeach; ?>
-            </dl>
-
+            </div>
         </section>
-
     <?php endif; ?>
+
+    <!-- Report Shop Modal -->
+    <div id="report-shop-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden p-4">
+        <div class="glass-card bg-surface-container-lowest border border-outline-variant/50 rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
+                <div class="flex items-center gap-2 text-error">
+                    <span class="material-symbols-outlined text-2xl">report</span>
+                    <h3 class="font-title-md font-bold text-on-surface">Report Shop</h3>
+                </div>
+                <button type="button" id="btn-close-report-modal" class="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+
+            <form action="<?= base_url('customer/shop/report') ?>" method="POST" class="flex flex-col gap-4">
+                <?= csrf_field() ?>
+                <input type="hidden" name="shop_id" value="<?= (int) $shop['id'] ?>">
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-on-surface-variant" for="report-reason">Reason for Reporting <span class="text-error">*</span></label>
+                    <select id="report-reason" name="issue_type" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-2.5 text-sm font-medium text-on-surface focus:ring-2 focus:ring-primary focus:border-primary" required>
+                        <option value="" disabled selected>Select a reason...</option>
+                        <option value="Counterfeit/Fake Product">Counterfeit/Fake Product</option>
+                        <option value="Item Not as Described">Item Not as Described</option>
+                        <option value="Harassment/Abusive Behavior">Harassment/Abusive Behavior</option>
+                        <option value="Scam/Fraud">Scam/Fraud</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                    <label class="text-xs font-semibold text-on-surface-variant" for="report-desc">Additional Details (Optional)</label>
+                    <textarea id="report-desc" name="description" rows="3" class="w-full bg-surface-container-lowest border border-outline-variant rounded-xl p-2.5 text-sm text-on-surface focus:ring-2 focus:ring-primary placeholder:text-outline/50" placeholder="Provide extra details to help our team investigate..."></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30">
+                    <button type="button" id="btn-cancel-report" class="px-4 py-2 text-sm font-semibold text-on-surface-variant hover:bg-surface-container rounded-xl transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-5 py-2 text-sm font-semibold bg-error text-on-error rounded-xl shadow hover:bg-error/90 transition-all">
+                        Submit Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- PDF Printing Services Bento (If Shop Offers Printing) -->
     <!-- PDF Printing Services Bento (If Shop Offers Printing) -->
@@ -1230,6 +1309,27 @@ if (dropzone && fileInput) {
     document.querySelectorAll('input[name="color_mode"], select[name="paper_size"], select[name="copies"], input[name="binding"]').forEach(el => {
         el.addEventListener('change', updatePrintingPrice);
     });
+
+    // Report Shop Modal Handlers
+    const reportModal = document.getElementById('report-shop-modal');
+    const btnOpenReport = document.getElementById('btn-open-report-modal');
+    const btnCloseReport = document.getElementById('btn-close-report-modal');
+    const btnCancelReport = document.getElementById('btn-cancel-report');
+
+    if (btnOpenReport && reportModal) {
+        btnOpenReport.addEventListener('click', () => reportModal.classList.remove('hidden'));
+    }
+    if (btnCloseReport && reportModal) {
+        btnCloseReport.addEventListener('click', () => reportModal.classList.add('hidden'));
+    }
+    if (btnCancelReport && reportModal) {
+        btnCancelReport.addEventListener('click', () => reportModal.classList.add('hidden'));
+    }
+    if (reportModal) {
+        reportModal.addEventListener('click', (e) => {
+            if (e.target === reportModal) reportModal.classList.add('hidden');
+        });
+    }
 }
 </script>
 

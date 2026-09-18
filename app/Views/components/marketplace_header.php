@@ -15,7 +15,7 @@
 
         <a href="<?= base_url('/') ?>" class="text-title-lg font-bold text-primary">MarketPlace</a>
 
-        <form id="ai-search-form" action="<?= base_url('/') ?>" method="GET" class="hidden md:flex items-center relative">
+        <form id="ai-search-form" action="<?= base_url('search') ?>" method="GET" class="hidden md:flex items-center relative">
 
             <span id="ai-search-icon" class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
             <input id="ai-search-input" name="q" value="<?= esc($searchQuery ?? '') ?>" maxlength="200" autocomplete="off" class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-64 text-label-sm focus:ring-2 focus:ring-primary" placeholder="Describe what you need..." title="Describe a product in English, Bisaya or Tagalog - e.g. &quot;stick pang sulat nga blue ang tubig&quot;" type="text">

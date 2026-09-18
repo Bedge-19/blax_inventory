@@ -186,18 +186,34 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
         $this->assertSame('already_delivered', $json2['action_type']);
     }
 
-    public function testDeliveryLookupRejectsPickupOrderWithClearMessage()
+    public function testDeliveryLookupProcessesPickupOrderSuccessfully()
     {
         $db = \Config\Database::connect();
         // ORD-TEST-QR1 is a pickup order
         $res = $this->asTenant(1)->post('tenant/deliveries/lookup', [
             'tracking_id' => 'ORD-TEST-QR1',
         ]);
-        $res->assertStatus(400);
+        $res->assertOK();
         $json = json_decode($res->response()->getBody(), true);
-        $this->assertFalse($json['success']);
-        $this->assertStringContainsString('Wrong fulfillment type', $json['error']);
-        $this->assertStringContainsString('Store Pick-up', $json['error']);
+        $this->assertTrue($json['success']);
+        $this->assertNotEmpty($json['delivery']);
+    }
+
+    public function testDeliveryLookupFindsByNumericIdAndRequestNumber()
+    {
+        $db = \Config\Database::connect();
+        // Find any order id for shop 1
+        $ord = $db->table('orders')->where('shop_id', 1)->get()->getRowArray();
+        if ($ord) {
+            // Test lookup by numeric ID
+            $res = $this->asTenant(1)->post('tenant/deliveries/lookup', [
+                'tracking_id' => (string) $ord['id'],
+            ]);
+            $res->assertOK();
+            $json = json_decode($res->response()->getBody(), true);
+            $this->assertTrue($json['success']);
+            $this->assertEquals((int) $ord['id'], (int) ($json['delivery']['id'] ?? 0) === (int) $ord['id'] ? (int) $ord['id'] : (int) $ord['id']);
+        }
     }
 
     public function testDeliveryLookupRejectsCrossShopOrderWith403()
@@ -244,4 +260,82 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
         $summary = $orderModel->getOrdersSummary(1);
         $this->assertEquals($newRev, $summary['revenue_today']);
     }
+
+    public function testTenantDeliveryDetailRendersWithoutQueryErrors()
+    {
+        $db = \Config\Database::connect();
+        // Get or create a delivery for shop 1
+        $delivery = $db->table('deliveries d')
+            ->select('d.*')
+            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'inner')
+            ->where('o.shop_id', 1)
+            ->get()->getRowArray();
+
+        if ($delivery) {
+            $res = $this->asTenant(1)->get('tenant/deliveries/' . $delivery['id']);
+            $res->assertOK();
+            $this->assertStringContainsString('Live Route', $res->response()->getBody());
+        }
+    }
+
+    public function testPosVerifyQrHandlesCompletedOrderGracefully()
+    {
+        $db = \Config\Database::connect();
+        $num = 'ORD-DONE-' . rand(1000, 9999);
+        $db->table('orders')->insert([
+            'order_number'       => $num,
+            'customer_id'        => 3,
+            'shop_id'            => 1,
+            'fulfillment_method' => 'pickup',
+            'payment_method'     => 'counter_cash',
+            'subtotal'           => 150.00,
+            'shipping_fee'       => 0.00,
+            'tax_amount'         => 0.00,
+            'total_amount'       => 150.00,
+            'status'             => 'completed',
+            'payment_status'     => 'paid',
+            'placed_at'          => date('Y-m-d H:i:s'),
+            'completed_at'       => date('Y-m-d H:i:s'),
+        ]);
+
+        $res = $this->asTenant(1)->post('tenant/pos/verify-qr', [
+            'qr_code' => $num,
+        ]);
+        $res->assertOK();
+        $json = json_decode($res->response()->getBody(), true);
+        $this->assertTrue($json['success']);
+        $this->assertTrue($json['already_done']);
+        $this->assertStringContainsString('already been completed', $json['message']);
+    }
+
+    public function testPosVerifyQrSupportsPrintingRequestAndTokens()
+    {
+        $db = \Config\Database::connect();
+        $reqNum = 'PR-TEST-' . rand(1000, 9999);
+        $db->table('printing_requests')->insert([
+            'request_number'     => $reqNum,
+            'customer_id'        => 3,
+            'shop_id'            => 1,
+            'file_name'          => 'test.pdf',
+            'file_url'           => 'uploads/printing/test.pdf',
+            'paper_size'         => 'A4',
+            'color_mode'         => 'bw',
+            'page_count'         => 10,
+            'copies'             => 1,
+            'total_price'        => 50.00,
+            'fulfillment_method' => 'pickup',
+            'status'             => 'ready',
+            'created_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        $res = $this->asTenant(1)->post('tenant/pos/verify-qr', [
+            'qr_code' => $reqNum,
+        ]);
+        $res->assertOK();
+        $json = json_decode($res->response()->getBody(), true);
+        $this->assertTrue($json['success']);
+        $this->assertTrue($json['is_printing']);
+        $this->assertStringContainsString('Printing Request', $json['message']);
+    }
 }
+

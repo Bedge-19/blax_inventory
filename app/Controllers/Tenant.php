@@ -18,6 +18,8 @@ use App\Models\ShopNotificationPreferenceModel;
 use App\Models\ProductImageModel;
 use App\Models\ProductVariantModel;
 use App\Models\PaymentModel;
+use App\Models\SiteContentModel;
+use App\Models\ComplianceModel;
 
 class Tenant extends BaseController
 {
@@ -127,13 +129,22 @@ class Tenant extends BaseController
         $lowStockItems  = $productModel->getLowStockProducts($shopId);
         $lowStockCount  = $productModel->countLowStockProducts($shopId);
 
-        // ---- Header notifications ----
+        // ---- Active Compliance Warning & Notifications ----
         $userId        = (int) session()->get('user_id');
+        $db = \Config\Database::connect();
+        $activeWarning = $userId > 0 ? $db->table('notifications')
+            ->where('user_id', $userId)
+            ->where('type', 'compliance_warning')
+            ->orderBy('created_at', 'DESC')
+            ->limit(1)
+            ->get()->getRowArray() : null;
+
         $notifications = $notifModel->getRecent($userId);
         $unreadCount   = $notifModel->getUnreadCount($userId);
 
         return view('tenant/dashboard', [
             'shop'           => $shop,
+            'active_warning' => $activeWarning,
             'products'       => $productModel->where('shop_id', $shopId)->where('deleted_at', null)->findAll(),
             'orders'         => $orderModel->getOrdersByShop($shopId),
             'printReqs'      => $prModel->getRequestsByShop($shopId),
@@ -454,7 +465,10 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Order not found']);
         }
 
-        $items    = (new OrderItemModel())->where('order_id', $orderId)->findAll();
+        $items = (new OrderItemModel())
+            ->select('order_items.*, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as gallery_image, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image')
+            ->where('order_items.order_id', $orderId)
+            ->findAll();
         $customer = (new UserModel())->find($order['customer_id']);
         $shop     = (new ShopModel())->find($order['shop_id']);
 
@@ -476,6 +490,8 @@ class Tenant extends BaseController
         return $this->response->setJSON([
             'success' => true,
             'order'   => [
+                'id'                 => (int) $order['id'],
+                'customer_id'        => (int) ($order['customer_id'] ?? 0),
                 'order_number'       => $order['order_number'],
                 'status'             => humanize_status($order['status']),
                 'raw_status'          => $order['status'],
@@ -495,12 +511,20 @@ class Tenant extends BaseController
                 'address_label'      => $addressLabel,
                 'phone'              => $phone,
             ],
-            'items' => array_map(static fn ($i) => [
-                'product_name' => $i['product_name'],
-                'quantity'     => (int) $i['quantity'],
-                'unit_price'   => (float) $i['unit_price'],
-                'line_total'   => (float) $i['line_total'],
-            ], $items),
+            'items' => array_map(static function ($i) {
+                $img = !empty($i['gallery_image']) ? $i['gallery_image'] : (!empty($i['product_image']) ? $i['product_image'] : '');
+                if ($img !== '' && !str_starts_with($img, 'http://') && !str_starts_with($img, 'https://')) {
+                    $img = base_url($img);
+                }
+                return [
+                    'product_name'  => $i['product_name'],
+                    'image_url'     => $img,
+                    'variant_label' => $i['variant_label'] ?? '',
+                    'quantity'      => (int) $i['quantity'],
+                    'unit_price'    => (float) $i['unit_price'],
+                    'line_total'    => (float) $i['line_total'],
+                ];
+            }, $items),
         ]);
     }
 
@@ -571,16 +595,17 @@ class Tenant extends BaseController
         $shop   = $res['shop'];
 
         // Recent requests (all statuses), with independent paginator group.
-        $search = trim((string) $this->request->getGet('q'));
-        $status = (string) $this->request->getGet('status');
-        $status = in_array($status, ['new', 'in_production', 'ready_for_pickup', 'ready_for_delivery', 'completed', 'cancelled'], true) ? $status : '';
-        $page   = max(1, (int) $this->request->getGet('page_recent'));
+        $search  = trim((string) $this->request->getGet('q'));
+        $status  = (string) $this->request->getGet('status');
+        $status  = in_array($status, ['new', 'in_production', 'ready_for_pickup', 'ready_for_delivery', 'completed', 'cancelled'], true) ? $status : '';
+        $perPage = max(5, min(100, (int) ($this->request->getGet('per_page') ?? 10)));
+        $page    = max(1, (int) $this->request->getGet('page_recent'));
 
         $recent = (new PrintingRequestModel())->getRequestsByShopPaginated(
             $shopId,
             $search !== '' ? $search : null,
             $status !== '' ? $status : null,
-            10,
+            $perPage,
             $page,
             'recent'
         );
@@ -650,7 +675,7 @@ class Tenant extends BaseController
         $search = trim((string) $this->request->getGet('q'));
         $status = (string) $this->request->getGet('status');
         $status = in_array($status, ['ready_for_pickup', 'shipped', 'in_transit', 'delivered', 'cancelled'], true) ? $status : '';
-        $page   = max(1, (int) $this->request->getGet('page_deliveries'));
+        $page   = max(1, (int) ($this->request->getGet('page_deliveries') ?: $this->request->getGet('page') ?: 1));
 
         $deliveryModel = new DeliveryModel();
         $result = $deliveryModel->getDeliveriesByShopPaginated(
@@ -724,34 +749,18 @@ class Tenant extends BaseController
             ]);
         }
 
-        // Fulfillment check: Reject Store Pick-up orders in Delivery scanner
-        if (($row['fulfillment_method'] ?? '') === 'pickup') {
-            $ref = $row['ref_number'] ?: $row['tracking_id'];
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'error'   => "Wrong fulfillment type: Order #{$ref} was placed for Store Pick-up. Please process it at the counter via POS.",
-                'message' => "Wrong fulfillment type: Order #{$ref} was placed for Store Pick-up. Please process it at the counter via POS.",
-            ]);
-        }
-
+        $isPickup      = ($row['fulfillment_method'] ?? '') === 'pickup';
         $currentStatus = $row['status'] ?? 'ready_for_pickup';
         $newStatus     = null;
         $statusMsg     = '';
         $actionType    = '';
 
-        if ($currentStatus === 'cancelled') {
-            $ref = $row['ref_number'] ?: $row['tracking_id'];
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'error'   => "Order #{$ref} has been cancelled.",
-                'message' => "Order #{$ref} has been cancelled.",
-            ]);
-        }
+        $ref = $row['ref_number'] ?: $row['tracking_id'];
 
-        // Status transition on QR Scan:
-        // 1. If currently shipped / in_transit / ready_for_pickup / processing / pending -> automatically mark as 'delivered'!
-        // 2. If already delivered -> inform user that it is verified as delivered
-        if (in_array($currentStatus, ['shipped', 'in_transit', 'ready_for_pickup', 'processing', 'pending'], true)) {
+        if ($currentStatus === 'cancelled') {
+            $statusMsg = ($isPickup ? 'Store Pick-up' : 'Delivery') . " Order #{$ref} was CANCELLED.";
+            $actionType = 'cancelled';
+        } elseif (in_array($currentStatus, ['shipped', 'in_transit', 'ready_for_pickup', 'processing', 'pending', 'ready_for_delivery'], true)) {
             $newStatus = 'delivered';
             $now = date('Y-m-d H:i:s');
             
@@ -776,14 +785,22 @@ class Tenant extends BaseController
 
             $currentStatus = 'delivered';
             $row['delivered_at'] = $now;
+            $row['status'] = 'delivered';
             $actionType = 'delivered';
-            $statusMsg = 'Order #' . ($row['ref_number'] ?: $row['tracking_id']) . ' has been verified and marked as DELIVERED!';
-        } elseif ($currentStatus === 'delivered') {
+            $statusMsg = $isPickup
+                ? "Pick-up Order #{$ref} verified & marked as COLLECTED / COMPLETED!"
+                : "Delivery #{$ref} verified & marked as DELIVERED!";
+        } elseif (in_array($currentStatus, ['delivered', 'completed'], true)) {
             $actionType = 'already_delivered';
-            $statusMsg = 'Order #' . ($row['ref_number'] ?: $row['tracking_id']) . ' is already verified as DELIVERED.';
+            $statusMsg = $isPickup
+                ? "Store Pick-up Order #{$ref} is already verified as COMPLETED / PICKED UP."
+                : "Delivery #{$ref} is already verified as DELIVERED.";
         } elseif ($currentStatus === 'returned') {
             $actionType = 'already_returned';
-            $statusMsg = 'Order/Request #' . ($row['ref_number'] ?: $row['tracking_id']) . ' is currently marked as RETURNED.';
+            $statusMsg = "Order/Request #{$ref} is currently marked as RETURNED.";
+        } else {
+            $actionType = 'verified';
+            $statusMsg = "Order #{$ref} verified. Current status: " . strtoupper(humanize_status($currentStatus));
         }
 
         // Send customer notification on QR status update
@@ -817,6 +834,8 @@ class Tenant extends BaseController
                 'id'               => (int) $row['id'],
                 'tracking_id'      => $row['tracking_id'],
                 'ref_number'       => $row['ref_number'] ?? '',
+                'product_name'     => $row['product_name'] ?? 'Order Item',
+                'product_details'  => $row['all_products_list'] ?? ($row['product_name'] ?? ''),
                 'deliverable_type' => $row['deliverable_type'],
                 'courier_name'     => $row['courier_name'] ?? '',
                 'destination'      => $row['destination_address'] ?? '',
@@ -906,6 +925,7 @@ class Tenant extends BaseController
             'available_balance' => $balanceData['available_balance'],
             'escrow_holding'    => $balanceData['escrow_holding'],
             'released_earnings' => $balanceData['released_earnings'],
+            'deduction_percent' => (new SiteContentModel())->getPlatformDeductionPercent(),
         ]);
     }
 
@@ -1156,6 +1176,20 @@ class Tenant extends BaseController
                     'order_status',
                     $notifTitle,
                     $notifMessage,
+                    '/customer/orders'
+                );
+            }
+
+            // Task 3: Prompt customer to rate the product on completion/delivery
+            if (in_array($status, ['completed', 'delivered'], true)) {
+                $ratingMsg = $itemTitle !== ''
+                    ? "How was \"{$itemTitle}\" from {$shopName}? Leave a rating to help other shoppers!"
+                    : "How was your order from {$shopName}? Leave a rating to help other shoppers!";
+                (new NotificationModel())->create(
+                    $customerId,
+                    'review_prompt',
+                    '⭐ Rate Your Purchase',
+                    $ratingMsg,
                     '/customer/orders'
                 );
             }
@@ -1414,6 +1448,54 @@ class Tenant extends BaseController
     }
 
     /**
+     * Inline document preview for a printing request.
+     */
+    public function viewPrintFile($requestId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+
+        $prModel = new PrintingRequestModel();
+        $row     = $prModel->find((int) $requestId);
+        if (!$row || (int) $row['shop_id'] !== $shopId) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found.');
+        }
+
+        $rel  = ltrim((string) $row['file_url'], '/');
+        $path = str_starts_with($rel, 'writable/')
+            ? WRITEPATH . substr($rel, strlen('writable/'))
+            : WRITEPATH . $rel;
+
+        $real = realpath($path);
+        $root = realpath(WRITEPATH);
+        if ($real === false || $root === false || !str_starts_with($real . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR)) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing file is not available.');
+        }
+        if (!is_file($real)) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing on the server.');
+        }
+
+        $name = trim((string) $row['file_name']);
+        if ($name === '') {
+            $name = basename($real);
+        }
+
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = finfo_file($finfo, $real) ?: 'application/pdf';
+        finfo_close($finfo);
+
+        return $this->response
+            ->setContentType($mime)
+            ->setHeader('Content-Disposition', 'inline; filename="' . str_replace('"', '', $name) . '"')
+            ->setHeader('Content-Length', (string) filesize($real))
+            ->setBody((string) file_get_contents($real));
+    }
+
+    /**
      * Save printing settings for the current shop (prices, bindings, down payment, paper sizes).
      */
     public function savePrintingSettings()
@@ -1611,8 +1693,10 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Please enter a valid GCash number (09XXXXXXXXX). Only GCash withdrawals are supported.');
         }
         $accountDetails = $cleaned;
-        $fee = round($amount * 0.03, 2);
+        $deductionPercent = (new SiteContentModel())->getPlatformDeductionPercent();
+        $fee = round($amount * ($deductionPercent / 100), 2);
 
+        $db = \Config\Database::connect();
         $db->table('payout_requests')->insert([
             'shop_id'            => $shopId,
             'reference_number'   => 'WD-' . date('Ymd') . '-' . rand(1000, 9999),
@@ -1620,6 +1704,7 @@ class Tenant extends BaseController
             'destination_method' => $destMethod,
             'destination_detail' => $accountDetails,
             'fee'                => $fee,
+            'deduction_percent'  => $deductionPercent,
             'status'             => 'pending',
             'requested_at'       => date('Y-m-d H:i:s'),
         ]);
@@ -1664,10 +1749,23 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Description must be 500 characters or fewer.');
         }
 
+        $street      = trim((string) $this->request->getPost('street'));
+        $barangay    = trim((string) $this->request->getPost('barangay'));
+        $addressLine = trim((string) $this->request->getPost('address_line'));
+
+        if ($addressLine === '' || $addressLine === 'Polomolok') {
+            $parts = array_filter([$street, $barangay, 'Polomolok', 'South Cotabato']);
+            if (!empty($parts)) {
+                $addressLine = implode(', ', $parts);
+            }
+        }
+
         (new ShopModel())->update($shopId, [
             'shop_name'       => $shopName,
             'description'     => $description,
-            'address_line'    => trim((string) $this->request->getPost('address_line')),
+            'street'          => $street,
+            'barangay'        => $barangay,
+            'address_line'    => $addressLine,
             'offers_printing' => $this->request->getPost('offers_printing') ? 1 : 0,
         ]);
 
@@ -1844,6 +1942,7 @@ class Tenant extends BaseController
         $threshold    = (int) $this->request->getPost('low_stock_threshold');
         $categoryId   = (int) $this->request->getPost('category_id');
         $sku          = trim((string) $this->request->getPost('sku'));
+        $shippingFee  = (float) $this->request->getPost('shipping_fee');
 
         if ($name === '' || $price < 0 || $stock < 0 || $threshold < 0) {
             return redirect()->back()->with('error', 'Please provide a valid product name, non-negative price, stock, and low-stock threshold.');
@@ -1872,6 +1971,7 @@ class Tenant extends BaseController
             'description'         => $description,
             'price'               => $price,
             'compare_at_price'    => $comparePrice > 0 ? $comparePrice : null,
+            'shipping_fee'        => $shippingFee >= 0 ? $shippingFee : 0,
             'stock_quantity'      => $stock,
             'low_stock_threshold' => $threshold > 0 ? $threshold : 5,
         ];
@@ -2508,39 +2608,77 @@ class Tenant extends BaseController
             ]);
         }
 
-        $search = trim(str_replace(['#'], '', $rawCode));
-        if (str_starts_with($search, '{') && str_ends_with($search, '}')) {
-            $decoded = json_decode($search, true);
-            if (is_array($decoded)) {
-                $search = trim((string) ($decoded['order_no'] ?? $decoded['order_number'] ?? $decoded['id'] ?? $search));
-            }
-        }
-
-        // Clean and extract order number: matches 'ORD-XXXXX' or raw order code
-        $orderNumber = $search;
-        if (preg_match('/(ORD-[A-Za-z0-9_-]+)/i', $search, $matches)) {
-            $orderNumber = strtoupper($matches[1]);
-        } elseif (preg_match('#/order/([A-Za-z0-9_-]+)#', $search, $matches)) {
-            $orderNumber = strtoupper($matches[1]);
-        } else {
-            $orderNumber = strtoupper(trim(str_replace(['#', ' '], '', $search)));
+        $deliveryModel = new DeliveryModel();
+        $tokens = $deliveryModel->extractLookupTokens($rawCode);
+        if (empty($tokens)) {
+            $tokens[] = $rawCode;
         }
 
         $orderModel = new OrderModel();
-        // Match exact order_number, prefixed 'ORD-', or numeric ID
-        $order = $orderModel
-            ->groupStart()
-                ->where('order_number', $orderNumber)
-                ->orWhere('order_number', 'ORD-' . $orderNumber)
-                ->orWhere('id', is_numeric($orderNumber) ? (int) $orderNumber : 0)
-            ->groupEnd()
-            ->first();
+        // Match exact order_number, prefixed 'ORD-', or numeric ID across all extracted tokens
+        $order = null;
+        foreach ($tokens as $t) {
+            $qb = $orderModel
+                ->groupStart()
+                    ->where('order_number', $t)
+                    ->orWhere('order_number', 'ORD-' . $t)
+                    ->orWhere('order_number', '#' . $t);
+            if (is_numeric($t)) {
+                $qb->orWhere('id', (int) $t);
+            }
+            $qb->groupEnd();
+            $order = $qb->first();
+            if ($order) {
+                break;
+            }
+        }
 
+        // If not found in orders, check printing requests
         if (!$order) {
+            $prModel = new \App\Models\PrintingRequestModel();
+            $pr = null;
+            foreach ($tokens as $t) {
+                $qb = $prModel
+                    ->groupStart()
+                        ->where('request_number', $t)
+                        ->orWhere('request_number', 'PR-' . $t)
+                        ->orWhere('request_number', '#' . $t);
+                if (is_numeric($t)) {
+                    $qb->orWhere('id', (int) $t);
+                }
+                $qb->groupEnd();
+                $pr = $qb->first();
+                if ($pr) {
+                    break;
+                }
+            }
+
+            if ($pr) {
+                // Tenant ownership check
+                if ((int) $pr['shop_id'] !== $shopId) {
+                    return $this->response->setStatusCode(403)->setJSON([
+                        'success' => false,
+                        'error'   => "Request #{$pr['request_number']} belongs to another shop, not {$shop['shop_name']}.",
+                        'message' => "Request #{$pr['request_number']} belongs to another shop, not {$shop['shop_name']}.",
+                    ]);
+                }
+
+                $isCompleted = in_array($pr['status'], ['completed', 'delivered'], true);
+                return $this->response->setJSON([
+                    'success'        => true,
+                    'is_printing'    => true,
+                    'already_done'   => $isCompleted,
+                    'message'        => "Printing Request #{$pr['request_number']} verified (" . ($isCompleted ? 'COMPLETED' : ucfirst($pr['status'])) . ").",
+                    'request_number' => $pr['request_number'],
+                    'redirect_url'   => site_url('tenant/printing?search=' . urlencode($pr['request_number'])),
+                ]);
+            }
+
+            $firstToken = $tokens[0] ?? $rawCode;
             return $this->response->setStatusCode(404)->setJSON([
                 'success' => false,
-                'error'   => "Order #{$orderNumber} was not found in the system.",
-                'message' => "Order #{$orderNumber} was not found in the system.",
+                'error'   => "Order or request #{$firstToken} was not found in the system.",
+                'message' => "Order or request #{$firstToken} was not found in the system.",
             ]);
         }
 
@@ -2572,10 +2710,14 @@ class Tenant extends BaseController
         }
 
         if (in_array($order['status'], ['completed', 'delivered'], true)) {
-            return $this->response->setStatusCode(400)->setJSON([
-                'success' => false,
-                'error'   => "Order #{$order['order_number']} has already been completed / released.",
-                'message' => "Order #{$order['order_number']} has already been completed / released.",
+            return $this->response->setJSON([
+                'success'      => true,
+                'already_done' => true,
+                'message'      => "Order #{$order['order_number']} has already been completed / released.",
+                'order_id'     => (int) $order['id'],
+                'order_number' => $order['order_number'],
+                'customer_id'  => (int) ($order['customer_id'] ?? 0),
+                'redirect_url' => site_url('tenant/pos?order_id=' . $order['id']),
             ]);
         }
 
@@ -3047,10 +3189,12 @@ class Tenant extends BaseController
 
         // Available store-pickup orders for quick selection (excluding completed, delivered, cancelled)
         $pickupOrders = $orderModel
-            ->where('shop_id', $shopId)
-            ->where('fulfillment_method', 'pickup')
-            ->whereNotIn('status', ['completed', 'delivered', 'cancelled'])
-            ->orderBy('placed_at', 'DESC')
+            ->select('orders.*, u.first_name, u.last_name, u.phone, (SELECT GROUP_CONCAT(CONCAT(quantity, "x ", product_name) SEPARATOR ", ") FROM order_items WHERE order_id = orders.id) as items_summary')
+            ->join('users u', 'u.id = orders.customer_id', 'left')
+            ->where('orders.shop_id', $shopId)
+            ->where('orders.fulfillment_method', 'pickup')
+            ->whereNotIn('orders.status', ['completed', 'delivered', 'cancelled'])
+            ->orderBy('orders.placed_at', 'DESC')
             ->findAll();
 
         $categories = (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll();
@@ -3068,6 +3212,131 @@ class Tenant extends BaseController
             'categories'    => $categories,
             'activeNav'     => 'pos',
             'title'         => !empty($order) ? 'Store Pick-up POS' : 'Walk-in POS',
+        ]);
+    }
+
+    /**
+     * JSON endpoint for order detail modal.
+     */
+    public function orderDetailJson(int $orderId)
+    {
+        return $this->orderItems($orderId);
+    }
+
+    /**
+     * Submit customer compliance report from tenant dashboard.
+     */
+    public function reportCustomer()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $customerId  = (int) $this->request->getPost('customer_id');
+        $issueType   = trim((string) $this->request->getPost('issue_type'));
+        $description = trim((string) $this->request->getPost('description'));
+
+        if ($customerId <= 0 || empty($issueType) || empty($description)) {
+            return redirect()->back()->with('error', 'Please select an issue type and provide a description.');
+        }
+
+        $customer = (new UserModel())->find($customerId);
+        if (!$customer) {
+            return redirect()->back()->with('error', 'Customer account not found.');
+        }
+
+        $reportNumber = 'REP-' . rand(1000, 9999);
+        $complianceModel = new ComplianceModel();
+        $complianceModel->insert([
+            'report_number'    => $reportNumber,
+            'reporter_id'      => (int) session()->get('user_id'),
+            'reported_shop_id' => null,
+            'reported_user_id' => $customerId,
+            'issue_type'       => $issueType,
+            'description'      => $description,
+            'status'           => 'pending',
+            'created_at'       => date('Y-m-d H:i:s'),
+        ]);
+
+        return redirect()->back()->with('success', "Report #{$reportNumber} submitted to compliance team for review.");
+    }
+
+    /**
+     * Dedicated delivery mapping and details page for a specific shipment.
+     */
+    public function deliveryDetail(int $deliveryId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+        $shop   = $res['shop'];
+
+        $deliveryModel = new DeliveryModel();
+        $delivery = $deliveryModel->find($deliveryId);
+        if (!$delivery) {
+            return redirect()->to('/tenant/delivery')->with('error', 'Delivery record not found.');
+        }
+
+        // Verify ownership
+        $ownerShopId = $deliveryModel->resolveShopId($deliveryId);
+        if ($ownerShopId !== $shopId) {
+            return redirect()->to('/tenant/delivery')->with('error', 'Unauthorized access to this delivery record.');
+        }
+
+        // Fetch customer and deliverable details
+        $customer = null;
+        $order = null;
+        $orderItems = [];
+        $printingRequest = null;
+
+        if ($delivery['deliverable_type'] === 'order') {
+            $order = (new OrderModel())->find($delivery['deliverable_id']);
+            if ($order && !empty($order['customer_id'])) {
+                $customer = (new UserModel())->find($order['customer_id']);
+            }
+            if ($order) {
+                $orderItems = (new OrderItemModel())
+                    ->select('order_items.*, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as gallery_image, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image')
+                    ->where('order_items.order_id', $order['id'])
+                    ->findAll();
+            }
+        } elseif ($delivery['deliverable_type'] === 'printing_request') {
+            $printingRequest = (new PrintingRequestModel())->find($delivery['deliverable_id']);
+            if ($printingRequest && !empty($printingRequest['customer_id'])) {
+                $customer = (new UserModel())->find($printingRequest['customer_id']);
+            }
+        }
+
+        // Coordinates check & fallback
+        $destLat = (float) ($delivery['destination_latitude'] ?? 0);
+        $destLng = (float) ($delivery['destination_longitude'] ?? 0);
+        if ($destLat === 0.0 || $destLng === 0.0) {
+            $destLat = 6.2209;
+            $destLng = 125.0642;
+        }
+
+        $shopLat = (float) ($shop['latitude'] ?? 6.2209);
+        $shopLng = (float) ($shop['longitude'] ?? 125.0642);
+
+        service('renderer')->setData(['shop' => $shop]);
+
+        return view('tenant/delivery_detail', [
+            'shop'            => $shop,
+            'delivery'        => $delivery,
+            'customer'        => $customer,
+            'order'           => $order,
+            'orderItems'      => $orderItems,
+            'printingRequest' => $printingRequest,
+            'shopLat'         => $shopLat,
+            'shopLng'         => $shopLng,
+            'destLat'         => $destLat,
+            'destLng'         => $destLng,
+            'activeNav'       => 'delivery',
+            'title'           => 'Delivery #' . ($delivery['tracking_id'] ?? $deliveryId),
         ]);
     }
 }

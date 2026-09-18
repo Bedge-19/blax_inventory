@@ -99,8 +99,12 @@ class Checkout extends BaseController
             ->orderBy('is_default', 'DESC')
             ->findAll();
 
+        if (empty($addresses)) {
+            return redirect()->to(base_url('customer/addresses?open_add=1'))->with('error', 'Please add and set a shipping address before checking out.');
+        }
+
         $subtotal = $unitPrice * $quantity;
-        $shipping = 50.00;
+        $shipping = !empty($product['shipping_fee']) ? (float) $product['shipping_fee'] : 50.00;
 
         return view('customer/buy_now', [
             'product'         => $product,
