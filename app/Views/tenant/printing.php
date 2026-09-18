@@ -238,6 +238,18 @@ $nextStates = [
                                                     <span>View QR Code</span>
                                                 </button>
 
+                                                <button type="button"
+                                                        onclick="closeMenus(); printPrintingWaybill('<?= esc($r['request_number']) ?>', '<?= esc($fullName !== '' ? $fullName : 'Customer') ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>', '<?= esc(pr_spec_line($r)) ?>', '<?= esc(number_format((float) $r['total_price'], 2)) ?>')"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">print</span>
+                                                    <span>Print Waybill</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/receipt/' . (int) $r['id']) ?>" target="_blank" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">receipt_long</span>
+                                                    <span>Print Receipt</span>
+                                                </a>
+
                                                 <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
                                                     <span class="material-symbols-outlined text-[18px] text-primary">download</span>
                                                     <span>Download File</span>
@@ -488,6 +500,18 @@ $nextStates = [
                                                     <span>View QR Code</span>
                                                 </button>
 
+                                                <button type="button"
+                                                        onclick="closeMenus(); printPrintingWaybill('<?= esc($r['request_number']) ?>', '<?= esc($fullName !== '' ? $fullName : 'Customer') ?>', '<?= esc(ucfirst(str_replace('_', ' ', $r['fulfillment_method'] ?? 'pickup'))) ?>', '<?= esc(pr_spec_line($r)) ?>', '<?= esc(number_format((float) $r['total_price'], 2)) ?>')"
+                                                        class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">print</span>
+                                                    <span>Print Waybill</span>
+                                                </button>
+
+                                                <a href="<?= base_url('tenant/printing/receipt/' . (int) $r['id']) ?>" target="_blank" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
+                                                    <span class="material-symbols-outlined text-[18px] text-primary">receipt_long</span>
+                                                    <span>Print Receipt</span>
+                                                </a>
+
                                                 <a href="<?= base_url('tenant/printing/download/' . (int) $r['id']) ?>" onclick="closeMenus()" class="w-full text-left px-sm py-2 rounded-xl text-on-surface text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-2.5 transition-colors">
                                                     <span class="material-symbols-outlined text-[18px] text-primary">download</span>
                                                     <span>Download File</span>
@@ -582,6 +606,14 @@ $nextStates = [
                 <span class="text-[11px] font-bold text-on-surface-variant block uppercase tracking-wider mb-1">Reference Attachments</span>
                 <div id="rmAttachmentsList" class="grid grid-cols-2 gap-2 mt-1"></div>
             </div>
+
+            <!-- Print Receipt Action -->
+            <div class="pt-2 border-t border-outline-variant/20">
+                <button type="button" id="rmPrintReceiptBtn" class="w-full py-2 bg-surface-container-high text-on-surface border border-outline-variant/40 rounded-xl font-bold hover:bg-surface-variant transition-all flex items-center justify-center gap-2 text-label-sm shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                    <span>Print Official Receipt</span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -609,7 +641,13 @@ $nextStates = [
             <span id="tqrFulfillment" class="mt-2 text-xs px-md py-1 bg-primary/10 text-primary rounded-full font-semibold uppercase tracking-wider">Pickup</span>
         </div>
 
-        <button type="button" onclick="document.getElementById('tenantQrModal').classList.add('hidden')" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        <div class="flex gap-2 w-full">
+            <button type="button" onclick="printFromTenantQrModal()" class="flex-1 py-md bg-secondary-container text-on-secondary-container rounded-xl text-button font-button hover:bg-secondary-container/80 transition-all flex items-center justify-center gap-1.5 shadow-sm">
+                <span class="material-symbols-outlined text-[18px]">print</span>
+                <span>Print Waybill</span>
+            </button>
+            <button type="button" onclick="document.getElementById('tenantQrModal').classList.add('hidden')" class="flex-1 py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+        </div>
     </div>
 </div>
 
@@ -914,10 +952,22 @@ $nextStates = [
             attBox.classList.add('hidden');
         }
 
+        const rmPrintBtn = document.getElementById('rmPrintReceiptBtn');
+        if (rmPrintBtn) {
+            rmPrintBtn.onclick = function() {
+                window.open('<?= base_url('tenant/printing/receipt') ?>/' + encodeURIComponent(btn.dataset.request || ''), '_blank');
+            };
+        }
+
         document.getElementById('requestModal').classList.remove('hidden');
     }
 
+    let currentModalQrReqNum = '';
+    let currentModalQrFulfillment = '';
+
     function openTenantQrModal(reqNum, fulfillment) {
+        currentModalQrReqNum = reqNum;
+        currentModalQrFulfillment = fulfillment;
         document.getElementById('tqrRequest').textContent = '#' + reqNum;
         document.getElementById('tqrFulfillment').textContent = fulfillment;
         const container = document.getElementById('tenant-qr-canvas');
@@ -933,6 +983,109 @@ $nextStates = [
             });
         }
         document.getElementById('tenantQrModal').classList.remove('hidden');
+    }
+
+    function printFromTenantQrModal() {
+        if (!currentModalQrReqNum) return;
+        printPrintingWaybill(currentModalQrReqNum, 'Customer', currentModalQrFulfillment, 'Printing Service Request', '');
+    }
+
+    function printPrintingWaybill(reqNum, customerName, fulfillment, specs, amount) {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        document.body.appendChild(tempDiv);
+
+        if (window.QRCode) {
+            new QRCode(tempDiv, {
+                text: reqNum,
+                width: 160,
+                height: 160,
+                colorDark: "#0f172a",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        setTimeout(() => {
+            let qrDataUrl = '';
+            const canvas = tempDiv.querySelector('canvas');
+            if (canvas) {
+                qrDataUrl = canvas.toDataURL('image/png');
+            } else {
+                const img = tempDiv.querySelector('img');
+                if (img) qrDataUrl = img.src;
+            }
+            tempDiv.remove();
+
+            const printWin = window.open('', '_blank');
+            printWin.document.write(`
+                <!DOCTYPE html>
+                <html>
+                    <head>
+                        <title>Job Waybill - #${reqNum}</title>
+                        <style>
+                            body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; padding: 20px; color: #1e293b; background: #ffffff; margin: 0; }
+                            .card { border: 2px solid #2563eb; border-radius: 16px; padding: 20px; max-width: 500px; margin: 0 auto; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+                            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin-bottom: 16px; }
+                            .order-no { font-size: 22px; font-weight: 900; color: #0f172a; margin: 0; font-family: monospace; }
+                            .badge { background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+                            .main-grid { display: flex; gap: 20px; align-items: center; margin: 16px 0; }
+                            .left-qr { width: 170px; text-align: center; }
+                            .qr-img { width: 150px; height: 150px; border-radius: 10px; border: 1px solid #cbd5e1; padding: 6px; background: #fff; }
+                            .right-info { flex: 1; border-left: 2px solid #e2e8f0; padding-left: 18px; text-align: left; }
+                            .field-group { margin-bottom: 10px; }
+                            .field-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+                            .field-value { font-size: 14px; font-weight: 800; color: #0f172a; margin-top: 2px; line-height: 1.3; }
+                            .footer-note { text-align: center; font-size: 11px; color: #64748b; border-top: 1px dashed #e2e8f0; padding-top: 12px; margin-top: 16px; }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="card">
+                            <div class="header">
+                                <div>
+                                    <span class="badge">Printing Job Waybill</span>
+                                    <h1 class="order-no">#${reqNum}</h1>
+                                </div>
+                                <div style="font-size: 11px; color: #64748b; text-align: right; font-weight: 700;">${fulfillment}</div>
+                            </div>
+                            <div class="main-grid">
+                                <div class="left-qr">
+                                    <img src="${qrDataUrl}" class="qr-img" />
+                                    <p style="font-size: 10px; color: #64748b; margin-top: 4px; font-weight: 600;">Scan to Verify Job</p>
+                                </div>
+                                <div class="right-info">
+                                    <div class="field-group">
+                                        <span class="field-label">Customer Name</span>
+                                        <div class="field-value">${customerName}</div>
+                                    </div>
+                                    <div class="field-group">
+                                        <span class="field-label">Job Specs</span>
+                                        <div class="field-value" style="font-size: 12px; font-weight: 600;">${specs || 'Standard Printing'}</div>
+                                    </div>
+                                    ${amount ? `
+                                    <div class="field-group">
+                                        <span class="field-label">Total Amount</span>
+                                        <div class="field-value" style="color: #2563eb;">₱${amount}</div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="footer-note">
+                                Blax Storefront Printing Services &amp; POS Verification Slip
+                            </div>
+                        </div>
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                                setTimeout(function(){ window.close(); }, 500);
+                            };
+                        <\/script>
+                    </body>
+                </html>
+            `);
+            printWin.document.close();
+        }, 100);
     }
 </script>
 

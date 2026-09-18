@@ -19,7 +19,9 @@ class PosControllerTest extends CIUnitTestCase
         $db = \Config\Database::connect();
         
         // Ensure ORD-88102 (belongs to shop 12)
-        if (!$db->table('orders')->where('order_number', 'ORD-88102')->get()->getRowArray()) {
+        if ($existing = $db->table('orders')->where('order_number', 'ORD-88102')->get()->getRowArray()) {
+            $db->table('orders')->where('id', $existing['id'])->update(['shop_id' => 12, 'fulfillment_method' => 'pickup', 'status' => 'processing']);
+        } else {
             $db->table('orders')->insert([
                 'order_number'       => 'ORD-88102',
                 'customer_id'        => 3,
@@ -37,7 +39,9 @@ class PosControllerTest extends CIUnitTestCase
         }
 
         // Ensure ORD-0922 (delivery order for shop 1)
-        if (!$db->table('orders')->where('order_number', 'ORD-0922')->get()->getRowArray()) {
+        if ($existing = $db->table('orders')->where('order_number', 'ORD-0922')->get()->getRowArray()) {
+            $db->table('orders')->where('id', $existing['id'])->update(['shop_id' => 1, 'fulfillment_method' => 'delivery', 'status' => 'processing']);
+        } else {
             $db->table('orders')->insert([
                 'order_number'       => 'ORD-0922',
                 'customer_id'        => 3,
@@ -55,7 +59,9 @@ class PosControllerTest extends CIUnitTestCase
         }
 
         // Ensure ORD-90097 (pending order for shop 1)
-        if (!$db->table('orders')->where('order_number', 'ORD-90097')->get()->getRowArray()) {
+        if ($existing = $db->table('orders')->where('order_number', 'ORD-90097')->get()->getRowArray()) {
+            $db->table('orders')->where('id', $existing['id'])->update(['shop_id' => 1, 'fulfillment_method' => 'pickup', 'status' => 'pending']);
+        } else {
             $db->table('orders')->insert([
                 'order_number'       => 'ORD-90097',
                 'customer_id'        => 3,

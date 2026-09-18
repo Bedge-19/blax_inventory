@@ -128,7 +128,10 @@
                                                 data-city="<?= esc($addrCity) ?>"
                                                 data-province="<?= esc($addrProv) ?>"
                                                 data-zip="<?= esc($addrZip) ?>"
-                                                data-country="<?= esc($addrCountry) ?>">
+                                                data-country="<?= esc($addrCountry) ?>"
+                                                data-lat="<?= esc($addr['latitude'] ?? '') ?>"
+                                                data-lng="<?= esc($addr['longitude'] ?? '') ?>"
+                                                data-place_id="<?= esc($addr['place_id'] ?? '') ?>">
 
                                                 <span class="material-symbols-outlined text-[18px]">edit</span> Edit
 
@@ -225,6 +228,9 @@
 
             <?= csrf_field() ?>
             <input type="hidden" name="address_id" id="addr-id" value="">
+            <input type="hidden" name="latitude" id="addr-latitude" value="">
+            <input type="hidden" name="longitude" id="addr-longitude" value="">
+            <input type="hidden" name="place_id" id="addr-place-id" value="">
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-md">
 
@@ -379,6 +385,9 @@
             field('addr-recipient').value = '';
             field('addr-phone').value = '';
             field('addr-line1').value = '';
+            if (field('addr-latitude')) field('addr-latitude').value = '';
+            if (field('addr-longitude')) field('addr-longitude').value = '';
+            if (field('addr-place-id')) field('addr-place-id').value = '';
             if (field('addr-barangay')) field('addr-barangay').value = '';
             if (field('addr-line2')) field('addr-line2').value = '';
             field('addr-city').value = 'Polomolok';
@@ -397,6 +406,9 @@
             field('addr-recipient').value = btn.dataset.recipient || '';
             field('addr-phone').value = btn.dataset.phone || '';
             field('addr-line1').value = btn.dataset.line1 || '';
+            if (field('addr-latitude')) field('addr-latitude').value = btn.dataset.lat || '';
+            if (field('addr-longitude')) field('addr-longitude').value = btn.dataset.lng || '';
+            if (field('addr-place-id')) field('addr-place-id').value = btn.dataset.place_id || '';
             var brgy = btn.dataset.line2 || '';
             if (field('addr-barangay')) field('addr-barangay').value = brgy;
             if (field('addr-line2')) field('addr-line2').value = brgy;
@@ -438,7 +450,72 @@
         if (params.get('open_add') === '1' || window.location.hash === '#add' || <?= empty($addresses) ? 'true' : 'false' ?>) {
             openAdd();
         }
+
+        let addressAutocomplete = null;
+        window.initAddressAutocomplete = function() {
+            const input = document.getElementById('addr-line1');
+            if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+            const poloBounds = new google.maps.LatLngBounds(
+                { lat: 6.10, lng: 124.95 },
+                { lat: 6.32, lng: 125.18 }
+            );
+
+            addressAutocomplete = new google.maps.places.Autocomplete(input, {
+                bounds: poloBounds,
+                componentRestrictions: { country: 'ph' },
+                fields: ['address_components', 'geometry', 'name', 'place_id', 'formatted_address'],
+                strictBounds: false
+            });
+
+            addressAutocomplete.addListener('place_changed', function() {
+                const place = addressAutocomplete.getPlace();
+                if (!place || !place.geometry || !place.geometry.location) return;
+
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+                const placeId = place.place_id || '';
+
+                const latInput = document.getElementById('addr-latitude');
+                const lngInput = document.getElementById('addr-longitude');
+                const placeIdInput = document.getElementById('addr-place-id');
+
+                if (latInput) latInput.value = lat;
+                if (lngInput) lngInput.value = lng;
+                if (placeIdInput) placeIdInput.value = placeId;
+
+                // Auto-match barangay in dropdown if detected
+                if (place.address_components) {
+                    for (const component of place.address_components) {
+                        const types = component.types;
+                        if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood') || types.includes('political')) {
+                            const brgyName = component.long_name.replace(/^(Barangay|Brgy\.?)\s+/i, '').trim();
+                            const brgySelect = document.getElementById('addr-barangay');
+                            if (brgySelect) {
+                                for (let i = 0; i < brgySelect.options.length; i++) {
+                                    if (brgySelect.options[i].value.toLowerCase() === brgyName.toLowerCase()) {
+                                        brgySelect.selectedIndex = i;
+                                        const l2 = document.getElementById('addr-line2');
+                                        if (l2) l2.value = brgySelect.options[i].value;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof google !== 'undefined' && google.maps && google.maps.places && !addressAutocomplete) {
+                window.initAddressAutocomplete();
+            }
+        });
     })();
 </script>
+
+<!-- Google Maps Places API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=places&loading=async&callback=initAddressAutocomplete" async defer></script>
 
 <?= $this->endSection() ?>

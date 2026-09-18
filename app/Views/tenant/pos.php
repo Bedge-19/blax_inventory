@@ -665,7 +665,7 @@ $orderItems = $orderItems ?? [];
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
 (function() {
     const isStorePickup = <?= $isStorePickup ? 'true' : 'false' ?>;
@@ -1069,7 +1069,11 @@ $orderItems = $orderItems ?? [];
         submitBtn.innerHTML = `<span class="material-symbols-outlined text-[20px]">check_circle</span><span>${isStorePickup ? 'Complete Store Pick-up' : 'Complete Walk-in Sale'}</span>`;
     }
 
+    let lastCompletedOrderId = null;
+
     function showSuccessReceipt(data, paymentMethod, dueAmount) {
+        lastCompletedOrderId = data.order_id || data.order_number;
+
         try {
             localStorage.setItem('blax_last_sale', JSON.stringify({ time: Date.now(), shop_id: <?= (int) ($shop['id'] ?? 0) ?>, order_id: data.order_id }));
             window.dispatchEvent(new CustomEvent('blax:sale_completed', { detail: data }));
@@ -1114,7 +1118,12 @@ $orderItems = $orderItems ?? [];
 
     if (printReceiptBtn) {
         printReceiptBtn.addEventListener('click', () => {
-            window.print();
+            if (lastCompletedOrderId) {
+                const printUrl = `${BASE_URL}/tenant/orders/receipt/${encodeURIComponent(lastCompletedOrderId)}`;
+                window.open(printUrl, '_blank');
+            } else {
+                window.print();
+            }
         });
     }
 

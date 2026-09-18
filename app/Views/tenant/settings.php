@@ -61,6 +61,8 @@
             <form action="<?= base_url('tenant/settings/save') ?>" method="POST" class="space-y-lg">
                 <?= csrf_field() ?>
                 <input type="hidden" name="section" value="profile">
+                <input type="hidden" name="latitude" id="shop_latitude" value="<?= esc($shop['latitude'] ?? '') ?>">
+                <input type="hidden" name="longitude" id="shop_longitude" value="<?= esc($shop['longitude'] ?? '') ?>">
 
                 <div class="grid grid-cols-1 gap-lg">
 
@@ -408,7 +410,70 @@
 
     wireHours();
     wireNotifs();
+
+    let shopAutocomplete = null;
+    window.initShopAddressAutocomplete = function() {
+        const input = document.getElementById('street');
+        if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
+
+        const poloBounds = new google.maps.LatLngBounds(
+            { lat: 6.10, lng: 124.95 },
+            { lat: 6.32, lng: 125.18 }
+        );
+
+        shopAutocomplete = new google.maps.places.Autocomplete(input, {
+            bounds: poloBounds,
+            componentRestrictions: { country: 'ph' },
+            fields: ['address_components', 'geometry', 'name', 'place_id', 'formatted_address'],
+            strictBounds: false
+        });
+
+        shopAutocomplete.addListener('place_changed', function() {
+            const place = shopAutocomplete.getPlace();
+            if (!place || !place.geometry || !place.geometry.location) return;
+
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+
+            const latInput = document.getElementById('shop_latitude');
+            const lngInput = document.getElementById('shop_longitude');
+            if (latInput) latInput.value = lat;
+            if (lngInput) lngInput.value = lng;
+
+            // Auto-match barangay in dropdown
+            if (place.address_components) {
+                for (const component of place.address_components) {
+                    const types = component.types;
+                    if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood') || types.includes('political')) {
+                        const brgyName = component.long_name.replace(/^(Barangay|Brgy\.?)\s+/i, '').trim();
+                        const brgySelect = document.getElementById('barangay');
+                        if (brgySelect) {
+                            for (let i = 0; i < brgySelect.options.length; i++) {
+                                if (brgySelect.options[i].value.toLowerCase() === brgyName.toLowerCase()) {
+                                    brgySelect.selectedIndex = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (addrEl && !userModifiedAddr) {
+                addrEl.value = place.formatted_address || place.name || '';
+            }
+        });
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof google !== 'undefined' && google.maps && google.maps.places && !shopAutocomplete) {
+            window.initShopAddressAutocomplete();
+        }
+    });
 })();
 </script>
+
+<!-- Google Maps Places API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=places&loading=async&callback=initShopAddressAutocomplete" async defer></script>
 
 <?= $this->endSection() ?>

@@ -1,9 +1,6 @@
 <?= $this->extend('layouts/tenant') ?>
 <?= $this->section('content') ?>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <div class="space-y-lg max-w-7xl mx-auto pb-xl">
 
     <!-- Top Navigation & Action Header -->
@@ -91,7 +88,7 @@
                     </div>
                 </div>
 
-                <!-- Leaflet Map Canvas -->
+                <!-- Google Maps Canvas -->
                 <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0" style="min-height:480px;"></div>
 
                 <!-- Map Legend Banner -->
@@ -106,7 +103,7 @@
                             <strong class="text-on-surface">Destination</strong> (Customer)
                         </span>
                     </div>
-                    <span class="text-[11px] text-outline">OpenStreetMap &bull; Realtime Bounds</span>
+                    <span class="text-[11px] text-outline">Google Maps &bull; Realtime Bounds</span>
                 </div>
             </div>
 
@@ -287,106 +284,238 @@
 </div>
 
 <script>
-    let mapInstance = null;
-    let shopLatLng = [<?= json_encode($shopLat) ?>, <?= json_encode($shopLng) ?>];
-    let destLatLng = [<?= json_encode($destLat) ?>, <?= json_encode($destLng) ?>];
+    let mapInstance       = null;
+    let shopMarker        = null;
+    let destMarker        = null;
+    let riderMarker       = null;
+    let routePolyline     = null;
+    let routePathPoints   = [];
+    let riderTimer        = null;
+    let riderProgress     = 0;
+    let isRiderMoving     = false;
 
-    function initDeliveryDetailMap() {
+    // Handle Google Maps API authentication / activation failure
+    window.gm_authFailure = function() {
         const container = document.getElementById('singleDeliveryMap');
-        if (!container || typeof L === 'undefined') return;
+        if (container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center bg-amber-50/80 dark:bg-amber-950/30 border-2 border-dashed border-amber-300 rounded-2xl">
+                    <span class="material-symbols-outlined text-4xl text-amber-600 mb-2">warning</span>
+                    <h3 class="font-bold text-amber-900 dark:text-amber-200 text-base">Google Maps API Activation Required</h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-300/80 max-w-md mt-1">
+                        The Google Cloud project (<strong>300493013944</strong>) has not yet activated the <strong>Maps JavaScript API</strong> or the API Key needs permissions.
+                    </p>
+                    <a href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com" target="_blank" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 transition-colors">
+                        <span>Enable Maps JavaScript API</span>
+                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                    </a>
+                </div>
+            `;
+        }
+    };
 
-        // Custom Leaflet Markers with SVG icons
-        const shopIcon = L.divIcon({
-            className: 'custom-shop-pin',
-            html: `<div style="background-color:#2563eb;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;">
-                     <span class="material-symbols-outlined" style="font-size:18px;">storefront</span>
-                   </div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -34]
-        });
+    const shopLatLng = { lat: parseFloat(<?= json_encode($shopLat) ?>), lng: parseFloat(<?= json_encode($shopLng) ?>) };
+    const destLatLng = { lat: parseFloat(<?= json_encode($destLat) ?>), lng: parseFloat(<?= json_encode($destLng) ?>) };
 
-        const destIcon = L.divIcon({
-            className: 'custom-dest-pin',
-            html: `<div style="background-color:#16a34a;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;">
-                     <span class="material-symbols-outlined" style="font-size:18px;">home</span>
-                   </div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 34],
-            popupAnchor: [0, -34]
-        });
+    const POLOMOLOK_BOUNDS = {
+        north: 6.32,
+        south: 6.10,
+        east: 125.18,
+        west: 124.95
+    };
 
-        mapInstance = L.map(container, {
+    function createDetailMarkerElement(type) {
+        const div = document.createElement('div');
+        if (type === 'shop') {
+            div.innerHTML = `
+                <div style="background-color:#2563eb;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">storefront</span>
+                </div>
+            `;
+        } else if (type === 'dest') {
+            div.innerHTML = `
+                <div style="background-color:#16a34a;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">home</span>
+                </div>
+            `;
+        } else if (type === 'rider') {
+            div.innerHTML = `
+                <div style="background-color:#ea580c;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(234,88,12,0.5);border:2.5px solid white;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">two_wheeler</span>
+                </div>
+            `;
+        }
+        return div;
+    }
+
+    window.initDeliveryDetailMap = function() {
+        const container = document.getElementById('singleDeliveryMap');
+        if (!container || typeof google === 'undefined' || !google.maps) return;
+
+        mapInstance = new google.maps.Map(container, {
             center: shopLatLng,
             zoom: 14,
-            scrollWheelZoom: true
+            minZoom: 11,
+            restriction: {
+                latLngBounds: POLOMOLOK_BOUNDS,
+                strictBounds: false
+            },
+            mapId: 'DEMO_MAP_ID',
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(mapInstance);
-
-        // Shop Marker
-        const shopMarker = L.marker(shopLatLng, { icon: shopIcon }).addTo(mapInstance);
-        shopMarker.bindPopup(`
-            <div style="padding:4px;font-family:sans-serif;">
-                <strong style="color:#2563eb;font-size:13px;"><?= esc($shop['shop_name'] ?? 'Your Store') ?></strong>
-                <p style="font-size:11px;color:#64748b;margin:2px 0 0 0;">Shop Origin Dispatch Point</p>
-            </div>
-        `);
-
-        // Destination Marker
-        const destMarker = L.marker(destLatLng, { icon: destIcon }).addTo(mapInstance);
-        destMarker.bindPopup(`
-            <div style="padding:4px;font-family:sans-serif;">
-                <strong style="color:#16a34a;font-size:13px;"><?= esc(trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? 'Customer'))) ?></strong>
-                <p style="font-size:11px;color:#334155;margin:2px 0 0 0;"><?= esc($delivery['destination_address']) ?></p>
-            </div>
-        `).openPopup();
-
-        // Polyline connecting points
-        const polyline = L.polyline([shopLatLng, destLatLng], {
-            color: '#2563eb',
-            weight: 4,
-            opacity: 0.8,
-            dashArray: '8, 8'
-        }).addTo(mapInstance);
-
-        // Fit bounds with padding
-        const group = new L.featureGroup([shopMarker, destMarker, polyline]);
-        mapInstance.fitBounds(group.getBounds().pad(0.2));
-
-        // Initialize Rider Marker
-        const riderIcon = L.divIcon({
-            className: 'custom-rider-pin',
-            html: `<div style="background-color:#ea580c;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(234,88,12,0.5);border:2.5px solid white;">
-                     <span class="material-symbols-outlined" style="font-size:18px;">two_wheeler</span>
-                   </div>`,
-            iconSize: [34, 34],
-            iconAnchor: [17, 17],
-            popupAnchor: [0, -17]
+        // 1. Shop Marker
+        const shopElem = createDetailMarkerElement('shop');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            shopMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: mapInstance,
+                position: shopLatLng,
+                content: shopElem,
+                title: <?= json_encode($shop['shop_name'] ?? 'Your Store') ?>
+            });
+        } else {
+            shopMarker = new google.maps.Marker({
+                map: mapInstance,
+                position: shopLatLng,
+                title: <?= json_encode($shop['shop_name'] ?? 'Your Store') ?>
+            });
+        }
+        const shopInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="padding:4px;font-family:sans-serif;">
+                    <strong style="color:#2563eb;font-size:13px;"><?= esc($shop['shop_name'] ?? 'Your Store') ?></strong>
+                    <p style="font-size:11px;color:#64748b;margin:2px 0 0 0;">Shop Origin Dispatch Point</p>
+                </div>
+            `
+        });
+        shopMarker.addListener('click', () => {
+            shopInfoWindow.open(mapInstance, shopMarker);
         });
 
-        riderMarker = L.marker(shopLatLng, { icon: riderIcon, zIndexOffset: 1000 }).addTo(mapInstance);
-        riderMarker.bindPopup(`<strong>Delivery Courier</strong><br>Dispatched along Polomolok route`);
+        // 2. Destination Marker
+        const destElem = createDetailMarkerElement('dest');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            destMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: mapInstance,
+                position: destLatLng,
+                content: destElem,
+                title: 'Customer Destination'
+            });
+        } else {
+            destMarker = new google.maps.Marker({
+                map: mapInstance,
+                position: destLatLng,
+                title: 'Customer Destination'
+            });
+        }
+        const destInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="padding:4px;font-family:sans-serif;">
+                    <strong style="color:#16a34a;font-size:13px;"><?= esc(trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? 'Customer'))) ?></strong>
+                    <p style="font-size:11px;color:#334155;margin:2px 0 0 0;"><?= esc($delivery['destination_address']) ?></p>
+                </div>
+            `
+        });
+        destMarker.addListener('click', () => {
+            destInfoWindow.open(mapInstance, destMarker);
+        });
+        setTimeout(() => destInfoWindow.open(mapInstance, destMarker), 500);
+
+        // 3. Rider Marker
+        const riderElem = createDetailMarkerElement('rider');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            riderMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: mapInstance,
+                position: shopLatLng,
+                content: riderElem,
+                title: 'Delivery Courier'
+            });
+        } else {
+            riderMarker = new google.maps.Marker({
+                map: mapInstance,
+                position: shopLatLng,
+                title: 'Delivery Courier'
+            });
+        }
+        const riderInfoWindow = new google.maps.InfoWindow({
+            content: `<div style="padding:4px;font-family:sans-serif;"><strong>Delivery Courier</strong><br><span style="font-size:11px;color:#64748b;">Dispatched along Polomolok route</span></div>`
+        });
+        riderMarker.addListener('click', () => {
+            riderInfoWindow.open(mapInstance, riderMarker);
+        });
+
+        // 4. Fetch Route Polyline
+        fetchDeliveryRoute(shopLatLng, destLatLng);
+
+        // Fit map bounds
+        recenterRoute();
 
         // Auto-start animation if in transit or shipped
         const currentDeliveryStatus = <?= json_encode($delivery['status'] ?? '') ?>;
         if (currentDeliveryStatus === 'in_transit' || currentDeliveryStatus === 'shipped') {
             setTimeout(() => {
                 toggleRiderAnimation();
-            }, 600);
+            }, 800);
         }
+    };
 
-        // Invalidate size on resize
-        setTimeout(() => mapInstance.invalidateSize(), 300);
+    function fetchDeliveryRoute(origin, destination) {
+        fetch('<?= base_url('api/route') ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                origin: origin,
+                destination: destination
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success && data.route && data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
+                const decodedPath = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
+                routePathPoints = decodedPath.map(p => ({ lat: p.lat(), lng: p.lng() }));
+                if (routePolyline) routePolyline.setMap(null);
+                routePolyline = new google.maps.Polyline({
+                    path: decodedPath,
+                    geodesic: true,
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 4,
+                    map: mapInstance
+                });
+            } else {
+                routePathPoints = [origin, destination];
+                if (routePolyline) routePolyline.setMap(null);
+                routePolyline = new google.maps.Polyline({
+                    path: [origin, destination],
+                    geodesic: true,
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 4,
+                    map: mapInstance
+                });
+            }
+        })
+        .catch(err => {
+            console.warn('Could not fetch route from Routes API:', err);
+            routePathPoints = [origin, destination];
+            if (routePolyline) routePolyline.setMap(null);
+            routePolyline = new google.maps.Polyline({
+                path: [origin, destination],
+                geodesic: true,
+                strokeColor: '#2563eb',
+                strokeOpacity: 0.85,
+                strokeWeight: 4,
+                map: mapInstance
+            });
+        });
     }
-
-    let riderMarker = null;
-    let riderTimer = null;
-    let riderProgress = 0;
-    let isRiderMoving = false;
 
     function toggleRiderAnimation() {
         if (!mapInstance) return;
@@ -408,19 +537,6 @@
 
     function startRiderMovement() {
         clearInterval(riderTimer);
-        if (!riderMarker) {
-            const riderIcon = L.divIcon({
-                className: 'custom-rider-pin',
-                html: `<div style="background-color:#ea580c;color:white;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(234,88,12,0.5);border:2.5px solid white;">
-                         <span class="material-symbols-outlined" style="font-size:18px;">two_wheeler</span>
-                       </div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 17],
-                popupAnchor: [0, -17]
-            });
-            riderMarker = L.marker(shopLatLng, { icon: riderIcon, zIndexOffset: 1000 }).addTo(mapInstance);
-        }
-
         riderTimer = setInterval(() => {
             riderProgress += 0.02;
             if (riderProgress >= 1) {
@@ -434,9 +550,28 @@
                 return;
             }
 
-            const curLat = shopLatLng[0] + (destLatLng[0] - shopLatLng[0]) * riderProgress;
-            const curLng = shopLatLng[1] + (destLatLng[1] - shopLatLng[1]) * riderProgress;
-            riderMarker.setLatLng([curLat, curLng]);
+            let curLat, curLng;
+            if (routePathPoints.length > 2) {
+                const totalSegments = routePathPoints.length - 1;
+                const exactIndex = riderProgress * totalSegments;
+                const segIndex = Math.min(Math.floor(exactIndex), totalSegments - 1);
+                const segFraction = exactIndex - segIndex;
+                const p1 = routePathPoints[segIndex];
+                const p2 = routePathPoints[segIndex + 1];
+                curLat = p1.lat + (p2.lat - p1.lat) * segFraction;
+                curLng = p1.lng + (p2.lng - p1.lng) * segFraction;
+            } else {
+                curLat = shopLatLng.lat + (destLatLng.lat - shopLatLng.lat) * riderProgress;
+                curLng = shopLatLng.lng + (destLatLng.lng - shopLatLng.lng) * riderProgress;
+            }
+
+            if (riderMarker) {
+                if (riderMarker.position) {
+                    riderMarker.position = { lat: curLat, lng: curLng };
+                } else if (typeof riderMarker.setPosition === 'function') {
+                    riderMarker.setPosition(new google.maps.LatLng(curLat, curLng));
+                }
+            }
 
             const pct = Math.round(riderProgress * 100);
             document.getElementById('routeProgressBadge').textContent = pct + '% en route';
@@ -445,26 +580,20 @@
 
     function recenterRoute() {
         if (!mapInstance) return;
-        const bounds = L.latLngBounds([shopLatLng, destLatLng]);
-        mapInstance.fitBounds(bounds.pad(0.2));
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(shopLatLng);
+        bounds.extend(destLatLng);
+        mapInstance.fitBounds(bounds, 60);
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof L !== 'undefined') {
-            initDeliveryDetailMap();
-        } else {
-            let retries = 0;
-            const timer = setInterval(() => {
-                retries++;
-                if (typeof L !== 'undefined') {
-                    clearInterval(timer);
-                    initDeliveryDetailMap();
-                } else if (retries > 30) {
-                    clearInterval(timer);
-                }
-            }, 100);
+        if (typeof google !== 'undefined' && google.maps && !mapInstance) {
+            window.initDeliveryDetailMap();
         }
     });
 </script>
+
+<!-- Google Maps Platform JS API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=marker,geometry&loading=async&callback=initDeliveryDetailMap" async defer></script>
 
 <?= $this->endSection() ?>

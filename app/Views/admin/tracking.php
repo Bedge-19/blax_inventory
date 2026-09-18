@@ -15,7 +15,7 @@
         </div>
     </div>
 
-    <!-- Map + Legend — prototype dots, Leaflet with Polomolok bounds -->
+    <!-- Map + Legend — Google Maps with Polomolok bounds -->
     <div class="relative rounded-2xl overflow-hidden border border-outline-variant bg-surface-container shadow-inner" style="min-height: 520px;">
         <div id="fleet-map" class="absolute inset-0 w-full h-full"></div>
         <!-- Legend overlay -->
@@ -122,10 +122,28 @@
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function(){
+    // Handle Google Maps API authentication / activation failure
+    window.gm_authFailure = function() {
+        const container = document.getElementById('fleet-map');
+        if (container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center bg-amber-50/80 dark:bg-amber-950/30 border-2 border-dashed border-amber-300 rounded-2xl">
+                    <span class="material-symbols-outlined text-4xl text-amber-600 mb-2">warning</span>
+                    <h3 class="font-bold text-amber-900 dark:text-amber-200 text-base">Google Maps API Activation Required</h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-300/80 max-w-md mt-1">
+                        The Google Cloud project (<strong>300493013944</strong>) has not yet activated the <strong>Maps JavaScript API</strong> or the API Key needs permissions.
+                    </p>
+                    <a href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com" target="_blank" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 transition-colors">
+                        <span>Enable Maps JavaScript API</span>
+                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                    </a>
+                </div>
+            `;
+        }
+    };
+
     const serverPins = <?= json_encode($pins ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>;
     const demoPins = [
         { tracking_id: 'TRK-TEST-POLO1', shop_name: 'Blax Printing Hub', destination_address: 'Purok 4, Brgy. Cannery Site, Polomolok', status: 'shipped', current_lat: 6.2305, current_lng: 125.0740, is_demo: true },
@@ -136,99 +154,120 @@
 
     const pins = (serverPins && serverPins.length > 0) ? serverPins : demoPins;
 
-    function initAdminMap() {
+    const POLO_CENTER = { lat: 6.2136, lng: 125.0661 };
+    const POLO_BOUNDS = {
+        north: 6.32,
+        south: 6.10,
+        east: 125.18,
+        west: 124.95
+    };
+
+    const colors = {
+        ready_for_pickup: '#f59e0b',
+        shipped: '#2563eb',
+        in_transit: '#7c3aed',
+        delivered: '#10b981'
+    };
+
+    window.initAdminMap = function() {
         const el = document.getElementById('fleet-map');
-        if (!el || typeof L === 'undefined') return;
+        if (!el || typeof google === 'undefined' || !google.maps) return;
 
-        const POLO_CENTER = [6.2136, 125.0661];
-        const POLO_BOUNDS = [[6.10, 124.95], [6.32, 125.18]];
-        const map = L.map(el, { maxBounds: POLO_BOUNDS, minZoom: 11 }).setView(POLO_CENTER, 12);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 18
-        }).addTo(map);
-
-        L.rectangle(POLO_BOUNDS, {
-            color: '#2563eb',
-            weight: 1.5,
-            fillOpacity: 0.03,
-            dashArray: '6 6'
-        }).addTo(map).bindTooltip('Polomolok Delivery Scope', { permanent: false });
-
-        const colors = {
-            ready_for_pickup: '#f59e0b',
-            shipped: '#2563eb',
-            in_transit: '#7c3aed',
-            delivered: '#10b981'
-        };
+        const map = new google.maps.Map(el, {
+            center: POLO_CENTER,
+            zoom: 12,
+            minZoom: 11,
+            restriction: {
+                latLngBounds: POLO_BOUNDS,
+                strictBounds: false
+            },
+            mapId: 'DEMO_MAP_ID',
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true
+        });
 
         const markers = [];
+        const bounds = new google.maps.LatLngBounds();
+
         (pins || []).forEach(p => {
             const lat = parseFloat(p.current_lat), lng = parseFloat(p.current_lng);
             if (isNaN(lat) || isNaN(lng)) return;
             if (lat < 6.10 || lat > 6.32 || lng < 124.95 || lng > 125.18) return;
 
+            const pos = { lat, lng };
             const color = colors[p.status] || '#64748b';
-            const icon = L.divIcon({
-                className: 'fleet-pin',
-                html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,0.4)"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8]
-            });
-
-            const m = L.marker([lat, lng], { icon }).addTo(map);
             const shop = p.shop_name || 'Shop';
             const demoTag = p.is_demo ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-weight:bold;margin-left:4px;">DEMO PIN</span>' : '';
 
-            m.bindPopup(`
-                <div style="font-family:inherit;min-width:160px;">
-                    <div style="font-weight:bold;color:#2563eb;font-size:13px;">#${p.tracking_id || ''} ${demoTag}</div>
-                    <div style="font-size:11px;color:#0f172a;font-weight:600;margin-top:2px;">🏪 ${shop}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">📍 ${p.destination_address || 'Polomolok'}</div>
-                    <div style="margin-top:4px;">
-                        <span style="font-size:10px;font-weight:bold;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:#e0f2fe;color:#0369a1;">
-                            ${(p.status || '').replace(/_/g, ' ')}
-                        </span>
+            // Marker DOM element
+            const pinElem = document.createElement('div');
+            pinElem.innerHTML = `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:pointer;"></div>`;
+
+            let marker;
+            if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+                marker = new google.maps.marker.AdvancedMarkerElement({
+                    map: map,
+                    position: pos,
+                    content: pinElem,
+                    title: `#${p.tracking_id || ''} - ${shop}`
+                });
+            } else {
+                marker = new google.maps.Marker({
+                    map: map,
+                    position: pos,
+                    title: `#${p.tracking_id || ''} - ${shop}`
+                });
+            }
+
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div style="font-family:inherit;min-width:160px;padding:4px;">
+                        <div style="font-weight:bold;color:#2563eb;font-size:13px;">#${p.tracking_id || ''} ${demoTag}</div>
+                        <div style="font-size:11px;color:#0f172a;font-weight:600;margin-top:2px;">🏪 ${shop}</div>
+                        <div style="font-size:11px;color:#475569;margin-top:2px;">📍 ${p.destination_address || 'Polomolok'}</div>
+                        <div style="margin-top:6px;">
+                            <span style="font-size:10px;font-weight:bold;text-transform:uppercase;padding:2px 6px;border-radius:999px;background:#e0f2fe;color:#0369a1;">
+                                ${(p.status || '').replace(/_/g, ' ')}
+                            </span>
+                        </div>
                     </div>
-                </div>
-            `);
-            markers.push(m);
+                `
+            });
+
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+
+            markers.push(marker);
+            bounds.extend(pos);
         });
 
-        if (markers.length) {
-            map.fitBounds(L.featureGroup(markers).getBounds().pad(0.3));
+        // Initialize MarkerClusterer if available
+        if (typeof markerClusterer !== 'undefined' && markerClusterer.MarkerClusterer && markers.length > 5) {
+            new markerClusterer.MarkerClusterer({ map, markers });
+        }
+
+        if (markers.length > 0) {
+            map.fitBounds(bounds, 50);
         } else {
-            map.setView(POLO_CENTER, 12);
+            map.setCenter(POLO_CENTER);
+            map.setZoom(12);
         }
+    };
 
-        setTimeout(() => { if (map) map.invalidateSize(); }, 300);
-        setTimeout(() => { if (map) map.invalidateSize(); }, 800);
-    }
-
-    function ensureAdminLeafletLoaded() {
-        if (typeof L !== 'undefined') {
-            initAdminMap();
-            return;
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof google !== 'undefined' && google.maps) {
+            window.initAdminMap();
         }
-        let attempts = 0;
-        const interval = setInterval(() => {
-            attempts++;
-            if (typeof L !== 'undefined') {
-                clearInterval(interval);
-                initAdminMap();
-            } else if (attempts > 60) {
-                clearInterval(interval);
-                console.warn('Leaflet map library timed out in admin tracking.');
-            }
-        }, 80);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', ensureAdminLeafletLoaded);
-    } else {
-        ensureAdminLeafletLoaded();
-    }
+    });
 })();
 </script>
+
+<!-- Google Maps Platform JS API & MarkerClusterer -->
+<script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=marker,geometry&loading=async&callback=initAdminMap" async defer></script>
+
 <?= $this->endSection() ?>

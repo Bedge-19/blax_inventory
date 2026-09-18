@@ -9,6 +9,7 @@ use CodeIgniter\Router\RouteCollection;
 // Customer / Public Routes
 $routes->get('/', 'Home::index');
 $routes->post('ai/query', 'Home::aiQuery');
+$routes->post('api/route', 'CustomerOrderController::computeRoute');
 
 // Auth Routes
 $routes->get('login', 'Auth::login');
@@ -93,8 +94,10 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->get('inventory', 'Tenant::inventory');
     $routes->get('orders', 'Tenant::orders');
     $routes->get('orders/export', 'Tenant::ordersExport');
+    $routes->get('orders/receipt/(:segment)', 'Tenant::orderReceipt/$1');
     $routes->get('orders/items/(:num)', 'Tenant::orderItems/$1');
     $routes->get('printing', 'Tenant::printing');
+    $routes->get('printing/receipt/(:segment)', 'Tenant::printingReceipt/$1');
     $routes->get('printing/view/(:num)', 'Tenant::viewPrintFile/$1');
     $routes->get('deliveries', 'Tenant::deliveries');
     $routes->get('delivery', 'Tenant::deliveries');
@@ -121,6 +124,8 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('products/bulk-archive', 'Tenant::bulkArchiveProducts');
     $routes->post('products/adjust-stock', 'Tenant::adjustStock');
     $routes->post('products/bulk-adjust-stock', 'Tenant::bulkAdjustStock');
+    $routes->post('orders/archive/(:num)', 'Tenant::archiveOrder/$1');
+    $routes->post('orders/archive-all', 'Tenant::archiveAllCompletedOrders');
     $routes->post('printing/archive/(:num)', 'Tenant::archivePrintingRequest/$1');
     $routes->post('printing/archive-all', 'Tenant::archiveAllCompleted');
     $routes->get('printing/download/(:num)', 'Tenant::downloadPrintFile/$1');

@@ -1,9 +1,6 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
 <style>
     /* Pulsing radar effects for live tracking */
     @keyframes pulseRing {
@@ -21,25 +18,17 @@
     .active-dot-pulse {
         animation: activeDotPulse 1.8s ease-in-out infinite;
     }
-    /* Map Container Style overrides */
-    .leaflet-container {
-        font-family: inherit;
+    /* Map Container Style */
+    #trackMap {
         width: 100%;
         height: 100%;
+        min-height: 480px;
         background-color: #f8fafc;
     }
-    .leaflet-tile {
-        visibility: inherit !important;
-    }
-    .track-popup .leaflet-popup-content-wrapper {
-        border-radius: 12px;
-        padding: 4px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(226, 232, 240, 0.8);
-    }
-    .track-popup .leaflet-popup-content {
-        margin: 8px 12px;
-        line-height: 1.4;
+    .gm-style-iw {
+        font-family: inherit !important;
+        border-radius: 12px !important;
+        padding: 4px 8px !important;
     }
 </style>
 
@@ -341,7 +330,7 @@
                     <!-- Map Card Container -->
                     <div class="relative w-full rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 bg-slate-100 min-h-[550px] h-[calc(100vh_-_140px)] flex flex-col">
                         
-                        <!-- The Actual Leaflet Map Element -->
+                        <!-- The Actual Google Maps Element -->
                         <div id="trackMap" class="w-full h-full flex-grow z-[1]" style="min-height:400px;"></div>
 
                         <!-- Floating Header Controls -->
@@ -411,9 +400,6 @@
     </div>
 </div>
 
-<!-- Leaflet JavaScript -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
 <script>
     // Map Coordinates Data passed from Controller
     const STORE_COORDS   = <?= json_encode($storeCoords) ?>;
@@ -424,151 +410,235 @@
     const COURIER_NAME   = <?= json_encode($courierName) ?>;
     const ORDER_STATUS   = <?= json_encode($order['status'] ?? 'pending') ?>;
 
-    let trackMap       = null;
-    let courierMarker  = null;
-    let storeMarker    = null;
-    let destMarker     = null;
-    let routePolyline  = null;
+    let trackMap          = null;
+    let courierMarker     = null;
+    let storeMarker       = null;
+    let destMarker        = null;
+    let courierInfoWindow = null;
+    let routePolyline     = null;
 
-    // Custom Map Markers Icons
-    function createStoreIcon() {
-        return L.divIcon({
-            className: 'store-custom-marker',
-            html: `
-                <div style="width:36px;height:36px;border-radius:50%;background:#0f172a;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;">
+    // Handle Google Maps API authentication / activation failure
+    window.gm_authFailure = function() {
+        const container = document.getElementById('trackMap');
+        if (container) {
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full p-6 text-center bg-amber-50/80 dark:bg-amber-950/30 border-2 border-dashed border-amber-300 rounded-2xl">
+                    <span class="material-symbols-outlined text-4xl text-amber-600 mb-2">warning</span>
+                    <h3 class="font-bold text-amber-900 dark:text-amber-200 text-base">Google Maps API Activation Required</h3>
+                    <p class="text-xs text-amber-700 dark:text-amber-300/80 max-w-md mt-1">
+                        The Google Cloud project (<strong>300493013944</strong>) has not yet activated the <strong>Maps JavaScript API</strong> or the API Key needs permissions.
+                    </p>
+                    <a href="https://console.cloud.google.com/apis/library/maps-backend.googleapis.com" target="_blank" class="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-semibold hover:bg-amber-700 transition-colors">
+                        <span>Enable Maps JavaScript API</span>
+                        <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                    </a>
+                </div>
+            `;
+        }
+    };
+
+    function createMarkerContent(type) {
+        const div = document.createElement('div');
+        if (type === 'store') {
+            div.innerHTML = `
+                <div style="width:36px;height:36px;border-radius:50%;background:#0f172a;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
                     <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">storefront</span>
                 </div>
-            `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18],
-            popupAnchor: [0, -18]
-        });
-    }
-
-    function createCourierIcon() {
-        return L.divIcon({
-            className: 'courier-custom-marker',
-            html: `
-                <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;">
+            `;
+        } else if (type === 'dest') {
+            div.innerHTML = `
+                <div style="width:36px;height:36px;border-radius:50%;background:#10b981;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(16,185,129,0.35);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
+                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">home</span>
+                </div>
+            `;
+        } else if (type === 'courier') {
+            div.innerHTML = `
+                <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
                     <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(37,99,235,0.3);animation:pulseRing 1.8s infinite;"></div>
                     <div style="width:34px;height:34px;border-radius:50%;background:#2563eb;border:2.5px solid #ffffff;box-shadow:0 3px 10px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;color:#fff;z-index:2;">
                         <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">two_wheeler</span>
                     </div>
                 </div>
-            `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20],
-            popupAnchor: [0, -20]
-        });
-    }
-
-    function createDestIcon() {
-        return L.divIcon({
-            className: 'dest-custom-marker',
-            html: `
-                <div style="width:36px;height:36px;border-radius:50%;background:#10b981;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(16,185,129,0.35);display:flex;align-items:center;justify-content:center;color:#fff;">
-                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">home</span>
-                </div>
-            `,
-            iconSize: [36, 36],
-            iconAnchor: [18, 18],
-            popupAnchor: [0, -18]
-        });
-    }
-
-    function triggerInvalidate() {
-        if (trackMap) {
-            trackMap.invalidateSize({ pan: false, debounceMoveend: true });
+            `;
         }
+        return div;
     }
 
-    function initTrackMap() {
+    window.initGoogleTrackMap = function() {
         const container = document.getElementById('trackMap');
-        if (!container || typeof L === 'undefined') return;
+        if (!container || typeof google === 'undefined' || !google.maps) return;
 
-        if (trackMap) {
-            trackMap.remove();
-            trackMap = null;
-        }
+        const storeLatLng   = { lat: parseFloat(STORE_COORDS[0]), lng: parseFloat(STORE_COORDS[1]) };
+        const destLatLng    = { lat: parseFloat(DEST_COORDS[0]), lng: parseFloat(DEST_COORDS[1]) };
+        const courierLatLng = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
 
-        // Initialize map centered on courier coordinates
-        trackMap = L.map('trackMap', {
+        trackMap = new google.maps.Map(container, {
+            center: courierLatLng,
+            zoom: 14,
+            mapId: 'DEMO_MAP_ID',
+            disableDefaultUI: false,
             zoomControl: true,
-            scrollWheelZoom: true,
-            fadeAnimation: false
-        }).setView(COURIER_COORDS, 14);
-
-        // OpenStreetMap Tile Layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19,
-            subdomains: ['a', 'b', 'c']
-        }).addTo(trackMap);
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true
+        });
 
         // 1. Store Marker
-        storeMarker = L.marker(STORE_COORDS, { icon: createStoreIcon() }).addTo(trackMap);
-        storeMarker.bindPopup(`
-            <div class="track-popup" style="font-family:inherit;">
-                <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Store Dispatch Hub</div>
-                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${SHOP_NAME}</div>
-                <div style="font-size:11px;color:#475569;margin-top:2px;">Polomolok Poblacion Hub</div>
-            </div>
-        `);
-
-        // 2. Customer Destination Marker
-        destMarker = L.marker(DEST_COORDS, { icon: createDestIcon() }).addTo(trackMap);
-        destMarker.bindPopup(`
-            <div class="track-popup" style="font-family:inherit;">
-                <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;">Delivery Destination</div>
-                <div style="font-size:12px;font-weight:600;color:#0f172a;margin-top:2px;">${DEST_ADDRESS}</div>
-            </div>
-        `);
-
-        // 3. Courier Rider Marker
-        courierMarker = L.marker(COURIER_COORDS, { icon: createCourierIcon() }).addTo(trackMap);
-        courierMarker.bindPopup(`
-            <div class="track-popup" style="font-family:inherit;">
-                <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;">Live Courier Position</div>
-                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
-                <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route to Destination</div>
-            </div>
-        `);
-
-        // 4. Connecting Polyline Route
-        const routePoints = [STORE_COORDS, COURIER_COORDS, DEST_COORDS];
-        routePolyline = L.polyline(routePoints, {
-            color: '#2563eb',
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '8, 8',
-            lineJoin: 'round'
-        }).addTo(trackMap);
-
-        // Fit map bounds to encompass all markers comfortably
-        const group = L.featureGroup([storeMarker, courierMarker, destMarker]);
-        trackMap.fitBounds(group.getBounds(), {
-            padding: [50, 50],
-            maxZoom: 16
+        const storeContent = createMarkerContent('store');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            storeMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: trackMap,
+                position: storeLatLng,
+                content: storeContent,
+                title: SHOP_NAME
+            });
+        } else {
+            storeMarker = new google.maps.Marker({
+                map: trackMap,
+                position: storeLatLng,
+                title: SHOP_NAME
+            });
+        }
+        const storeInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="font-family:inherit;padding:4px;">
+                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Store Dispatch Hub</div>
+                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${SHOP_NAME}</div>
+                    <div style="font-size:11px;color:#475569;margin-top:2px;">Polomolok Hub</div>
+                </div>
+            `
+        });
+        storeMarker.addListener('click', () => {
+            storeInfoWindow.open(trackMap, storeMarker);
         });
 
-        // Open courier popup by default on load
-        setTimeout(() => {
-            if (courierMarker) courierMarker.openPopup();
-        }, 400);
+        // 2. Customer Destination Marker
+        const destContent = createMarkerContent('dest');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            destMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: trackMap,
+                position: destLatLng,
+                content: destContent,
+                title: 'Delivery Destination'
+            });
+        } else {
+            destMarker = new google.maps.Marker({
+                map: trackMap,
+                position: destLatLng,
+                title: 'Delivery Destination'
+            });
+        }
+        const destInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="font-family:inherit;padding:4px;">
+                    <div style="font-size:11px;font-weight:700;color:#059669;text-transform:uppercase;">Delivery Destination</div>
+                    <div style="font-size:12px;font-weight:600;color:#0f172a;margin-top:2px;">${DEST_ADDRESS}</div>
+                </div>
+            `
+        });
+        destMarker.addListener('click', () => {
+            destInfoWindow.open(trackMap, destMarker);
+        });
 
-        // Invalidate size on multiple progressive ticks to guarantee full tile grid coverage
-        [50, 150, 300, 600, 1000, 1500, 2500].forEach(delay => {
-            setTimeout(triggerInvalidate, delay);
+        // 3. Courier Marker
+        const courierContent = createMarkerContent('courier');
+        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+            courierMarker = new google.maps.marker.AdvancedMarkerElement({
+                map: trackMap,
+                position: courierLatLng,
+                content: courierContent,
+                title: COURIER_NAME
+            });
+        } else {
+            courierMarker = new google.maps.Marker({
+                map: trackMap,
+                position: courierLatLng,
+                title: COURIER_NAME
+            });
+        }
+        courierInfoWindow = new google.maps.InfoWindow({
+            content: `
+                <div style="font-family:inherit;padding:4px;">
+                    <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;">Live Courier Position</div>
+                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
+                    <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route</div>
+                </div>
+            `
+        });
+        courierMarker.addListener('click', () => {
+            courierInfoWindow.open(trackMap, courierMarker);
+        });
+
+        // Open courier info window by default
+        setTimeout(() => {
+            courierInfoWindow.open(trackMap, courierMarker);
+        }, 500);
+
+        // 4. Fetch Route Polyline from backend proxy (/api/route)
+        fetchRoutePolyline(storeLatLng, destLatLng, courierLatLng);
+
+        // Fit map bounds to show all markers
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(storeLatLng);
+        bounds.extend(destLatLng);
+        bounds.extend(courierLatLng);
+        trackMap.fitBounds(bounds, 60);
+    };
+
+    function fetchRoutePolyline(storeLatLng, destLatLng, courierLatLng) {
+        fetch('<?= base_url('api/route') ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                origin: storeLatLng,
+                destination: destLatLng
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success && data.route && data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
+                const decodedPath = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
+                if (routePolyline) routePolyline.setMap(null);
+                routePolyline = new google.maps.Polyline({
+                    path: decodedPath,
+                    geodesic: true,
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.85,
+                    strokeWeight: 4,
+                    map: trackMap
+                });
+            } else {
+                drawFallbackLine(storeLatLng, courierLatLng, destLatLng);
+            }
+        })
+        .catch(err => {
+            console.warn('Could not fetch route from Routes API, using direct line fallback:', err);
+            drawFallbackLine(storeLatLng, courierLatLng, destLatLng);
+        });
+    }
+
+    function drawFallbackLine(storeLatLng, courierLatLng, destLatLng) {
+        if (routePolyline) routePolyline.setMap(null);
+        routePolyline = new google.maps.Polyline({
+            path: [storeLatLng, courierLatLng, destLatLng],
+            geodesic: true,
+            strokeColor: '#2563eb',
+            strokeOpacity: 0.85,
+            strokeWeight: 3,
+            map: trackMap
         });
     }
 
     function centerOnCourier() {
         if (!trackMap || !COURIER_COORDS) return;
-        trackMap.flyTo(COURIER_COORDS, 16, {
-            duration: 1.2
-        });
-        if (courierMarker) {
-            courierMarker.openPopup();
+        const courierLatLng = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
+        trackMap.panTo(courierLatLng);
+        trackMap.setZoom(16);
+        if (courierInfoWindow && courierMarker) {
+            courierInfoWindow.open(trackMap, courierMarker);
         }
     }
 
@@ -586,14 +656,15 @@
         }
     }
 
-    // Initialize map when DOM is ready or after Leaflet loads
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initTrackMap);
-    } else {
-        initTrackMap();
-    }
-
-    window.addEventListener('resize', triggerInvalidate);
+    // Fallback if callback didn't fire immediately
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof google !== 'undefined' && google.maps && !trackMap) {
+            window.initGoogleTrackMap();
+        }
+    });
 </script>
+
+<!-- Google Maps JavaScript API (loaded after callback is defined) -->
+<script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=marker,geometry&loading=async&callback=initGoogleTrackMap" async defer></script>
 
 <?= $this->endSection() ?>

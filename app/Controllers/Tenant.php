@@ -406,6 +406,9 @@ class Tenant extends BaseController
         $shopId = (int) $res['shopId'];
         $shop   = $res['shop'];
 
+        // Automatically archive completed items older than 3 days
+        (new ArchivedItemModel())->autoArchiveCompletedItems($shopId, 3);
+
         $orderModel = new OrderModel();
 
         $search   = trim((string) $this->request->getGet('q'));
@@ -529,6 +532,122 @@ class Tenant extends BaseController
     }
 
     /**
+     * Dedicated Standalone Printable Receipt & Waybill for a Product Order / POS Sale.
+     * Renders a clean receipt in a new tab without system UI, complete with product
+     * names, purchase date/time, QR verification code, and shop details.
+     */
+    public function orderReceipt($orderRef = null)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+        $shop   = (new ShopModel())->find($shopId) ?? [];
+
+        if (empty($orderRef)) {
+            return redirect()->to(base_url('tenant/orders'))->with('error', 'Please specify an order.');
+        }
+
+        $orderModel = new OrderModel();
+        $order = null;
+
+        if (is_numeric($orderRef)) {
+            $order = $orderModel->find((int) $orderRef);
+        }
+
+        if (!$order) {
+            $order = $orderModel->where('order_number', (string) $orderRef)->first();
+        }
+
+        if (!$order && is_numeric($orderRef)) {
+            $order = $orderModel->where('order_number', 'ORD-' . $orderRef)->first();
+        }
+
+        if (!$order || (int) $order['shop_id'] !== $shopId) {
+            return redirect()->to(base_url('tenant/orders'))->with('error', 'Order not found or access denied.');
+        }
+
+        $items = (new OrderItemModel())
+            ->where('order_id', (int) $order['id'])
+            ->findAll();
+
+        $customer = !empty($order['customer_id']) ? (new UserModel())->find($order['customer_id']) : null;
+
+        $shippingAddr = null;
+        if (!empty($order['shipping_address_id'])) {
+            $shippingAddr = (new ShippingAddressModel())->find($order['shipping_address_id']);
+        }
+
+        // Format QR payload for quick scanning and order tracking
+        $qrPayload = $order['order_number'];
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($qrPayload);
+
+        return view('tenant/receipt', [
+            'type'         => 'order',
+            'order'        => $order,
+            'items'        => $items,
+            'customer'     => $customer,
+            'shippingAddr' => $shippingAddr,
+            'shop'         => $shop,
+            'qrUrl'        => $qrUrl,
+            'cashierName'  => session()->get('user_name') ?? 'Store Staff',
+        ]);
+    }
+
+    /**
+     * Dedicated Standalone Printable Receipt & Job Ticket for a Printing Request.
+     */
+    public function printingReceipt($requestRef = null)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+        $shop   = (new ShopModel())->find($shopId) ?? [];
+
+        if (empty($requestRef)) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'Please specify a printing request.');
+        }
+
+        $prModel = new PrintingRequestModel();
+        $pr = null;
+
+        if (is_numeric($requestRef)) {
+            $pr = $prModel->find((int) $requestRef);
+        }
+
+        if (!$pr) {
+            $pr = $prModel->where('request_number', (string) $requestRef)->first();
+        }
+
+        if (!$pr && is_numeric($requestRef)) {
+            $pr = $prModel->where('request_number', 'PR-' . $requestRef)->first();
+        }
+
+        if (!$pr || (int) $pr['shop_id'] !== $shopId) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found or access denied.');
+        }
+
+        $customer = !empty($pr['customer_id']) ? (new UserModel())->find($pr['customer_id']) : null;
+
+        $qrPayload = $pr['request_number'] ?? ('PR-' . $pr['id']);
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($qrPayload);
+
+        return view('tenant/receipt', [
+            'type'         => 'printing',
+            'printing'     => $pr,
+            'customer'     => $customer,
+            'shop'         => $shop,
+            'qrUrl'        => $qrUrl,
+            'cashierName'  => session()->get('user_name') ?? 'Store Staff',
+        ]);
+    }
+
+    /**
      * CSV export of the currently filtered orders, reusing the same
      * tenant-scoped query as the Orders table.
      */
@@ -593,6 +712,9 @@ class Tenant extends BaseController
 
         $shopId = (int) $res['shopId'];
         $shop   = $res['shop'];
+
+        // Automatically archive completed items older than 3 days
+        (new ArchivedItemModel())->autoArchiveCompletedItems($shopId, 3);
 
         // Recent requests (all statuses), with independent paginator group.
         $search  = trim((string) $this->request->getGet('q'));
@@ -1089,6 +1211,9 @@ class Tenant extends BaseController
         $shopId = $res['shopId'];
         $shop   = $res['shop'];
 
+        // Automatically archive completed items older than 3 days
+        (new ArchivedItemModel())->autoArchiveCompletedItems($shopId, 3);
+
         $page   = max(1, (int) $this->request->getGet('page_archive'));
         $result = (new ArchivedItemModel())->getArchivedForShopPaginated($shopId, 10, $page, 'archive');
 
@@ -1581,6 +1706,61 @@ class Tenant extends BaseController
         return redirect()->back()->with('success', $count . ' completed request(s) archived.');
     }
 
+    /**
+     * Archive a single completed or delivered product order (logged, not deleted).
+     */
+    public function archiveOrder($orderId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+
+        $orderModel = new OrderModel();
+        $row        = $orderModel->find((int) $orderId);
+        if (!$row || (int) $row['shop_id'] !== $shopId) {
+            return redirect()->back()->with('error', 'Order not found.');
+        }
+
+        if (!in_array($row['status'], ['completed', 'delivered'], true)) {
+            return redirect()->back()->with('error', 'Only completed or delivered orders can be archived.');
+        }
+
+        $label = !empty($row['order_number']) ? ('#' . ltrim($row['order_number'], '#')) : ('#ORD-' . $row['id']);
+        $this->insertArchiveRow($shopId, 'order', (int) $row['id'], $label);
+
+        return redirect()->back()->with('success', 'Order archived successfully.');
+    }
+
+    /**
+     * Archive every completed/delivered order for the shop at once.
+     */
+    public function archiveAllCompletedOrders()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId    = (int) $res['shopId'];
+        $completed = (new OrderModel())
+            ->where('shop_id', $shopId)
+            ->whereIn('status', ['completed', 'delivered'])
+            ->findAll();
+
+        $count = 0;
+        foreach ($completed as $c) {
+            $label = !empty($c['order_number']) ? ('#' . ltrim($c['order_number'], '#')) : ('#ORD-' . $c['id']);
+            if ($this->insertArchiveRow($shopId, 'order', (int) $c['id'], $label)) {
+                $count++;
+            }
+        }
+
+        return redirect()->back()->with('success', $count . ' completed order(s) archived.');
+    }
+
     private function insertArchiveRow(int $shopId, string $itemType, int $itemId, string $label): bool
     {
         $exists = (new ArchivedItemModel())
@@ -1760,14 +1940,41 @@ class Tenant extends BaseController
             }
         }
 
-        (new ShopModel())->update($shopId, [
+        $lat = $this->request->getPost('latitude');
+        $lng = $this->request->getPost('longitude');
+
+        $updateData = [
             'shop_name'       => $shopName,
             'description'     => $description,
             'street'          => $street,
             'barangay'        => $barangay,
             'address_line'    => $addressLine,
             'offers_printing' => $this->request->getPost('offers_printing') ? 1 : 0,
-        ]);
+        ];
+
+        if ($lat !== null && $lng !== null && is_numeric($lat) && is_numeric($lng) && (float) $lat != 0 && (float) $lng != 0) {
+            $updateData['latitude']    = (float) $lat;
+            $updateData['longitude']   = (float) $lng;
+            $updateData['geocoded_at'] = date('Y-m-d H:i:s');
+        } else {
+            $shopModel = new ShopModel();
+            $existingShop = $shopModel->find($shopId);
+            $existingStreet = $existingShop['street'] ?? '';
+            $existingBarangay = $existingShop['barangay'] ?? '';
+            $needsGeocoding = empty($existingShop['latitude']) || $street !== $existingStreet || $barangay !== $existingBarangay;
+
+            if ($needsGeocoding && ($street !== '' || $barangay !== '' || $addressLine !== '')) {
+                $mapsService = new \App\Services\GoogleMapsService();
+                $geo = $mapsService->geocodeAddress($addressLine);
+                if ($geo) {
+                    $updateData['latitude']    = $geo['lat'];
+                    $updateData['longitude']   = $geo['lng'];
+                    $updateData['geocoded_at'] = date('Y-m-d H:i:s');
+                }
+            }
+        }
+
+        (new ShopModel())->update($shopId, $updateData);
 
         return redirect()->back()->with('success', 'Shop profile saved.');
     }
@@ -2943,6 +3150,7 @@ class Tenant extends BaseController
         return $this->response->setJSON([
             'success'             => true,
             'message'             => 'Store pick-up completed successfully.',
+            'order_id'            => (int) $orderId,
             'order_number'        => $order['order_number'],
             'additional_subtotal' => $additionalSubtotal,
             'final_total'         => $finalTotal,
@@ -3314,13 +3522,33 @@ class Tenant extends BaseController
         // Coordinates check & fallback
         $destLat = (float) ($delivery['destination_latitude'] ?? 0);
         $destLng = (float) ($delivery['destination_longitude'] ?? 0);
+
         if ($destLat === 0.0 || $destLng === 0.0) {
-            $destLat = 6.2209;
-            $destLng = 125.0642;
+            if ($order && !empty($order['shipping_address_id'])) {
+                $shippingAddr = (new \App\Models\ShippingAddressModel())->find($order['shipping_address_id']);
+                if ($shippingAddr && !empty($shippingAddr['latitude']) && !empty($shippingAddr['longitude'])) {
+                    $destLat = (float) $shippingAddr['latitude'];
+                    $destLng = (float) $shippingAddr['longitude'];
+                }
+            }
         }
 
-        $shopLat = (float) ($shop['latitude'] ?? 6.2209);
-        $shopLng = (float) ($shop['longitude'] ?? 125.0642);
+        if (($destLat === 0.0 || $destLng === 0.0) && !empty($delivery['destination_address'])) {
+            $mapsService = new \App\Services\GoogleMapsService();
+            $geo = $mapsService->geocodeAddress($delivery['destination_address']);
+            if ($geo) {
+                $destLat = $geo['lat'];
+                $destLng = $geo['lng'];
+            }
+        }
+
+        if ($destLat === 0.0 || $destLng === 0.0) {
+            $destLat = 6.2136;
+            $destLng = 125.0661;
+        }
+
+        $shopLat = !empty($shop['latitude']) && (float) $shop['latitude'] != 0 ? (float) $shop['latitude'] : 6.2136;
+        $shopLng = !empty($shop['longitude']) && (float) $shop['longitude'] != 0 ? (float) $shop['longitude'] : 125.0661;
 
         service('renderer')->setData(['shop' => $shop]);
 
@@ -3340,4 +3568,6 @@ class Tenant extends BaseController
         ]);
     }
 }
+
+
 

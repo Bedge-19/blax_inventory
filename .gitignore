@@ -71,14 +71,21 @@ pnpm-debug.log*
 # STORAGE, CACHE & TEMPORARY DIRECTORIES
 #--------------------------------------------------------------------
 # CodeIgniter 4 writable storage
-writable/
-writable/*
-!writable/
-!writable/cache/.gitkeep
-!writable/logs/.gitkeep
-!writable/session/.gitkeep
-!writable/debugbar/.gitkeep
-!writable/uploads/.gitkeep
+/writable/cache/*
+!/writable/cache/.gitkeep
+!/writable/cache/index.html
+/writable/debugbar/*
+!/writable/debugbar/.gitkeep
+!/writable/debugbar/index.html
+/writable/logs/*
+!/writable/logs/.gitkeep
+!/writable/logs/index.html
+/writable/session/*
+!/writable/session/.gitkeep
+!/writable/session/index.html
+/writable/uploads/*
+!/writable/uploads/.gitkeep
+!/writable/uploads/index.html
 
 # Generic / Laravel storage & log directories
 /storage/

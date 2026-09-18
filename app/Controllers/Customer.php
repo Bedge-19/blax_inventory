@@ -642,6 +642,27 @@ class Customer extends BaseController
             return redirect()->back();
         }
 
+        $lat     = $this->request->getPost('latitude');
+        $lng     = $this->request->getPost('longitude');
+        $placeId = trim((string) $this->request->getPost('place_id'));
+
+        if ($lat !== null && $lng !== null && is_numeric($lat) && is_numeric($lng) && (float) $lat != 0 && (float) $lng != 0) {
+            $data['latitude']    = (float) $lat;
+            $data['longitude']   = (float) $lng;
+            $data['place_id']    = $placeId ?: null;
+            $data['geocoded_at'] = date('Y-m-d H:i:s');
+        } else {
+            $mapsService = new \App\Services\GoogleMapsService();
+            $fullAddr = $data['address_line1'] . ', ' . $barangay . ', Polomolok, South Cotabato, Philippines';
+            $geo = $mapsService->geocodeAddress($fullAddr);
+            if ($geo) {
+                $data['latitude']    = $geo['lat'];
+                $data['longitude']   = $geo['lng'];
+                $data['place_id']    = $geo['place_id'] ?? null;
+                $data['geocoded_at'] = date('Y-m-d H:i:s');
+            }
+        }
+
         $addressModel = new ShippingAddressModel();
 
         if ($addressId > 0) {

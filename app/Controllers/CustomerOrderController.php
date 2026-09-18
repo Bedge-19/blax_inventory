@@ -9,6 +9,7 @@ use App\Models\ProductImageModel;
 use App\Models\ShopModel;
 use App\Models\ShippingAddressModel;
 use App\Models\DeliveryModel;
+use App\Services\GoogleMapsService;
 
 class CustomerOrderController extends BaseController
 {
@@ -154,15 +155,54 @@ class CustomerOrderController extends BaseController
         }
 
         // Coordinates calculations (Polomolok area)
-        // Store base: Polomolok Poblacion
-        $storeLat = 6.2217;
-        $storeLng = 125.0667;
+        $mapsService = new GoogleMapsService();
+        $defaultCoords = $mapsService->getDefaultCoordinates();
+
+        // 1. Store base coordinates
+        if (!empty($shop['latitude']) && !empty($shop['longitude']) && (float) $shop['latitude'] != 0) {
+            $storeLat = (float) $shop['latitude'];
+            $storeLng = (float) $shop['longitude'];
+        } else {
+            $shopAddr = implode(', ', array_filter([$shop['street'] ?? '', $shop['barangay'] ?? '', $shop['address_line'] ?? '', 'Polomolok', 'South Cotabato']));
+            $geoShop = $mapsService->geocodeAddress($shopAddr);
+            if ($geoShop) {
+                $storeLat = $geoShop['lat'];
+                $storeLng = $geoShop['lng'];
+                $shopModel->update($shop['id'], [
+                    'latitude'    => $storeLat,
+                    'longitude'   => $storeLng,
+                    'geocoded_at' => date('Y-m-d H:i:s'),
+                ]);
+            } else {
+                $storeLat = $defaultCoords['lat'];
+                $storeLng = $defaultCoords['lng'];
+            }
+        }
         $storeCoords = [$storeLat, $storeLng];
 
-        // Deterministic destination coordinates in Polomolok area
-        $seed = (int) $order['id'];
-        $destLat = round(6.2300 + ((($seed * 17) % 31) - 15) * 0.0016, 6);
-        $destLng = round(125.0750 + ((($seed * 23) % 31) - 15) * 0.0016, 6);
+        // 2. Destination coordinates
+        if ($shippingAddress && !empty($shippingAddress['latitude']) && !empty($shippingAddress['longitude']) && (float) $shippingAddress['latitude'] != 0) {
+            $destLat = (float) $shippingAddress['latitude'];
+            $destLng = (float) $shippingAddress['longitude'];
+        } else {
+            $geoDest = !empty($destAddressText) ? $mapsService->geocodeAddress($destAddressText) : null;
+            if ($geoDest) {
+                $destLat = $geoDest['lat'];
+                $destLng = $geoDest['lng'];
+                if ($shippingAddress && !empty($shippingAddress['id'])) {
+                    $shippingAddressModel->update($shippingAddress['id'], [
+                        'latitude'    => $destLat,
+                        'longitude'   => $destLng,
+                        'place_id'    => $geoDest['place_id'] ?? null,
+                        'geocoded_at' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            } else {
+                $seed = (int) $order['id'];
+                $destLat = round(6.2300 + ((($seed * 17) % 31) - 15) * 0.0016, 6);
+                $destLng = round(125.0750 + ((($seed * 23) % 31) - 15) * 0.0016, 6);
+            }
+        }
         $destCoords = [$destLat, $destLng];
 
         $status = strtolower(trim((string) $order['status']));
@@ -302,6 +342,56 @@ class CustomerOrderController extends BaseController
             'destCoords'       => $destCoords,
             'courierCoords'    => $courierCoords,
             'destAddressText'  => $destAddressText,
+        ]);
+    }
+
+    /**
+     * AJAX proxy to compute road routes via Google Routes API.
+     * Route: POST /api/route
+     */
+    public function computeRoute()
+    {
+        $json = $this->request->getJSON(true);
+        if (!$json || empty($json['origin']) || empty($json['destination'])) {
+            $origin = [
+                'lat' => (float) $this->request->getPost('origin_lat'),
+                'lng' => (float) $this->request->getPost('origin_lng'),
+            ];
+            $dest = [
+                'lat' => (float) $this->request->getPost('dest_lat'),
+                'lng' => (float) $this->request->getPost('dest_lng'),
+            ];
+        } else {
+            $origin = [
+                'lat' => (float) ($json['origin']['lat'] ?? $json['origin']['latitude'] ?? 0),
+                'lng' => (float) ($json['origin']['lng'] ?? $json['origin']['longitude'] ?? 0),
+            ];
+            $dest = [
+                'lat' => (float) ($json['destination']['lat'] ?? $json['destination']['latitude'] ?? 0),
+                'lng' => (float) ($json['destination']['lng'] ?? $json['destination']['longitude'] ?? 0),
+            ];
+        }
+
+        if ($origin['lat'] == 0 || $origin['lng'] == 0 || $dest['lat'] == 0 || $dest['lng'] == 0) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => 'Invalid coordinates provided.',
+            ]);
+        }
+
+        $mapsService = new GoogleMapsService();
+        $route = $mapsService->computeRoute($origin, $dest);
+
+        if (!$route) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => 'Failed to compute route from Google Routes API.',
+            ]);
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'route'   => $route,
         ]);
     }
 }

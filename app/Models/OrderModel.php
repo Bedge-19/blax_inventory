@@ -45,10 +45,16 @@ class OrderModel extends Model
 
     public function getOrdersByShop(int $shopId)
     {
+        $archived = $this->db->table('archived_items')
+            ->select('item_id')
+            ->where('shop_id', $shopId)
+            ->where('item_type', 'order');
+
         return $this->db->table('orders o')
             ->select('o.*, u.first_name, u.last_name, u.email')
             ->join('users u', 'u.id = o.customer_id', 'left')
             ->where('o.shop_id', $shopId)
+            ->whereNotIn('o.id', $archived, false)
             ->orderBy("CASE 
                 WHEN LOWER(o.status) = 'pending' THEN 1 
                 WHEN LOWER(o.status) IN ('processing', 'in_progress') THEN 2 
@@ -82,6 +88,12 @@ class OrderModel extends Model
             ->join('users u', 'u.id = orders.customer_id', 'left')
             ->join('shipping_addresses sa', 'sa.id = orders.shipping_address_id', 'left')
             ->where('orders.shop_id', $shopId);
+
+        $archived = $this->db->table('archived_items')
+            ->select('item_id')
+            ->where('shop_id', $shopId)
+            ->where('item_type', 'order');
+        $builder->whereNotIn('orders.id', $archived, false);
 
         if ($search !== null && $search !== '') {
             $itemSub = function ($q) use ($search) {

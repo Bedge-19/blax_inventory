@@ -55,6 +55,10 @@ class ContentSecurityPolicy extends BaseConfig
         'https://unpkg.com',
         'https://cdnjs.cloudflare.com',
         'https://cdn.jsdelivr.net',
+        'https://maps.googleapis.com',
+        'https://*.googleapis.com',
+        'https://*.gstatic.com',
+        'https://*.google.com',
         'unsafe-inline',
         'unsafe-eval',
     ];
@@ -62,6 +66,8 @@ class ContentSecurityPolicy extends BaseConfig
     public $styleSrc = [
         'self',
         'https://fonts.googleapis.com',
+        'https://maps.googleapis.com',
+        'https://*.googleapis.com',
         'unsafe-inline',
     ];
 
@@ -70,6 +76,11 @@ class ContentSecurityPolicy extends BaseConfig
         'data:',
         'https:',
         'blob:',
+        'https://maps.gstatic.com',
+        'https://maps.googleapis.com',
+        'https://*.googleapis.com',
+        'https://*.ggpht.com',
+        'https://*.googleusercontent.com',
     ];
 
     public $baseURI = 'self';
@@ -77,6 +88,8 @@ class ContentSecurityPolicy extends BaseConfig
     public $childSrc = [
         'self',
         'https://checkout.paymongo.com',
+        'https://maps.googleapis.com',
+        'https://*.google.com',
         'blob:',
     ];
 
@@ -86,6 +99,12 @@ class ContentSecurityPolicy extends BaseConfig
         'https://checkout.paymongo.com',
         'https://unpkg.com',
         'https://cdnjs.cloudflare.com',
+        'https://maps.googleapis.com',
+        'https://places.googleapis.com',
+        'https://routes.googleapis.com',
+        'https://*.googleapis.com',
+        'https://*.gstatic.com',
+        'https://*.google.com',
         'blob:',
         'data:',
     ];
@@ -93,6 +112,8 @@ class ContentSecurityPolicy extends BaseConfig
     public $fontSrc = [
         'self',
         'https://fonts.gstatic.com',
+        'https://fonts.googleapis.com',
+        'https://*.gstatic.com',
         'data:',
     ];
 
@@ -106,6 +127,8 @@ class ContentSecurityPolicy extends BaseConfig
     public $frameSrc = [
         'self',
         'https://checkout.paymongo.com',
+        'https://maps.googleapis.com',
+        'https://*.google.com',
     ];
 
     public $mediaSrc = 'self';

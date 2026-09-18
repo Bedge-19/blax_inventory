@@ -232,6 +232,9 @@
                                                 <button type="button" onclick="openOrderDetails(<?= (int) $o['id'] ?>)" class="w-full text-left px-sm py-sm rounded-lg text-on-surface-variant text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-xs">
                                                     <span class="material-symbols-outlined text-[18px]">visibility</span> View Details
                                                 </button>
+                                                <a href="<?= base_url('tenant/orders/receipt/' . (int) $o['id']) ?>" target="_blank" class="w-full text-left px-sm py-sm rounded-lg text-on-surface-variant text-label-sm font-semibold hover:bg-surface-container-high flex items-center gap-xs">
+                                                    <span class="material-symbols-outlined text-[18px]">receipt_long</span> Print Receipt
+                                                </a>
                                                 <?php if ($o['status'] === 'processing'): ?>
                                                     <button type="button" onclick="openOrderQrModal(
                                                         '<?= esc($o['order_number']) ?>',
@@ -347,6 +350,12 @@
             <button type="button" id="omPosBtn" class="w-full py-sm bg-secondary text-on-secondary rounded-xl font-bold hover:bg-secondary/90 transition-all flex items-center justify-center gap-xs text-label-sm shadow-sm">
                 <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
                 <span>Open POS</span>
+            </button>
+        </div>
+        <div id="omReceiptContainer" class="mt-sm">
+            <button type="button" id="omReceiptBtn" class="w-full py-sm bg-surface-container-high text-on-surface border border-outline-variant/40 rounded-xl font-bold hover:bg-surface-variant transition-all flex items-center justify-center gap-xs text-label-sm shadow-sm">
+                <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                <span>Print Official Receipt</span>
             </button>
         </div>
     </div>
@@ -666,6 +675,13 @@
                     }
                 }
 
+                const receiptBtn = document.getElementById('omReceiptBtn');
+                if (receiptBtn) {
+                    receiptBtn.onclick = function() {
+                        window.open('<?= base_url('tenant/orders/receipt') ?>/' + encodeURIComponent(id), '_blank');
+                    };
+                }
+
                 document.getElementById('orderModal').classList.remove('hidden');
             })
             .catch(() => {
@@ -789,7 +805,7 @@
                         <div class="main-grid">
                             <!-- Left Side: QR Code -->
                             <div class="left-qr">
-                                <img src="${currentQrData.qrUrl}" class="qr-img" />
+                                <img src="${currentQrData.qrUrl}" class="qr-img" onload="doPrint()" onerror="doPrint()" />
                                 <p style="font-size: 10px; color: #64748b; margin-top: 4px; font-weight: 600;">Scan to Verify Order</p>
                             </div>
 
@@ -822,7 +838,16 @@
                             Blax Storefront Order Waybill &amp; Verification System
                         </div>
                     </div>
-                    <script>window.onload = function() { window.print(); window.close(); }<\/script>
+                    <script>
+                        var printed = false;
+                        function doPrint() {
+                            if (printed) return;
+                            printed = true;
+                            window.print();
+                            setTimeout(function() { window.close(); }, 500);
+                        }
+                        setTimeout(doPrint, 2500);
+                    <\/script>
                 </body>
             </html>
         `);

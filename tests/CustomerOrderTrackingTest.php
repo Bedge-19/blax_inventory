@@ -188,11 +188,11 @@ class CustomerOrderTrackingTest extends CIUnitTestCase
         // 5. Items Summary
         $this->assertStringContainsString('Premium Thermal Paper Roll', $body);
 
-        // 6. Interactive Leaflet Map
+        // 6. Interactive Google Map
         $this->assertStringContainsString('id="trackMap"', $body);
         $this->assertStringContainsString('Center on Courier', $body);
         $this->assertStringContainsString('Live Route Tracking', $body);
-        $this->assertStringContainsString('leaflet.js', $body);
+        $this->assertStringContainsString('maps.googleapis.com', $body);
         $this->assertStringContainsString('STORE_COORDS', $body);
         $this->assertStringContainsString('COURIER_COORDS', $body);
         $this->assertStringContainsString('DEST_COORDS', $body);
