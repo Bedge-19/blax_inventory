@@ -191,47 +191,131 @@ class Admin extends BaseController
     public function tracking()
     {
         $auth = $this->checkAdminAuth();
-        if ($auth !== true) return $auth;
-
-        $search     = trim((string)$this->request->getGet('q'));
-        $shopFilter = trim((string)$this->request->getGet('shop'));
-        $status     = trim((string)$this->request->getGet('status'));
-        $page       = max(1, (int) $this->request->getGet('page_tracking'));
+        if ($auth !== true) {
+            return $auth;
+        }
 
         $deliveryModel = new DeliveryModel();
-        $pins = $deliveryModel->getAllDeliveryPins($search, $shopFilter);
+        $pins = $deliveryModel->getAllDeliveryPins();
 
-        // Polomolok filter: only keep pins with valid Polomolok coordinates or Polomolok destination
-        $pins = array_values(array_filter($pins, function($p){
-            $hasCoords = isset($p['current_lat']) && isset($p['current_lng']) && $p['current_lat'] !== null && $p['current_lng'] !== null;
-            if ($hasCoords) {
-                $lat=(float)$p['current_lat']; $lng=(float)$p['current_lng'];
-                if (!DeliveryModel::isPolomolokCoordinate($lat,$lng)) return false;
+        // Ensure pins only contain valid Polomolok coordinates
+        $pins = array_values(array_filter($pins, function ($p) {
+            if (!empty($p['current_lat']) && !empty($p['current_lng'])) {
+                return DeliveryModel::isPolomolokCoordinate((float) $p['current_lat'], (float) $p['current_lng']);
             }
-            // destination must mention Polomolok if no coords
-            if (!$hasCoords && !empty($p['destination_address']) && stripos($p['destination_address'],'Polomolok')===false) {
-                // keep if shop city is Polomolok — check via shops table? For now allow but flag
-                // Allow through but map pin will be skipped
-            }
-            return true;
+            return false;
         }));
 
-        $result     = $deliveryModel->getAdminTrackingPaginated($search, $shopFilter, $status, 20, $page, 'tracking');
-        $deliveries = $result['deliveries'];
+        $groupedShops = [];
+        $activeShipmentCount = 0;
+        $inTransitCount = 0;
+        $shippedCount = 0;
 
-        // Shops for filter dropdown
-        $db = \Config\Database::connect();
-        $shops = $db->table('shops')->select('shop_name')->orderBy('shop_name','ASC')->get()->getResultArray();
-        $activeCount = $db->table('deliveries')->whereIn('status',['ready_for_pickup','shipped','in_transit'])->countAllResults();
+        foreach ($pins as $pin) {
+            $sId = (int) ($pin['shop_id'] ?? 0);
+            $sName = $pin['shop_name'] ?? 'Independent Partner';
+            $activeShipmentCount++;
+            if ($pin['status'] === 'in_transit') {
+                $inTransitCount++;
+            } else {
+                $shippedCount++;
+            }
+
+            if (!isset($groupedShops[$sId])) {
+                $groupedShops[$sId] = [
+                    'shop_id'    => $sId,
+                    'shop_name'  => $sName,
+                    'shop_logo'  => $pin['shop_logo'] ?? '',
+                    'shop_lat'   => $pin['shop_lat'] ?? null,
+                    'shop_lng'   => $pin['shop_lng'] ?? null,
+                    'count'      => 0,
+                    'deliveries' => [],
+                ];
+            }
+            $groupedShops[$sId]['count']++;
+            $groupedShops[$sId]['deliveries'][] = $pin;
+        }
+
+        $kpis = [
+            'total_active' => $activeShipmentCount,
+            'in_transit'   => $inTransitCount,
+            'shipped'      => $shippedCount,
+            'active_shops' => count($groupedShops),
+        ];
 
         return view('admin/tracking', [
-            'live_deliveries' => $deliveries,
-            'deliveries'      => $deliveries,
-            'pager'           => $result['pager'],
-            'pins'            => $pins,
-            'shops'           => $shops,
-            'filters'         => ['q'=>$search,'shop'=>$shopFilter,'status'=>$status],
-            'active_count'    => $activeCount,
+            'pins'         => $pins,
+            'groupedShops' => array_values($groupedShops),
+            'kpis'         => $kpis,
+            'title'        => 'Live Fleet Tracking',
+        ]);
+    }
+
+    /**
+     * AJAX endpoint for live fleet map auto-refreshing.
+     * Route: GET admin/tracking/pins
+     */
+    public function trackingPins()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $deliveryModel = new DeliveryModel();
+        $pins = $deliveryModel->getAllDeliveryPins();
+
+        $pins = array_values(array_filter($pins, function ($p) {
+            if (!empty($p['current_lat']) && !empty($p['current_lng'])) {
+                return DeliveryModel::isPolomolokCoordinate((float) $p['current_lat'], (float) $p['current_lng']);
+            }
+            return false;
+        }));
+
+        $groupedShops = [];
+        $activeShipmentCount = 0;
+        $inTransitCount = 0;
+        $shippedCount = 0;
+
+        foreach ($pins as $pin) {
+            $sId = (int) ($pin['shop_id'] ?? 0);
+            $sName = $pin['shop_name'] ?? 'Independent Partner';
+            $activeShipmentCount++;
+            if ($pin['status'] === 'in_transit') {
+                $inTransitCount++;
+            } else {
+                $shippedCount++;
+            }
+
+            if (!isset($groupedShops[$sId])) {
+                $groupedShops[$sId] = [
+                    'shop_id'    => $sId,
+                    'shop_name'  => $sName,
+                    'shop_logo'  => $pin['shop_logo'] ?? '',
+                    'shop_lat'   => $pin['shop_lat'] ?? null,
+                    'shop_lng'   => $pin['shop_lng'] ?? null,
+                    'count'      => 0,
+                    'deliveries' => [],
+                ];
+            }
+            $groupedShops[$sId]['count']++;
+            $groupedShops[$sId]['deliveries'][] = $pin;
+        }
+
+        $kpis = [
+            'total_active' => $activeShipmentCount,
+            'in_transit'   => $inTransitCount,
+            'shipped'      => $shippedCount,
+            'active_shops' => count($groupedShops),
+        ];
+
+        return $this->response->setJSON([
+            'success'      => true,
+            'pins'         => $pins,
+            'groupedShops' => array_values($groupedShops),
+            'kpis'         => $kpis,
+            'count'        => count($pins),
+            'timestamp'    => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -275,52 +359,130 @@ class Admin extends BaseController
         $range = $this->request->getGet('range');
         $range = in_array($range, ['7','30','year'], true) ? $range : '30';
 
-        $adminRevenueTotal = $payoutModel->getAdminRevenueTotal('completed');
-        $adminRevenueChart = $payoutModel->getAdminRevenueChartData($range,'completed');
-        $payoutCount = $db->table('payout_requests')->where('status','completed')->where('destination_method','gcash')->countAllResults();
+        $adminRevenueTotal = (float) $payoutModel->getAdminRevenueTotal('completed');
+        $adminRevenueChart = $payoutModel->getAdminRevenueChartData($range, 'completed');
+        $payoutCount = $db->table('payout_requests')->where('status', 'completed')->where('destination_method', 'gcash')->countAllResults();
         $avgFee = $payoutCount > 0 ? $adminRevenueTotal / $payoutCount : 0;
-        $totalOrders = $db->table('orders')->countAllResults();
-        $activeShops = $db->table('shops')->where('status','active')->countAllResults();
-        $totalCustomers = $db->table('users')->where('role','customer')->countAllResults();
 
-        // Top shops by order volume only — no revenue
+        // Platform GMV (Orders total + Custom Printing jobs)
+        $orderGmv = (float) ($db->table('orders')->selectSum('total_amount')->get()->getRow()->total_amount ?? 0);
+        $printGmv = 0.0;
+        if ($db->tableExists('printing_requests')) {
+            $printGmv = (float) ($db->table('printing_requests')->selectSum('total_price')->get()->getRow()->total_price ?? 0);
+        }
+        $platformGmv = $orderGmv + $printGmv;
+
+        $totalOrders = $db->table('orders')->countAllResults();
+        $totalCustomers = $db->table('users')->where('role', 'customer')->countAllResults();
+
+        // Merchant network
+        $totalShops = $db->table('shops')->countAllResults();
+        $activeShops = $db->table('shops')->where('status', 'active')->countAllResults();
+        $printingShops = $db->table('shops')->where('status', 'active')->where('offers_printing', 1)->countAllResults();
+
+        // Fulfillment method breakdown
+        $deliveryCount = $db->table('orders')->where('fulfillment_method', 'delivery')->countAllResults();
+        $pickupCount = $db->table('orders')->where('fulfillment_method', 'pickup')->countAllResults();
+        $fulfillmentTotal = max(1, $deliveryCount + $pickupCount);
+        $fulfillmentDist = [
+            'delivery_count' => $deliveryCount,
+            'delivery_pct'   => round(($deliveryCount / $fulfillmentTotal) * 100),
+            'pickup_count'   => $pickupCount,
+            'pickup_pct'     => round(($pickupCount / $fulfillmentTotal) * 100),
+        ];
+
+        // Payment method breakdown
+        $paymentCounts = [
+            'gcash'  => $db->table('orders')->where('payment_method', 'gcash')->countAllResults(),
+            'online' => $db->table('orders')->whereIn('payment_method', ['online', 'paymongo', 'card'])->countAllResults(),
+            'cash'   => $db->table('orders')->whereIn('payment_method', ['cash', 'cod'])->countAllResults(),
+        ];
+        $totalPaidMethods = max(1, array_sum($paymentCounts));
+        $paymentDist = [
+            'gcash'  => ['count' => $paymentCounts['gcash'], 'pct' => round(($paymentCounts['gcash'] / $totalPaidMethods) * 100)],
+            'online' => ['count' => $paymentCounts['online'], 'pct' => round(($paymentCounts['online'] / $totalPaidMethods) * 100)],
+            'cash'   => ['count' => $paymentCounts['cash'], 'pct' => round(($paymentCounts['cash'] / $totalPaidMethods) * 100)],
+        ];
+
+        // Top shops by volume & GMV
         $topShops = $db->table('orders o')
-            ->select('s.shop_name, COUNT(o.id) as total_orders')
+            ->select('s.id as shop_id, s.shop_name, s.logo_url, s.plan, s.offers_printing, s.rating_average, COUNT(o.id) as total_orders, COALESCE(SUM(o.total_amount), 0) as total_gmv')
             ->join('shops s', 's.id = o.shop_id', 'left')
             ->groupBy('o.shop_id')
-            ->orderBy('total_orders','DESC')
-            ->limit(5)
+            ->orderBy('total_orders', 'DESC')
+            ->limit(6)
             ->get()->getResultArray();
 
+        // Polomolok delivery area distribution
+        $areaCounts = [];
+        if ($db->tableExists('shipping_addresses')) {
+            $addrRows = $db->table('shipping_addresses sa')
+                ->select("COALESCE(NULLIF(sa.city, ''), 'Poblacion') as area, COUNT(sa.id) as count")
+                ->groupBy('area')
+                ->orderBy('count', 'DESC')
+                ->limit(5)
+                ->get()->getResultArray();
+            $areaCounts = $addrRows;
+        }
+
+        // Active deliveries
+        $deliveryModel = new DeliveryModel();
+        $activeDeliveriesCount = $deliveryModel->whereIn('status', ['shipped', 'in_transit'])->countAllResults();
+
+        // Period chart metrics
+        $chartValues = array_map('floatval', $adminRevenueChart['values'] ?? []);
+        $chartSum = round(array_sum($chartValues), 2);
+        $chartAvg = count($chartValues) > 0 ? round($chartSum / count($chartValues), 2) : 0;
+        $chartPeak = count($chartValues) > 0 ? max($chartValues) : 0;
+
         return view('admin/analytics', [
-            'admin_revenue' => $adminRevenueTotal,
-            'avg_fee'       => $avgFee,
-            'payout_count'  => $payoutCount,
-            'total_orders'  => $totalOrders,
-            'active_shops'  => $activeShops,
-            'total_customers'=> $totalCustomers,
-            'top_shops'     => $topShops,
-            'chart_labels'  => $adminRevenueChart['labels'],
-            'chart_values'  => $adminRevenueChart['values'],
-            'range'         => $range,
+            'admin_revenue'           => $adminRevenueTotal,
+            'avg_fee'                 => $avgFee,
+            'payout_count'            => $payoutCount,
+            'platform_gmv'            => $platformGmv,
+            'total_orders'            => $totalOrders,
+            'total_shops'             => $totalShops,
+            'active_shops'            => $activeShops,
+            'printing_shops'          => $printingShops,
+            'total_customers'         => $totalCustomers,
+            'fulfillment_dist'        => $fulfillmentDist,
+            'payment_dist'            => $paymentDist,
+            'top_shops'               => $topShops,
+            'area_counts'             => $areaCounts,
+            'active_deliveries_count' => $activeDeliveriesCount,
+            'chart_labels'            => $adminRevenueChart['labels'],
+            'chart_values'            => $adminRevenueChart['values'],
+            'chart_sum'               => $chartSum,
+            'chart_avg'               => $chartAvg,
+            'chart_peak'              => $chartPeak,
+            'range'                   => $range,
+            'title'                   => 'Analytics',
         ]);
     }
 
     public function analyticsData()
     {
         $auth = $this->checkAdminAuth();
-        if ($auth !== true) return $this->response->setStatusCode(401)->setJSON(['success'=>false]);
+        if ($auth !== true) return $this->response->setStatusCode(401)->setJSON(['success' => false]);
 
-        $range = (string)$this->request->getGet('range');
-        $range = in_array($range, ['7','30','year'], true) ? $range : '30';
+        $range = (string) $this->request->getGet('range');
+        $range = in_array($range, ['7', '30', 'year'], true) ? $range : '30';
         $payoutModel = new PayoutModel();
-        $chart = $payoutModel->getAdminRevenueChartData($range,'completed');
+        $chart = $payoutModel->getAdminRevenueChartData($range, 'completed');
+        $values = array_map('floatval', $chart['values'] ?? []);
+        $total = round(array_sum($values), 2);
+        $count = count($values);
+        $avg = $count > 0 ? round($total / $count, 2) : 0;
+        $peak = $count > 0 ? max($values) : 0;
+
         return $this->response->setJSON([
-            'success'=>true,
-            'range'=>$range,
-            'labels'=>$chart['labels'],
-            'values'=>$chart['values'],
-            'total'=>round(array_sum($chart['values']),2),
+            'success' => true,
+            'range'   => $range,
+            'labels'  => $chart['labels'],
+            'values'  => $chart['values'],
+            'total'   => $total,
+            'avg'     => $avg,
+            'peak'    => $peak,
         ]);
     }
 
@@ -335,20 +497,35 @@ class Admin extends BaseController
             $db->query("CREATE TABLE IF NOT EXISTS site_contents (id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY, page VARCHAR(60) NOT NULL, content_key VARCHAR(100) NOT NULL, label VARCHAR(150) NULL, content_type ENUM('text','textarea','image') DEFAULT 'text', text_value TEXT NULL, image_url VARCHAR(500) NULL, sort_order INT DEFAULT 0, updated_by BIGINT UNSIGNED NULL, created_at TIMESTAMP NULL, updated_at TIMESTAMP NULL, UNIQUE KEY uq_page_key (page,content_key))");
         }
 
-        // Seed default structured entries if missing
+        // Migrate legacy 'home' records to 'home_banners'
+        $legacyRows = $db->table('site_contents')->where('page', 'home')->get()->getResultArray();
+        foreach ($legacyRows as $leg) {
+            $existsInHomeBanners = $db->table('site_contents')
+                ->where('page', 'home_banners')
+                ->where('content_key', $leg['content_key'])
+                ->countAllResults();
+            if ($existsInHomeBanners === 0) {
+                $db->table('site_contents')->where('id', $leg['id'])->update(['page' => 'home_banners']);
+            } else {
+                $db->table('site_contents')->where('id', $leg['id'])->delete();
+            }
+        }
+
+        // Remove deprecated promotional_blocks if present
+        $db->table('site_contents')->where('page', 'promotional_blocks')->delete();
+
+        // Seed default structured entries if missing, ordered top-to-bottom
         $defaults = [
             ['page'=>'home_banners','content_key'=>'hero_badge','label'=>'Hero Badge Text','content_type'=>'text','text_value'=>'Seasonal Event','sort_order'=>1],
             ['page'=>'home_banners','content_key'=>'hero_title','label'=>'Hero Main Headline','content_type'=>'text','text_value'=>'The Ultimate Merchandise & Printing Hub','sort_order'=>2],
             ['page'=>'home_banners','content_key'=>'hero_subtitle','label'=>'Hero Subtitle Description','content_type'=>'textarea','text_value'=>'Discover premium goods, exclusive deals, and top-tier printing services all in one place across Polomolok.','sort_order'=>3],
-            ['page'=>'home_banners','content_key'=>'hero_image','label'=>'Hero Banner Background','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80','sort_order'=>4],
-            ['page'=>'home_banners','content_key'=>'hero_cta_text','label'=>'Hero CTA Button Text','content_type'=>'text','text_value'=>'Explore Marketplace','sort_order'=>5],
+            ['page'=>'home_banners','content_key'=>'hero_cta_text','label'=>'Hero CTA Button Text','content_type'=>'text','text_value'=>'Explore Marketplace','sort_order'=>4],
+            ['page'=>'home_banners','content_key'=>'hero_image','label'=>'Hero Banner Background','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80','sort_order'=>5],
+            ['page'=>'home_banners','content_key'=>'catalog_title','label'=>'Catalog Section Heading','content_type'=>'text','text_value'=>'Global Product Catalog','sort_order'=>6],
+            ['page'=>'home_banners','content_key'=>'catalog_subtitle','label'=>'Catalog Section Subtitle','content_type'=>'textarea','text_value'=>'Aggregation of all products currently available across the entire RHK network.','sort_order'=>7],
 
-            ['page'=>'announcement_bar','content_key'=>'announcement_text','label'=>'Top Bar Announcement Text','content_type'=>'text','text_value'=>'🚀 Free doorstep delivery on orders over ₱500 within Polomolok! Use code BLAXSHIP','sort_order'=>1],
-            ['page'=>'announcement_bar','content_key'=>'announcement_active','label'=>'Announcement Bar Active (1 or 0)','content_type'=>'text','text_value'=>'1','sort_order'=>2],
-
-            ['page'=>'promotional_blocks','content_key'=>'promo_title','label'=>'Promotional Block Title','content_type'=>'text','text_value'=>'Featured Flash Sale & Printing Deals','sort_order'=>1],
-            ['page'=>'promotional_blocks','content_key'=>'promo_tagline','label'=>'Promotional Tagline','content_type'=>'textarea','text_value'=>'High-definition apparel printing, custom document binding, and top-rated merchant products.','sort_order'=>2],
-            ['page'=>'promotional_blocks','content_key'=>'promo_banner_image','label'=>'Promo Banner Image','content_type'=>'image','image_url'=>'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1440&q=80','sort_order'=>3],
+            ['page'=>'announcement_bar','content_key'=>'announcement_active','label'=>'Announcement Bar Active (1 or 0)','content_type'=>'text','text_value'=>'1','sort_order'=>1],
+            ['page'=>'announcement_bar','content_key'=>'announcement_text','label'=>'Top Bar Announcement Text','content_type'=>'text','text_value'=>'🚀 Free doorstep delivery on orders over ₱500 within Polomolok! Use code BLAXSHIP','sort_order'=>2],
 
             ['page'=>'footer_info','content_key'=>'footer_contact_email','label'=>'Contact Email','content_type'=>'text','text_value'=>'support@blaxinventory.com','sort_order'=>1],
             ['page'=>'footer_info','content_key'=>'footer_phone','label'=>'Customer Hotline','content_type'=>'text','text_value'=>'+63 917 123 4567','sort_order'=>2],
@@ -357,11 +534,30 @@ class Admin extends BaseController
         ];
 
         foreach ($defaults as $d) {
-            $existing = $db->table('site_contents')->where('page', $d['page'])->where('content_key', $d['content_key'])->countAllResults();
-            if ($existing === 0) {
+            $existing = $db->table('site_contents')->where('page', $d['page'])->where('content_key', $d['content_key'])->get()->getRowArray();
+            if (!$existing) {
                 $db->table('site_contents')->insert($d);
+            } else {
+                // Keep sort_order aligned with top-to-bottom layout
+                $db->table('site_contents')->where('id', $existing['id'])->update(['sort_order' => $d['sort_order']]);
             }
         }
+
+        $connectedFields = [
+            'hero_badge'           => 'Homepage Hero Badge',
+            'hero_title'           => 'Homepage Hero Headline',
+            'hero_subtitle'        => 'Homepage Hero Subtitle',
+            'hero_cta_text'        => 'Homepage Hero CTA Button',
+            'hero_image'           => 'Homepage Hero Background',
+            'catalog_title'        => 'Homepage Catalog Heading',
+            'catalog_subtitle'     => 'Homepage Catalog Subtitle',
+            'announcement_text'    => 'Global Announcement Bar',
+            'announcement_active'  => 'Global Announcement Toggle',
+            'footer_contact_email' => 'Global Footer Contact',
+            'footer_phone'         => 'Global Footer Contact',
+            'footer_address'       => 'Global Footer Contact',
+            'footer_copyright'     => 'Global Footer Copyright',
+        ];
 
         $grouped = $model->getAllGrouped();
         if (empty($grouped)) {
@@ -369,8 +565,9 @@ class Admin extends BaseController
         }
 
         return view('admin/content', [
-            'grouped' => $grouped,
-            'pages'   => array_keys($grouped),
+            'grouped'         => $grouped,
+            'pages'           => array_keys($grouped),
+            'connectedFields' => $connectedFields,
         ]);
     }
 

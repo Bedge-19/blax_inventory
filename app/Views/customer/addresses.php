@@ -260,6 +260,7 @@
             <div class="flex flex-col gap-1">
 
                 <label for="addr-line1" class="text-label-sm font-semibold text-on-surface-variant">Address Line 1 / Street <span class="text-error">*</span></label>
+                <div id="addr-autocomplete-wrapper" class="hidden mb-2"></div>
                 <input type="text" id="addr-line1" name="address_line1" placeholder="House No., Street Name, Purok / Block & Lot" class="w-full p-md bg-surface-container-lowest border border-outline-variant rounded-xl text-sm focus:ring-2 focus:ring-primary" required>
 
             </div>
@@ -452,7 +453,54 @@
         }
 
         let addressAutocomplete = null;
-        window.initAddressAutocomplete = function() {
+
+        function handleCustomerPlaceSelection(place) {
+            if (!place) return;
+            let lat = null;
+            let lng = null;
+            let placeId = place.place_id || place.id || '';
+
+            if (place.geometry && place.geometry.location) {
+                lat = typeof place.geometry.location.lat === 'function' ? place.geometry.location.lat() : place.geometry.location.lat;
+                lng = typeof place.geometry.location.lng === 'function' ? place.geometry.location.lng() : place.geometry.location.lng;
+            } else if (place.location) {
+                lat = typeof place.location.lat === 'function' ? place.location.lat() : place.location.lat;
+                lng = typeof place.location.lng === 'function' ? place.location.lng() : place.location.lng;
+            }
+
+            const latInput = document.getElementById('addr-latitude');
+            const lngInput = document.getElementById('addr-longitude');
+            const placeIdInput = document.getElementById('addr-place-id');
+
+            if (latInput && lat !== null) latInput.value = lat;
+            if (lngInput && lng !== null) lngInput.value = lng;
+            if (placeIdInput && placeId) placeIdInput.value = placeId;
+
+            // Auto-match barangay in dropdown if detected
+            const components = place.address_components || place.addressComponents;
+            if (components) {
+                for (const component of components) {
+                    const types = component.types || [];
+                    const longName = component.long_name || component.longText || '';
+                    if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood') || types.includes('political')) {
+                        const brgyName = longName.replace(/^(Barangay|Brgy\.?)\s+/i, '').trim();
+                        const brgySelect = document.getElementById('addr-barangay');
+                        if (brgySelect) {
+                            for (let i = 0; i < brgySelect.options.length; i++) {
+                                if (brgySelect.options[i].value.toLowerCase() === brgyName.toLowerCase()) {
+                                    brgySelect.selectedIndex = i;
+                                    const l2 = document.getElementById('addr-line2');
+                                    if (l2) l2.value = brgySelect.options[i].value;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        window.initAddressAutocomplete = async function() {
             const input = document.getElementById('addr-line1');
             if (!input || typeof google === 'undefined' || !google.maps || !google.maps.places) return;
 
@@ -461,6 +509,47 @@
                 { lat: 6.32, lng: 125.18 }
             );
 
+            // 1. Try modern PlaceAutocompleteElement
+            if (google.maps.places.PlaceAutocompleteElement) {
+                try {
+                    const elem = new google.maps.places.PlaceAutocompleteElement();
+                    elem.componentRestrictions = { country: 'ph' };
+
+                    const onSelect = async (event) => {
+                        let place = event.place;
+                        if (event.placePrediction && typeof event.placePrediction.toPlace === 'function') {
+                            place = event.placePrediction.toPlace();
+                        }
+                        if (place && typeof place.fetchFields === 'function') {
+                            await place.fetchFields({
+                                fields: ['displayName', 'formattedAddress', 'location', 'addressComponents']
+                            });
+                        }
+                        if (place && place.formattedAddress) {
+                            input.value = place.formattedAddress;
+                        } else if (place && place.displayName) {
+                            input.value = place.displayName;
+                        }
+                        handleCustomerPlaceSelection(place);
+                    };
+
+                    elem.addEventListener('gmp-placeselect', onSelect);
+                    elem.addEventListener('gmp-select', onSelect);
+
+                    const wrapper = document.getElementById('addr-autocomplete-wrapper');
+                    if (wrapper && !wrapper.hasChildNodes()) {
+                        elem.classList.add('w-full');
+                        wrapper.appendChild(elem);
+                        wrapper.classList.remove('hidden');
+                        addressAutocomplete = elem;
+                        return;
+                    }
+                } catch (err) {
+                    console.debug('PlaceAutocompleteElement initialization skipped, using fallback Autocomplete:', err);
+                }
+            }
+
+            // 2. Fallback to legacy Autocomplete widget
             addressAutocomplete = new google.maps.places.Autocomplete(input, {
                 bounds: poloBounds,
                 componentRestrictions: { country: 'ph' },
@@ -470,40 +559,7 @@
 
             addressAutocomplete.addListener('place_changed', function() {
                 const place = addressAutocomplete.getPlace();
-                if (!place || !place.geometry || !place.geometry.location) return;
-
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-                const placeId = place.place_id || '';
-
-                const latInput = document.getElementById('addr-latitude');
-                const lngInput = document.getElementById('addr-longitude');
-                const placeIdInput = document.getElementById('addr-place-id');
-
-                if (latInput) latInput.value = lat;
-                if (lngInput) lngInput.value = lng;
-                if (placeIdInput) placeIdInput.value = placeId;
-
-                // Auto-match barangay in dropdown if detected
-                if (place.address_components) {
-                    for (const component of place.address_components) {
-                        const types = component.types;
-                        if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood') || types.includes('political')) {
-                            const brgyName = component.long_name.replace(/^(Barangay|Brgy\.?)\s+/i, '').trim();
-                            const brgySelect = document.getElementById('addr-barangay');
-                            if (brgySelect) {
-                                for (let i = 0; i < brgySelect.options.length; i++) {
-                                    if (brgySelect.options[i].value.toLowerCase() === brgyName.toLowerCase()) {
-                                        brgySelect.selectedIndex = i;
-                                        const l2 = document.getElementById('addr-line2');
-                                        if (l2) l2.value = brgySelect.options[i].value;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                handleCustomerPlaceSelection(place);
             });
         };
 

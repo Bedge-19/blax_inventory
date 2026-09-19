@@ -62,6 +62,7 @@ $routes->get('search', 'Customer::search');
 // Customer Dashboard / Account
 $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
     $routes->get('orders', 'Customer::orders');
+    $routes->get('orders/track/(:any)/position', 'Customer::getDeliveryPosition/$1');
     $routes->get('orders/track/(:any)', 'Customer::trackOrder/$1');
     $routes->post('orders/(:num)/cancel', 'Customer::cancelOrder/$1');
     $routes->post('orders/cancel', 'Customer::cancelOrder');
@@ -113,6 +114,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('printing/update-status', 'Tenant::updatePrintingStatus');
     $routes->post('printing/settings/save', 'Tenant::savePrintingSettings');
     $routes->post('deliveries/update-status', 'Tenant::updateDeliveryStatus');
+    $routes->post('deliveries/update-location', 'Tenant::updateDeliveryLocation');
     $routes->post('deliveries/lookup', 'Tenant::deliveryLookup');
     $routes->post('withdrawals/request', 'Tenant::requestWithdrawal');
     $routes->post('settings/save', 'Tenant::saveSettings');
@@ -150,6 +152,7 @@ $routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->get('payments', 'Admin::payments');
     $routes->get('compliance', 'Admin::compliance');
     $routes->get('tracking', 'Admin::tracking');
+    $routes->get('tracking/pins', 'Admin::trackingPins');
     $routes->get('audit-log', 'Admin::auditLog');
     $routes->get('analytics', 'Admin::analytics');
     $routes->get('analytics/data', 'Admin::analyticsData');

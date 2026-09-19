@@ -32,12 +32,16 @@ class AdvancedPrintingAndVariantUpsertTest extends CIUnitTestCase
         $this->assertArrayHasKey('down_payment_percent', $settings);
         $this->assertArrayHasKey('price_staple', $settings);
         $this->assertArrayHasKey('price_spiral', $settings);
+        $this->assertArrayHasKey('price_color_per_page', $settings);
+        $this->assertArrayHasKey('price_bw_per_page', $settings);
 
         // Save custom settings
         $ok = $settingModel->saveForShop($shopId, [
             'down_payment_percent' => 30.00,
             'price_staple'         => 12.00,
             'price_spiral'         => 40.00,
+            'price_color_per_page' => 6.50,
+            'price_bw_per_page'    => 2.75,
         ]);
         $this->assertTrue($ok);
 
@@ -45,12 +49,16 @@ class AdvancedPrintingAndVariantUpsertTest extends CIUnitTestCase
         $this->assertEquals(30.00, (float) $reloaded['down_payment_percent']);
         $this->assertEquals(12.00, (float) $reloaded['price_staple']);
         $this->assertEquals(40.00, (float) $reloaded['price_spiral']);
+        $this->assertEquals(6.50, (float) $reloaded['price_color_per_page']);
+        $this->assertEquals(2.75, (float) $reloaded['price_bw_per_page']);
 
-        // Restore to 50%
+        // Restore defaults
         $settingModel->saveForShop($shopId, [
             'down_payment_percent' => 50.00,
             'price_staple'         => 10.00,
             'price_spiral'         => 35.00,
+            'price_color_per_page' => 5.00,
+            'price_bw_per_page'    => 2.00,
         ]);
     }
 
@@ -67,20 +75,20 @@ class AdvancedPrintingAndVariantUpsertTest extends CIUnitTestCase
         $this->assertArrayHasKey('legal', $sizes);
         $this->assertArrayHasKey('a4', $sizes);
 
-        // Update letter and legal
+        // Update letter and legal is_enabled
         $ok = $paperModel->saveForShop($shopId, [
-            'letter' => ['is_enabled' => 1, 'price_color' => 6.00, 'price_bw' => 2.50],
-            'legal'  => ['is_enabled' => 0, 'price_color' => 7.00, 'price_bw' => 3.00],
+            'letter' => ['is_enabled' => 1],
+            'legal'  => ['is_enabled' => 0],
         ]);
         $this->assertTrue($ok);
 
         $reloaded = $paperModel->getForShop($shopId);
-        $this->assertEquals(6.00, (float) $reloaded['letter']['price_color']);
+        $this->assertEquals(1, (int) $reloaded['letter']['is_enabled']);
         $this->assertEquals(0, (int) $reloaded['legal']['is_enabled']);
 
         // Restore legal back to enabled so other tests aren't affected
         $paperModel->saveForShop($shopId, [
-            'legal' => ['is_enabled' => 1, 'price_color' => 7.50, 'price_bw' => 3.00],
+            'legal' => ['is_enabled' => 1],
         ]);
     }
 

@@ -107,16 +107,16 @@
                                 $isCancelled = ($orderStatus === 'cancelled');
                                 $isPickup = (($order['fulfillment_method'] ?? 'delivery') === 'pickup');
                                 $currentStep = match($orderStatus) {
-                                    'pending'                      => 1,
-                                    'processing'                   => 2,
-                                    'shipped', 'ready_for_pickup'  => 3,
-                                    'delivered', 'completed'       => 4,
-                                    default                        => 1,
+                                    'pending'                                  => 1,
+                                    'processing'                               => 2,
+                                    'shipped', 'in_transit', 'ready_for_pickup' => 3,
+                                    'delivered', 'completed'                   => 4,
+                                    default                                    => 1,
                                 };
                                 $steps = [
                                     1 => ['label' => 'Placed', 'icon' => 'shopping_bag'],
                                     2 => ['label' => 'Processing', 'icon' => 'inventory_2'],
-                                    3 => ['label' => $isPickup ? 'Ready for Pick-up' : 'In Transit', 'icon' => $isPickup ? 'storefront' : 'local_shipping'],
+                                    3 => ['label' => $isPickup ? 'Ready for Pick-up' : 'Shipped', 'icon' => $isPickup ? 'storefront' : 'local_shipping'],
                                     4 => ['label' => 'Completed', 'icon' => 'check_circle'],
                                 ];
                             ?>
@@ -283,11 +283,18 @@
 
                                 <?php else: ?>
 
-                                    <a href="<?= base_url('customer/orders/track/' . esc($order['order_number'] ?? $order['id'])) ?>" 
-                                       class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition gap-1.5 flex-1 md:flex-none">
-                                        <span class="material-symbols-outlined text-[18px]">local_shipping</span>
-                                        <span>Track Order</span>
-                                    </a>
+                                    <?php if (in_array($orderStatus, ['shipped', 'in_transit'], true)): ?>
+                                        <a href="<?= base_url('customer/orders/track/' . esc($order['order_number'] ?? $order['id'])) ?>" 
+                                           class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition gap-1.5 flex-1 md:flex-none">
+                                            <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                                            <span>Track Order</span>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-xs text-on-surface-variant/70 font-medium text-center py-sm px-md bg-surface-container/70 border border-outline-variant/30 rounded-lg flex items-center justify-center gap-1">
+                                            <span class="material-symbols-outlined text-[15px] text-outline">schedule</span>
+                                            <span>Tracking available once shipped</span>
+                                        </span>
+                                    <?php endif; ?>
 
                                 <?php endif; ?>
 

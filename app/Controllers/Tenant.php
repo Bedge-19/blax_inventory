@@ -717,9 +717,11 @@ class Tenant extends BaseController
         (new ArchivedItemModel())->autoArchiveCompletedItems($shopId, 3);
 
         // Recent requests (all statuses), with independent paginator group.
-        $search  = trim((string) $this->request->getGet('q'));
+        $search  = trim((string) ($this->request->getGet('q') ?: $this->request->getGet('search')));
         $status  = (string) $this->request->getGet('status');
         $status  = in_array($status, ['new', 'in_production', 'ready_for_pickup', 'ready_for_delivery', 'completed', 'cancelled'], true) ? $status : '';
+        $docType = strtolower((string) $this->request->getGet('doc_type'));
+        $docType = in_array($docType, ['pdf', 'docx'], true) ? $docType : '';
         $perPage = max(5, min(100, (int) ($this->request->getGet('per_page') ?? 10)));
         $page    = max(1, (int) $this->request->getGet('page_recent'));
 
@@ -729,7 +731,8 @@ class Tenant extends BaseController
             $status !== '' ? $status : null,
             $perPage,
             $page,
-            'recent'
+            'recent',
+            $docType !== '' ? $docType : null
         );
 
         // Completed section, separate paginator group.
@@ -748,10 +751,13 @@ class Tenant extends BaseController
         $paperModel   = new \App\Models\ShopPaperSizeSettingModel();
         $attModel     = new \App\Models\PrintingRequestAttachmentModel();
 
-        $allReqIds = array_merge(
+        $queue = (new PrintingRequestModel())->getProductionQueue($shopId);
+
+        $allReqIds = array_unique(array_filter(array_merge(
             array_column($recent['requests'], 'id'),
-            array_column($completed['requests'], 'id')
-        );
+            array_column($completed['requests'], 'id'),
+            array_column($queue, 'id')
+        )));
         $attsByReq = [];
         if (!empty($allReqIds)) {
             $rawAtts = $attModel->whereIn('printing_request_id', $allReqIds)->findAll();
@@ -767,16 +773,20 @@ class Tenant extends BaseController
             $cq['attachments'] = $attsByReq[$cq['id']] ?? [];
         }
         unset($cq);
+        foreach ($queue as &$qq) {
+            $qq['attachments'] = $attsByReq[$qq['id']] ?? [];
+        }
+        unset($qq);
 
         return view('tenant/printing', [
             'shop'             => $shop,
             'requests'         => $recent['requests'],
             'pager'            => $recent['pager'],
             'summary'          => (new PrintingRequestModel())->getPrintSummary($shopId),
-            'queue'            => (new PrintingRequestModel())->getProductionQueue($shopId),
+            'queue'            => $queue,
             'completed'        => $completed['requests'],
             'completed_pager'  => $completed['pager'],
-            'filters'          => ['q' => $search, 'status' => $status, 'cq' => $cSearch],
+            'filters'          => ['q' => $search, 'status' => $status, 'doc_type' => $docType, 'cq' => $cSearch],
             'printingSettings' => $settingModel->getForShop($shopId),
             'paperSizes'       => $paperModel->getForShop($shopId),
             'activeNav'        => 'printing',
@@ -796,7 +806,7 @@ class Tenant extends BaseController
 
         $search = trim((string) $this->request->getGet('q'));
         $status = (string) $this->request->getGet('status');
-        $status = in_array($status, ['ready_for_pickup', 'shipped', 'in_transit', 'delivered', 'cancelled'], true) ? $status : '';
+        $status = in_array($status, ['shipped', 'in_transit'], true) ? $status : '';
         $page   = max(1, (int) ($this->request->getGet('page_deliveries') ?: $this->request->getGet('page') ?: 1));
 
         $deliveryModel = new DeliveryModel();
@@ -817,12 +827,9 @@ class Tenant extends BaseController
             'pins'          => $deliveryModel->getDeliveryPins($shopId),
             'filters'       => ['q' => $search, 'status' => $status],
             'statusOptions' => [
-                'ready_for_pickup' => 'Ready for Pickup',
-                'shipped'          => 'Shipped',
-                'in_transit'       => 'In Transit',
-                'delivered'        => 'Delivered',
-                'returned'         => 'Returned',
-                'cancelled'        => 'Cancelled',
+                'shipped'    => 'Shipped',
+                'in_transit' => 'In Transit',
+                'delivered'  => 'Mark as Delivered',
             ],
             'activeNav'     => 'delivery',
             'title'         => 'Delivery Management',
@@ -968,6 +975,83 @@ class Tenant extends BaseController
                 'shipped_at'       => !empty($row['shipped_at']) ? date('M d, Y h:i A', strtotime($row['shipped_at'])) : null,
                 'delivered_at'     => !empty($row['delivered_at']) ? date('M d, Y h:i A', strtotime($row['delivered_at'])) : null,
             ],
+        ]);
+    }
+
+    /**
+     * Real-time GPS location broadcasting endpoint for delivery rider (shop owner).
+     * Route: POST tenant/deliveries/update-location
+     */
+    public function updateDeliveryLocation()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $deliveryId = (int) $this->request->getPost('delivery_id');
+        $lat        = (float) $this->request->getPost('lat');
+        $lng        = (float) $this->request->getPost('lng');
+
+        if ($deliveryId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => 'Delivery ID is required.',
+            ]);
+        }
+
+        $deliveryModel = new DeliveryModel();
+        $ownerShopId = $deliveryModel->resolveShopId($deliveryId);
+        if (!$ownerShopId || $ownerShopId !== $shopId) {
+            return $this->response->setStatusCode(403)->setJSON([
+                'success' => false,
+                'error'   => 'Access denied. This delivery does not belong to your shop.',
+            ]);
+        }
+
+        $delivery = $deliveryModel->find($deliveryId);
+        if (!$delivery) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'error'   => 'Delivery record not found.',
+            ]);
+        }
+
+        if (!in_array($delivery['status'], ['shipped', 'in_transit'], true)) {
+            return $this->response->setJSON([
+                'success' => false,
+                'error'   => 'Delivery is no longer active (' . $delivery['status'] . '). Updates ignored.',
+                'status'  => $delivery['status'],
+            ]);
+        }
+
+        if (!DeliveryModel::isPolomolokCoordinate($lat, $lng)) {
+            return $this->response->setStatusCode(422)->setJSON([
+                'success' => false,
+                'error'   => 'GPS coordinates are outside the Polomolok operational delivery zone.',
+            ]);
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $updateData = [
+            'current_lat'         => $lat,
+            'current_lng'         => $lng,
+            'location_updated_at' => $now,
+        ];
+        if ($delivery['status'] === 'shipped') {
+            $updateData['status'] = 'in_transit';
+        }
+
+        $deliveryModel->update($deliveryId, $updateData);
+
+        return $this->response->setJSON([
+            'success'    => true,
+            'lat'        => $lat,
+            'lng'        => $lng,
+            'status'     => $updateData['status'] ?? $delivery['status'],
+            'updated_at' => $now,
+            'csrf_hash'  => csrf_hash(),
         ]);
     }
 
@@ -1349,14 +1433,49 @@ class Tenant extends BaseController
                 $customer = (new UserModel())->find($order['customer_id']);
                 $address  = !empty($customer['address']) ? $customer['address'] : 'Customer Shipping Address';
 
+                // Determine real starting coordinates from the shop
+                $startLat = isset($shop['latitude']) && $shop['latitude'] !== null ? (float) $shop['latitude'] : null;
+                $startLng = isset($shop['longitude']) && $shop['longitude'] !== null ? (float) $shop['longitude'] : null;
+
+                if (!DeliveryModel::isPolomolokCoordinate($startLat, $startLng)) {
+                    // Attempt on-the-fly geocoding for the shop address
+                    $shopAddrParts = array_filter([
+                        $shop['street'] ?? '',
+                        $shop['barangay'] ?? '',
+                        $shop['city'] ?? 'Polomolok',
+                        $shop['province'] ?? 'South Cotabato',
+                    ]);
+                    $shopFullAddress = implode(', ', $shopAddrParts);
+                    if ($shopFullAddress !== '') {
+                        $geo = (new \App\Services\GoogleMapsService())->geocodeAddress($shopFullAddress);
+                        if ($geo && DeliveryModel::isPolomolokCoordinate($geo['lat'], $geo['lng'])) {
+                            $startLat = $geo['lat'];
+                            $startLng = $geo['lng'];
+                            (new ShopModel())->update($shopId, [
+                                'latitude'    => $startLat,
+                                'longitude'   => $startLng,
+                                'geocoded_at' => date('Y-m-d H:i:s'),
+                            ]);
+                        }
+                    }
+                }
+
+                // Fall back to Polomolok town center default only as last resort — never Manila
+                if (!DeliveryModel::isPolomolokCoordinate($startLat, $startLng)) {
+                    $gConfig = config('GoogleMaps');
+                    $startLat = $gConfig->defaultLat ?? DeliveryModel::POLOMOLOK_CENTER_LAT;
+                    $startLng = $gConfig->defaultLng ?? DeliveryModel::POLOMOLOK_CENTER_LNG;
+                }
+
                 $delId = $deliveryModel->insert([
                     'deliverable_type'    => 'order',
                     'deliverable_id'      => $orderId,
-                    'tracking_id'          => 'TRK-' . strtoupper(substr(md5($orderId . time()), 0, 8)),
+                    'tracking_id'         => 'TRK-' . strtoupper(substr(md5($orderId . time()), 0, 8)),
                     'courier_name'        => 'Standard Courier',
                     'destination_address' => $address,
-                    'current_lat'         => 14.5995,
-                    'current_lng'         => 120.9842,
+                    'current_lat'         => $startLat,
+                    'current_lng'         => $startLng,
+                    'location_updated_at' => date('Y-m-d H:i:s'),
                     'status'              => 'shipped',
                     'shipped_at'          => date('Y-m-d H:i:s'),
                     'created_at'          => date('Y-m-d H:i:s'),
@@ -1527,9 +1646,47 @@ class Tenant extends BaseController
     }
 
     /**
-     * Secure file download for a printing request. The stored file_url is
-     * resolved against WRITEPATH and containment-checked so arbitrary
-     * filesystem paths can never be served.
+     * Helper to resolve the physical file path for a printing request.
+     * Checks WRITEPATH and FCPATH candidate paths and ensures security containment.
+     */
+    protected function resolvePrintFilePath(array $row): ?string
+    {
+        $rawUrl = (string) ($row['file_url'] ?? '');
+        if (trim($rawUrl) === '') {
+            return null;
+        }
+
+        $clean = ltrim(str_replace(['\\', '//'], '/', $rawUrl), '/');
+        $baseName = basename($clean);
+
+        $candidates = [
+            WRITEPATH . 'uploads/printing/' . $baseName,
+            WRITEPATH . (str_starts_with($clean, 'writable/') ? substr($clean, strlen('writable/')) : $clean),
+            WRITEPATH . $clean,
+            WRITEPATH . 'uploads/' . $baseName,
+            FCPATH . $clean,
+            FCPATH . 'uploads/printing/' . $baseName,
+            FCPATH . 'uploads/printing_attachments/' . $baseName,
+        ];
+
+        $rootWrite = realpath(WRITEPATH);
+        $rootFc    = realpath(FCPATH);
+
+        foreach ($candidates as $cand) {
+            $real = realpath($cand);
+            if ($real !== false && is_file($real)) {
+                if (($rootWrite && str_starts_with($real . DIRECTORY_SEPARATOR, $rootWrite . DIRECTORY_SEPARATOR)) ||
+                    ($rootFc && str_starts_with($real . DIRECTORY_SEPARATOR, $rootFc . DIRECTORY_SEPARATOR))) {
+                    return $real;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Secure file download for a printing request.
      */
     public function downloadPrintFile($requestId)
     {
@@ -1546,18 +1703,9 @@ class Tenant extends BaseController
             return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found.');
         }
 
-        $rel  = ltrim((string) $row['file_url'], '/');
-        $path = str_starts_with($rel, 'writable/')
-            ? WRITEPATH . substr($rel, strlen('writable/'))
-            : WRITEPATH . $rel;
-
-        $real = realpath($path);
-        $root = realpath(WRITEPATH);
-        if ($real === false || $root === false || !str_starts_with($real . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR)) {
-            return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing file is not available.');
-        }
-        if (!is_file($real)) {
-            return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing on the server.');
+        $real = $this->resolvePrintFilePath($row);
+        if (!$real) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing or not accessible on the server.');
         }
 
         $name = trim((string) $row['file_name']);
@@ -1565,8 +1713,14 @@ class Tenant extends BaseController
             $name = basename($real);
         }
 
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime  = $finfo ? (finfo_file($finfo, $real) ?: 'application/octet-stream') : 'application/octet-stream';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
+
         return $this->response
-            ->setContentType('application/pdf')
+            ->setContentType($mime)
             ->setHeader('Content-Disposition', 'attachment; filename="' . str_replace('"', '', $name) . '"')
             ->setHeader('Content-Length', (string) filesize($real))
             ->setBody((string) file_get_contents($real));
@@ -1590,18 +1744,9 @@ class Tenant extends BaseController
             return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found.');
         }
 
-        $rel  = ltrim((string) $row['file_url'], '/');
-        $path = str_starts_with($rel, 'writable/')
-            ? WRITEPATH . substr($rel, strlen('writable/'))
-            : WRITEPATH . $rel;
-
-        $real = realpath($path);
-        $root = realpath(WRITEPATH);
-        if ($real === false || $root === false || !str_starts_with($real . DIRECTORY_SEPARATOR, $root . DIRECTORY_SEPARATOR)) {
-            return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing file is not available.');
-        }
-        if (!is_file($real)) {
-            return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing on the server.');
+        $real = $this->resolvePrintFilePath($row);
+        if (!$real) {
+            return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing or not accessible on the server.');
         }
 
         $name = trim((string) $row['file_name']);
@@ -1610,8 +1755,10 @@ class Tenant extends BaseController
         }
 
         $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = finfo_file($finfo, $real) ?: 'application/pdf';
-        finfo_close($finfo);
+        $mime  = $finfo ? (finfo_file($finfo, $real) ?: 'application/pdf') : 'application/pdf';
+        if ($finfo) {
+            finfo_close($finfo);
+        }
 
         return $this->response
             ->setContentType($mime)
@@ -1638,12 +1785,16 @@ class Tenant extends BaseController
         $downPaymentPercent = (float) ($this->request->getPost('down_payment_percent') ?? 50.00);
         $priceStaple        = (float) ($this->request->getPost('price_staple') ?? 10.00);
         $priceSpiral        = (float) ($this->request->getPost('price_spiral') ?? 35.00);
+        $priceColor         = (float) ($this->request->getPost('price_color_per_page') ?? 5.00);
+        $priceBw            = (float) ($this->request->getPost('price_bw_per_page') ?? 2.00);
 
         $settingModel = new \App\Models\ShopPrintingSettingModel();
         $settingModel->saveForShop($shopId, [
             'down_payment_percent' => $downPaymentPercent,
             'price_staple'         => $priceStaple,
             'price_spiral'         => $priceSpiral,
+            'price_color_per_page' => $priceColor,
+            'price_bw_per_page'    => $priceBw,
         ]);
 
         $sizesInput = (array) $this->request->getPost('paper_sizes');
@@ -1826,7 +1977,7 @@ class Tenant extends BaseController
         }
         $deliveryModel->update($deliveryId, $data);
 
-        // Synchronize linked order
+        // Synchronize linked order or printing request
         if ($row['deliverable_type'] === 'order') {
             if ($dbStatus === 'delivered') {
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'delivered', 'completed_at' => date('Y-m-d H:i:s')]);
@@ -1836,6 +1987,14 @@ class Tenant extends BaseController
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'shipped']);
             } elseif ($dbStatus === 'cancelled') {
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'cancelled']);
+            }
+        } elseif ($row['deliverable_type'] === 'printing_request') {
+            if ($dbStatus === 'delivered') {
+                (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'completed', 'completed_at' => date('Y-m-d H:i:s')]);
+            } elseif ($dbStatus === 'cancelled') {
+                (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'cancelled']);
+            } elseif ($dbStatus === 'shipped') {
+                (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'ready_for_delivery']);
             }
         }
 
@@ -3100,16 +3259,15 @@ class Tenant extends BaseController
         }
 
         // Record in audit log
-        (new \App\Models\AuditLogModel())->insert([
-            'actor_id'    => $userId,
-            'actor_role'  => 'shop_owner',
-            'action'      => 'pos_pickup_complete',
-            'target_type' => 'order',
-            'target_id'   => $orderId,
-            'status'      => 'success',
-            'ip_address'  => $this->request->getIPAddress(),
-            'created_at'  => date('Y-m-d H:i:s'),
-        ]);
+        (new \App\Models\AuditLogModel())->log(
+            $userId,
+            'tenant',
+            'pos_pickup_complete',
+            'order',
+            'success',
+            $orderId,
+            $this->request->getIPAddress()
+        );
 
         // Notify customer
         $customerId = (int) ($order['customer_id'] ?? 0);

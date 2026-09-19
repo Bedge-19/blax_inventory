@@ -19,6 +19,7 @@ class DeliveryModel extends Model
         'destination_address',
         'current_lat',
         'current_lng',
+        'location_updated_at',
         'status',
         'shipped_at',
         'delivered_at',
@@ -41,6 +42,7 @@ class DeliveryModel extends Model
             ->join('orders o', "o.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'order'", 'left')
             ->join('printing_requests pr', "pr.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'printing_request'", 'left')
             ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
             ->groupStart()
             ->where('o.shop_id', $shopId)
             ->orWhere('pr.shop_id', $shopId)
@@ -59,6 +61,9 @@ class DeliveryModel extends Model
 
         if ($status !== null && $status !== '') {
             $builder->where('deliveries.status', $status);
+        } else {
+            // Default view: only show active doorstep deliveries (shipped / in transit). Exclude completed/delivered, pickup, returned, and cancelled.
+            $builder->whereIn('deliveries.status', ['shipped', 'in_transit']);
         }
 
         return $builder;
@@ -66,13 +71,17 @@ class DeliveryModel extends Model
 
     public function syncMissingDeliveries(int $shopId): void
     {
-        // 1. Sync all printing requests for this shop
+        // 1. Sync all printing requests for this shop that are for DELIVERY only (exclude store pick-ups)
         $prs = $this->db->table('printing_requests')
             ->where('shop_id', $shopId)
+            ->where('fulfillment_method', 'delivery')
             ->get()->getResultArray();
 
         foreach ($prs as $pr) {
-            $trackingId = (string) ($pr['request_number'] ?? ('PR-' . $pr['id']));
+            $trackingId = (string) ($pr['request_number'] ?? '');
+            if ($trackingId === '') {
+                $trackingId = 'PR-' . strtoupper(substr(md5((string) $pr['id']), 0, 8));
+            }
             $existing = $this->db->table('deliveries')
                 ->where('deliverable_type', 'printing_request')
                 ->where('deliverable_id', (int) $pr['id'])
@@ -84,39 +93,42 @@ class DeliveryModel extends Model
                     ->get()->getRowArray();
             }
 
-            $isDelivery = ($pr['fulfillment_method'] ?? 'pickup') === 'delivery';
             $delStatus = match ($pr['status']) {
-                'ready_for_pickup'   => 'ready_for_pickup',
-                'ready_for_delivery' => 'shipped',
-                'completed'          => $isDelivery ? 'shipped' : 'ready_for_pickup',
-                'cancelled'          => 'cancelled',
-                default              => $isDelivery ? 'shipped' : 'ready_for_pickup',
+                'ready_for_delivery', 'shipped' => 'shipped',
+                'in_transit'                    => 'in_transit',
+                'completed'                     => 'delivered',
+                'cancelled'                     => 'cancelled',
+                default                         => 'shipped',
             };
 
             if ($existing) {
-                if ($existing['status'] !== $delStatus && !in_array($existing['status'], ['delivered', 'returned'], true)) {
-                    $this->update($existing['id'], ['status' => $delStatus]);
-                }
+                $this->update($existing['id'], [
+                    'status' => $delStatus,
+                ]);
             } else {
                 $this->insert([
                     'deliverable_type'    => 'printing_request',
                     'deliverable_id'      => (int) $pr['id'],
                     'tracking_id'         => $trackingId,
-                    'courier_name'        => ($pr['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Store Courier' : 'Store Pick-up',
-                    'destination_address' => ($pr['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Doorstep Delivery' : 'Store Pick-up (Poblacion, Polomolok)',
+                    'courier_name'        => 'Store Courier',
+                    'destination_address' => 'Doorstep Delivery',
                     'status'              => $delStatus,
                     'created_at'          => $pr['created_at'] ?? date('Y-m-d H:i:s'),
                 ]);
             }
         }
 
-        // 2. Sync all orders for this shop
+        // 2. Sync all orders for this shop that are for DELIVERY only (exclude store pick-ups)
         $orders = $this->db->table('orders')
             ->where('shop_id', $shopId)
+            ->where('fulfillment_method', 'delivery')
             ->get()->getResultArray();
 
         foreach ($orders as $ord) {
-            $trackingId = (string) ($ord['order_number'] ?? ('ORD-' . $ord['id']));
+            $trackingId = (string) ($ord['order_number'] ?? '');
+            if ($trackingId === '') {
+                $trackingId = 'TRK-' . strtoupper(substr(md5((string) $ord['id']), 0, 8));
+            }
             $existing = $this->db->table('deliveries')
                 ->where('deliverable_type', 'order')
                 ->where('deliverable_id', (int) $ord['id'])
@@ -129,25 +141,25 @@ class DeliveryModel extends Model
             }
 
             $delStatus = match ($ord['status']) {
-                'ready_for_pickup'  => 'ready_for_pickup',
                 'shipped'           => 'shipped',
+                'in_transit'        => 'in_transit',
                 'delivered'         => 'delivered',
                 'returned'          => 'returned',
                 'cancelled'         => 'cancelled',
-                default             => 'ready_for_pickup',
+                default             => 'shipped',
             };
 
             if ($existing) {
-                if ($existing['status'] !== $delStatus && !in_array($existing['status'], ['delivered', 'returned'], true)) {
-                    $this->update($existing['id'], ['status' => $delStatus]);
-                }
+                $this->update($existing['id'], [
+                    'status' => $delStatus,
+                ]);
             } else {
                 $this->insert([
                     'deliverable_type'    => 'order',
                     'deliverable_id'      => (int) $ord['id'],
                     'tracking_id'         => $trackingId,
-                    'courier_name'        => ($ord['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Store Courier' : 'Store Pick-up',
-                    'destination_address' => ($ord['fulfillment_method'] ?? 'pickup') === 'delivery' ? 'Customer Shipping Address' : 'Store Pick-up (Poblacion, Polomolok)',
+                    'courier_name'        => 'Store Courier',
+                    'destination_address' => 'Customer Shipping Address',
                     'status'              => $delStatus,
                     'created_at'          => $ord['created_at'] ?? date('Y-m-d H:i:s'),
                 ]);
@@ -155,42 +167,129 @@ class DeliveryModel extends Model
         }
     }
 
-    /**
-     * Paginated, tenant-scoped delivery list for the Delivery Management page.
-     */
     public function getDeliveriesByShopPaginated(
         int $shopId,
         ?string $search = null,
         ?string $status = null,
-        int $perPage = 12,
+        int $perPage = 10,
         int $page = 1,
         string $group = 'deliveries'
     ): array {
-        $this->syncMissingDeliveries($shopId);
-        $this->buildDeliveryQuery($shopId, $search, $status)
-            ->orderBy('deliveries.created_at', 'DESC');
+        return $this->getDeliveriesPaginated($shopId, $search, $status, $perPage, $page);
+    }
 
-        $deliveries = $this->paginate($perPage, $group, $page);
+    public function getDeliveriesPaginated(
+        int $shopId,
+        ?string $search = null,
+        ?string $status = null,
+        int $perPage = 10,
+        int $page = 1
+    ): array {
+        $this->syncMissingDeliveries($shopId);
+
+        // Pre-count total matching rows
+        $countQuery = $this->db->table('deliveries d')
+            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
+            ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
+            ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
+            ->groupStart()
+            ->where('o.shop_id', $shopId)
+            ->orWhere('pr.shop_id', $shopId)
+            ->groupEnd();
+
+        if ($search !== null && $search !== '') {
+            $countQuery->groupStart()
+                ->like('d.tracking_id', $search)
+                ->orLike('COALESCE(o.order_number, pr.request_number)', $search)
+                ->orLike('u.first_name', $search)
+                ->orLike('u.last_name', $search)
+                ->orLike('d.destination_address', $search)
+                ->groupEnd();
+        }
+
+        if ($status !== null && $status !== '') {
+            $countQuery->where('d.status', $status);
+        } else {
+            $countQuery->whereIn('d.status', ['shipped', 'in_transit']);
+        }
+
+        $total = $countQuery->countAllResults();
+
+        // Paginate using builder
+        $builder = $this->buildDeliveryQuery($shopId, $search, $status);
+        $deliveries = $builder->orderBy('deliveries.created_at', 'DESC')
+            ->get($perPage, ($page - 1) * $perPage)
+            ->getResultArray();
+
+        // Build a manual pager so pagination links work
+        $pagerService = service('pager');
+        $pagerService->store('deliveries', $page, $perPage, $total);
+        $this->pager = $pagerService;
 
         return [
-            'deliveries' => $this->enrichDeliveriesWithProducts($deliveries ?: []),
-            'pager'      => $this->pager,
+            'deliveries' => $deliveries,
+            'pager'      => $pagerService,
+            'total'      => $total,
         ];
     }
 
     /**
-     * Unpaginated, tenant-scoped delivery list for the CSV export.
+     * Admin-scoped delivery list with shop name join and pagination.
      */
-    public function getDeliveriesForExport(
-        int $shopId,
+    public function getAdminTrackingPaginated(
         ?string $search = null,
-        ?string $status = null
+        ?string $shopFilter = null,
+        ?string $status = null,
+        int $perPage = 20,
+        int $page = 1,
+        string $group = 'tracking'
     ): array {
-        $deliveries = $this->buildDeliveryQuery($shopId, $search, $status)
-            ->orderBy('deliveries.created_at', 'DESC')
-            ->get()->getResultArray();
+        $builder = $this->db->table('deliveries d')
+            ->select("d.*, COALESCE(o.order_number, pr.request_number) AS ref_number, COALESCE(o.fulfillment_method, pr.fulfillment_method) AS fulfillment_method, u.first_name, u.last_name, s.shop_name, s.id as shop_id, sa.address_line1, sa.city, sa.province")
+            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
+            ->join('shipping_addresses sa', "sa.id = o.shipping_address_id", 'left')
+            ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
+            ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
+            ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery');
 
-        return $this->enrichDeliveriesWithProducts($deliveries ?: []);
+        if ($search !== null && $search !== '') {
+            $builder->groupStart()
+                ->like('d.tracking_id', $search)
+                ->orLike('COALESCE(o.order_number, pr.request_number)', $search)
+                ->orLike('u.first_name', $search)
+                ->orLike('u.last_name', $search)
+                ->orLike('d.destination_address', $search)
+                ->orLike('s.shop_name', $search)
+                ->groupEnd();
+        }
+
+        if ($shopFilter !== null && $shopFilter !== '') {
+            $builder->where('s.shop_name', $shopFilter);
+        }
+
+        if ($status !== null && $status !== '') {
+            $builder->where('d.status', $status);
+        }
+
+        $countBuilder = clone $builder;
+        $total = $countBuilder->countAllResults(false);
+
+        $deliveries = $builder->orderBy('d.created_at', 'DESC')
+            ->limit($perPage, ($page - 1) * $perPage)
+            ->get()
+            ->getResultArray();
+
+        $pagerService = service('pager');
+        $pagerService->store($group, $page, $perPage, $total);
+        $this->pager = $pagerService;
+
+        return [
+            'deliveries' => $deliveries,
+            'pager'      => $pagerService,
+            'total'      => $total,
+        ];
     }
 
     /**
@@ -299,31 +398,33 @@ class DeliveryModel extends Model
     }
 
     /**
-     * Delivery-page KPI cards, all tenant-scoped aggregate SQL.
+     * KPI counters for tenant delivery overview.
      */
-    public function getDeliveryKPIs(int $shopId): array
+    public function getDeliveryKpis(int $shopId): array
     {
-        $today = $this->getLocalToday();
+        $today = date('Y-m-d');
 
         $row = $this->db->table('deliveries d')
             ->select("
-                SUM(CASE WHEN d.status IN ('ready_for_pickup','shipped','in_transit') THEN 1 ELSE 0 END) AS active,
-                SUM(CASE WHEN d.status = 'ready_for_pickup' THEN 1 ELSE 0 END) AS ready_for_pickup,
+                SUM(CASE WHEN d.status IN ('shipped','in_transit') THEN 1 ELSE 0 END) AS active,
                 SUM(CASE WHEN d.status = 'shipped' THEN 1 ELSE 0 END) AS shipped,
+                SUM(CASE WHEN d.status = 'in_transit' THEN 1 ELSE 0 END) AS in_transit,
                 SUM(CASE WHEN d.status = 'delivered' AND d.delivered_at >= '" . $today . " 00:00:00' THEN 1 ELSE 0 END) AS completed_today
             ")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
             ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
             ->groupStart()
             ->where('o.shop_id', $shopId)
             ->orWhere('pr.shop_id', $shopId)
             ->groupEnd()
-            ->get()->getRow();
+            ->get()
+            ->getRow();
 
         return [
             'active'            => (int) ($row->active ?? 0),
-            'ready_for_pickup'  => (int) ($row->ready_for_pickup ?? 0),
             'shipped'           => (int) ($row->shipped ?? 0),
+            'in_transit'        => (int) ($row->in_transit ?? 0),
             'completed_today'   => (int) ($row->completed_today ?? 0),
         ];
     }
@@ -344,23 +445,23 @@ class DeliveryModel extends Model
     }
 
     /**
-     * In-progress deliveries with their latest position, for the fleet map.
-     * Courier removed — shops handle own deliveries.
+     * In-progress doorstep deliveries with their latest position, for the fleet map.
      */
     public function getDeliveryPins(int $shopId): array
     {
         $rows = $this->db->table('deliveries d')
-            ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, u.phone as customer_phone, sa.address_line1, sa.city, sa.province, sa.label as address_label, s.shop_name")
+            ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, d.location_updated_at, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, u.phone as customer_phone, sa.address_line1, sa.city, sa.province, sa.label as address_label, s.shop_name, s.latitude as shop_lat, s.longitude as shop_lng")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
             ->join('shipping_addresses sa', "sa.id = o.shipping_address_id", 'left')
             ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
             ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
             ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
             ->groupStart()
                 ->where('o.shop_id', $shopId)
                 ->orWhere('pr.shop_id', $shopId)
             ->groupEnd()
-            ->whereIn('d.status', ['ready_for_pickup', 'shipped', 'in_transit', 'delivered', 'returned'])
+            ->whereIn('d.status', ['shipped', 'in_transit'])
             ->orderBy('d.created_at', 'DESC')
             ->get()->getResultArray();
 
@@ -377,10 +478,16 @@ class DeliveryModel extends Model
             $lat = (float) ($r['current_lat'] ?? 0);
             $lng = (float) ($r['current_lng'] ?? 0);
             if (!self::isPolomolokCoordinate($lat, $lng)) {
-                // Generate realistic coordinate in Polomolok area based on delivery id
-                $seed = (int) $r['id'];
-                $r['current_lat'] = number_format(6.2136 + ((($seed * 17) % 30) - 15) * 0.0015, 7, '.', '');
-                $r['current_lng'] = number_format(125.0661 + ((($seed * 23) % 30) - 15) * 0.0015, 7, '.', '');
+                // Honest fallback: use shop's real starting coordinates if valid, else Polomolok center
+                $shopLat = (float) ($r['shop_lat'] ?? 0);
+                $shopLng = (float) ($r['shop_lng'] ?? 0);
+                if (self::isPolomolokCoordinate($shopLat, $shopLng)) {
+                    $r['current_lat'] = number_format($shopLat, 7, '.', '');
+                    $r['current_lng'] = number_format($shopLng, 7, '.', '');
+                } else {
+                    $r['current_lat'] = number_format(self::POLOMOLOK_CENTER_LAT, 7, '.', '');
+                    $r['current_lng'] = number_format(self::POLOMOLOK_CENTER_LNG, 7, '.', '');
+                }
             }
         }
         unset($r);
@@ -394,19 +501,39 @@ class DeliveryModel extends Model
     public function getAllDeliveryPins(?string $search = null, ?string $shopFilter = null): array
     {
         $builder = $this->db->table('deliveries d')
-            ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, s.shop_name, s.id as shop_id")
+            ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, d.location_updated_at, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, s.shop_name, s.id as shop_id, s.logo_url as shop_logo, s.latitude as shop_lat, s.longitude as shop_lng")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
             ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
             ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
             ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
-            ->whereIn('d.status', ['ready_for_pickup', 'shipped', 'in_transit']);
+            ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
+            ->whereIn('d.status', ['shipped', 'in_transit']);
         if ($search !== null && $search !== '') {
             $builder->groupStart()->like('d.tracking_id', $search)->orLike('d.destination_address', $search)->orLike('s.shop_name', $search)->groupEnd();
         }
         if ($shopFilter !== null && $shopFilter !== '') {
             $builder->where('s.shop_name', $shopFilter);
         }
-        return $builder->orderBy('d.created_at', 'DESC')->get()->getResultArray();
+        $rows = $builder->orderBy('d.created_at', 'DESC')->get()->getResultArray();
+
+        foreach ($rows as &$r) {
+            $lat = (float) ($r['current_lat'] ?? 0);
+            $lng = (float) ($r['current_lng'] ?? 0);
+            if (!self::isPolomolokCoordinate($lat, $lng)) {
+                $shopLat = (float) ($r['shop_lat'] ?? 0);
+                $shopLng = (float) ($r['shop_lng'] ?? 0);
+                if (self::isPolomolokCoordinate($shopLat, $shopLng)) {
+                    $r['current_lat'] = number_format($shopLat, 7, '.', '');
+                    $r['current_lng'] = number_format($shopLng, 7, '.', '');
+                } else {
+                    $r['current_lat'] = number_format(self::POLOMOLOK_CENTER_LAT, 7, '.', '');
+                    $r['current_lng'] = number_format(self::POLOMOLOK_CENTER_LNG, 7, '.', '');
+                }
+            }
+        }
+        unset($r);
+
+        return $rows;
     }
 
     /**
@@ -737,58 +864,5 @@ class DeliveryModel extends Model
     public function getLocalToday(): string
     {
         return (string) $this->db->query('SELECT CURDATE() AS d')->getRow()->d;
-    }
-
-    /**
-     * Paginated deliveries for Admin live tracking / fleet monitor table.
-     *
-     * @return array{deliveries: array, pager: \CodeIgniter\Pager\Pager|null}
-     */
-    public function getAdminTrackingPaginated(
-        ?string $search = null,
-        ?string $shopFilter = null,
-        ?string $status = null,
-        int $perPage = 20,
-        int $page = 1,
-        string $group = 'tracking'
-    ): array {
-        $this->builder()
-            ->select("deliveries.*, deliveries.deliverable_id as order_id, deliveries.status as delivery_status, COALESCE(deliveries.destination_address, sa.address_line1) as shipping_address, deliveries.created_at as updated_at, s.shop_name, u.first_name, u.last_name, COALESCE(o.order_number, pr.request_number) as ref_number, deliveries.deliverable_type")
-            ->join('orders o', "o.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'order'", 'left')
-            ->join('printing_requests pr', "pr.id = deliveries.deliverable_id AND deliveries.deliverable_type = 'printing_request'", 'left')
-            ->join('shipping_addresses sa', 'sa.id = o.shipping_address_id', 'left')
-            ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
-            ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
-            ->orderBy('deliveries.created_at', 'DESC');
-
-        if ($search !== null && $search !== '') {
-            $this->builder()->groupStart()
-                ->like('deliveries.tracking_id', $search)
-                ->orLike('s.shop_name', $search)
-                ->orLike('deliveries.destination_address', $search)
-                ->groupEnd();
-        }
-
-        if ($shopFilter !== null && $shopFilter !== '') {
-            $this->builder()->where('s.shop_name', $shopFilter);
-        }
-
-        if ($status !== null && in_array($status, ['ready_for_pickup', 'shipped', 'in_transit', 'delivered', 'cancelled'], true)) {
-            $this->builder()->where('deliveries.status', $status);
-        }
-
-        // Restrict to Polomolok destinations
-        $this->builder()->groupStart()
-            ->like('COALESCE(deliveries.destination_address, sa.city)', 'Polomolok')
-            ->orLike('sa.province', 'South Cotabato')
-            ->orWhere('deliveries.destination_address IS NULL')
-            ->groupEnd();
-
-        $deliveries = $this->paginate($perPage, $group, $page);
-
-        return [
-            'deliveries' => $deliveries ?: [],
-            'pager'      => $this->pager,
-        ];
     }
 }

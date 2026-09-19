@@ -59,6 +59,12 @@ class CustomerOrderController extends BaseController
             return redirect()->to('/customer/orders')->with('error', 'This order is for Store Pick-up. Please view your Store Pick-up QR Pass.');
         }
 
+        // Live delivery tracking is only available once the order has been shipped
+        $status = strtolower(trim((string) $order['status']));
+        if (!in_array($status, ['shipped', 'in_transit', 'delivered', 'completed'], true)) {
+            return redirect()->to('/customer/orders')->with('error', 'Live delivery tracking will be available once the store has marked your order as shipped.');
+        }
+
         // Fetch Shop info
         $shopModel = new ShopModel();
         $shop = $shopModel->find($order['shop_id']) ?? [];
@@ -392,6 +398,89 @@ class CustomerOrderController extends BaseController
         return $this->response->setJSON([
             'success' => true,
             'route'   => $route,
+        ]);
+    }
+
+    /**
+     * AJAX endpoint for customer live position polling.
+     * Route: GET customer/orders/track/(:any)/position
+     */
+    public function getDeliveryPosition($orderRef = null)
+    {
+        $session = session();
+        $userId  = $session->get('user_id');
+
+        if (!$userId) {
+            return $this->response->setStatusCode(401)->setJSON([
+                'success' => false,
+                'error'   => 'Unauthorized',
+            ]);
+        }
+
+        if (empty($orderRef)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => 'Missing order reference',
+            ]);
+        }
+
+        $orderModel = new OrderModel();
+        $order = null;
+
+        if (is_numeric($orderRef)) {
+            $order = $orderModel->where('id', (int) $orderRef)->first();
+        }
+        if (!$order) {
+            $order = $orderModel->where('order_number', (string) $orderRef)->first();
+        }
+        if (!$order && is_numeric($orderRef)) {
+            $order = $orderModel->where('order_number', 'ORD-' . $orderRef)->first();
+        }
+
+        if (!$order || (int) $order['customer_id'] !== (int) $userId) {
+            return $this->response->setStatusCode(404)->setJSON([
+                'success' => false,
+                'error'   => 'Order not found or access denied.',
+            ]);
+        }
+
+        $deliveryModel = new DeliveryModel();
+        $delivery = $deliveryModel->where('deliverable_type', 'order')
+            ->where('deliverable_id', (int) $order['id'])
+            ->first();
+
+        $status = strtolower(trim((string) $order['status']));
+        if (!in_array($status, ['shipped', 'in_transit', 'delivered', 'completed'], true)) {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => 'Live tracking is not available until the order has been shipped.',
+            ]);
+        }
+
+        $lat = null;
+        $lng = null;
+
+        if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
+            $lat = (float) $delivery['current_lat'];
+            $lng = (float) $delivery['current_lng'];
+        } else {
+            $shop = (new ShopModel())->find($order['shop_id']);
+            if ($shop && !empty($shop['latitude']) && !empty($shop['longitude']) && DeliveryModel::isPolomolokCoordinate((float) $shop['latitude'], (float) $shop['longitude'])) {
+                $lat = (float) $shop['latitude'];
+                $lng = (float) $shop['longitude'];
+            } else {
+                $lat = DeliveryModel::POLOMOLOK_CENTER_LAT;
+                $lng = DeliveryModel::POLOMOLOK_CENTER_LNG;
+            }
+        }
+
+        return $this->response->setJSON([
+            'success'         => true,
+            'status'          => $status,
+            'delivery_status' => $delivery['status'] ?? 'pending',
+            'lat'             => $lat,
+            'lng'             => $lng,
+            'updated_at'      => $delivery['location_updated_at'] ?? $delivery['updated_at'] ?? null,
         ]);
     }
 }

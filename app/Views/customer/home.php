@@ -28,20 +28,10 @@
             <div class="mt-sm flex gap-md">
 
                 <a href="#catalog" class="bg-primary text-on-primary text-button font-button px-lg py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-300 hover:scale-105 hover:shadow-lg">
-
-                    Shop Now
-
+                    <?= esc($sc['hero_cta_text']['text_value'] ?? 'Shop Now') ?>
                 </a>
 
             </div>
-
-        </div>
-
-        <!-- Carousel Controls (Static representation) -->
-        <div class="absolute bottom-md right-lg flex gap-sm z-20">
-
-            <button type="button" class="w-10 h-10 rounded-full glassmorphism flex items-center justify-center text-on-surface hover:text-primary transition-colors shadow-sm"><span class="material-symbols-outlined">chevron_left</span></button>
-            <button type="button" class="w-10 h-10 rounded-full glassmorphism flex items-center justify-center text-on-surface hover:text-primary transition-colors shadow-sm"><span class="material-symbols-outlined">chevron_right</span></button>
 
         </div>
 

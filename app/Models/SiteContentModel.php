@@ -50,6 +50,21 @@ class SiteContentModel extends Model
         return $grouped;
     }
 
+    /**
+     * Fetch all site content entries indexed by content_key.
+     *
+     * @return array<string, array>
+     */
+    public function getAllKeyMap(): array
+    {
+        $rows = $this->orderBy('sort_order', 'ASC')->findAll();
+        $map = [];
+        foreach ($rows as $r) {
+            $map[$r['content_key']] = $r;
+        }
+        return $map;
+    }
+
     public function getPlatformDeductionPercent(): float
     {
         $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();

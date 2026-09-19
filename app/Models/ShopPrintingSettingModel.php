@@ -16,6 +16,8 @@ class ShopPrintingSettingModel extends Model
         'down_payment_percent',
         'price_staple',
         'price_spiral',
+        'price_color_per_page',
+        'price_bw_per_page',
     ];
     protected $useTimestamps    = true;
     protected $createdField     = 'created_at';
@@ -28,6 +30,8 @@ class ShopPrintingSettingModel extends Model
         'down_payment_percent' => 50.00,
         'price_staple'         => 10.00,
         'price_spiral'         => 35.00,
+        'price_color_per_page' => 5.00,
+        'price_bw_per_page'    => 2.00,
     ];
 
     /**
@@ -47,6 +51,8 @@ class ShopPrintingSettingModel extends Model
             'down_payment_percent' => (float) ($setting['down_payment_percent'] ?? self::DEFAULTS['down_payment_percent']),
             'price_staple'         => (float) ($setting['price_staple'] ?? self::DEFAULTS['price_staple']),
             'price_spiral'         => (float) ($setting['price_spiral'] ?? self::DEFAULTS['price_spiral']),
+            'price_color_per_page' => (float) ($setting['price_color_per_page'] ?? self::DEFAULTS['price_color_per_page']),
+            'price_bw_per_page'    => (float) ($setting['price_bw_per_page'] ?? self::DEFAULTS['price_bw_per_page']),
         ];
     }
 
@@ -62,6 +68,8 @@ class ShopPrintingSettingModel extends Model
             'down_payment_percent' => isset($data['down_payment_percent']) ? max(0, min(100, (float) $data['down_payment_percent'])) : self::DEFAULTS['down_payment_percent'],
             'price_staple'         => isset($data['price_staple']) ? max(0, (float) $data['price_staple']) : self::DEFAULTS['price_staple'],
             'price_spiral'         => isset($data['price_spiral']) ? max(0, (float) $data['price_spiral']) : self::DEFAULTS['price_spiral'],
+            'price_color_per_page' => isset($data['price_color_per_page']) ? max(0, (float) $data['price_color_per_page']) : self::DEFAULTS['price_color_per_page'],
+            'price_bw_per_page'    => isset($data['price_bw_per_page']) ? max(0, (float) $data['price_bw_per_page']) : self::DEFAULTS['price_bw_per_page'],
         ];
 
         if ($existing) {

@@ -86,10 +86,11 @@ class PrintingRequestModel extends Model
         ?string $status = null,
         int $perPage = 10,
         int $page = 1,
-        string $group = 'recent'
+        string $group = 'recent',
+        ?string $docType = null
     ) {
         $this->builder()
-            ->select('printing_requests.*, u.first_name, u.last_name, u.profile_image_url')
+            ->select('printing_requests.*, u.first_name, u.last_name, u.profile_image_url, u.email, u.phone')
             ->join('users u', 'u.id = printing_requests.customer_id', 'left')
             ->where('printing_requests.shop_id', $shopId)
             ->orderBy("CASE 
@@ -110,6 +111,9 @@ class PrintingRequestModel extends Model
 
         if ($status !== null && $status !== '') {
             $this->builder()->where('printing_requests.status', $status);
+        }
+        if ($docType !== null && in_array(strtolower($docType), ['pdf', 'docx'], true)) {
+            $this->builder()->where('LOWER(printing_requests.document_type)', strtolower($docType));
         }
         if ($search !== null && $search !== '') {
             $this->builder()
@@ -169,7 +173,7 @@ class PrintingRequestModel extends Model
     public function getProductionQueue(int $shopId, int $limit = 10): array
     {
         return $this->db->table('printing_requests pr')
-            ->select('pr.*, u.first_name, u.last_name')
+            ->select('pr.*, u.first_name, u.last_name, u.profile_image_url, u.email, u.phone')
             ->join('users u', 'u.id = pr.customer_id', 'left')
             ->where('pr.shop_id', $shopId)
             ->where('pr.status', 'in_production')
@@ -191,7 +195,7 @@ class PrintingRequestModel extends Model
         string $group = 'completed'
     ) {
         $this->builder()
-            ->select('printing_requests.*, u.first_name, u.last_name')
+            ->select('printing_requests.*, u.first_name, u.last_name, u.profile_image_url, u.email, u.phone')
             ->join('users u', 'u.id = printing_requests.customer_id', 'left')
             ->where('printing_requests.shop_id', $shopId)
             ->where('printing_requests.status', 'completed')

@@ -43,26 +43,26 @@
             <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['active'] ?? 0)) ?></p>
         </div>
 
-        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-secondary/40">
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-blue-500/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-2 bg-secondary-container/30 text-secondary rounded-xl">
-                    <span class="material-symbols-outlined text-[20px]">storefront</span>
+                <div class="p-2 bg-blue-500/10 text-blue-600 rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">inventory</span>
                 </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-secondary bg-secondary-container/20 px-2 py-0.5 rounded-full">Pick-up</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-500/10 px-2 py-0.5 rounded-full">Shipped</span>
             </div>
-            <h3 class="text-xs text-on-surface-variant font-medium">Ready for Pick-up</h3>
-            <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['ready_for_pickup'] ?? 0)) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">Shipped Packages</h3>
+            <p class="text-headline-md font-extrabold text-blue-700 mt-xs font-mono"><?= number_format((int) ($kpis['shipped'] ?? 0)) ?></p>
         </div>
 
-        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-tertiary/40">
+        <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-amber-500/40">
             <div class="flex justify-between items-start mb-sm">
-                <div class="p-2 bg-tertiary-container/20 text-tertiary rounded-xl">
-                    <span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
+                <div class="p-2 bg-amber-500/10 text-amber-600 rounded-xl">
+                    <span class="material-symbols-outlined text-[20px]">navigation</span>
                 </div>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-tertiary bg-tertiary/10 px-2 py-0.5 rounded-full">Dispatched</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-full">In Transit</span>
             </div>
-            <h3 class="text-xs text-on-surface-variant font-medium">Shipped &bull; In Transit</h3>
-            <p class="text-headline-md font-extrabold text-on-surface mt-xs font-mono"><?= number_format((int) ($kpis['shipped'] ?? 0)) ?></p>
+            <h3 class="text-xs text-on-surface-variant font-medium">In Transit</h3>
+            <p class="text-headline-md font-extrabold text-amber-700 mt-xs font-mono"><?= number_format((int) ($kpis['in_transit'] ?? 0)) ?></p>
         </div>
 
         <div class="bg-surface-container-lowest p-md rounded-2xl border border-outline-variant/30 shadow-2xs transition-all hover:border-emerald-500/40">
@@ -96,7 +96,7 @@
                 <select id="liveStatusFilter" 
                         onchange="applyStatusFilter(this.value)"
                         class="px-md py-2.5 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
-                    <option value="">All Statuses</option>
+                    <option value="">All Active Deliveries</option>
                     <?php foreach ($statusOptions as $val => $label): ?>
                         <option value="<?= esc($val) ?>" <?= ($filters['status'] ?? '') === $val ? 'selected' : '' ?>><?= esc($label) ?></option>
                     <?php endforeach; ?>
@@ -113,12 +113,9 @@
             <?php
                 $activeFilter = $filters['status'] ?? '';
                 $pills = [
-                    ''                 => 'All Shipments',
-                    'ready_for_pickup' => 'Ready for Pickup',
-                    'shipped'          => 'Shipped',
-                    'in_transit'       => 'In Transit',
-                    'delivered'        => 'Delivered',
-                    'cancelled'        => 'Cancelled',
+                    ''           => 'All Active Deliveries',
+                    'shipped'    => 'Shipped',
+                    'in_transit' => 'In Transit',
                 ];
             ?>
             <?php foreach ($pills as $pkey => $plabel): ?>
@@ -174,17 +171,10 @@
                         <div class="flex items-center justify-between gap-sm mb-sm">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <?= status_badge($d['status']) ?>
-                                <?php if ($isPickup): ?>
-                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-secondary bg-secondary-container/30 border border-secondary/20 px-2 py-0.5 rounded-full">
-                                        <span class="material-symbols-outlined text-[13px]">storefront</span>
-                                        <span>Pick-up</span>
-                                    </span>
-                                <?php else: ?>
-                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
-                                        <span class="material-symbols-outlined text-[13px]">local_shipping</span>
-                                        <span>Delivery</span>
-                                    </span>
-                                <?php endif; ?>
+                                <span class="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
+                                    <span class="material-symbols-outlined text-[13px]">local_shipping</span>
+                                    <span>Doorstep Delivery</span>
+                                </span>
                             </div>
 
                             <!-- More Menu / Quick Status Dropdown -->
@@ -313,7 +303,7 @@
                     local_shipping
                 </span>
                 <h3 class="text-title-md font-bold text-on-surface">No Deliveries Found</h3>
-                <p class="text-xs text-on-surface-variant max-w-sm mx-auto">There are currently no shipment records matching your filter. Orders marked for delivery or ready for pickup will appear here.</p>
+                <p class="text-xs text-on-surface-variant max-w-sm mx-auto">There are currently no active doorstep deliveries matching your filter. Orders dispatched for delivery will appear here.</p>
                 <button type="button" onclick="resetShipmentFilters()" class="mt-2 px-md py-sm bg-primary text-on-primary text-xs font-bold rounded-xl hover:bg-primary/90">
                     Clear Filters
                 </button>
@@ -332,7 +322,7 @@
     </div>
 
     <!-- Modern Styled Pagination Bar -->
-    <?php if (isset($pager)): ?>
+    <?php if (isset($pager) && is_object($pager)): ?>
         <?php
             $dTot   = (int) $pager->getTotal('deliveries');
             $dCur   = (int) $pager->getCurrentPage('deliveries');
@@ -364,6 +354,10 @@
                     </a>
                 </div>
             <?php endif; ?>
+        </div>
+    <?php elseif (isset($pager) && is_string($pager) && trim($pager) !== ''): ?>
+        <div class="mt-lg pt-md">
+            <?= $pager ?>
         </div>
     <?php endif; ?>
 
@@ -618,6 +612,19 @@
 
     function startDeliveryCamera() {
         if (typeof Html5Qrcode === 'undefined') return;
+
+        if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            const statusEl = document.getElementById('scannerStatus');
+            if (statusEl) statusEl.textContent = 'Camera requires HTTPS or localhost. Please upload a photo or enter code manually.';
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const statusEl = document.getElementById('scannerStatus');
+            if (statusEl) statusEl.textContent = 'Camera is not supported on this browser context. Please upload a photo or enter code manually.';
+            return;
+        }
+
         if (!deliveryHtml5QrCode) {
             deliveryHtml5QrCode = new Html5Qrcode("qr-reader");
         }
@@ -752,7 +759,7 @@
         const fd = new FormData();
         fd.append('tracking_id', trackingCode);
         const csrfToken = '<?= csrf_token() ?>';
-        const csrfHash  = '<?= csrf_hash() ?>';
+        const csrfHash  = (window.getCsrfToken && window.getCsrfToken()) ? window.getCsrfToken() : '<?= csrf_hash() ?>';
         fd.append(csrfToken, csrfHash);
 
         fetch('<?= base_url('tenant/deliveries/lookup') ?>', {
@@ -763,6 +770,10 @@
         .then(r => r.json())
         .then(data => {
             iconEl.classList.remove('animate-spin');
+            if (data && data.csrf_hash) {
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) meta.setAttribute('content', data.csrf_hash);
+            }
             if (data.success && data.delivery) {
                 const isDelivered = data.action_type === 'delivered' || data.action_type === 'already_delivered' || data.delivery.status === 'delivered' || data.delivery.status === 'completed';
                 resultBox.classList.remove('bg-surface-container', 'text-on-surface', 'border-outline-variant');

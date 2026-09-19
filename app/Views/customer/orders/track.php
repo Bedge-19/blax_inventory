@@ -577,65 +577,83 @@
         // 4. Fetch Route Polyline from backend proxy (/api/route)
         fetchRoutePolyline(storeLatLng, destLatLng, courierLatLng);
 
-        // Fit map bounds to show all markers
-        const bounds = new google.maps.LatLngBounds();
-        bounds.extend(storeLatLng);
-        bounds.extend(destLatLng);
-        bounds.extend(courierLatLng);
-        trackMap.fitBounds(bounds, 60);
+        // Start live position polling (every 6 seconds)
+        startPositionPolling();
     };
 
-    function fetchRoutePolyline(storeLatLng, destLatLng, courierLatLng) {
-        fetch('<?= base_url('api/route') ?>', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                origin: storeLatLng,
-                destination: destLatLng
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data && data.success && data.route && data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
-                const decodedPath = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
-                if (routePolyline) routePolyline.setMap(null);
-                routePolyline = new google.maps.Polyline({
-                    path: decodedPath,
-                    geodesic: true,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.85,
-                    strokeWeight: 4,
-                    map: trackMap
-                });
+    let currentRiderPos = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
+    let animationFrameId = null;
+    let pollInterval = null;
+
+    function animateMarkerTo(targetLat, targetLng) {
+        if (!courierMarker) return;
+        const startLat = currentRiderPos.lat;
+        const startLng = currentRiderPos.lng;
+        const startTime = performance.now();
+        const duration = 2000; // 2-second smooth lerp
+
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+        }
+
+        function step(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out quad
+            const ease = 1 - (1 - progress) * (1 - progress);
+
+            const curLat = startLat + (targetLat - startLat) * ease;
+            const curLng = startLng + (targetLng - startLng) * ease;
+            currentRiderPos = { lat: curLat, lng: curLng };
+
+            if (courierMarker.position && typeof courierMarker.position.lat === 'function') {
+                courierMarker.setPosition(new google.maps.LatLng(curLat, curLng));
             } else {
-                drawFallbackLine(storeLatLng, courierLatLng, destLatLng);
+                courierMarker.position = { lat: curLat, lng: curLng };
             }
-        })
-        .catch(err => {
-            console.warn('Could not fetch route from Routes API, using direct line fallback:', err);
-            drawFallbackLine(storeLatLng, courierLatLng, destLatLng);
-        });
+
+            if (progress < 1) {
+                animationFrameId = requestAnimationFrame(step);
+            }
+        }
+        animationFrameId = requestAnimationFrame(step);
     }
 
-    function drawFallbackLine(storeLatLng, courierLatLng, destLatLng) {
-        if (routePolyline) routePolyline.setMap(null);
-        routePolyline = new google.maps.Polyline({
-            path: [storeLatLng, courierLatLng, destLatLng],
-            geodesic: true,
-            strokeColor: '#2563eb',
-            strokeOpacity: 0.85,
-            strokeWeight: 3,
-            map: trackMap
-        });
+    function startPositionPolling() {
+        if (['delivered', 'completed', 'cancelled'].includes(ORDER_STATUS)) return;
+
+        pollInterval = setInterval(() => {
+            fetch('<?= base_url('customer/orders/track/' . ($order['order_number'] ?? $order['id']) . '/position') ?>', {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data && data.success && data.lat && data.lng) {
+                    const newLat = parseFloat(data.lat);
+                    const newLng = parseFloat(data.lng);
+
+                    // If coordinates moved significantly (> 1 meter), smoothly interpolate
+                    if (Math.abs(newLat - currentRiderPos.lat) > 0.00001 || Math.abs(newLng - currentRiderPos.lng) > 0.00001) {
+                        animateMarkerTo(newLat, newLng);
+                    }
+
+                    if (data.status === 'delivered' || data.status === 'completed' || data.status === 'cancelled') {
+                        clearInterval(pollInterval);
+                        setTimeout(() => location.reload(), 1500);
+                    }
+                }
+            })
+            .catch(err => {
+                console.debug('Position poll skipped:', err);
+            });
+        }, 6000);
     }
 
     function centerOnCourier() {
-        if (!trackMap || !COURIER_COORDS) return;
-        const courierLatLng = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
-        trackMap.panTo(courierLatLng);
+        if (!trackMap) return;
+        trackMap.panTo(currentRiderPos);
         trackMap.setZoom(16);
         if (courierInfoWindow && courierMarker) {
             courierInfoWindow.open(trackMap, courierMarker);

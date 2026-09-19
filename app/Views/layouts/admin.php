@@ -11,7 +11,11 @@
         'content' => ['content', 'Content Management', 'Manage customer-facing text and images'],
     ];
 
-    $seg = service('request')->getUri()->getSegment(2) ?? 'dashboard';
+    try {
+        $seg = service('request')->getUri()->getSegment(2) ?: 'dashboard';
+    } catch (\Throwable $e) {
+        $seg = 'dashboard';
+    }
     $resolved = $segMap[$seg] ?? ['', $seg, ''];
     $activeNav = $activeNav ?? $resolved[0];
     $pageTitle = $title ?? $resolved[1];

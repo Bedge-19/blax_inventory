@@ -68,7 +68,7 @@ class Home extends BaseController
         $siteContents = [];
         try {
             $scm = new SiteContentModel();
-            $siteContents = $scm->getContentMap('home');
+            $siteContents = $scm->getAllKeyMap();
         } catch (\Throwable $e) { $siteContents = []; }
 
         return view('customer/home', [

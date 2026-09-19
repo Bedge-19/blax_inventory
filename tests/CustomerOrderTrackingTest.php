@@ -232,4 +232,59 @@ class CustomerOrderTrackingTest extends CIUnitTestCase
         $this->assertStringContainsString('/customer/orders/track/' . $orderNumber, $body);
         $this->assertStringContainsString('Track Order', $body);
     }
+
+    public function testPendingOrderShowsShippedInStepperAndHidesTrackButtonUntilShipped()
+    {
+        $userModel = new UserModel();
+        $customer = $userModel->where('role', 'customer')->first();
+        $this->assertNotNull($customer);
+
+        $shop = (new ShopModel())->first();
+        $this->assertNotNull($shop);
+
+        $orderModel = new OrderModel();
+        $orderNumber = 'ORD-BTN-' . uniqid('', false) . rand(100, 999);
+        $orderId = $orderModel->insert([
+            'order_number'       => $orderNumber,
+            'customer_id'        => (int) $customer['id'],
+            'shop_id'            => (int) $shop['id'],
+            'status'             => 'pending',
+            'fulfillment_method' => 'delivery',
+            'payment_status'     => 'paid',
+            'payment_method'     => 'gcash',
+            'subtotal'           => 200.00,
+            'total_amount'       => 250.00,
+            'shipping_fee'       => 50.00,
+            'placed_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        // 1. Check orders index view: Stepper has "Shipped" and button shows "Tracking available once shipped"
+        $result = $this->asCustomer((int) $customer['id'], $customer['email'])
+            ->get('customer/orders');
+        $result->assertOK();
+        $body = $result->response()->getBody();
+
+        // Must show 'Shipped' in timeline, NOT 'In Transit'
+        $this->assertStringContainsString('Shipped', $body);
+        $this->assertStringNotContainsString('In Transit', $body);
+
+        // For this pending order, 'Track Order' link must NOT be present
+        $this->assertStringNotContainsString('/customer/orders/track/' . $orderNumber, $body);
+        $this->assertStringContainsString('Tracking available once shipped', $body);
+
+        // 2. Direct GET to track endpoint on pending order must redirect back with notice
+        $trackResult = $this->asCustomer((int) $customer['id'], $customer['email'])
+            ->get('customer/orders/track/' . $orderNumber);
+        $trackResult->assertRedirectTo('customer/orders');
+
+        // 3. Mark as shipped -> Now Track Order link is visible and tracking page works
+        $orderModel->update($orderId, ['status' => 'shipped']);
+
+        $resultShipped = $this->asCustomer((int) $customer['id'], $customer['email'])
+            ->get('customer/orders');
+        $resultShipped->assertOK();
+        $bodyShipped = $resultShipped->response()->getBody();
+
+        $this->assertStringContainsString('/customer/orders/track/' . $orderNumber, $bodyShipped);
+    }
 }

@@ -30,6 +30,19 @@
     } else {
         $activeOrdersCount = 0;
     }
+
+    // Global CMS contents for announcement bar and footer across all customer pages
+    if (!isset($cmsGlobal) || empty($cmsGlobal)) {
+        try {
+            $scm = new \App\Models\SiteContentModel();
+            $cmsGlobal = $scm->getAllKeyMap();
+        } catch (\Throwable $e) {
+            $cmsGlobal = [];
+        }
+    }
+    if (isset($siteContents) && is_array($siteContents)) {
+        $cmsGlobal = array_merge($cmsGlobal, $siteContents);
+    }
 ?>
 
 <!DOCTYPE html><html class="light" lang="en"><head>
@@ -42,6 +55,8 @@
 
     <div class="flex-grow flex flex-col">
 
+        <?= view('components/announcement_bar', ['cms' => $cmsGlobal]) ?>
+
         <?= view('components/marketplace_header', [
             'activeNav'          => $activeNav,
             'cartCount'          => $cartCount,
@@ -51,7 +66,7 @@
             'searchQuery'        => $searchQuery ?? ''
         ]) ?>
         <?= $this->renderSection('content') ?>
-        <?= view('components/footer') ?>
+        <?= view('components/footer', ['cms' => $cmsGlobal]) ?>
 
     </div>
 

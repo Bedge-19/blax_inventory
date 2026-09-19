@@ -360,18 +360,15 @@
                                             <?php if (!empty($paperSizes)): ?>
                                                 <?php foreach ($paperSizes as $sKey => $sVal): ?>
                                                     <?php if (!empty($sVal['is_enabled'])): ?>
-                                                        <option value="<?= esc($sKey) ?>"
-                                                                data-price-color="<?= esc($sVal['price_color'] ?? 5.00) ?>"
-                                                                data-price-bw="<?= esc($sVal['price_bw'] ?? 2.00) ?>"
-                                                                <?= $sKey === 'letter' ? 'selected' : '' ?>>
+                                                        <option value="<?= esc($sKey) ?>" <?= $sKey === 'letter' ? 'selected' : '' ?>>
                                                             <?= esc($sVal['label'] ?? strtoupper($sKey)) ?>
                                                         </option>
                                                     <?php endif; ?>
                                                 <?php endforeach; ?>
                                             <?php else: ?>
-                                                <option value="letter" data-price-color="5.00" data-price-bw="2.00" selected>Letter (8.5 x 11)</option>
-                                                <option value="legal" data-price-color="6.00" data-price-bw="2.50">Legal (8.5 x 14)</option>
-                                                <option value="a4" data-price-color="5.00" data-price-bw="2.00">A4 (8.27 x 11.69)</option>
+                                                <option value="letter" selected>Letter (8.5" x 11")</option>
+                                                <option value="legal">Legal (8.5" x 14")</option>
+                                                <option value="a4">A4 (8.27" x 11.69")</option>
                                             <?php endif; ?>
                                         </select>
 
@@ -385,19 +382,10 @@
 
                                     <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Copies</label>
 
-                                    <div class="relative">
-
-                                        <select name="copies" class="w-full py-2 px-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-medium focus:ring-2 focus:ring-primary focus:border-primary text-on-surface transition-all appearance-none pr-8">
-
-                                            <option value="1">1 Copy</option>
-                                            <option value="2">2 Copies</option>
-                                            <option value="5">5 Copies</option>
-                                            <option value="10">10 Copies</option>
-
-                                        </select>
-
-                                        <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-[18px] text-outline pointer-events-none">expand_more</span>
-
+                                    <div class="flex items-center">
+                                        <button type="button" id="btnCopiesMinus" class="w-9 h-9 flex items-center justify-center bg-surface-container border border-outline-variant/40 rounded-l-xl text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 font-bold text-base select-none">−</button>
+                                        <input type="number" name="copies" id="copiesInput" min="1" max="500" value="1" class="w-full py-2 px-2 text-center bg-surface-container-low border-y border-outline-variant/40 text-xs font-semibold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none">
+                                        <button type="button" id="btnCopiesPlus" class="w-9 h-9 flex items-center justify-center bg-surface-container border border-outline-variant/40 rounded-r-xl text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 font-bold text-base select-none">+</button>
                                     </div>
 
                                 </div>
@@ -406,6 +394,10 @@
 
                             <!-- Color Mode -->
                             <div>
+                                <?php
+                                    $priceColor = (float) ($printingSettings['price_color_per_page'] ?? 5.00);
+                                    $priceBw    = (float) ($printingSettings['price_bw_per_page'] ?? 2.00);
+                                ?>
 
                                 <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Color Mode</label>
 
@@ -414,18 +406,26 @@
                                     <label class="cursor-pointer">
 
                                         <input type="radio" name="color_mode" value="colored" class="peer sr-only" checked>
-                                        <span class="flex items-center justify-center gap-1.5 py-2 px-3 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
-                                            <span class="material-symbols-outlined text-[16px]">palette</span> Full Color
-                                        </span>
+                                        <div class="flex items-center justify-between gap-1.5 py-2 px-3 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
+                                            <span class="flex items-center gap-1.5 truncate">
+                                                <span class="material-symbols-outlined text-[16px] shrink-0">palette</span>
+                                                <span class="truncate">Full Color</span>
+                                            </span>
+                                            <span class="text-[11px] font-semibold opacity-90 shrink-0">₱<?= number_format($priceColor, 2) ?>/page</span>
+                                        </div>
 
                                     </label>
 
                                     <label class="cursor-pointer">
 
                                         <input type="radio" name="color_mode" value="black_white" class="peer sr-only">
-                                        <span class="flex items-center justify-center gap-1.5 py-2 px-3 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
-                                            <span class="material-symbols-outlined text-[16px]">grayscale</span> Black &amp; White
-                                        </span>
+                                        <div class="flex items-center justify-between gap-1.5 py-2 px-3 text-center rounded-xl text-xs font-bold border border-outline-variant/40 bg-surface-container-low text-on-surface transition-all peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary peer-checked:shadow-sm">
+                                            <span class="flex items-center gap-1.5 truncate">
+                                                <span class="material-symbols-outlined text-[16px] shrink-0">grayscale</span>
+                                                <span class="truncate">Black &amp; White</span>
+                                            </span>
+                                            <span class="text-[11px] font-semibold opacity-90 shrink-0">₱<?= number_format($priceBw, 2) ?>/page</span>
+                                        </div>
 
                                     </label>
 
@@ -536,7 +536,10 @@
                                 <div class="bg-surface-container-low p-md rounded-xl space-y-xs border border-outline-variant/20">
 
                                     <div class="flex justify-between items-center text-xs text-on-surface-variant">
-                                        <span>Total Printing Price:</span>
+                                        <div>
+                                            <span>Total Printing Price:</span>
+                                            <span class="text-[11px] text-outline block font-normal" id="printing-rate-helper"></span>
+                                        </div>
                                         <span class="text-sm font-bold text-on-surface" id="printing-total-price">₱0.00</span>
                                     </div>
 
@@ -1269,14 +1272,19 @@ if (dropzone && fileInput) {
     }
 
     function updatePrintingPrice() {
+        const globalPriceColor = <?= (float) ($printingSettings['price_color_per_page'] ?? 5.00) ?>;
+        const globalPriceBw    = <?= (float) ($printingSettings['price_bw_per_page'] ?? 2.00) ?>;
+
         const pages = parseInt(hiddenPageCount ? hiddenPageCount.value : 0, 10) || 0;
         const colorRadio = document.querySelector('input[name="color_mode"]:checked');
         const isColored = colorRadio ? (colorRadio.value === 'colored') : true;
-        const paperSizeEl = document.getElementById('paperSizeSelect') || document.querySelector('select[name="paper_size"]');
-        const selectedOpt = paperSizeEl && paperSizeEl.selectedIndex >= 0 ? paperSizeEl.options[paperSizeEl.selectedIndex] : null;
 
-        const copiesEl = document.querySelector('select[name="copies"]');
-        const copies = parseInt(copiesEl ? copiesEl.value : 1, 10) || 1;
+        const copiesInput = document.getElementById('copiesInput') || document.querySelector('input[name="copies"]');
+        let rawCopies = parseInt(copiesInput ? copiesInput.value : 1, 10);
+        if (isNaN(rawCopies) || rawCopies < 1) rawCopies = 1;
+        if (rawCopies > 500) rawCopies = 500;
+        const copies = rawCopies;
+
         const bindingRadio = document.querySelector('input[name="binding"]:checked');
         const bindingCost = parseFloat(bindingRadio ? (bindingRadio.dataset.cost || 0) : 0);
 
@@ -1285,28 +1293,74 @@ if (dropzone && fileInput) {
         if (pages <= 0) {
             const elTotal = document.getElementById('printing-total-price');
             const elDown = document.getElementById('printing-down-payment');
+            const elHelper = document.getElementById('printing-rate-helper');
             if (elTotal) elTotal.textContent = '₱0.00';
             if (elDown) elDown.textContent = '₱0.00';
+            if (elHelper) elHelper.textContent = '';
             return;
         }
 
-        let basePerPage = 5.00;
-        if (selectedOpt) {
-            basePerPage = isColored
-                ? parseFloat(selectedOpt.dataset.priceColor || 5.00)
-                : parseFloat(selectedOpt.dataset.priceBw || 2.00);
-        }
+        // Global rates based on color mode only
+        const basePerPage = isColored ? globalPriceColor : globalPriceBw;
 
         let total = ((pages * basePerPage) + bindingCost) * copies;
         let downPayment = total * (downPaymentPercent / 100.00);
 
         const elTotal = document.getElementById('printing-total-price');
         const elDown = document.getElementById('printing-down-payment');
+        const elHelper = document.getElementById('printing-rate-helper');
         if (elTotal) elTotal.textContent = '₱' + total.toFixed(2);
         if (elDown) elDown.textContent = '₱' + downPayment.toFixed(2);
+        if (elHelper) {
+            let helper = `${pages} page${pages > 1 ? 's' : ''} × ₱${basePerPage.toFixed(2)} (${isColored ? 'Full Color' : 'B&W'})`;
+            if (bindingCost > 0) helper += ` + ₱${bindingCost.toFixed(2)} binding`;
+            if (copies > 1) helper += ` × ${copies} copies`;
+            elHelper.textContent = helper;
+        }
     }
 
-    document.querySelectorAll('input[name="color_mode"], select[name="paper_size"], select[name="copies"], input[name="binding"]').forEach(el => {
+    const copiesInput = document.getElementById('copiesInput');
+    const btnMinus = document.getElementById('btnCopiesMinus');
+    const btnPlus  = document.getElementById('btnCopiesPlus');
+
+    if (btnMinus && copiesInput) {
+        btnMinus.addEventListener('click', () => {
+            let val = parseInt(copiesInput.value, 10) || 1;
+            if (val > 1) {
+                copiesInput.value = val - 1;
+                updatePrintingPrice();
+            }
+        });
+    }
+
+    if (btnPlus && copiesInput) {
+        btnPlus.addEventListener('click', () => {
+            let val = parseInt(copiesInput.value, 10) || 1;
+            if (val < 500) {
+                copiesInput.value = val + 1;
+                updatePrintingPrice();
+            }
+        });
+    }
+
+    if (copiesInput) {
+        copiesInput.addEventListener('input', () => {
+            let val = parseInt(copiesInput.value, 10);
+            if (!isNaN(val)) {
+                if (val < 1) copiesInput.value = 1;
+                if (val > 500) copiesInput.value = 500;
+            }
+            updatePrintingPrice();
+        });
+        copiesInput.addEventListener('blur', () => {
+            let val = parseInt(copiesInput.value, 10);
+            if (isNaN(val) || val < 1) copiesInput.value = 1;
+            if (val > 500) copiesInput.value = 500;
+            updatePrintingPrice();
+        });
+    }
+
+    document.querySelectorAll('input[name="color_mode"], select[name="paper_size"], input[name="copies"], input[name="binding"]').forEach(el => {
         el.addEventListener('change', updatePrintingPrice);
     });
 

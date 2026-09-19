@@ -65,26 +65,32 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-xs">
-                        <button type="button" id="btnToggleRider" onclick="toggleRiderAnimation()" class="px-2.5 py-1 text-xs font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white border border-primary/30 rounded-lg transition-all flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">two_wheeler</span>
-                            <span id="btnRiderText">Simulate Rider</span>
-                        </button>
-                        <button type="button" onclick="recenterRoute()" class="px-2.5 py-1 text-xs font-semibold bg-surface-container border border-outline-variant/40 rounded-lg hover:bg-surface-container-high transition-all flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">my_location</span>
-                            <span>Recenter</span>
-                        </button>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border <?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-surface-container text-on-surface-variant border-outline-variant/30' ?>">
+                            <span class="w-2 h-2 rounded-full <?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'bg-emerald-500 animate-ping' : 'bg-gray-400' ?>"></span>
+                            <span><?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'GPS Broadcasting Active' : 'Passive Tracking' ?></span>
+                        </span>
                     </div>
                 </div>
 
-                <!-- Floating Live Tracking Indicator Bar -->
+                <!-- Honest Live GPS Broadcasting Indicator Bar -->
                 <div id="liveTrackingBar" class="p-2.5 px-4 bg-surface-container-low/70 border-b border-outline-variant/20 flex items-center justify-between gap-sm text-xs flex-wrap">
                     <div class="flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                        <span class="font-bold text-on-surface">Live Status:</span>
-                        <span id="riderStatusText" class="text-on-surface-variant font-medium">Tracking route between <?= esc($shop['shop_name'] ?? 'Storefront') ?> and Destination</span>
+                        <span id="gpsIndicatorDot" class="w-2 h-2 rounded-full <?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'bg-emerald-500 animate-ping' : 'bg-gray-400' ?>"></span>
+                        <span class="font-bold text-on-surface">GPS Status:</span>
+                        <span id="gpsStatusText" class="text-on-surface-variant font-medium">
+                            <?php if (in_array($delivery['status'], ['shipped', 'in_transit'])): ?>
+                                Connecting to device GPS...
+                            <?php elseif ($delivery['status'] === 'delivered'): ?>
+                                Delivery completed
+                            <?php elseif ($delivery['status'] === 'cancelled'): ?>
+                                Delivery cancelled
+                            <?php else: ?>
+                                Awaiting dispatch
+                            <?php endif; ?>
+                        </span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span id="routeProgressBadge" class="font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full text-[11px]">0% en route</span>
+                        <span id="gpsLastUpdated" class="font-mono text-outline text-[11px]"></span>
                     </div>
                 </div>
 
@@ -284,15 +290,15 @@
 </div>
 
 <script>
-    let mapInstance       = null;
-    let shopMarker        = null;
-    let destMarker        = null;
-    let riderMarker       = null;
-    let routePolyline     = null;
-    let routePathPoints   = [];
-    let riderTimer        = null;
-    let riderProgress     = 0;
-    let isRiderMoving     = false;
+    let mapInstance     = null;
+    let shopMarker      = null;
+    let destMarker      = null;
+    let riderMarker     = null;
+    let routePolyline   = null;
+    let routePathPoints = [];
+    let watchId         = null;
+    let lastSentTime    = 0;
+    let lastSentCoords  = null;
 
     // Handle Google Maps API authentication / activation failure
     window.gm_authFailure = function() {
@@ -316,6 +322,11 @@
 
     const shopLatLng = { lat: parseFloat(<?= json_encode($shopLat) ?>), lng: parseFloat(<?= json_encode($shopLng) ?>) };
     const destLatLng = { lat: parseFloat(<?= json_encode($destLat) ?>), lng: parseFloat(<?= json_encode($destLng) ?>) };
+    const initialRiderLat = parseFloat(<?= json_encode($delivery['current_lat'] ?? null) ?>) || shopLatLng.lat;
+    const initialRiderLng = parseFloat(<?= json_encode($delivery['current_lng'] ?? null) ?>) || shopLatLng.lng;
+    let currentRiderLatLng = { lat: initialRiderLat, lng: initialRiderLng };
+    const DELIVERY_ID = <?= (int) $delivery['id'] ?>;
+    const IS_ACTIVE_DELIVERY = <?= json_encode(in_array($delivery['status'], ['shipped', 'in_transit'])) ?>;
 
     const POLOMOLOK_BOUNDS = {
         north: 6.32,
@@ -425,24 +436,24 @@
         });
         setTimeout(() => destInfoWindow.open(mapInstance, destMarker), 500);
 
-        // 3. Rider Marker
+        // 3. Rider Marker (positioned at current coordinates)
         const riderElem = createDetailMarkerElement('rider');
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             riderMarker = new google.maps.marker.AdvancedMarkerElement({
                 map: mapInstance,
-                position: shopLatLng,
+                position: currentRiderLatLng,
                 content: riderElem,
-                title: 'Delivery Courier'
+                title: 'Live Courier Position'
             });
         } else {
             riderMarker = new google.maps.Marker({
                 map: mapInstance,
-                position: shopLatLng,
-                title: 'Delivery Courier'
+                position: currentRiderLatLng,
+                title: 'Live Courier Position'
             });
         }
         const riderInfoWindow = new google.maps.InfoWindow({
-            content: `<div style="padding:4px;font-family:sans-serif;"><strong>Delivery Courier</strong><br><span style="font-size:11px;color:#64748b;">Dispatched along Polomolok route</span></div>`
+            content: `<div style="padding:4px;font-family:sans-serif;"><strong>Delivery Courier (You)</strong><br><span style="font-size:11px;color:#64748b;">Live GPS location broadcast</span></div>`
         });
         riderMarker.addListener('click', () => {
             riderInfoWindow.open(mapInstance, riderMarker);
@@ -451,15 +462,16 @@
         // 4. Fetch Route Polyline
         fetchDeliveryRoute(shopLatLng, destLatLng);
 
-        // Fit map bounds
-        recenterRoute();
+        // Fit map bounds once on load
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(shopLatLng);
+        bounds.extend(destLatLng);
+        bounds.extend(currentRiderLatLng);
+        mapInstance.fitBounds(bounds, 60);
 
-        // Auto-start animation if in transit or shipped
-        const currentDeliveryStatus = <?= json_encode($delivery['status'] ?? '') ?>;
-        if (currentDeliveryStatus === 'in_transit' || currentDeliveryStatus === 'shipped') {
-            setTimeout(() => {
-                toggleRiderAnimation();
-            }, 800);
+        // 5. Start real GPS tracking if delivery is active
+        if (IS_ACTIVE_DELIVERY) {
+            startGpsBroadcasting();
         }
     };
 
@@ -517,74 +529,124 @@
         });
     }
 
-    function toggleRiderAnimation() {
-        if (!mapInstance) return;
-        isRiderMoving = !isRiderMoving;
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const p1 = lat1 * Math.PI / 180;
+        const p2 = lat2 * Math.PI / 180;
+        const dp = (lat2 - lat1) * Math.PI / 180;
+        const dl = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+                  Math.cos(p1) * Math.cos(p2) *
+                  Math.sin(dl / 2) * Math.sin(dl / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
 
-        const btnText = document.getElementById('btnRiderText');
-        const statusText = document.getElementById('riderStatusText');
-
-        if (isRiderMoving) {
-            btnText.textContent = 'Pause GPS';
-            statusText.textContent = 'Live GPS Rider moving along waypoint trajectory';
-            startRiderMovement();
-        } else {
-            btnText.textContent = 'Resume GPS';
-            statusText.textContent = 'Live GPS paused at current coordinates';
-            clearInterval(riderTimer);
+    function startGpsBroadcasting() {
+        if (!navigator.geolocation) {
+            const statusElem = document.getElementById('gpsStatusText');
+            if (statusElem) statusElem.textContent = 'Geolocation is not supported by your browser.';
+            return;
         }
-    }
 
-    function startRiderMovement() {
-        clearInterval(riderTimer);
-        riderTimer = setInterval(() => {
-            riderProgress += 0.02;
-            if (riderProgress >= 1) {
-                riderProgress = 1;
-                clearInterval(riderTimer);
-                isRiderMoving = false;
-                document.getElementById('btnRiderText').textContent = 'Replay Route';
-                document.getElementById('riderStatusText').textContent = 'Courier has arrived at Customer Destination!';
-                document.getElementById('routeProgressBadge').textContent = '100% arrived';
-                riderProgress = 0;
-                return;
-            }
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                const accuracy = Math.round(pos.coords.accuracy || 0);
 
-            let curLat, curLng;
-            if (routePathPoints.length > 2) {
-                const totalSegments = routePathPoints.length - 1;
-                const exactIndex = riderProgress * totalSegments;
-                const segIndex = Math.min(Math.floor(exactIndex), totalSegments - 1);
-                const segFraction = exactIndex - segIndex;
-                const p1 = routePathPoints[segIndex];
-                const p2 = routePathPoints[segIndex + 1];
-                curLat = p1.lat + (p2.lat - p1.lat) * segFraction;
-                curLng = p1.lng + (p2.lng - p1.lng) * segFraction;
-            } else {
-                curLat = shopLatLng.lat + (destLatLng.lat - shopLatLng.lat) * riderProgress;
-                curLng = shopLatLng.lng + (destLatLng.lng - shopLatLng.lng) * riderProgress;
-            }
+                currentRiderLatLng = { lat, lng };
 
-            if (riderMarker) {
-                if (riderMarker.position) {
-                    riderMarker.position = { lat: curLat, lng: curLng };
-                } else if (typeof riderMarker.setPosition === 'function') {
-                    riderMarker.setPosition(new google.maps.LatLng(curLat, curLng));
+                // Update marker position on map
+                if (riderMarker) {
+                    if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
+                        riderMarker.setPosition(new google.maps.LatLng(lat, lng));
+                    } else {
+                        riderMarker.position = { lat, lng };
+                    }
                 }
+
+                const now = Date.now();
+                let shouldSend = false;
+                if (now - lastSentTime >= 6000) {
+                    shouldSend = true;
+                } else if (lastSentCoords && distanceMeters(lat, lng, lastSentCoords.lat, lastSentCoords.lng) >= 5) {
+                    if (now - lastSentTime >= 3000) {
+                        shouldSend = true;
+                    }
+                }
+
+                if (shouldSend) {
+                    sendLocationUpdate(lat, lng, accuracy);
+                }
+            },
+            (err) => {
+                let msg = 'Unable to retrieve GPS location.';
+                if (err.code === err.PERMISSION_DENIED) {
+                    msg = 'Location permission denied. Please allow GPS access in your browser to broadcast live position.';
+                } else if (err.code === err.POSITION_UNAVAILABLE) {
+                    msg = 'GPS signal unavailable. Please check device location services.';
+                } else if (err.code === err.TIMEOUT) {
+                    msg = 'Location request timed out. Retrying...';
+                }
+                const statusElem = document.getElementById('gpsStatusText');
+                if (statusElem) statusElem.textContent = msg;
+                const dot = document.getElementById('gpsIndicatorDot');
+                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+            },
+            {
+                enableHighAccuracy: true,
+                maximumAge: 5000,
+                timeout: 10000
             }
-
-            const pct = Math.round(riderProgress * 100);
-            document.getElementById('routeProgressBadge').textContent = pct + '% en route';
-        }, 300);
+        );
     }
 
-    function recenterRoute() {
-        if (!mapInstance) return;
-        const bounds = new google.maps.LatLngBounds();
-        bounds.extend(shopLatLng);
-        bounds.extend(destLatLng);
-        mapInstance.fitBounds(bounds, 60);
+    function sendLocationUpdate(lat, lng, accuracy) {
+        lastSentTime = Date.now();
+        lastSentCoords = { lat, lng };
+
+        const formData = new FormData();
+        formData.append('delivery_id', DELIVERY_ID);
+        formData.append('lat', lat);
+        formData.append('lng', lng);
+        const csrfToken = window.getCsrfToken ? window.getCsrfToken() : '';
+        if (csrfToken) {
+            formData.append('<?= csrf_token() ?>', csrfToken);
+        }
+
+        fetch('<?= base_url('tenant/deliveries/update-location') ?>', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.success) {
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                const statusElem = document.getElementById('gpsStatusText');
+                if (statusElem) statusElem.textContent = `Broadcasting your live location to customer (±${accuracy}m)`;
+                const timeElem = document.getElementById('gpsLastUpdated');
+                if (timeElem) timeElem.textContent = `Last sent: ${timeStr}`;
+                const dot = document.getElementById('gpsIndicatorDot');
+                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+            } else if (data && data.error) {
+                const statusElem = document.getElementById('gpsStatusText');
+                if (statusElem) statusElem.textContent = data.error;
+            }
+        })
+        .catch(err => {
+            console.debug('Failed to broadcast GPS position:', err);
+        });
     }
+
+    window.addEventListener('beforeunload', () => {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+        }
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {

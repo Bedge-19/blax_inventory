@@ -411,6 +411,16 @@ class Customer extends BaseController
     }
 
     /**
+     * AJAX endpoint for customer live position polling.
+     */
+    public function getDeliveryPosition($orderRef = null)
+    {
+        $controller = new CustomerOrderController();
+        $controller->initController($this->request, $this->response, $this->logger);
+        return $controller->getDeliveryPosition($orderRef);
+    }
+
+    /**
      * Cancel an active order by customer.
      * Validates customer ownership, restricts cancellation to pending/processing only,
      * restores inventory quantities (including variants), and sends notification.
@@ -1161,16 +1171,24 @@ class Customer extends BaseController
         $colorMode = strtolower((string) $this->request->getPost('color_mode')) === 'colored' ? 'color' : 'bw';
         $bindingMap = ['stapled' => 'staple', 'spiral' => 'spiral', 'none' => 'none'];
         $binding = $bindingMap[strtolower((string) $this->request->getPost('binding'))] ?? 'none';
-        $copies = max(1, (int) $this->request->getPost('copies'));
+        $copies = max(1, min(500, (int) $this->request->getPost('copies')));
 
         $fulfillment = $this->request->getPost('fulfillment_method') === 'delivery' ? 'delivery' : 'pickup';
 
-        // Fetch dynamic pricing for shop
+        // Fetch dynamic pricing and supported sizes for shop
         $shopPaperSizes = (new \App\Models\ShopPaperSizeSettingModel())->getForShop($shopId);
         $shopSettings   = (new \App\Models\ShopPrintingSettingModel())->getForShop($shopId);
 
-        $sizeSetting = $shopPaperSizes[$paperSize] ?? ($shopPaperSizes['letter'] ?? ['price_color' => 5.00, 'price_bw' => 2.00]);
-        $basePerPage = ($colorMode === 'color') ? (float) $sizeSetting['price_color'] : (float) $sizeSetting['price_bw'];
+        // Validate paper size is enabled for this shop
+        if (isset($shopPaperSizes[$paperSize]) && empty($shopPaperSizes[$paperSize]['is_enabled'])) {
+            session()->setFlashdata('error', 'The selected paper size is not currently offered by this shop.');
+            return redirect()->back();
+        }
+
+        // Global rates per page based on color mode
+        $basePerPage = ($colorMode === 'color')
+            ? (float) ($shopSettings['price_color_per_page'] ?? 5.00)
+            : (float) ($shopSettings['price_bw_per_page'] ?? 2.00);
 
         $bindingCost = match ($binding) {
             'staple' => (float) ($shopSettings['price_staple'] ?? 10.00),
@@ -1245,9 +1263,6 @@ class Customer extends BaseController
     {
         $session = session();
         $userId  = $session->get('user_id');
-        if (!$userId) {
-            return redirect()->to('/login');
-        }
 
         $isCancel = (bool) $this->request->getGet('cancel');
         if ($isCancel) {
@@ -1264,8 +1279,41 @@ class Customer extends BaseController
         if (!$pending && $sessionId !== '') {
             $pending = cache()->get('pending_printing_' . $sessionId);
         }
-        if (!$pending) {
+        if (!$pending && $userId) {
             $pending = session()->get('pending_printing_' . $userId);
+        }
+
+        // Session recovery: If PHP session expired during external GCash checkout, recover user
+        if (!$userId) {
+            $recoveredUserId = null;
+            if (!empty($pending['customer_id'])) {
+                $recoveredUserId = (int) $pending['customer_id'];
+            } elseif ($sessionId !== '') {
+                $paymongo = service('paymongoService');
+                $check = $paymongo->getCheckoutSession($sessionId);
+                if (!empty($check['session']['attributes']['metadata']['user_id'])) {
+                    $recoveredUserId = (int) $check['session']['attributes']['metadata']['user_id'];
+                }
+            }
+
+            if ($recoveredUserId) {
+                $recoveredUser = (new \App\Models\UserModel())->find($recoveredUserId);
+                if ($recoveredUser) {
+                    $session->set([
+                        'user_id'    => (int) $recoveredUser['id'],
+                        'user_name'  => trim(($recoveredUser['first_name'] ?? '') . ' ' . ($recoveredUser['last_name'] ?? '')),
+                        'user_email' => $recoveredUser['email'] ?? '',
+                        'user_role'  => $recoveredUser['role'] ?? 'customer',
+                        'role'       => $recoveredUser['role'] ?? 'customer',
+                        'isLoggedIn' => true,
+                    ]);
+                    $userId = (int) $recoveredUser['id'];
+                }
+            }
+        }
+
+        if (!$userId) {
+            return redirect()->to('/login');
         }
 
         if (empty($pending)) {
@@ -1295,68 +1343,94 @@ class Customer extends BaseController
         $db->transStart();
 
         $paymentModel = new \App\Models\PaymentModel();
-        // Idempotency: prevent duplicate printing request/payment if callback runs multiple times
-        $alreadyProcessed = $paymentModel->where('reference_number', $sessionId)->first();
+        // Idempotency: prevent duplicate printing request/payment if callback runs multiple times concurrently
+        $alreadyProcessed = $db->query(
+            "SELECT * FROM payments WHERE reference_number = ? LIMIT 1 FOR UPDATE",
+            [$sessionId]
+        )->getRowArray();
+
         if ($alreadyProcessed) {
             $db->transComplete();
+            // Also clean up any lingering cache
+            if ($token !== '') {
+                session()->remove('pending_printing_token_' . $token);
+                cache()->delete('pending_printing_token_' . $token);
+            }
+            if ($sessionId !== '') {
+                cache()->delete('pending_printing_' . $sessionId);
+            }
             return redirect()->to('/customer/printing')->with('info', 'Your printing request down payment has already been verified.');
         }
 
-        $prModel = new PrintingRequestModel();
-        $insertData = [
-            'request_number'       => $pending['request_number'] ?? ('PR-' . date('Ymd') . '-' . rand(1000, 9999)),
-            'customer_id'          => $userId,
-            'shop_id'              => $pending['shop_id'],
-            'file_name'            => $pending['file_name'],
-            'file_url'             => $pending['file_url'],
-            'document_type'        => $pending['document_type'] ?? 'pdf',
-            'doc_change_type'      => $pending['doc_change_type'] ?? 'as_is',
-            'special_instructions' => $pending['special_instructions'] ?? null,
-            'paper_size'           => $pending['paper_size'],
-            'color_mode'           => $pending['color_mode'],
-            'copies'               => $pending['copies'],
-            'page_count'           => $pending['page_count'],
-            'binding_option'       => $pending['binding_option'],
-            'paper_stock'          => $pending['paper_stock'],
-            'fulfillment_method'   => $fulfillmentMethod = $pending['fulfillment_method'] ?? 'pickup',
-            'total_price'          => $pending['total_price'],
-            'down_payment'         => $pending['down_payment'],
-            'status'               => 'Paid (Down Payment)',
-            'progress_percent'     => 0,
-        ];
+        try {
+            $prModel = new PrintingRequestModel();
+            $insertData = [
+                'request_number'       => $pending['request_number'] ?? ('PR-' . date('Ymd') . '-' . rand(1000, 9999)),
+                'customer_id'          => $userId,
+                'shop_id'              => $pending['shop_id'],
+                'file_name'            => $pending['file_name'],
+                'file_url'             => $pending['file_url'],
+                'document_type'        => $pending['document_type'] ?? 'pdf',
+                'doc_change_type'      => $pending['doc_change_type'] ?? 'as_is',
+                'special_instructions' => $pending['special_instructions'] ?? null,
+                'paper_size'           => $pending['paper_size'],
+                'color_mode'           => $pending['color_mode'],
+                'copies'               => $pending['copies'],
+                'page_count'           => $pending['page_count'],
+                'binding_option'       => $pending['binding_option'],
+                'paper_stock'          => $pending['paper_stock'],
+                'fulfillment_method'   => $fulfillmentMethod = $pending['fulfillment_method'] ?? 'pickup',
+                'total_price'          => $pending['total_price'],
+                'down_payment'         => $pending['down_payment'],
+                'status'               => 'Paid (Down Payment)',
+                'progress_percent'     => 0,
+            ];
 
-        $prId = $prModel->insert($insertData);
+            $prId = $prModel->insert($insertData);
 
-        if (!empty($pending['reference_photos']) && is_array($pending['reference_photos'])) {
-            $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
-            foreach ($pending['reference_photos'] as $attachment) {
-                $attPath = is_array($attachment) ? ($attachment['file_path'] ?? ($attachment['image_url'] ?? '')) : (string) $attachment;
-                if ($attPath !== '') {
-                    $attachmentModel->insert([
-                        'printing_request_id' => $prId,
-                        'image_url'           => $attPath,
-                        'created_at'          => date('Y-m-d H:i:s'),
-                    ]);
+            if (!empty($pending['reference_photos']) && is_array($pending['reference_photos'])) {
+                $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
+                foreach ($pending['reference_photos'] as $attachment) {
+                    $attPath = is_array($attachment) ? ($attachment['file_path'] ?? ($attachment['image_url'] ?? '')) : (string) $attachment;
+                    if ($attPath !== '') {
+                        $attachmentModel->insert([
+                            'printing_request_id' => $prId,
+                            'image_url'           => $attPath,
+                            'created_at'          => date('Y-m-d H:i:s'),
+                        ]);
+                    }
                 }
             }
+
+            $paymentModel->insert([
+                'payable_type'     => 'printing_request',
+                'payable_id'       => $prId,
+                'method'           => 'gcash',
+                'amount'           => $pending['down_payment'],
+                'reference_number' => $sessionId,
+                'proof_image_url'  => null,
+                'status'           => 'verified',
+                'processed_at'     => date('Y-m-d H:i:s'),
+                'created_at'       => date('Y-m-d H:i:s'),
+            ]);
+
+            $db->transComplete();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            if (str_contains($e->getMessage(), 'Duplicate entry') || str_contains($e->getMessage(), '1062')) {
+                return redirect()->to('/customer/printing')->with('info', 'Your printing request down payment has already been verified.');
+            }
+            throw $e;
         }
 
-        $paymentModel->insert([
-            'payable_type'     => 'printing_request',
-            'payable_id'       => $prId,
-            'method'           => 'gcash',
-            'amount'           => $pending['down_payment'],
-            'reference_number' => $sessionId,
-            'proof_image_url'  => null,
-            'status'           => 'verified',
-            'processed_at'     => date('Y-m-d H:i:s'),
-            'created_at'       => date('Y-m-d H:i:s'),
-        ]);
-
-        // Clean up pending session data
+        // Clean up pending session and explicit cache data
         session()->remove('pending_printing_' . $userId);
         if ($token !== '') {
             session()->remove('pending_printing_token_' . $token);
+            cache()->delete('pending_printing_token_' . $token);
+        }
+        if ($sessionId !== '') {
+            cache()->delete('pending_printing_' . $sessionId);
         }
 
         $shop = (new \App\Models\ShopModel())->find($pending['shop_id']);

@@ -1217,6 +1217,20 @@ $orderItems = $orderItems ?? [];
             }
         };
 
+        if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            showCameraError();
+            if (placeholder) {
+                const sub = placeholder.querySelector('span:last-child');
+                if (sub) sub.textContent = 'Camera requires HTTPS or localhost. Upload photo or enter code manually.';
+            }
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showCameraError();
+            return;
+        }
+
         const config = { fps: 12 };
         html5QrCode.start(
             { facingMode: "environment" },
@@ -1366,7 +1380,8 @@ $orderItems = $orderItems ?? [];
 
         const fd = new FormData();
         fd.append('qr_code', code);
-        fd.append(CSRF_TOKEN_NAME, CSRF_HASH_VAL);
+        const currentCsrf = (window.getCsrfToken && window.getCsrfToken()) ? window.getCsrfToken() : CSRF_HASH_VAL;
+        fd.append(CSRF_TOKEN_NAME, currentCsrf);
 
         fetch(`${BASE_URL}/tenant/pos/verify-qr`, {
             method: 'POST',
@@ -1378,7 +1393,11 @@ $orderItems = $orderItems ?? [];
         .then(({ status, data }) => {
             if (manualBtn) manualBtn.disabled = false;
             if (manualInput) manualInput.disabled = false;
-            if (data.csrf_hash) CSRF_HASH_VAL = data.csrf_hash;
+            if (data.csrf_hash) {
+                CSRF_HASH_VAL = data.csrf_hash;
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) meta.setAttribute('content', data.csrf_hash);
+            }
 
             if (data.success) {
                 if (feedback) {
