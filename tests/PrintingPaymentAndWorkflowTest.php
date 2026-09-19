@@ -218,7 +218,7 @@ class PrintingPaymentAndWorkflowTest extends CIUnitTestCase
             'created_at'         => date('Y-m-d H:i:s'),
         ]);
 
-        $queue = $requestModel->getProductionQueue($shopId);
+        $queue = $requestModel->getProductionQueue($shopId, 100);
         $queueIds = array_column($queue, 'id');
 
         $this->assertContains((string) $pickupId, array_map('strval', $queueIds));

@@ -276,5 +276,123 @@ class TenantOrdersAndTextBeeSmsTest extends CIUnitTestCase
         $this->assertArrayHasKey('revenue_today', $summary);
         $this->assertIsFloat($summary['revenue_today']);
     }
+
+    public function testProcessingQueueRendersWithContextAwareButtons()
+    {
+        \Config\Services::resetSingle('renderer');
+        $orderModel = new OrderModel();
+        $orderItemModel = new \App\Models\OrderItemModel();
+        $shop = (new ShopModel())->first();
+        $customer = (new UserModel())->where('role', 'customer')->first();
+
+        $uniq = uniqid('', false) . rand(100, 999);
+
+        // 1. Create a processing order with Store Pick-up
+        $pickupOrderNum = 'TEST-PROC-PKP-' . $uniq;
+        $pickupOrderId = $orderModel->insert([
+            'order_number'       => $pickupOrderNum,
+            'customer_id'        => $customer['id'],
+            'shop_id'            => $shop['id'],
+            'fulfillment_method' => 'pickup',
+            'payment_method'     => 'counter_cash',
+            'subtotal'           => 120.00,
+            'shipping_fee'       => 0.00,
+            'tax_amount'         => 0.00,
+            'total_amount'       => 120.00,
+            'status'             => 'processing',
+            'payment_status'     => 'unpaid',
+            'placed_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        $orderItemModel->insert([
+            'order_id'     => $pickupOrderId,
+            'product_id'   => 1,
+            'product_name' => 'Pick-up Processing Item ' . $uniq,
+            'quantity'     => 2,
+            'unit_price'   => 60.00,
+            'line_total'   => 120.00,
+        ]);
+
+        // 2. Create a processing order with Doorstep Delivery
+        $deliveryOrderNum = 'TEST-PROC-DEL-' . $uniq;
+        $deliveryOrderId = $orderModel->insert([
+            'order_number'       => $deliveryOrderNum,
+            'customer_id'        => $customer['id'],
+            'shop_id'            => $shop['id'],
+            'fulfillment_method' => 'delivery',
+            'payment_method'     => 'gcash',
+            'subtotal'           => 250.00,
+            'shipping_fee'       => 50.00,
+            'tax_amount'         => 0.00,
+            'total_amount'       => 300.00,
+            'status'             => 'processing',
+            'payment_status'     => 'paid',
+            'placed_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        $orderItemModel->insert([
+            'order_id'     => $deliveryOrderId,
+            'product_id'   => 1,
+            'product_name' => 'Delivery Processing Item ' . $uniq,
+            'quantity'     => 1,
+            'unit_price'   => 250.00,
+            'line_total'   => 250.00,
+        ]);
+
+        // 3. Test getProcessingOrdersForShop
+        $procOrders = $orderModel->getProcessingOrdersForShop((int) $shop['id']);
+        $this->assertNotEmpty($procOrders);
+        $orderNumbers = array_column($procOrders, 'order_number');
+        $this->assertContains($pickupOrderNum, $orderNumbers);
+        $this->assertContains($deliveryOrderNum, $orderNumbers);
+
+        // 4. Request tenant/orders page
+        $res = $this->asTenant((int) $shop['id'])->get('tenant/orders');
+        $res->assertOK();
+        $body = $res->getBody();
+
+        // Verify Active Processing Container header
+        $this->assertStringContainsString('Active Processing &amp; Packing Queue', $body);
+
+        // Verify both orders appear
+        $this->assertStringContainsString($pickupOrderNum, $body);
+        $this->assertStringContainsString($deliveryOrderNum, $body);
+        $this->assertStringContainsString('Pick-up Processing Item ' . $uniq, $body);
+        $this->assertStringContainsString('Delivery Processing Item ' . $uniq, $body);
+
+        // Verify context-aware button for Store Pick-up is "Ready for Pick-up"
+        $this->assertStringContainsString('Ready for Pick-up', $body);
+        $this->assertStringContainsString('value="ready_for_pickup"', $body);
+
+        // Verify context-aware button for Doorstep Delivery is "Shipped"
+        $this->assertStringContainsString('Shipped', $body);
+        $this->assertStringContainsString('value="shipped"', $body);
+
+        // Verify explicit "View Details" button is rendered outside in the orders table
+        $this->assertStringContainsString('View Details', $body);
+        $this->assertStringContainsString('openOrderDetails(' . $pickupOrderId . ')', $body);
+        $this->assertStringContainsString('openOrderDetails(' . $deliveryOrderId . ')', $body);
+        $this->assertStringContainsString('function escapeHtml', $body);
+        $this->assertStringContainsString('id="orderModal"', $body);
+
+        // 5. Test tenant/orders/items/{id} AJAX endpoint
+        $itemsRes = $this->asTenant((int) $shop['id'])->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])->get('tenant/orders/items/' . $pickupOrderId);
+        $itemsRes->assertOK();
+        $json = json_decode($itemsRes->getJSON(), true);
+        $this->assertIsArray($json);
+        $this->assertTrue($json['success'] ?? false);
+        $this->assertEquals($pickupOrderNum, $json['order']['order_number']);
+        $this->assertNotEmpty($json['items']);
+        $this->assertEquals('Pick-up Processing Item ' . $uniq, $json['items'][0]['product_name']);
+
+        // 6. Test tenant/orders/items/{id} for order with shipping address
+        $delItemsRes = $this->asTenant((int) $shop['id'])->withHeaders(['X-Requested-With' => 'XMLHttpRequest'])->get('tenant/orders/items/' . $deliveryOrderId);
+        $delItemsRes->assertOK();
+        $delJson = json_decode($delItemsRes->getJSON(), true);
+        $this->assertTrue($delJson['success']);
+        $this->assertEquals($deliveryOrderNum, $delJson['order']['order_number']);
+        $this->assertNotEmpty($delJson['items']);
+        $this->assertEquals('Delivery Processing Item ' . $uniq, $delJson['items'][0]['product_name']);
+    }
 }
 

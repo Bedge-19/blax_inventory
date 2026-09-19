@@ -20,6 +20,8 @@ use App\Models\ProductVariantModel;
 use App\Models\PaymentModel;
 use App\Models\SiteContentModel;
 use App\Models\ComplianceModel;
+use App\Models\ShippingAddressModel;
+use App\Models\AuditLogModel;
 
 class Tenant extends BaseController
 {
@@ -429,13 +431,16 @@ class Tenant extends BaseController
             'orders'
         );
 
+        $processingOrders = $orderModel->getProcessingOrdersForShop($shopId);
+
         return view('tenant/orders', [
-            'shop'          => $shop,
-            'orders'        => $result['orders'],
-            'pager'         => $result['pager'],
-            'summary'       => $orderModel->getOrdersSummary($shopId),
-            'filters'       => ['q' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo],
-            'statusOptions' => [
+            'shop'             => $shop,
+            'orders'           => $result['orders'],
+            'processingOrders' => $processingOrders,
+            'pager'            => $result['pager'],
+            'summary'          => $orderModel->getOrdersSummary($shopId),
+            'filters'          => ['q' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo],
+            'statusOptions'    => [
                 'pending'          => 'Pending',
                 'processing'       => 'Processing',
                 'ready_for_pickup' => 'Ready for Pickup',
@@ -444,8 +449,8 @@ class Tenant extends BaseController
                 'completed'        => 'Completed',
                 'cancelled'        => 'Cancelled',
             ],
-            'activeNav'     => 'orders',
-            'title'         => 'Orders Management',
+            'activeNav'        => 'orders',
+            'title'            => 'Orders Management',
         ]);
     }
 
@@ -500,7 +505,7 @@ class Tenant extends BaseController
                 'raw_status'          => $order['status'],
                 'payment_status'      => $order['payment_status'] ?? 'unpaid',
                 'placed_at'          => date('M d, Y h:i A', strtotime($order['placed_at'])),
-                'payment_method'     => strtoupper($order['payment_method'] ?? 'cod'),
+                'payment_method'     => !empty($order['payment_method']) ? strtoupper($order['payment_method']) : ($order['fulfillment_method'] === 'pickup' ? 'PAY ON PICK-UP' : 'COD'),
                 'fulfillment_method'  => ucfirst(str_replace('_', ' ', $order['fulfillment_method'] ?? 'delivery')),
                 'raw_fulfillment_method' => $order['fulfillment_method'] ?? 'delivery',
                 'pos_additional_amount' => (float) ($order['pos_additional_amount'] ?? 0),
@@ -580,14 +585,27 @@ class Tenant extends BaseController
             $shippingAddr = (new ShippingAddressModel())->find($order['shipping_address_id']);
         }
 
+        $printingId = $this->request->getGet('printing_id');
+        $printing = null;
+        if (!empty($printingId)) {
+            $prModel = new PrintingRequestModel();
+            if (is_numeric($printingId)) {
+                $printing = $prModel->where('shop_id', $shopId)->find((int) $printingId);
+            }
+            if (!$printing) {
+                $printing = $prModel->where('shop_id', $shopId)->where('request_number', (string) $printingId)->first();
+            }
+        }
+
         // Format QR payload for quick scanning and order tracking
         $qrPayload = $order['order_number'];
         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($qrPayload);
 
         return view('tenant/receipt', [
-            'type'         => 'order',
+            'type'         => $printing ? 'combined' : 'order',
             'order'        => $order,
             'items'        => $items,
+            'printing'     => $printing,
             'customer'     => $customer,
             'shippingAddr' => $shippingAddr,
             'shop'         => $shop,
@@ -634,12 +652,30 @@ class Tenant extends BaseController
 
         $customer = !empty($pr['customer_id']) ? (new UserModel())->find($pr['customer_id']) : null;
 
+        $orderId = $this->request->getGet('order_id');
+        $order = null;
+        $items = [];
+        if (!empty($orderId)) {
+            $orderModel = new OrderModel();
+            if (is_numeric($orderId)) {
+                $order = $orderModel->where('shop_id', $shopId)->find((int) $orderId);
+            }
+            if (!$order) {
+                $order = $orderModel->where('shop_id', $shopId)->where('order_number', (string) $orderId)->first();
+            }
+            if ($order) {
+                $items = (new OrderItemModel())->where('order_id', (int) $order['id'])->findAll();
+            }
+        }
+
         $qrPayload = $pr['request_number'] ?? ('PR-' . $pr['id']);
         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . urlencode($qrPayload);
 
         return view('tenant/receipt', [
-            'type'         => 'printing',
+            'type'         => $order ? 'combined' : 'printing',
             'printing'     => $pr,
+            'order'        => $order,
+            'items'        => $items,
             'customer'     => $customer,
             'shop'         => $shop,
             'qrUrl'        => $qrUrl,
@@ -1131,60 +1167,201 @@ class Tenant extends BaseController
             'available_balance' => $balanceData['available_balance'],
             'escrow_holding'    => $balanceData['escrow_holding'],
             'released_earnings' => $balanceData['released_earnings'],
+            'settled_records'   => $balanceData['settled_records'] ?? [],
+            'escrow_records'    => $balanceData['escrow_records'] ?? [],
             'deduction_percent' => (new SiteContentModel())->getPlatformDeductionPercent(),
         ]);
     }
 
     /**
-     * Compute shop owner's available balance and escrow holdings based on fulfillment.
-     * Available Balance increases ONLY AFTER the order/printing status changes to Delivered or Completed.
-     * Formula: Shop Balance = Current Balance + (Item Subtotal - Platform Fees).
+     * Compute shop owner's available balance and escrow holdings based strictly on GCash payments.
+     * Cash and COD payments are directly collected in person by the merchant and are NOT withdrawable.
+     * Only completed and delivered transactions paid via GCash are credited to Available Balance.
+     * In-progress GCash orders/requests remain safely in Funds in Escrow until fulfilled.
      */
     public function getShopEscrowAndBalance(int $shopId): array
     {
+        helper('status');
         $orderModel = new OrderModel();
         $db         = \Config\Database::connect();
 
         $orders = $orderModel->getOrdersByShop($shopId);
-        $printingRequests = $db->table('printing_requests')->where('shop_id', $shopId)->get()->getResultArray();
+        $printingRequests = $db->table('printing_requests pr')
+            ->select('pr.*, u.first_name, u.last_name, u.email')
+            ->join('users u', 'u.id = pr.customer_id', 'left')
+            ->where('pr.shop_id', $shopId)
+            ->get()->getResultArray();
 
         $releasedEarnings = 0.0;
         $escrowHolding    = 0.0;
+        $settledRecords   = [];
+        $escrowRecords    = [];
 
+        // 1. Process Product Orders
         foreach ($orders as $o) {
-            $isPaid = ($o['payment_status'] ?? '') === 'paid';
-            $isDelivered = in_array($o['status'] ?? '', ['delivered', 'completed'], true);
-            $subtotal = (float) ($o['subtotal'] ?? ($o['total_amount'] ?? 0));
-            // Platform fee formula: Item Subtotal - Platform Fees (0% fee currently for marketplace items)
-            $netEarnings = $subtotal;
+            $status = strtolower(trim((string) ($o['status'] ?? '')));
+            if ($status === 'cancelled' || !empty($o['cancelled_at'])) {
+                continue;
+            }
 
-            if ($isDelivered) {
-                // If delivered/completed, funds are released to available balance
-                if ($isPaid || in_array($o['payment_method'] ?? '', ['cod', 'pickup'], true)) {
-                    $releasedEarnings += $netEarnings;
+            // Check verified GCash records in payments table
+            $verifiedOrderGcash = (float) ($db->table('payments')
+                ->where('payable_type', 'order')
+                ->where('payable_id', (int) $o['id'])
+                ->where('status', 'verified')
+                ->where('LOWER(method)', 'gcash')
+                ->selectSum('amount')
+                ->get()->getRowArray()['amount'] ?? 0.0);
+
+            $orderPayMethod = strtolower(trim((string) ($o['payment_method'] ?? '')));
+            $isOnlineGcash  = in_array($orderPayMethod, ['gcash', 'paymongo', 'online_gcash'], true) 
+                && strtolower(trim((string) ($o['payment_status'] ?? ''))) === 'paid';
+
+            $posPayMethod = strtolower(trim((string) ($o['pos_payment_method'] ?? '')));
+            $isPosGcash   = ($posPayMethod === 'gcash') 
+                && in_array(strtolower(trim((string) ($o['pos_payment_status'] ?? ''))), ['paid', 'completed'], true);
+
+            $gcashAmount = 0.0;
+            if ($verifiedOrderGcash > 0) {
+                $gcashAmount = $verifiedOrderGcash;
+            } else {
+                if ($isOnlineGcash) {
+                    $gcashAmount += (float) ($o['subtotal'] ?? ($o['total_amount'] ?? 0));
                 }
-            } elseif ($isPaid) {
-                // Paid via PayMongo GCash but not yet delivered -> held in system escrow
-                $escrowHolding += $netEarnings;
+                if ($isPosGcash && !$isOnlineGcash) {
+                    $gcashAmount += (float) ($o['total_amount'] ?? 0);
+                } elseif ($isPosGcash && $isOnlineGcash && (float) ($o['pos_additional_amount'] ?? 0) > 0) {
+                    $gcashAmount += (float) $o['pos_additional_amount'];
+                }
+            }
+
+            // If not paid via GCash (e.g. COD, Pickup Cash, Counter Cash), skip
+            if ($gcashAmount <= 0) {
+                continue;
+            }
+
+            $custName = trim(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? ''));
+            if ($custName === '' && !empty($o['cancel_reason']) && str_starts_with($o['cancel_reason'], 'Walk-in:')) {
+                $custName = substr($o['cancel_reason'], 8);
+            }
+            if ($custName === '') {
+                $custName = 'Counter Customer';
+            }
+
+            $channel = $isOnlineGcash ? 'Online PayMongo GCash' : ($isPosGcash ? 'Counter POS (GCash QR)' : 'GCash');
+
+            if (in_array($status, ['delivered', 'completed'], true)) {
+                $releasedEarnings += $gcashAmount;
+                $settledRecords[] = [
+                    'id'            => (int) $o['id'],
+                    'reference'     => (string) ($o['order_number'] ?? ('#' . $o['id'])),
+                    'type'          => 'order',
+                    'type_label'    => 'Product Order',
+                    'customer_name' => $custName,
+                    'channel'       => $channel,
+                    'amount'        => $gcashAmount,
+                    'status'        => 'completed',
+                    'status_label'  => 'Completed & Released',
+                    'completed_at'  => $o['completed_at'] ?? $o['placed_at'] ?? date('Y-m-d H:i:s'),
+                ];
+            } else {
+                $escrowHolding += $gcashAmount;
+                $escrowRecords[] = [
+                    'id'            => (int) $o['id'],
+                    'reference'     => (string) ($o['order_number'] ?? ('#' . $o['id'])),
+                    'type'          => 'order',
+                    'type_label'    => 'Product Order',
+                    'customer_name' => $custName,
+                    'channel'       => $channel,
+                    'amount'        => $gcashAmount,
+                    'status'        => $status,
+                    'status_label'  => 'Held in Escrow (' . humanize_status($status) . ')',
+                    'placed_at'     => $o['placed_at'] ?? date('Y-m-d H:i:s'),
+                ];
             }
         }
 
+        // 2. Process Printing Requests
         foreach ($printingRequests as $pr) {
-            $status = strtolower((string) ($pr['status'] ?? ''));
-            $isCompleted = ($status === 'completed');
-            $downPayment = (float) ($pr['down_payment'] ?? 0);
-            $totalPrice  = (float) ($pr['total_price'] ?? 0);
+            $status = strtolower(trim((string) ($pr['status'] ?? '')));
+            if ($status === 'cancelled') {
+                continue;
+            }
 
-            if ($isCompleted) {
-                $releasedEarnings += ($totalPrice > 0 ? $totalPrice : $downPayment);
-            } elseif (stripos($status, 'paid') !== false || $downPayment > 0) {
-                $escrowHolding += $downPayment;
+            // Check verified GCash records in payments table
+            $verifiedPrGcash = (float) ($db->table('payments')
+                ->where('payable_type', 'printing_request')
+                ->where('payable_id', (int) $pr['id'])
+                ->where('status', 'verified')
+                ->where('LOWER(method)', 'gcash')
+                ->selectSum('amount')
+                ->get()->getRowArray()['amount'] ?? 0.0);
+
+            $prGcashAmount = 0.0;
+            if ($verifiedPrGcash > 0) {
+                $prGcashAmount = $verifiedPrGcash;
+            } elseif ((float) ($pr['down_payment'] ?? 0) > 0) {
+                // Online down payment through marketplace checkout is via PayMongo GCash
+                $prGcashAmount = (float) $pr['down_payment'];
+            }
+
+            // If not paid via GCash, skip
+            if ($prGcashAmount <= 0) {
+                continue;
+            }
+
+            $custName = trim(($pr['first_name'] ?? '') . ' ' . ($pr['last_name'] ?? ''));
+            if ($custName === '') {
+                $custName = 'Online Customer';
+            }
+
+            $fileName = !empty($pr['file_name']) ? $pr['file_name'] : 'Document.pdf';
+
+            if ($status === 'completed') {
+                $releasedEarnings += $prGcashAmount;
+                $settledRecords[] = [
+                    'id'            => (int) $pr['id'],
+                    'reference'     => (string) ($pr['request_number'] ?? ('PR-' . $pr['id'])),
+                    'type'          => 'printing',
+                    'type_label'    => 'Printing Request',
+                    'customer_name' => $custName,
+                    'file_name'     => $fileName,
+                    'channel'       => 'GCash (Printing)',
+                    'amount'        => $prGcashAmount,
+                    'status'        => 'completed',
+                    'status_label'  => 'Completed & Released',
+                    'completed_at'  => $pr['completed_at'] ?? $pr['created_at'] ?? date('Y-m-d H:i:s'),
+                ];
+            } else {
+                $escrowHolding += $prGcashAmount;
+                $escrowRecords[] = [
+                    'id'            => (int) $pr['id'],
+                    'reference'     => (string) ($pr['request_number'] ?? ('PR-' . $pr['id'])),
+                    'type'          => 'printing',
+                    'type_label'    => 'Printing Request',
+                    'customer_name' => $custName,
+                    'file_name'     => $fileName,
+                    'channel'       => 'GCash (Printing Escrow)',
+                    'amount'        => $prGcashAmount,
+                    'status'        => $status,
+                    'status_label'  => 'Held in Escrow (' . humanize_status($status) . ')',
+                    'placed_at'     => $pr['created_at'] ?? date('Y-m-d H:i:s'),
+                ];
             }
         }
 
+        // Sort records by timestamp descending
+        usort($settledRecords, static function ($a, $b) {
+            return strtotime($b['completed_at']) <=> strtotime($a['completed_at']);
+        });
+        usort($escrowRecords, static function ($a, $b) {
+            return strtotime($b['placed_at']) <=> strtotime($a['placed_at']);
+        });
+
+        // Deduct active payout requests (exclude rejected or failed)
         $payouts = $db->table('payout_requests')
             ->where('shop_id', $shopId)
-            ->where('status !=', 'rejected')
+            ->whereNotIn('status', ['rejected', 'failed'])
             ->selectSum('amount')
             ->get()->getRowArray();
         $payoutDeductions = (float) ($payouts['amount'] ?? 0);
@@ -1196,6 +1373,8 @@ class Tenant extends BaseController
             'escrow_holding'    => round($escrowHolding, 2),
             'released_earnings' => round($releasedEarnings, 2),
             'total_deductions'  => $payoutDeductions,
+            'settled_records'   => $settledRecords,
+            'escrow_records'    => $escrowRecords,
         ];
     }
 
@@ -1292,21 +1471,102 @@ class Tenant extends BaseController
             return $res;
         }
 
-        $shopId = $res['shopId'];
+        $shopId = (int) $res['shopId'];
         $shop   = $res['shop'];
 
         // Automatically archive completed items older than 3 days
         (new ArchivedItemModel())->autoArchiveCompletedItems($shopId, 3);
 
+        $db = \Config\Database::connect();
+        $totalCount    = $db->table('archived_items')->where('shop_id', $shopId)->countAllResults();
+        $ordersCount   = $db->table('archived_items')->where('shop_id', $shopId)->where('item_type', 'order')->countAllResults();
+        $invCount      = $db->table('archived_items')->where('shop_id', $shopId)->where('item_type', 'inventory')->countAllResults();
+        $printingCount = $db->table('archived_items')->where('shop_id', $shopId)->where('item_type', 'printing_request')->countAllResults();
+
+        $type   = trim((string) $this->request->getGet('type'));
+        $search = trim((string) $this->request->getGet('q'));
         $page   = max(1, (int) $this->request->getGet('page_archive'));
-        $result = (new ArchivedItemModel())->getArchivedForShopPaginated($shopId, 10, $page, 'archive');
+
+        $result = (new ArchivedItemModel())->getArchivedForShopPaginated($shopId, 15, $page, 'archive', $type, $search);
+        $items  = $result['items'];
+
+        // Enrich items with metadata
+        foreach ($items as &$it) {
+            $itemType = $it['item_type'] ?? '';
+            $itemId   = (int) ($it['item_id'] ?? 0);
+
+            $it['details'] = [];
+            if ($itemType === 'inventory') {
+                $prod = $db->table('products p')
+                    ->select('p.id, p.name, p.price, p.stock_quantity, p.sku, c.name AS category_name, pi.image_url')
+                    ->join('categories c', 'c.id = p.category_id', 'left')
+                    ->join('product_images pi', 'pi.product_id = p.id AND pi.is_primary = 1', 'left')
+                    ->where('p.id', $itemId)
+                    ->get()->getRowArray();
+                if ($prod) {
+                    $it['details'] = [
+                        'name'          => $prod['name'],
+                        'price'         => (float) $prod['price'],
+                        'stock'         => (int) $prod['stock_quantity'],
+                        'sku'           => $prod['sku'] ?? '',
+                        'category'      => $prod['category_name'] ?? 'General',
+                        'image_url'     => $prod['image_url'] ?? null,
+                    ];
+                }
+            } elseif ($itemType === 'order') {
+                $ord = $db->table('orders o')
+                    ->select('o.id, o.order_number, o.total_amount, o.status, o.payment_status, o.fulfillment_method, u.first_name, u.last_name, (SELECT COUNT(*) FROM order_items WHERE order_id = o.id) AS item_count')
+                    ->join('users u', 'u.id = o.customer_id', 'left')
+                    ->where('o.id', $itemId)
+                    ->get()->getRowArray();
+                if ($ord) {
+                    $custName = trim(($ord['first_name'] ?? '') . ' ' . ($ord['last_name'] ?? ''));
+                    $it['details'] = [
+                        'order_number'       => $ord['order_number'] ?? ('#' . $ord['id']),
+                        'total_amount'       => (float) $ord['total_amount'],
+                        'status'             => $ord['status'],
+                        'payment_status'     => $ord['payment_status'],
+                        'fulfillment_method' => $ord['fulfillment_method'],
+                        'customer_name'      => $custName !== '' ? $custName : 'Customer',
+                        'item_count'         => (int) ($ord['item_count'] ?? 1),
+                    ];
+                }
+            } elseif ($itemType === 'printing_request') {
+                $pr = $db->table('printing_requests pr')
+                    ->select('pr.id, pr.request_number, pr.file_name, pr.total_price, pr.status, pr.page_count, pr.copies, u.first_name, u.last_name')
+                    ->join('users u', 'u.id = pr.customer_id', 'left')
+                    ->where('pr.id', $itemId)
+                    ->get()->getRowArray();
+                if ($pr) {
+                    $custName = trim(($pr['first_name'] ?? '') . ' ' . ($pr['last_name'] ?? ''));
+                    $it['details'] = [
+                        'request_number' => $pr['request_number'] ?? ('PR-' . $pr['id']),
+                        'file_name'      => $pr['file_name'] ?? 'Document.pdf',
+                        'total_price'    => (float) $pr['total_price'],
+                        'status'         => $pr['status'],
+                        'page_count'     => (int) ($pr['page_count'] ?? 1),
+                        'copies'         => (int) ($pr['copies'] ?? 1),
+                        'customer_name'  => $custName !== '' ? $custName : 'Customer',
+                    ];
+                }
+            }
+        }
+        unset($it);
 
         return view('tenant/archive', [
             'shop'          => $shop,
-            'archivedItems' => $result['items'],
+            'archivedItems' => $items,
             'pager'         => $result['pager'],
             'activeNav'     => 'archive',
             'title'         => 'Archive & Recovery',
+            'activeType'    => $type,
+            'searchQuery'   => $search,
+            'kpis'          => [
+                'total'     => $totalCount,
+                'orders'    => $ordersCount,
+                'inventory' => $invCount,
+                'printing'  => $printingCount,
+            ],
         ]);
     }
 
@@ -1502,6 +1762,10 @@ class Tenant extends BaseController
 
         if ($status === 'shipped') {
             return redirect()->to(base_url('tenant/deliveries'))->with('success', 'Order #' . ($order['order_number'] ?? $orderId) . ' status updated to Shipped and transferred to Delivery module.');
+        }
+
+        if ($status === 'ready_for_pickup') {
+            return redirect()->back()->with('success', 'Order #' . ($order['order_number'] ?? $orderId) . ' is now marked Ready for Pick-up! Customer has been notified.');
         }
 
         if ($status === 'processing') {
@@ -2851,25 +3115,36 @@ class Tenant extends BaseController
     {
         $res = $this->getShopOrRedirect();
         if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
             return $res;
         }
 
+        $shopId       = (int) $res['shopId'];
         $archiveModel = new ArchivedItemModel();
         $item         = $archiveModel->find((int) $archiveId);
 
-        if (!$item || (int) $item['shop_id'] !== (int) $res['shopId']) {
+        if (!$item || (int) $item['shop_id'] !== $shopId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Archived item not found.']);
+            }
             return redirect()->back()->with('error', 'Archived item not found.');
         }
 
-        // A record already restored (or in the middle of being restored) is
-        // not eligible for another restore.
         if (!empty($item['restored_at'])) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'This item has already been restored.']);
+            }
             return redirect()->back()->with('error', 'This item has already been restored.');
         }
 
         if ($item['item_type'] === 'inventory') {
             $product = (new ProductModel())->find((int) $item['item_id']);
-            if (!$product || (int) $product['shop_id'] !== (int) $res['shopId']) {
+            if (!$product || (int) $product['shop_id'] !== $shopId) {
+                if ($this->request->isAJAX()) {
+                    return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'The linked product no longer exists in your shop.']);
+                }
                 return redirect()->back()->with('error', 'The linked product no longer exists in your shop.');
             }
 
@@ -2882,7 +3157,290 @@ class Tenant extends BaseController
         $archiveModel->update((int) $archiveId, ['restored_at' => date('Y-m-d H:i:s')]);
         $archiveModel->delete((int) $archiveId);
 
+        (new AuditLogModel())->log(
+            (int) (session()->get('user_id') ?? 0) ?: null,
+            'tenant',
+            'restored_archive_item',
+            $item['item_type'],
+            'success',
+            (int) $item['item_id'],
+            $this->request->getIPAddress()
+        );
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Item restored successfully.']);
+        }
         return redirect()->back()->with('success', 'Item restored successfully.');
+    }
+
+    public function archiveItemDetail($archiveId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId = (int) $res['shopId'];
+        $db     = \Config\Database::connect();
+
+        $archive = $db->table('archived_items a')
+            ->select('a.*, u.first_name AS archived_by_first, u.last_name AS archived_by_last, u.email AS archived_by_email')
+            ->join('users u', 'u.id = a.archived_by', 'left')
+            ->where('a.id', (int) $archiveId)
+            ->where('a.shop_id', $shopId)
+            ->get()->getRowArray();
+
+        if (!$archive) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Archived item not found.']);
+        }
+
+        $itemType = $archive['item_type'];
+        $itemId   = (int) $archive['item_id'];
+        $data     = [
+            'archive_id'        => (int) $archive['id'],
+            'item_type'         => $itemType,
+            'item_id'           => $itemId,
+            'item_label'        => $archive['item_label'],
+            'archived_at'       => $archive['archived_at'],
+            'archived_by_name'  => trim(($archive['archived_by_first'] ?? '') . ' ' . ($archive['archived_by_last'] ?? '')) ?: 'System',
+            'archived_by_email' => $archive['archived_by_email'] ?? '',
+            'entity'            => null,
+        ];
+
+        if ($itemType === 'inventory') {
+            $product = $db->table('products p')
+                ->select('p.*, c.name AS category_name')
+                ->join('categories c', 'c.id = p.category_id', 'left')
+                ->where('p.id', $itemId)
+                ->get()->getRowArray();
+            if ($product) {
+                $images = $db->table('product_images')
+                    ->where('product_id', $itemId)
+                    ->orderBy('is_primary', 'DESC')
+                    ->get()->getResultArray();
+                $product['images'] = $images;
+                $data['entity']    = $product;
+            }
+        } elseif ($itemType === 'order') {
+            $order = $db->table('orders o')
+                ->select('o.*, u.first_name, u.last_name, u.email, u.phone AS phone_number')
+                ->join('users u', 'u.id = o.customer_id', 'left')
+                ->where('o.id', $itemId)
+                ->get()->getRowArray();
+            if ($order) {
+                $items = $db->table('order_items oi')
+                    ->select('oi.*, p.name AS product_name, pi.image_url')
+                    ->join('products p', 'p.id = oi.product_id', 'left')
+                    ->join('product_images pi', 'pi.product_id = p.id AND pi.is_primary = 1', 'left')
+                    ->where('oi.order_id', $itemId)
+                    ->get()->getResultArray();
+                $order['items'] = $items;
+                $data['entity'] = $order;
+            }
+        } elseif ($itemType === 'printing_request') {
+            $pr = $db->table('printing_requests pr')
+                ->select('pr.*, u.first_name, u.last_name, u.email, u.phone AS phone_number')
+                ->join('users u', 'u.id = pr.customer_id', 'left')
+                ->where('pr.id', $itemId)
+                ->get()->getRowArray();
+            if ($pr) {
+                $data['entity'] = $pr;
+            }
+        }
+
+        return $this->response->setJSON(['success' => true, 'data' => $data]);
+    }
+
+    public function bulkRestore()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
+            return $res;
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $archiveIds = $this->request->getPost('archive_ids');
+        if (empty($archiveIds) || !is_array($archiveIds)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => 'No items selected.']);
+            }
+            return redirect()->back()->with('error', 'No items selected.');
+        }
+
+        $archiveModel  = new ArchivedItemModel();
+        $productModel  = new ProductModel();
+        $auditModel    = new AuditLogModel();
+        $restoredCount = 0;
+
+        foreach ($archiveIds as $id) {
+            $aid  = (int) $id;
+            $item = $archiveModel->where('id', $aid)->where('shop_id', $shopId)->first();
+            if (!$item) {
+                continue;
+            }
+
+            if ($item['item_type'] === 'inventory') {
+                $productModel->update((int) $item['item_id'], [
+                    'status'     => 'active',
+                    'deleted_at' => null,
+                ]);
+            }
+
+            $archiveModel->delete($aid);
+            $restoredCount++;
+        }
+
+        $auditModel->log(
+            (int) (session()->get('user_id') ?? 0) ?: null,
+            'tenant',
+            'bulk_restored_archive_items',
+            'archive',
+            'success',
+            $restoredCount,
+            $this->request->getIPAddress()
+        );
+
+        $msg = "{$restoredCount} item(s) restored successfully.";
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => $msg, 'count' => $restoredCount]);
+        }
+        return redirect()->back()->with('success', $msg);
+    }
+
+    public function permanentDelete($archiveId)
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
+            return $res;
+        }
+
+        $shopId       = (int) $res['shopId'];
+        $archiveModel = new ArchivedItemModel();
+        $item         = $archiveModel->where('id', (int) $archiveId)->where('shop_id', $shopId)->first();
+
+        if (!$item) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Archived item not found.']);
+            }
+            return redirect()->back()->with('error', 'Archived item not found.');
+        }
+
+        $archiveModel->delete((int) $archiveId);
+
+        (new AuditLogModel())->log(
+            (int) (session()->get('user_id') ?? 0) ?: null,
+            'tenant',
+            'permanent_deleted_archive_item',
+            $item['item_type'],
+            'success',
+            (int) $item['item_id'],
+            $this->request->getIPAddress()
+        );
+
+        $msg = 'Item permanently removed from archive.';
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => $msg]);
+        }
+        return redirect()->back()->with('success', $msg);
+    }
+
+    public function bulkPermanentDelete()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
+            return $res;
+        }
+
+        $shopId     = (int) $res['shopId'];
+        $archiveIds = $this->request->getPost('archive_ids');
+        if (empty($archiveIds) || !is_array($archiveIds)) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => 'No items selected.']);
+            }
+            return redirect()->back()->with('error', 'No items selected.');
+        }
+
+        $archiveModel = new ArchivedItemModel();
+        $deletedCount = 0;
+
+        foreach ($archiveIds as $id) {
+            $aid  = (int) $id;
+            $item = $archiveModel->where('id', $aid)->where('shop_id', $shopId)->first();
+            if ($item) {
+                $archiveModel->delete($aid);
+                $deletedCount++;
+            }
+        }
+
+        (new AuditLogModel())->log(
+            (int) (session()->get('user_id') ?? 0) ?: null,
+            'tenant',
+            'bulk_permanent_deleted_archive_items',
+            'archive',
+            'success',
+            $deletedCount,
+            $this->request->getIPAddress()
+        );
+
+        $msg = "{$deletedCount} item(s) permanently removed from archive.";
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => $msg, 'count' => $deletedCount]);
+        }
+        return redirect()->back()->with('success', $msg);
+    }
+
+    public function exportArchiveCsv()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+        $db     = \Config\Database::connect();
+
+        $rows = $db->table('archived_items a')
+            ->select('a.id, a.item_type, a.item_id, a.item_label, a.archived_at, u.first_name, u.last_name, u.email')
+            ->join('users u', 'u.id = a.archived_by', 'left')
+            ->where('a.shop_id', $shopId)
+            ->orderBy('a.archived_at', 'DESC')
+            ->get()->getResultArray();
+
+        $filename = 'archive_records_' . date('Y-m-d') . '.csv';
+
+        $output = fopen('php://temp', 'r+');
+        fputcsv($output, ['Archive ID', 'Item Type', 'Reference / Label', 'Original Item ID', 'Archived Date', 'Archived By Name', 'Archived By Email']);
+
+        foreach ($rows as $r) {
+            $archiverName = trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')) ?: 'System';
+            fputcsv($output, [
+                $r['id'],
+                ucfirst(str_replace('_', ' ', $r['item_type'])),
+                $r['item_label'],
+                $r['item_id'],
+                $r['archived_at'],
+                $archiverName,
+                $r['email'] ?? '',
+            ]);
+        }
+
+        rewind($output);
+        $csvContent = stream_get_contents($output);
+        fclose($output);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($csvContent);
     }
 
     private function progressForStatus(string $status): int
@@ -3029,14 +3587,65 @@ class Tenant extends BaseController
                     ]);
                 }
 
-                $isCompleted = in_array($pr['status'], ['completed', 'delivered'], true);
+                // Fulfillment check (Store Pick-up)
+                if (($pr['fulfillment_method'] ?? '') !== 'pickup') {
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Wrong fulfillment type: Printing Request #{$pr['request_number']} was placed for Doorstep Delivery. Please use the Deliveries scanner to process deliveries.",
+                        'message' => "Wrong fulfillment type: Printing Request #{$pr['request_number']} was placed for Doorstep Delivery. Please use the Deliveries scanner to process deliveries.",
+                    ]);
+                }
+
+                // Status check: reject pending/in_production requests
+                if (in_array($pr['status'], ['new', 'in_production'], true)) {
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Printing Request #{$pr['request_number']} is still " . humanize_status($pr['status']) . ". Please mark it Ready for Pick-up before completing pick-up in POS.",
+                        'message' => "Printing Request #{$pr['request_number']} is still " . humanize_status($pr['status']) . ". Please mark it Ready for Pick-up before completing pick-up in POS.",
+                    ]);
+                }
+
+                if ($pr['status'] === 'cancelled') {
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Printing Request #{$pr['request_number']} has been cancelled.",
+                        'message' => "Printing Request #{$pr['request_number']} has been cancelled.",
+                    ]);
+                }
+
+                if (in_array($pr['status'], ['completed', 'delivered'], true)) {
+                    return $this->response->setJSON([
+                        'success'        => true,
+                        'is_printing'    => true,
+                        'already_done'   => true,
+                        'message'        => "Printing Request #{$pr['request_number']} has already been completed / released.",
+                        'request_id'     => (int) $pr['id'],
+                        'request_number' => $pr['request_number'],
+                        'redirect_url'   => site_url('tenant/pos?printing_id=' . $pr['id']),
+                    ]);
+                }
+
+                // Dispatch arrival notification to customer
+                $customerId = (int) ($pr['customer_id'] ?? 0);
+                if ($customerId > 0) {
+                    $shopName = $shop['shop_name'] ?? 'the shop';
+                    (new NotificationModel())->create(
+                        $customerId,
+                        'printing',
+                        'Store Pick-up In Progress',
+                        "Your printing request #{$pr['request_number']} is being processed at {$shopName}.",
+                        '/customer/printing'
+                    );
+                }
+
                 return $this->response->setJSON([
                     'success'        => true,
                     'is_printing'    => true,
-                    'already_done'   => $isCompleted,
-                    'message'        => "Printing Request #{$pr['request_number']} verified (" . ($isCompleted ? 'COMPLETED' : ucfirst($pr['status'])) . ").",
+                    'message'        => "Printing Request #{$pr['request_number']} successfully verified.",
+                    'request_id'     => (int) $pr['id'],
                     'request_number' => $pr['request_number'],
-                    'redirect_url'   => site_url('tenant/printing?search=' . urlencode($pr['request_number'])),
+                    'customer_id'    => (int) ($pr['customer_id'] ?? 0),
+                    'redirect_url'   => site_url('tenant/pos?printing_id=' . $pr['id']),
                 ]);
             }
 
@@ -3132,14 +3741,416 @@ class Tenant extends BaseController
         $shopId = (int) $res['shopId'];
         $userId = (int) session()->get('user_id');
 
-        $orderId = (int) $this->request->getPost('order_id');
-        $rawItems = $this->request->getPost('items');
-        $items = is_array($rawItems) ? $rawItems : (json_decode((string)$rawItems, true) ?: []);
+        $orderId    = (int) $this->request->getPost('order_id');
+        $printingId = (int) $this->request->getPost('printing_id');
+        $rawItems   = $this->request->getPost('items');
+        $items      = is_array($rawItems) ? $rawItems : (json_decode((string)$rawItems, true) ?: []);
         $counterMethod = strtolower(trim((string) $this->request->getPost('counter_payment_method') ?? 'cash'));
         if (!in_array($counterMethod, ['cash', 'gcash', 'card', 'none'], true)) {
             $counterMethod = 'cash';
         }
 
+        // =========================================================================
+        // BRANCH C: COMBINED PRODUCT ORDER + PRINTING REQUEST PICK-UP
+        // =========================================================================
+        if ($orderId > 0 && $printingId > 0) {
+            $orderModel = new OrderModel();
+            $order = $orderModel->find($orderId);
+
+            if (!$order || (int) $order['shop_id'] !== $shopId) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Order not found for your shop.']);
+            }
+            if (($order['fulfillment_method'] ?? '') !== 'pickup') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'POS completion is only permitted for Store Pick-up orders.']);
+            }
+            if ($order['status'] !== 'ready_for_pickup') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Order #' . $order['order_number'] . ' is ' . humanize_status($order['status']) . '. Only Ready for Pick-up orders can be completed in POS.']);
+            }
+
+            $prModel = new PrintingRequestModel();
+            $pr = $prModel->find($printingId);
+
+            if (!$pr || (int) $pr['shop_id'] !== $shopId) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Printing request not found for your shop.']);
+            }
+            if (($pr['fulfillment_method'] ?? '') !== 'pickup') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'POS completion is only permitted for Store Pick-up printing requests.']);
+            }
+            if (!in_array($pr['status'], ['ready_for_pickup', 'ready'], true)) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Printing request #' . $pr['request_number'] . ' is ' . humanize_status($pr['status']) . '. Only Ready for Pick-up requests can be completed in POS.']);
+            }
+
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            $productModel       = new ProductModel();
+            $orderItemModel     = new OrderItemModel();
+            $additionalSubtotal = 0.00;
+            $addedItemSummaries = [];
+
+            // 1. Validate and process in-store add-on items (linked to order)
+            foreach ($items as $it) {
+                $productId = (int) ($it['product_id'] ?? 0);
+                $quantity  = max(1, (int) ($it['quantity'] ?? 1));
+                if ($productId <= 0) continue;
+
+                $product = $db->table('products')
+                    ->where('id', $productId)
+                    ->where('shop_id', $shopId)
+                    ->where('deleted_at IS NULL')
+                    ->get()->getRowArray();
+
+                if (!$product) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => "Product #{$productId} is not available in your shop."]);
+                }
+
+                if ((int) $product['stock_quantity'] < $quantity) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => "Insufficient stock for '{$product['name']}'. Available: {$product['stock_quantity']}, Requested: {$quantity}."]);
+                }
+
+                $unitPrice = (float) $product['price'];
+                $lineTotal = round($unitPrice * $quantity, 2);
+                $additionalSubtotal += $lineTotal;
+
+                $newStock = (int) $product['stock_quantity'] - $quantity;
+                $productModel->update($productId, ['stock_quantity' => $newStock]);
+                $this->maybeNotifyLowStock($shopId, $product, $newStock);
+
+                $orderItemModel->insert([
+                    'order_id'        => $orderId,
+                    'product_id'      => $productId,
+                    'product_name'    => $product['name'],
+                    'quantity'        => $quantity,
+                    'unit_price'      => $unitPrice,
+                    'line_total'      => $lineTotal,
+                    'is_pos_addition' => 1,
+                ]);
+
+                $addedItemSummaries[] = "{$quantity}x {$product['name']}";
+            }
+
+            // 2. Finalize product order
+            $onlineOrderPaid = ($order['payment_status'] ?? '') === 'paid';
+            $orderDue = !$onlineOrderPaid ? (float) $order['total_amount'] : 0.0;
+            $finalOrderTotal = round((float) $order['total_amount'] + $additionalSubtotal, 2);
+
+            $orderUpdate = [
+                'pos_additional_amount' => $additionalSubtotal,
+                'pos_payment_method'    => ($additionalSubtotal > 0 || !$onlineOrderPaid) ? $counterMethod : 'none',
+                'pos_payment_status'    => ($additionalSubtotal > 0 || !$onlineOrderPaid) ? 'paid' : 'not_applicable',
+                'total_amount'          => $finalOrderTotal,
+                'status'                => 'completed',
+                'completed_at'          => date('Y-m-d H:i:s'),
+            ];
+            if (!$onlineOrderPaid) {
+                $orderUpdate['payment_status'] = 'paid';
+            }
+            $orderModel->update($orderId, $orderUpdate);
+
+            $orderCounterOwed = round($orderDue + $additionalSubtotal, 2);
+            if ($orderCounterOwed > 0) {
+                (new PaymentModel())->insert([
+                    'payable_type'     => 'order',
+                    'payable_id'       => $orderId,
+                    'method'           => $counterMethod,
+                    'amount'           => $orderCounterOwed,
+                    'reference_number' => null,
+                    'proof_image_url'  => null,
+                    'status'           => 'verified',
+                    'processed_at'     => date('Y-m-d H:i:s'),
+                    'created_at'       => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // 3. Finalize printing request
+            $verifiedPrPayments = (new PaymentModel())
+                ->where('payable_type', 'printing_request')
+                ->where('payable_id', $printingId)
+                ->where('status', 'verified')
+                ->findAll();
+
+            $prOnlinePaid = 0.0;
+            foreach ($verifiedPrPayments as $pm) {
+                $prOnlinePaid += (float) $pm['amount'];
+            }
+            if ($prOnlinePaid <= 0 && (float) ($pr['down_payment'] ?? 0) > 0) {
+                $prOnlinePaid = (float) $pr['down_payment'];
+            }
+            $prTotal = (float) $pr['total_price'];
+            $prRemainingBalance = max(0.0, round($prTotal - $prOnlinePaid, 2));
+
+            $prModel->update($printingId, [
+                'status'           => 'completed',
+                'progress_percent' => 100,
+                'completed_at'     => date('Y-m-d H:i:s'),
+            ]);
+
+            if ($prRemainingBalance > 0) {
+                (new PaymentModel())->insert([
+                    'payable_type'     => 'printing_request',
+                    'payable_id'       => $printingId,
+                    'method'           => $counterMethod,
+                    'amount'           => $prRemainingBalance,
+                    'reference_number' => null,
+                    'proof_image_url'  => null,
+                    'status'           => 'verified',
+                    'processed_at'     => date('Y-m-d H:i:s'),
+                    'created_at'       => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // 4. Sync linked delivery records if any
+            $deliveryModel = new DeliveryModel();
+            $delOrder = $deliveryModel->where('deliverable_type', 'order')->where('deliverable_id', $orderId)->first();
+            if ($delOrder && !in_array($delOrder['status'], ['delivered', 'returned'], true)) {
+                $deliveryModel->update($delOrder['id'], ['status' => 'delivered', 'delivered_at' => date('Y-m-d H:i:s')]);
+            }
+            $delPr = $deliveryModel->where('deliverable_type', 'printing_request')->where('deliverable_id', $printingId)->first();
+            if ($delPr && !in_array($delPr['status'], ['delivered', 'returned'], true)) {
+                $deliveryModel->update($delPr['id'], ['status' => 'delivered', 'delivered_at' => date('Y-m-d H:i:s')]);
+            }
+
+            // 5. Audit logs for both
+            $auditLogModel = new \App\Models\AuditLogModel();
+            $auditLogModel->log($userId, 'tenant', 'pos_pickup_complete', 'order', 'success', $orderId, $this->request->getIPAddress());
+            $auditLogModel->log($userId, 'tenant', 'pos_pickup_complete', 'printing_request', 'success', $printingId, $this->request->getIPAddress());
+
+            // 6. Notifications for both
+            $notifModel = new NotificationModel();
+            $shop = (new ShopModel())->find($shopId);
+            $shopName = $shop['shop_name'] ?? 'the shop';
+            $custOrder = (int) ($order['customer_id'] ?? 0);
+            if ($custOrder > 0) {
+                $notifModel->create(
+                    $custOrder,
+                    'order_status',
+                    'Pick-up Order Completed',
+                    "Your Store Pick-up order #{$order['order_number']} has been completed at {$shopName}.",
+                    '/customer/orders'
+                );
+            }
+            $custPr = (int) ($pr['customer_id'] ?? 0);
+            if ($custPr > 0) {
+                $fileName = !empty($pr['file_name']) ? $pr['file_name'] : 'Document.pdf';
+                $notifModel->create(
+                    $custPr,
+                    'printing',
+                    'Pick-up Printing Completed',
+                    "Your printing request for {$fileName} (#{$pr['request_number']}) has been completed and collected at {$shopName}.",
+                    '/customer/printing'
+                );
+            }
+
+            $db->transComplete();
+            if ($db->transStatus() === false) {
+                return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => 'A database error occurred while completing the combined pick-up.']);
+            }
+
+            $combinedCounterDue = round($orderCounterOwed + $prRemainingBalance, 2);
+
+            return $this->response->setJSON([
+                'success'             => true,
+                'type'                => 'combined',
+                'is_combined'         => true,
+                'message'             => "Combined Pick-up (Order #{$order['order_number']} & Printing #{$pr['request_number']}) completed successfully!",
+                'order_id'            => (int) $order['id'],
+                'order_number'        => $order['order_number'],
+                'printing_id'         => (int) $pr['id'],
+                'printing_number'     => $pr['request_number'],
+                'additional_subtotal' => $additionalSubtotal,
+                'order_due'           => $orderDue,
+                'printing_balance'    => $prRemainingBalance,
+                'final_total'         => $combinedCounterDue,
+                'total_collected'     => $combinedCounterDue,
+            ]);
+        }
+
+        // =========================================================================
+        // BRANCH A: PRINTING REQUEST STORE PICK-UP ONLY
+        // =========================================================================
+        if ($printingId > 0) {
+            $prModel = new PrintingRequestModel();
+            $pr = $prModel->find($printingId);
+
+            if (!$pr || (int) $pr['shop_id'] !== $shopId) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Printing request not found for your shop.']);
+            }
+
+            if (($pr['fulfillment_method'] ?? '') !== 'pickup') {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'POS completion is only permitted for Store Pick-up printing requests.']);
+            }
+
+            if (!in_array($pr['status'], ['ready_for_pickup', 'ready'], true)) {
+                $msg = in_array($pr['status'], ['completed', 'delivered'], true)
+                    ? 'This printing request is already completed.'
+                    : 'This printing request is ' . humanize_status($pr['status']) . '. Only Ready for Pick-up requests can be completed in POS.';
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $msg]);
+            }
+
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            $productModel       = new ProductModel();
+            $additionalSubtotal = 0.00;
+            $addedItemSummaries = [];
+
+            // Validate and process in-store items (if any added at counter)
+            foreach ($items as $it) {
+                $productId = (int) ($it['product_id'] ?? 0);
+                $quantity  = max(1, (int) ($it['quantity'] ?? 1));
+
+                if ($productId <= 0) continue;
+
+                // Lock row FOR UPDATE to prevent race condition / negative stock
+                $product = $db->table('products')
+                    ->where('id', $productId)
+                    ->where('shop_id', $shopId)
+                    ->where('deleted_at IS NULL')
+                    ->get()->getRowArray();
+
+                if (!$product) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Product #{$productId} is not available in your shop.",
+                    ]);
+                }
+
+                if ((int) $product['stock_quantity'] < $quantity) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Insufficient stock for '{$product['name']}'. Available: {$product['stock_quantity']}, Requested: {$quantity}.",
+                    ]);
+                }
+
+                $unitPrice = (float) $product['price'];
+                $lineTotal = round($unitPrice * $quantity, 2);
+                $additionalSubtotal += $lineTotal;
+
+                // Deduct stock safely
+                $newStock = (int) $product['stock_quantity'] - $quantity;
+                $productModel->update($productId, ['stock_quantity' => $newStock]);
+
+                // Low stock check
+                $this->maybeNotifyLowStock($shopId, $product, $newStock);
+
+                $addedItemSummaries[] = "{$quantity}x {$product['name']}";
+            }
+
+            // Calculate verified payments already paid online
+            $verifiedPayments = (new PaymentModel())
+                ->where('payable_type', 'printing_request')
+                ->where('payable_id', $printingId)
+                ->where('status', 'verified')
+                ->findAll();
+
+            $onlinePaid = 0.0;
+            foreach ($verifiedPayments as $pm) {
+                $onlinePaid += (float) $pm['amount'];
+            }
+            if ($onlinePaid <= 0 && (float) ($pr['down_payment'] ?? 0) > 0) {
+                $onlinePaid = (float) $pr['down_payment'];
+            }
+
+            $totalPrintPrice   = (float) $pr['total_price'];
+            $remainingBalance  = max(0.0, round($totalPrintPrice - $onlinePaid, 2));
+            $counterAmountDue  = round($remainingBalance + $additionalSubtotal, 2);
+
+            // Transition printing request to completed
+            $prModel->update($printingId, [
+                'status'           => 'completed',
+                'progress_percent' => 100,
+                'completed_at'     => date('Y-m-d H:i:s'),
+            ]);
+
+            // Sync corresponding delivery record if any exists
+            $deliveryModel = new DeliveryModel();
+            $delRow = $deliveryModel->where('deliverable_type', 'printing_request')->where('deliverable_id', $printingId)->first();
+            if ($delRow && !in_array($delRow['status'], ['delivered', 'returned'], true)) {
+                $deliveryModel->update($delRow['id'], ['status' => 'ready_for_pickup']);
+            }
+
+            // Record payment for counter settlement (remaining balance and/or in-store items)
+            if ($counterAmountDue > 0) {
+                $paymentModel = new PaymentModel();
+                $paymentModel->insert([
+                    'payable_type'     => 'printing_request',
+                    'payable_id'       => $printingId,
+                    'method'           => $counterMethod,
+                    'amount'           => $counterAmountDue,
+                    'reference_number' => null,
+                    'proof_image_url'  => null,
+                    'status'           => 'verified',
+                    'processed_at'     => date('Y-m-d H:i:s'),
+                    'created_at'       => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            // Audit log
+            (new \App\Models\AuditLogModel())->log(
+                $userId,
+                'tenant',
+                'pos_pickup_complete',
+                'printing_request',
+                'success',
+                $printingId,
+                $this->request->getIPAddress()
+            );
+
+            // Customer notification
+            $customerId = (int) ($pr['customer_id'] ?? 0);
+            if ($customerId > 0) {
+                $shop = (new ShopModel())->find($shopId);
+                $shopName = $shop['shop_name'] ?? 'the shop';
+                $fileName = !empty($pr['file_name']) ? $pr['file_name'] : 'Document.pdf';
+
+                if ($additionalSubtotal > 0) {
+                    $itemsStr = !empty($addedItemSummaries) ? implode(', ', $addedItemSummaries) : 'in-store items';
+                    (new NotificationModel())->create(
+                        $customerId,
+                        'printing',
+                        'Additional Items Purchased',
+                        "₱" . number_format($additionalSubtotal, 2) . " in additional items ({$itemsStr}) were purchased with Printing Request #{$pr['request_number']} at {$shopName}.",
+                        '/customer/printing'
+                    );
+                }
+
+                (new NotificationModel())->create(
+                    $customerId,
+                    'printing',
+                    'Pick-up Printing Completed',
+                    "Your printing request for {$fileName} (#{$pr['request_number']}) has been completed and collected at {$shopName}.",
+                    '/customer/printing'
+                );
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'success' => false,
+                    'error'   => 'A database error occurred while completing the printing pick-up.',
+                ]);
+            }
+
+            return $this->response->setJSON([
+                'success'             => true,
+                'is_printing'         => true,
+                'message'             => 'Printing pick-up completed successfully.',
+                'order_id'            => $pr['request_number'],
+                'order_number'        => $pr['request_number'],
+                'additional_subtotal' => $additionalSubtotal,
+                'remaining_balance'   => $remainingBalance,
+                'final_total'         => $counterAmountDue,
+            ]);
+        }
+
+        // =========================================================================
+        // BRANCH B: PRODUCT ORDER STORE PICK-UP
+        // =========================================================================
         $orderModel = new OrderModel();
         $order = $orderModel->find($orderId);
 
@@ -3151,10 +4162,10 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'POS completion is only permitted for Store Pick-up orders.']);
         }
 
-        if (in_array($order['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)) {
-            $msg = $order['status'] === 'pending'
-                ? 'This order is still pending. Please accept and process the order before completing pick-up.'
-                : 'This order is already ' . $order['status'] . '.';
+        if ($order['status'] !== 'ready_for_pickup') {
+            $msg = in_array($order['status'], ['completed', 'delivered'], true)
+                ? 'This order is already ' . $order['status'] . '.'
+                : 'Order #' . $order['order_number'] . ' is ' . humanize_status($order['status']) . '. Only Ready for Pick-up orders can be completed in POS.';
             return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $msg]);
         }
 
@@ -3539,45 +4550,148 @@ class Tenant extends BaseController
         $orderModel = new OrderModel();
 
         if ($orderId) {
-            $order = $orderModel->find($orderId);
-            if (!$order || (int) $order['shop_id'] !== $shopId) {
-                return redirect()->back()->with('error', 'Invalid order for your shop.');
+            $order = $orderModel
+                ->select('orders.*, u.first_name, u.last_name, u.phone as customer_phone, u.email as customer_email, u.profile_image_url')
+                ->join('users u', 'u.id = orders.customer_id', 'left')
+                ->where('orders.id', $orderId)
+                ->where('orders.shop_id', $shopId)
+                ->first();
+
+            if (!$order) {
+                return redirect()->to('tenant/pos')->with('error', 'Invalid order for your shop.');
             }
             if (($order['fulfillment_method'] ?? '') !== 'pickup') {
-                return redirect()->back()->with('error', 'POS additions are only permitted for Store Pick-up orders.');
+                return redirect()->to('tenant/pos')->with('error', 'POS additions are only permitted for Store Pick-up orders.');
             }
-            if ($order['status'] === 'pending') {
-                $orderModel->update((int) $order['id'], ['status' => 'processing']);
-                $order['status'] = 'processing';
+            if (!in_array($order['status'], ['ready_for_pickup', 'completed'], true)) {
+                return redirect()->to('tenant/pos')->with('error', 'Order is ' . humanize_status($order['status']) . '. Only Ready for Pick-up orders can be processed in POS.');
             }
-            $orderItems = (new OrderItemModel())->where('order_id', $order['id'])->findAll();
+            $orderItems = (new OrderItemModel())
+                ->select('order_items.*, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as gallery_image')
+                ->where('order_items.order_id', $order['id'])
+                ->findAll();
         }
 
-        // Available store-pickup orders for quick selection (excluding completed, delivered, cancelled)
+        // Check if we're in printing pick-up mode (printing_id provided)
+        $printingId = $this->request->getGet('printing_id');
+        $printingRequest = null;
+        $printingPayments = [];
+        $printingOnlinePaid = 0.0;
+        $printingRemainingBalance = 0.0;
+
+        if ($printingId) {
+            $prModel = new PrintingRequestModel();
+            $printingRequest = $prModel
+                ->select('printing_requests.*, u.first_name, u.last_name, u.phone, u.email')
+                ->join('users u', 'u.id = printing_requests.customer_id', 'left')
+                ->where('printing_requests.id', $printingId)
+                ->where('printing_requests.shop_id', $shopId)
+                ->first();
+
+            if (!$printingRequest) {
+                return redirect()->to('tenant/pos')->with('error', 'Printing request not found for your shop.');
+            }
+            if (($printingRequest['fulfillment_method'] ?? '') !== 'pickup') {
+                return redirect()->to('tenant/pos')->with('error', 'POS is only permitted for Store Pick-up printing requests.');
+            }
+            if (!in_array($printingRequest['status'], ['ready_for_pickup', 'ready', 'completed'], true)) {
+                return redirect()->to('tenant/pos')->with('error', 'Printing request is ' . humanize_status($printingRequest['status']) . '. Only Ready for Pick-up requests can be processed in POS.');
+            }
+
+            $printingPayments = (new PaymentModel())
+                ->where('payable_type', 'printing_request')
+                ->where('payable_id', $printingRequest['id'])
+                ->where('status', 'verified')
+                ->findAll();
+
+            foreach ($printingPayments as $pm) {
+                $printingOnlinePaid += (float) $pm['amount'];
+            }
+            if ($printingOnlinePaid <= 0 && (float) ($printingRequest['down_payment'] ?? 0) > 0) {
+                $printingOnlinePaid = (float) $printingRequest['down_payment'];
+            }
+            $totalPrice = (float) $printingRequest['total_price'];
+            $printingRemainingBalance = max(0.0, round($totalPrice - $printingOnlinePaid, 2));
+        }
+
+        // Available store-pickup product orders for quick selection (ONLY ready_for_pickup)
         $pickupOrders = $orderModel
             ->select('orders.*, u.first_name, u.last_name, u.phone, (SELECT GROUP_CONCAT(CONCAT(quantity, "x ", product_name) SEPARATOR ", ") FROM order_items WHERE order_id = orders.id) as items_summary')
             ->join('users u', 'u.id = orders.customer_id', 'left')
             ->where('orders.shop_id', $shopId)
             ->where('orders.fulfillment_method', 'pickup')
-            ->whereNotIn('orders.status', ['completed', 'delivered', 'cancelled'])
+            ->where('orders.status', 'ready_for_pickup')
             ->orderBy('orders.placed_at', 'DESC')
+            ->findAll();
+
+        // Available store-pickup printing requests for quick selection (ONLY ready_for_pickup)
+        $printingPickupRequests = (new PrintingRequestModel())
+            ->select('printing_requests.*, u.first_name, u.last_name, u.phone, u.email')
+            ->join('users u', 'u.id = printing_requests.customer_id', 'left')
+            ->where('printing_requests.shop_id', $shopId)
+            ->where('printing_requests.fulfillment_method', 'pickup')
+            ->groupStart()
+                ->where('printing_requests.status', 'ready_for_pickup')
+                ->orWhere('printing_requests.status', 'ready')
+            ->groupEnd()
+            ->orderBy('printing_requests.created_at', 'DESC')
             ->findAll();
 
         $categories = (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll();
 
+        // Cross-reference customers who have both ready-for-pickup orders and printing requests
+        $customerHasPrintingMap = [];
+        foreach ($printingPickupRequests as $prItem) {
+            $cId = (int) ($prItem['customer_id'] ?? 0);
+            if ($cId > 0) {
+                $customerHasPrintingMap[$cId][] = $prItem;
+            }
+        }
+
+        $customerHasOrderMap = [];
+        foreach ($pickupOrders as $poItem) {
+            $cId = (int) ($poItem['customer_id'] ?? 0);
+            if ($cId > 0) {
+                $customerHasOrderMap[$cId][] = $poItem;
+            }
+        }
+
+        $pageTitle = 'Walk-in POS';
+        if (!empty($order) && !empty($printingRequest)) {
+            $pageTitle = 'Combined Pick-up POS';
+        } elseif (!empty($printingRequest)) {
+            $pageTitle = 'Printing Pick-up POS';
+        } elseif (!empty($order)) {
+            $pageTitle = 'Store Pick-up POS';
+        }
+
         service('renderer')->setData([
-            'shop'          => $shop,
-            'order'         => $order,
+            'shop'                   => $shop,
+            'order'                  => $order,
+            'printingRequest'        => $printingRequest,
+            'pickupOrders'           => $pickupOrders,
+            'printingPickupRequests' => $printingPickupRequests,
+            'fullscreenLayout'       => true,
+            'customerHasPrintingMap' => $customerHasPrintingMap,
+            'customerHasOrderMap'    => $customerHasOrderMap,
         ]);
 
         return view('tenant/pos', [
-            'shop'          => $shop,
-            'order'         => $order,
-            'orderItems'    => $orderItems,
-            'pickupOrders'  => $pickupOrders,
-            'categories'    => $categories,
-            'activeNav'     => 'pos',
-            'title'         => !empty($order) ? 'Store Pick-up POS' : 'Walk-in POS',
+            'shop'                     => $shop,
+            'order'                    => $order,
+            'orderItems'               => $orderItems,
+            'pickupOrders'             => $pickupOrders,
+            'printingRequest'          => $printingRequest,
+            'printingPayments'         => $printingPayments,
+            'printingOnlinePaid'       => $printingOnlinePaid,
+            'printingRemainingBalance' => $printingRemainingBalance,
+            'printingPickupRequests'   => $printingPickupRequests,
+            'customerHasPrintingMap'   => $customerHasPrintingMap,
+            'customerHasOrderMap'      => $customerHasOrderMap,
+            'fullscreenLayout'         => true,
+            'categories'               => $categories,
+            'activeNav'                => 'pos',
+            'title'                    => $pageTitle,
         ]);
     }
 

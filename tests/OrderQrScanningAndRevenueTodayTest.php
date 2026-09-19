@@ -311,7 +311,7 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
     public function testPosVerifyQrSupportsPrintingRequestAndTokens()
     {
         $db = \Config\Database::connect();
-        $reqNum = 'PR-TEST-' . rand(1000, 9999);
+        $reqNum = 'PR-TEST-' . time() . '-' . rand(1000, 9999);
         $db->table('printing_requests')->insert([
             'request_number'     => $reqNum,
             'customer_id'        => 3,

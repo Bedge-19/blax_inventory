@@ -181,6 +181,52 @@ class OrderModel extends Model
     }
 
     /**
+     * Retrieves all active processing orders for a given shop along with their
+     * order items and customer info for the dedicated processing fulfillment queue.
+     */
+    public function getProcessingOrdersForShop(int $shopId): array
+    {
+        $archived = $this->db->table('archived_items')
+            ->select('item_id')
+            ->where('shop_id', $shopId)
+            ->where('item_type', 'order');
+
+        $orders = $this->db->table('orders')
+            ->select('orders.*, u.first_name, u.last_name, u.email, u.profile_image_url, COALESCE(sa.phone, u.phone) as customer_phone, sa.label as address_label, sa.address_line1, sa.city, sa.province')
+            ->join('users u', 'u.id = orders.customer_id', 'left')
+            ->join('shipping_addresses sa', 'sa.id = orders.shipping_address_id', 'left')
+            ->where('orders.shop_id', $shopId)
+            ->where('orders.status', 'processing')
+            ->whereNotIn('orders.id', $archived, false)
+            ->orderBy('orders.placed_at', 'ASC')
+            ->get()
+            ->getResultArray();
+
+        if (empty($orders)) {
+            return [];
+        }
+
+        $orderIds = array_column($orders, 'id');
+        $items = $this->db->table('order_items')
+            ->select('order_items.*, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as product_image')
+            ->whereIn('order_items.order_id', $orderIds)
+            ->get()
+            ->getResultArray();
+
+        $itemsByOrder = [];
+        foreach ($items as $it) {
+            $itemsByOrder[$it['order_id']][] = $it;
+        }
+
+        foreach ($orders as &$ord) {
+            $ord['items'] = $itemsByOrder[$ord['id']] ?? [];
+        }
+        unset($ord);
+
+        return $orders;
+    }
+
+    /**
      * Orders-page summary cards, all tenant-scoped and computed with
      * aggregate SQL (no full-table loads).
      */

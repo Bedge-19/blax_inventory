@@ -31,13 +31,27 @@ class ArchivedItemModel extends Model
         int $shopId,
         int $perPage = 10,
         int $page = 1,
-        string $group = 'archive'
+        string $group = 'archive',
+        ?string $type = null,
+        ?string $search = null
     ): array {
-        $this->builder()
+        $builder = $this->builder()
             ->select('archived_items.*, u.first_name AS archived_by_first, u.last_name AS archived_by_last, u.profile_image_url AS archived_by_image')
             ->join('users u', 'u.id = archived_items.archived_by', 'left')
-            ->where('archived_items.shop_id', $shopId)
-            ->orderBy('archived_items.archived_at', 'DESC');
+            ->where('archived_items.shop_id', $shopId);
+
+        if (!empty($type) && in_array($type, ['order', 'inventory', 'printing_request'], true)) {
+            $builder->where('archived_items.item_type', $type);
+        }
+
+        if (!empty($search)) {
+            $builder->groupStart()
+                ->like('archived_items.item_label', $search)
+                ->orLike('archived_items.item_id', $search)
+            ->groupEnd();
+        }
+
+        $builder->orderBy('archived_items.archived_at', 'DESC');
 
         $items = $this->paginate($perPage, $group, $page);
 

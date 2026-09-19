@@ -132,6 +132,11 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('printing/archive-all', 'Tenant::archiveAllCompleted');
     $routes->get('printing/download/(:num)', 'Tenant::downloadPrintFile/$1');
     $routes->post('archive/restore/(:num)', 'Tenant::restoreProduct/$1');
+    $routes->get('archive/detail/(:num)', 'Tenant::archiveItemDetail/$1');
+    $routes->post('archive/bulk-restore', 'Tenant::bulkRestore');
+    $routes->post('archive/delete/(:num)', 'Tenant::permanentDelete/$1');
+    $routes->post('archive/bulk-delete', 'Tenant::bulkPermanentDelete');
+    $routes->get('archive/export', 'Tenant::exportArchiveCsv');
     $routes->post('notifications/mark-read', 'Tenant::markNotificationsRead');
     $routes->get('pos/search-products', 'Tenant::posSearchProducts');
     $routes->post('pos/verify-qr', 'Tenant::posVerifyQr');
@@ -154,6 +159,8 @@ $routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->get('tracking', 'Admin::tracking');
     $routes->get('tracking/pins', 'Admin::trackingPins');
     $routes->get('audit-log', 'Admin::auditLog');
+    $routes->get('audit-log/detail/(:num)', 'Admin::auditLogDetail/$1');
+    $routes->get('audit-log/export', 'Admin::exportAuditLog');
     $routes->get('analytics', 'Admin::analytics');
     $routes->get('analytics/data', 'Admin::analyticsData');
     $routes->get('content', 'Admin::content');

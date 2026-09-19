@@ -19,6 +19,7 @@
     $activeNav = $activeNav ?? $resolved[0];
     $pageTitle = $title ?? $resolved[1];
     $shopName  = $shop['shop_name'] ?? 'Blax Admin';
+    $fullscreenLayout = !empty($fullscreenLayout) && ($activeNav === 'pos');
 ?>
 
 <!DOCTYPE html><html class="light" lang="en"><head>
@@ -34,14 +35,14 @@
         <div id="tenant-sidebar-overlay" class="sidebar-overlay"></div>
 
         <!-- SideNavBar -->
-        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen hidden md:flex transition-transform duration-300">
+        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen <?= $fullscreenLayout ? 'hidden' : 'hidden md:flex' ?> transition-transform duration-300">
 
             <div class="px-sm mb-xl flex justify-between items-start">
                 <div>
                     <h1 class="text-headline-md font-bold text-primary">Blax</h1>
                     <p class="text-label-sm text-on-surface-variant/60">Manage Storefront</p>
                 </div>
-                <button id="tenant-sidebar-close" type="button" class="md:hidden text-on-surface-variant p-1 -mr-2">
+                <button id="tenant-sidebar-close" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> text-on-surface-variant p-1 -mr-2">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -144,13 +145,13 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 ml-0 md:ml-64 overflow-y-auto bg-surface relative">
+        <main class="flex-1 <?= $fullscreenLayout ? 'ml-0' : 'ml-0 md:ml-64' ?> overflow-y-auto bg-surface relative">
 
             <header class="sticky top-0 z-30 bg-surface-container-lowest backdrop-blur-xl border-b border-outline-variant/30 px-4 md:px-8 lg:px-10 py-md flex justify-between items-center">
 
                 <div class="flex items-center gap-md">
 
-                    <button id="sidebar-toggle" class="md:hidden p-2 text-on-surface-variant hover:bg-surface-container rounded-full" aria-label="Toggle sidebar">
+                    <button id="sidebar-toggle" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> p-2 text-on-surface-variant hover:bg-surface-container rounded-full" aria-label="Toggle sidebar">
 
                         <span class="material-symbols-outlined">menu</span>
 
@@ -303,7 +304,7 @@
 
             </header>
 
-            <div class="p-4 md:p-gutter max-w-container-max mx-auto space-y-xl w-full">
+            <div class="<?= $fullscreenLayout ? 'p-2 sm:p-3 md:p-4 w-full' : 'p-4 md:p-gutter max-w-container-max mx-auto space-y-xl w-full' ?>">
 
                 <?= $this->renderSection('content') ?>
 

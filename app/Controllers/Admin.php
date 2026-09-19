@@ -324,29 +324,191 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
-        $search = trim((string)$this->request->getGet('q'));
-        $role   = trim((string)$this->request->getGet('role'));
-        $status = trim((string)$this->request->getGet('status'));
-        $page   = max(1, (int) $this->request->getGet('page_audit_log'));
+        $search    = trim((string) $this->request->getGet('q'));
+        $role      = trim((string) $this->request->getGet('role'));
+        $status    = trim((string) $this->request->getGet('status'));
+        $dateRange = trim((string) $this->request->getGet('range'));
+        $ip        = trim((string) $this->request->getGet('ip'));
+        $page      = max(1, (int) $this->request->getGet('page_audit_log'));
 
         $auditLogModel = new AuditLogModel();
-        $result = $auditLogModel->getAuditLogsPaginated($search, $role, $status, 25, $page, 'audit_log');
+        $result = $auditLogModel->getAuditLogsPaginated($search, $role, $status, 25, $page, 'audit_log', $dateRange, $ip);
         $logs   = $result['logs'];
 
         $db = \Config\Database::connect();
         $total24h = $db->table('audit_logs')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
-        $critical = $db->table('audit_logs')->where('status','failed')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
-        $newAccounts = $db->table('audit_logs')->where('action','Created Account')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
+        $critical = $db->table('audit_logs')->where('status', 'failed')->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))->countAllResults();
+        $financialOps = $db->table('audit_logs')
+            ->groupStart()
+                ->like('action', 'payout')
+                ->orLike('action', 'payment')
+                ->orLike('target_type', 'payout')
+                ->orLike('target_type', 'payment')
+            ->groupEnd()
+            ->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))
+            ->countAllResults();
+        $activeActors = $db->table('audit_logs')
+            ->select('COUNT(DISTINCT actor_id) AS total')
+            ->where('created_at >=', date('Y-m-d H:i:s', strtotime('-24 hours')))
+            ->where('actor_id IS NOT NULL')
+            ->get()->getRowArray()['total'] ?? 0;
 
         return view('admin/audit_log', [
-            'audit_logs'   => $logs,
-            'logs'         => $logs,
-            'pager'        => $result['pager'],
-            'filters'      => ['q'=>$search,'role'=>$role,'status'=>$status],
-            'total_24h'    => $total24h,
-            'critical'     => $critical,
-            'new_accounts' => $newAccounts,
+            'audit_logs'    => $logs,
+            'logs'          => $logs,
+            'pager'         => $result['pager'],
+            'filters'       => [
+                'q'      => $search,
+                'role'   => $role,
+                'status' => $status,
+                'range'  => $dateRange,
+                'ip'     => $ip,
+            ],
+            'total_24h'     => $total24h,
+            'critical'      => $critical,
+            'financial_ops' => $financialOps,
+            'active_actors' => (int) $activeActors,
+            'activeNav'     => 'audit',
+            'title'         => 'Audit Log',
         ]);
+    }
+
+    public function auditLogDetail($logId)
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $db = \Config\Database::connect();
+        $log = $db->table('audit_logs a')
+            ->select('a.*, u.first_name, u.last_name, u.email, u.phone AS phone_number, u.role AS user_actual_role')
+            ->join('users u', 'u.id = a.actor_id', 'left')
+            ->where('a.id', (int) $logId)
+            ->get()->getRowArray();
+
+        if (!$log) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Audit log record not found.']);
+        }
+
+        $actorName = trim(($log['first_name'] ?? '') . ' ' . ($log['last_name'] ?? '')) ?: ($log['actor_role'] === 'system' ? 'System Process' : 'Anonymous');
+
+        // Resolve target metadata if available
+        $targetInfo = null;
+        if (!empty($log['target_type']) && !empty($log['target_id'])) {
+            $tt  = strtolower($log['target_type']);
+            $tid = (int) $log['target_id'];
+            if ($tt === 'shop') {
+                $targetInfo = $db->table('shops')->select('id, shop_name, slug, status')->where('id', $tid)->get()->getRowArray();
+            } elseif ($tt === 'user' || $tt === 'customer') {
+                $targetInfo = $db->table('users')->select('id, first_name, last_name, email, role')->where('id', $tid)->get()->getRowArray();
+            } elseif ($tt === 'order') {
+                $targetInfo = $db->table('orders')->select('id, order_number, total_amount, status')->where('id', $tid)->get()->getRowArray();
+            } elseif ($tt === 'payout') {
+                $targetInfo = $db->table('payout_requests')->select('id, amount, status, payout_method')->where('id', $tid)->get()->getRowArray();
+            }
+        }
+
+        return $this->response->setJSON([
+            'success' => true,
+            'data'    => [
+                'id'          => (int) $log['id'],
+                'actor_id'    => $log['actor_id'] ? (int) $log['actor_id'] : null,
+                'actor_name'  => $actorName,
+                'actor_email' => $log['email'] ?? '',
+                'actor_phone' => $log['phone_number'] ?? '',
+                'actor_role'  => $log['actor_role'],
+                'action'      => $log['action'],
+                'target_type' => $log['target_type'] ?? '',
+                'target_id'   => $log['target_id'] ? (int) $log['target_id'] : null,
+                'target_info' => $targetInfo,
+                'status'      => $log['status'],
+                'ip_address'  => $log['ip_address'] ?? '127.0.0.1',
+                'created_at'  => $log['created_at'],
+                'time_ago'    => date('M d, Y h:i:s A', strtotime($log['created_at'])),
+            ],
+        ]);
+    }
+
+    public function exportAuditLog()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $search    = trim((string) $this->request->getGet('q'));
+        $role      = trim((string) $this->request->getGet('role'));
+        $status    = trim((string) $this->request->getGet('status'));
+        $dateRange = trim((string) $this->request->getGet('range'));
+        $ip        = trim((string) $this->request->getGet('ip'));
+
+        $db      = \Config\Database::connect();
+        $builder = $db->table('audit_logs a')
+            ->select('a.*, u.first_name, u.last_name, u.email')
+            ->join('users u', 'u.id = a.actor_id', 'left')
+            ->orderBy('a.created_at', 'DESC');
+
+        if ($search !== '') {
+            $builder->groupStart()
+                ->like('a.action', $search)
+                ->orLike('a.target_type', $search)
+                ->orLike('a.target_id', $search)
+                ->orLike('a.ip_address', $search)
+                ->orLike('u.first_name', $search)
+                ->orLike('u.last_name', $search)
+                ->orLike('u.email', $search)
+                ->groupEnd();
+        }
+
+        if ($ip !== '') {
+            $builder->where('a.ip_address', $ip);
+        }
+
+        if ($role !== '' && in_array($role, ['admin', 'tenant', 'customer', 'system'], true)) {
+            $builder->where('a.actor_role', $role);
+        }
+
+        if ($status !== '' && in_array($status, ['success', 'failed'], true)) {
+            $builder->where('a.status', $status);
+        }
+
+        if ($dateRange === 'today') {
+            $builder->where('a.created_at >=', date('Y-m-d 00:00:00'));
+        } elseif ($dateRange === '7d') {
+            $builder->where('a.created_at >=', date('Y-m-d H:i:s', strtotime('-7 days')));
+        } elseif ($dateRange === '30d') {
+            $builder->where('a.created_at >=', date('Y-m-d H:i:s', strtotime('-30 days')));
+        }
+
+        $logs = $builder->get()->getResultArray();
+        $filename = 'admin_audit_logs_' . date('Y-m-d') . '.csv';
+
+        $output = fopen('php://temp', 'r+');
+        fputcsv($output, ['Log ID', 'Timestamp', 'Actor Name', 'Actor Email', 'Role', 'Action', 'Target Type', 'Target ID', 'Status', 'IP Address']);
+
+        foreach ($logs as $l) {
+            $actorName = trim(($l['first_name'] ?? '') . ' ' . ($l['last_name'] ?? '')) ?: ($l['actor_role'] === 'system' ? 'System' : 'Unknown');
+            fputcsv($output, [
+                $l['id'],
+                $l['created_at'],
+                $actorName,
+                $l['email'] ?? '',
+                strtoupper($l['actor_role']),
+                $l['action'],
+                $l['target_type'] ?? '',
+                $l['target_id'] ?? '',
+                strtoupper($l['status']),
+                $l['ip_address'] ?? '',
+            ]);
+        }
+
+        rewind($output);
+        $csvContent = stream_get_contents($output);
+        fclose($output);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($csvContent);
     }
 
     public function analytics()

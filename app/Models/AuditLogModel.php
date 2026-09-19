@@ -103,27 +103,45 @@ class AuditLogModel extends Model
         ?string $status = null,
         int $perPage = 25,
         int $page = 1,
-        string $group = 'audit_log'
+        string $group = 'audit_log',
+        ?string $dateRange = null,
+        ?string $ip = null
     ): array {
-        $this->builder()
+        $builder = $this->builder()
             ->select('audit_logs.*, u.first_name, u.last_name, u.email')
             ->join('users u', 'u.id = audit_logs.actor_id', 'left')
             ->orderBy('audit_logs.created_at', 'DESC');
 
         if ($search !== null && $search !== '') {
-            $this->builder()->groupStart()
+            $builder->groupStart()
                 ->like('audit_logs.action', $search)
                 ->orLike('audit_logs.target_type', $search)
+                ->orLike('audit_logs.target_id', $search)
+                ->orLike('audit_logs.ip_address', $search)
                 ->orLike('u.first_name', $search)
+                ->orLike('u.last_name', $search)
+                ->orLike('u.email', $search)
                 ->groupEnd();
         }
 
+        if ($ip !== null && $ip !== '') {
+            $builder->where('audit_logs.ip_address', $ip);
+        }
+
         if ($role !== null && in_array($role, ['admin', 'tenant', 'customer', 'system'], true)) {
-            $this->builder()->where('audit_logs.actor_role', $role);
+            $builder->where('audit_logs.actor_role', $role);
         }
 
         if ($status !== null && in_array($status, ['success', 'failed'], true)) {
-            $this->builder()->where('audit_logs.status', $status);
+            $builder->where('audit_logs.status', $status);
+        }
+
+        if ($dateRange === 'today') {
+            $builder->where('audit_logs.created_at >=', date('Y-m-d 00:00:00'));
+        } elseif ($dateRange === '7d') {
+            $builder->where('audit_logs.created_at >=', date('Y-m-d H:i:s', strtotime('-7 days')));
+        } elseif ($dateRange === '30d') {
+            $builder->where('audit_logs.created_at >=', date('Y-m-d H:i:s', strtotime('-30 days')));
         }
 
         $logs = $this->paginate($perPage, $group, $page);

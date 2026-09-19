@@ -347,7 +347,7 @@
                 <?php endif; ?>
             </div>
             <span class="badge-official">
-                <?= ($type ?? 'order') === 'printing' ? 'Printing Job Ticket & Receipt' : 'Official Sales Receipt' ?>
+                <?= ($type ?? 'order') === 'combined' ? 'Combined Pick-up & Printing Receipt' : (($type ?? 'order') === 'printing' ? 'Printing Job Ticket & Receipt' : 'Official Sales Receipt') ?>
             </span>
         </div>
 
@@ -355,7 +355,13 @@
         <div class="meta-grid">
             <div class="meta-item">
                 <span class="meta-label">Reference</span>
-                <span class="meta-val">#<?= esc($order['order_number'] ?? $printing['request_number'] ?? 'N/A') ?></span>
+                <span class="meta-val">
+                    <?php if (($type ?? 'order') === 'combined' && !empty($order) && !empty($printing)): ?>
+                        #<?= esc($order['order_number']) ?><br><span style="font-size: 9.5px; opacity: 0.85;">#<?= esc($printing['request_number']) ?></span>
+                    <?php else: ?>
+                        #<?= esc($order['order_number'] ?? $printing['request_number'] ?? 'N/A') ?>
+                    <?php endif; ?>
+                </span>
             </div>
             <div class="meta-item" style="text-align: right;">
                 <span class="meta-label">Date & Time</span>
@@ -396,7 +402,63 @@
         </div>
 
         <!-- 3. Items Table -->
-        <?php if (($type ?? 'order') === 'printing' && !empty($printing)): ?>
+        <?php if (($type ?? 'order') === 'combined' && !empty($printing) && !empty($order)): ?>
+            <!-- Product Items List -->
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; width: 65%;">Product Items</th>
+                        <th style="text-align: right; width: 35%;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($items)): ?>
+                        <?php foreach ($items as $it): ?>
+                            <tr>
+                                <td>
+                                    <div class="item-title"><?= esc($it['product_name'] ?? 'Product Item') ?></div>
+                                    <?php if (!empty($it['variant_label'])): ?>
+                                        <div class="item-variant"><?= esc($it['variant_label']) ?></div>
+                                    <?php endif; ?>
+                                    <?php if (!empty($it['is_pos_addition'])): ?>
+                                        <div style="font-size: 8.5px; font-weight: 700; color: #b45309; text-transform: uppercase; letter-spacing: 0.5px;">+ In-Store Addition</div>
+                                    <?php endif; ?>
+                                    <div class="item-calc">
+                                        <?= (int) ($it['quantity'] ?? 1) ?> &times; ₱<?= number_format((float) ($it['unit_price'] ?? 0), 2) ?>
+                                    </div>
+                                </td>
+                                <td class="item-price">
+                                    ₱<?= number_format((float) ($it['line_total'] ?? (($it['unit_price'] ?? 0) * ($it['quantity'] ?? 1))), 2) ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+
+            <!-- Printing Specs -->
+            <table class="items-table" style="margin-top: 10px;">
+                <thead>
+                    <tr>
+                        <th style="text-align: left; width: 65%;">Printing Job Specs</th>
+                        <th style="text-align: right; width: 35%;">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="item-title"><?= esc($printing['file_name'] ?? 'Document Print Job') ?></div>
+                            <div class="item-variant"><?= esc($printing['paper_size'] ?? 'A4') ?> • <?= esc($printing['color_mode'] ?? 'Color') ?> • <?= esc($printing['binding_option'] ?: 'No Binding') ?></div>
+                            <div class="item-calc"><?= (int) ($printing['page_count'] ?? 1) ?> pages &times; <?= (int) ($printing['copies'] ?? 1) ?> copies</div>
+                        </td>
+                        <td class="item-price">
+                            ₱<?= number_format((float) ($printing['total_price'] ?? 0), 2) ?>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+        <?php elseif (($type ?? 'order') === 'printing' && !empty($printing)): ?>
             <!-- Printing Specs -->
             <table class="items-table">
                 <thead>
@@ -436,6 +498,9 @@
                                     <?php if (!empty($it['variant_label'])): ?>
                                         <div class="item-variant"><?= esc($it['variant_label']) ?></div>
                                     <?php endif; ?>
+                                    <?php if (!empty($it['is_pos_addition'])): ?>
+                                        <div style="font-size: 8.5px; font-weight: 700; color: #b45309; text-transform: uppercase; letter-spacing: 0.5px;">+ In-Store Addition</div>
+                                    <?php endif; ?>
                                     <div class="item-calc">
                                         <?= (int) ($it['quantity'] ?? 1) ?> &times; ₱<?= number_format((float) ($it['unit_price'] ?? 0), 2) ?>
                                     </div>
@@ -459,17 +524,26 @@
         <!-- 4. Summary & Payments -->
         <div class="summary-box">
             <?php 
+                $isCombined = (($type ?? 'order') === 'combined' && !empty($printing) && !empty($order));
                 $subtotal = (float) ($order['subtotal'] ?? $printing['total_price'] ?? 0);
                 $shipping = (float) ($order['shipping_fee'] ?? 0);
                 $posAdd   = (float) ($order['pos_additional_amount'] ?? 0);
-                $grand    = (float) ($order['total_amount'] ?? $printing['total_price'] ?? 0);
+                $prPrice  = $isCombined ? (float) ($printing['total_price'] ?? 0) : 0.0;
+                $grand    = $isCombined ? ((float) ($order['total_amount'] ?? 0) + $prPrice) : (float) ($order['total_amount'] ?? $printing['total_price'] ?? 0);
                 $payMethod = strtoupper($order['pos_payment_method'] ?? $order['payment_method'] ?? 'CASH');
-                if ($payMethod === 'COUNTER_CASH') $payMethod = 'CASH';
+                if ($payMethod === 'COUNTER_CASH' || $payMethod === 'NONE') $payMethod = 'CASH';
             ?>
             <div class="summary-row">
-                <span>Subtotal:</span>
+                <span><?= $isCombined ? 'Products Subtotal:' : 'Subtotal:' ?></span>
                 <span>₱<?= number_format($subtotal, 2) ?></span>
             </div>
+
+            <?php if ($isCombined): ?>
+                <div class="summary-row">
+                    <span>Printing Request Total:</span>
+                    <span>₱<?= number_format($prPrice, 2) ?></span>
+                </div>
+            <?php endif; ?>
 
             <?php if ($shipping > 0): ?>
                 <div class="summary-row">
