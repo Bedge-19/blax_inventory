@@ -182,6 +182,7 @@ trait CheckoutProcessorTrait
                 $productId = (int) $item['product_id'];
                 $quantity  = (int) $item['quantity'];
 
+                // Lock row FOR UPDATE to prevent race condition / negative stock
                 $prod = $db->query(
                     'SELECT * FROM products WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
                     [$productId]
@@ -193,6 +194,7 @@ trait CheckoutProcessorTrait
                 }
 
                 if (!empty($item['variant_id'])) {
+                    // Lock row FOR UPDATE to prevent race condition / negative stock
                     $var = $db->query(
                         'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
                         [(int) $item['variant_id'], $productId]

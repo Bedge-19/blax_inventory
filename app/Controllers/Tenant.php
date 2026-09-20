@@ -4280,6 +4280,7 @@ class Tenant extends BaseController
                 $quantity  = max(1, (int) ($it['quantity'] ?? 1));
                 if ($productId <= 0) continue;
 
+                // Lock row FOR UPDATE to prevent race condition / negative stock
                 $product = $db->query(
                     'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
                     [$productId, $shopId]
@@ -4297,6 +4298,7 @@ class Tenant extends BaseController
 
                 $variantId = (int) ($it['variant_id'] ?? 0);
                 if ($variantId > 0) {
+                    // Lock row FOR UPDATE to prevent race condition / negative stock
                     $variant = $db->query(
                         'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
                         [$variantId, $productId]
@@ -4540,6 +4542,7 @@ class Tenant extends BaseController
 
                 $variantId = (int) ($it['variant_id'] ?? 0);
                 if ($variantId > 0) {
+                    // Lock row FOR UPDATE to prevent race condition / negative stock
                     $variant = $db->query(
                         'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
                         [$variantId, $productId]
@@ -4753,6 +4756,7 @@ class Tenant extends BaseController
 
             $variantId = (int) ($it['variant_id'] ?? 0);
             if ($variantId > 0) {
+                // Lock row FOR UPDATE to prevent race condition / negative stock
                 $variant = $db->query(
                     'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
                     [$variantId, $productId]
@@ -4967,6 +4971,7 @@ class Tenant extends BaseController
 
             if ($productId <= 0) continue;
 
+            // Lock row FOR UPDATE to prevent race condition / negative stock
             $product = $db->query(
                 'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
                 [$productId, $shopId]
@@ -4990,6 +4995,7 @@ class Tenant extends BaseController
 
             $variantId = (int) ($it['variant_id'] ?? 0);
             if ($variantId > 0) {
+                // Lock row FOR UPDATE to prevent race condition / negative stock
                 $variant = $db->query(
                     'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
                     [$variantId, $productId]

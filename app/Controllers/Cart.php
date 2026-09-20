@@ -463,7 +463,7 @@ class Cart extends BaseController
                     'line_total'    => $it['line_total'],
                 ]);
 
-                // Decrement stock upon verified payment
+                // Lock row FOR UPDATE to prevent race condition / negative stock
                 $pId  = (int) $it['product_id'];
                 $pQty = (int) $it['quantity'];
                 if (!empty($it['variant_id'])) {
@@ -651,7 +651,7 @@ class Cart extends BaseController
                         'line_total'    => $it['line_total'],
                     ]);
 
-                    // Decrement stock upon verified webhook payment
+                    // Lock row FOR UPDATE to prevent race condition / negative stock
                     $pId  = (int) $it['product_id'];
                     $pQty = (int) $it['quantity'];
                     if (!empty($it['variant_id'])) {
