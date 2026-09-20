@@ -107,13 +107,30 @@
                 </button>
             </div>
 
-            <!-- Instant Search Input -->
-            <div class="relative flex-1 sm:max-w-xs">
-                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-                <input id="archiveSearch" type="text" placeholder="Search by name, #ID, or order..." class="w-full pl-9 pr-8 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-body-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                <button type="button" id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
-                    <span class="material-symbols-outlined text-[16px]">close</span>
-                </button>
+            <!-- Per-Page Selector & Instant Search Input -->
+            <div class="flex items-center gap-2 flex-wrap flex-1 justify-end">
+                <form method="get" action="<?= base_url('tenant/archive') ?>" class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                    <?php if (!empty($activeType)): ?>
+                        <input type="hidden" name="type" value="<?= esc($activeType) ?>">
+                    <?php endif; ?>
+                    <?php if (!empty($searchQuery)): ?>
+                        <input type="hidden" name="q" value="<?= esc($searchQuery) ?>">
+                    <?php endif; ?>
+                    <label for="archive_per_page" class="font-medium">Show:</label>
+                    <select name="per_page" id="archive_per_page" onchange="this.form.submit()" class="bg-surface-container-low border border-outline-variant/40 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-primary">
+                        <option value="5" <?= ($per_page ?? 10) == 5 ? 'selected' : '' ?>>5</option>
+                        <option value="10" <?= ($per_page ?? 10) == 10 ? 'selected' : '' ?>>10</option>
+                        <option value="15" <?= ($per_page ?? 10) == 15 ? 'selected' : '' ?>>15</option>
+                        <option value="20" <?= ($per_page ?? 10) == 20 ? 'selected' : '' ?>>20</option>
+                    </select>
+                </form>
+                <div class="relative flex-1 sm:max-w-xs">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+                    <input id="archiveSearch" type="text" placeholder="Search by name, #ID, or order..." class="w-full pl-9 pr-8 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-body-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                    <button type="button" id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface">
+                        <span class="material-symbols-outlined text-[16px]">close</span>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -300,13 +317,13 @@
             </table>
         </div>
 
-        <!-- Pagination -->
         <?php
-        $aTot   = (int) $pager->getTotal('archive');
-        $aCur   = (int) $pager->getCurrentPage('archive');
-        $aPag   = (int) $pager->getPageCount('archive');
-        $aStart = $aTot === 0 ? 0 : ($aCur - 1) * 15 + 1;
-        $aEnd   = min($aCur * 15, $aTot);
+        $aTot     = (int) $pager->getTotal('archive');
+        $aCur     = (int) $pager->getCurrentPage('archive');
+        $aPag     = (int) $pager->getPageCount('archive');
+        $aPerPage = (int) ($per_page ?? ($pager ? $pager->getPerPage('archive') : 10));
+        $aStart   = $aTot === 0 ? 0 : ($aCur - 1) * $aPerPage + 1;
+        $aEnd     = min($aCur * $aPerPage, $aTot);
         ?>
         <?php if ($aPag > 1): ?>
             <div class="px-6 py-4 bg-surface-container-low/40 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">

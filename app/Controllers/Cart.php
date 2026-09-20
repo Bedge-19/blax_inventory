@@ -446,6 +446,7 @@ class Cart extends BaseController
                 'total_amount'        => $so['total_amount'],
                 'status'              => 'pending',
                 'payment_status'      => 'paid',
+                'placed_at'           => date('Y-m-d H:i:s'),
             ]);
 
             $createdOrderIds[] = $orderId;
@@ -633,6 +634,7 @@ class Cart extends BaseController
                     'total_amount'        => $so['total_amount'],
                     'status'              => 'pending',
                     'payment_status'      => 'paid',
+                    'placed_at'           => date('Y-m-d H:i:s'),
                 ]);
 
                 $createdOrderIds[] = $orderId;

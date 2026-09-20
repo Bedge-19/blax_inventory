@@ -90,7 +90,7 @@
 
                         <div class="flex items-start pt-md">
 
-                            <input class="cart-item-checkbox w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" name="selected_items[]" type="checkbox" value="<?= (int) $item['id'] ?>" data-id="<?= (int) $item['id'] ?>" data-price="<?= (float) $item['price'] ?>" data-qty="<?= (int) $item['quantity'] ?>" data-shop-name="<?= esc($item['shop_name'] ?? 'RHK Store') ?>" <?= !empty($item['is_selected']) ? 'checked' : '' ?>>
+                            <input class="cart-item-checkbox w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" name="selected_items[]" type="checkbox" value="<?= (int) $item['id'] ?>" data-id="<?= (int) $item['id'] ?>" data-price="<?= (float) $item['price'] ?>" data-qty="<?= (int) $item['quantity'] ?>" data-shop-name="<?= esc($item['shop_name'] ?? 'RHK Store') ?>" data-offers-delivery="<?= (isset($item['offers_delivery']) && (int)$item['offers_delivery'] === 0) ? '0' : '1' ?>" data-offers-pickup="<?= (isset($item['offers_pickup']) && (int)$item['offers_pickup'] === 0) ? '0' : '1' ?>" <?= !empty($item['is_selected']) ? 'checked' : '' ?>>
 
                         </div>
 
@@ -199,9 +199,9 @@
 
                             <div class="grid grid-cols-1 gap-sm">
 
-                                <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
+                                <label id="label-pay-gcash" class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
 
-                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="gcash">
+                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="gcash" id="cart-pay-gcash">
                                     <span class="material-symbols-outlined text-[#007DFE] group-hover:scale-110 transition-transform">account_balance_wallet</span>
                                     <div class="flex flex-col">
                                         <span class="text-body-md font-bold">GCash</span>
@@ -210,28 +210,34 @@
 
                                 </label>
 
-                                <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
+                                <label id="label-pay-pickup" class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
 
-                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="pickup">
+                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="pickup" id="cart-pay-pickup">
                                     <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">storefront</span>
                                     <div class="flex flex-col">
                                         <span class="text-body-md font-bold">Store Pick-up</span>
-                                        <span class="text-xs text-on-surface-variant">Pick up at the shop branch</span>
+                                        <span class="text-xs text-on-surface-variant" id="subtext-pay-pickup">Pick up at the shop branch</span>
                                     </div>
 
                                 </label>
 
-                                <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
+                                <label id="label-pay-cod" class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group">
 
-                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="cod">
+                                    <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary" name="payment_method" type="radio" value="cod" id="cart-pay-cod">
                                     <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">local_shipping</span>
                                     <div class="flex flex-col">
                                         <span class="text-body-md font-bold">Cash on Delivery</span>
-                                        <span class="text-xs text-on-surface-variant">Pay at doorstep</span>
+                                        <span class="text-xs text-on-surface-variant" id="subtext-pay-cod">Pay at doorstep</span>
                                     </div>
 
                                 </label>
 
+                            </div>
+
+                            <!-- Cart Service Restriction Notice -->
+                            <div id="cart-service-notice" class="hidden mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2">
+                                <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0 mt-0.5">info</span>
+                                <span id="cart-service-notice-text"></span>
                             </div>
 
                         </div>
@@ -315,21 +321,21 @@
                 <span class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider block mb-1">Select Fulfillment</span>
                 <div class="grid grid-cols-1 gap-sm">
                     <label class="flex items-center gap-md p-sm rounded-lg border border-primary bg-primary/5 cursor-pointer" id="label-opt-delivery">
-                        <input type="radio" name="modal_fulfillment_choice" value="delivery" checked class="w-4 h-4 text-primary focus:ring-primary">
+                        <input type="radio" name="modal_fulfillment_choice" value="delivery" checked class="w-4 h-4 text-primary focus:ring-primary" id="modal-fchoice-delivery">
                         <div class="flex flex-col">
                             <span class="text-sm font-bold text-on-surface flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[18px]">local_shipping</span> Doorstep Delivery
                             </span>
-                            <span class="text-[11px] text-on-surface-variant">Delivered to your address (₱50.00 fee)</span>
+                            <span class="text-[11px] text-on-surface-variant" id="modal-desc-delivery">Delivered to your address (₱50.00 fee)</span>
                         </div>
                     </label>
                     <label class="flex items-center gap-md p-sm rounded-lg border border-outline-variant hover:bg-surface-container cursor-pointer" id="label-opt-pickup">
-                        <input type="radio" name="modal_fulfillment_choice" value="pickup" class="w-4 h-4 text-primary focus:ring-primary">
+                        <input type="radio" name="modal_fulfillment_choice" value="pickup" class="w-4 h-4 text-primary focus:ring-primary" id="modal-fchoice-pickup">
                         <div class="flex flex-col">
                             <span class="text-sm font-bold text-on-surface flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[18px]">storefront</span> Store Pick-up
                             </span>
-                            <span class="text-[11px] text-on-surface-variant">Pick up at shop branch (Free / ₱0.00)</span>
+                            <span class="text-[11px] text-on-surface-variant" id="modal-desc-pickup">Pick up at shop branch (Free / ₱0.00)</span>
                         </div>
                     </label>
                 </div>
@@ -412,6 +418,100 @@
         var selected = Array.prototype.filter.call(itemCheckboxes, function (cb) { return cb.checked; });
         var anySelected = selected.length > 0;
 
+        var canDeliver = true;
+        var canPickup  = true;
+        selected.forEach(function (cb) {
+            if (cb.getAttribute('data-offers-delivery') === '0') canDeliver = false;
+            if (cb.getAttribute('data-offers-pickup') === '0') canPickup = false;
+        });
+
+        // Sync payment method elements
+        var payPickup     = document.getElementById('cart-pay-pickup');
+        var payCod        = document.getElementById('cart-pay-cod');
+        var labelPickup   = document.getElementById('label-pay-pickup');
+        var labelCod      = document.getElementById('label-pay-cod');
+        var subtextPickup = document.getElementById('subtext-pay-pickup');
+        var subtextCod    = document.getElementById('subtext-pay-cod');
+
+        var noticeEl   = document.getElementById('cart-service-notice');
+        var noticeText = document.getElementById('cart-service-notice-text');
+
+        // Handle Delivery (COD)
+        if (payCod && labelCod) {
+            if (anySelected && !canDeliver) {
+                payCod.disabled = true;
+                if (payCod.checked) payCod.checked = false;
+                labelCod.className = 'flex items-center gap-md p-md bg-surface-container-low opacity-40 cursor-not-allowed pointer-events-none rounded-lg border border-outline-variant/30';
+                if (subtextCod) subtextCod.textContent = 'Kasalukuyang walang doorstep delivery';
+            } else {
+                payCod.disabled = false;
+                labelCod.className = 'flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group';
+                if (subtextCod) subtextCod.textContent = 'Pay at doorstep';
+            }
+        }
+
+        // Handle Store Pick-up
+        if (payPickup && labelPickup) {
+            if (anySelected && !canPickup) {
+                payPickup.disabled = true;
+                if (payPickup.checked) payPickup.checked = false;
+                labelPickup.className = 'flex items-center gap-md p-md bg-surface-container-low opacity-40 cursor-not-allowed pointer-events-none rounded-lg border border-outline-variant/30';
+                if (subtextPickup) subtextPickup.textContent = 'Kasalukuyang walang store pick-up';
+            } else {
+                payPickup.disabled = false;
+                labelPickup.className = 'flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-lg border border-outline-variant/30 cursor-pointer group';
+                if (subtextPickup) subtextPickup.textContent = 'Pick up at the shop branch';
+            }
+        }
+
+        // Service Notice Banner
+        if (noticeEl && noticeText) {
+            if (anySelected && (!canDeliver || !canPickup)) {
+                noticeEl.classList.remove('hidden');
+                if (!canDeliver && !canPickup) {
+                    noticeText.textContent = 'Paalala: Walang delivery at pick-up service na available sa tindahang ito ngayon.';
+                } else if (!canDeliver) {
+                    noticeText.textContent = 'Paalala: Walang Doorstep Delivery service ang tindahang ito. Store Pick-up lamang ang maaaring piliin.';
+                } else if (!canPickup) {
+                    noticeText.textContent = 'Paalala: Walang Store Pick-up service ang tindahang ito. Doorstep Delivery lamang ang maaaring piliin.';
+                }
+            } else {
+                noticeEl.classList.add('hidden');
+            }
+        }
+
+        // Modal GCash choices enable/disable
+        var modalChoiceDelivery = document.getElementById('modal-fchoice-delivery');
+        var modalChoicePickup   = document.getElementById('modal-fchoice-pickup');
+        var labelModalDel       = document.getElementById('label-opt-delivery');
+        var labelModalPick      = document.getElementById('label-opt-pickup');
+        var descModalDel        = document.getElementById('modal-desc-delivery');
+        var descModalPick       = document.getElementById('modal-desc-pickup');
+
+        if (modalChoiceDelivery && labelModalDel) {
+            if (anySelected && !canDeliver) {
+                modalChoiceDelivery.disabled = true;
+                labelModalDel.className = 'flex items-center gap-md p-sm rounded-lg border border-outline-variant/30 opacity-40 cursor-not-allowed pointer-events-none';
+                if (descModalDel) descModalDel.textContent = 'Hindi available sa shop na ito';
+            } else {
+                modalChoiceDelivery.disabled = false;
+                labelModalDel.className = 'flex items-center gap-md p-sm rounded-lg border border-primary bg-primary/5 cursor-pointer';
+                if (descModalDel) descModalDel.textContent = 'Delivered to your address (₱50.00 fee)';
+            }
+        }
+
+        if (modalChoicePickup && labelModalPick) {
+            if (anySelected && !canPickup) {
+                modalChoicePickup.disabled = true;
+                labelModalPick.className = 'flex items-center gap-md p-sm rounded-lg border border-outline-variant/30 opacity-40 cursor-not-allowed pointer-events-none';
+                if (descModalPick) descModalPick.textContent = 'Hindi available sa shop na ito';
+            } else {
+                modalChoicePickup.disabled = false;
+                labelModalPick.className = 'flex items-center gap-md p-sm rounded-lg border border-outline-variant hover:bg-surface-container cursor-pointer';
+                if (descModalPick) descModalPick.textContent = 'Pick up at shop branch (Free / ₱0.00)';
+            }
+        }
+
         if (anySelected) {
             checkoutSidebar.classList.add('visible');
             if (emptyMsg) emptyMsg.style.display = 'none';
@@ -421,7 +521,7 @@
                 subtotal += (parseFloat(cb.getAttribute('data-price')) || 0) * (parseInt(cb.getAttribute('data-qty'), 10) || 1);
             });
 
-            var selectedPayment = Array.prototype.find.call(paymentRadios, function (r) { return r.checked; });
+            var selectedPayment = Array.prototype.find.call(paymentRadios, function (r) { return r.checked && !r.disabled; });
             var currentShipping = (selectedPayment && selectedPayment.value === 'pickup') ? 0 : shipping;
 
             document.getElementById('subtotal-val').innerText = money(subtotal);
@@ -439,7 +539,7 @@
     }
 
     function validateCheckout() {
-        var hasPayment = Array.prototype.some.call(paymentRadios, function (r) { return r.checked; });
+        var hasPayment = Array.prototype.some.call(paymentRadios, function (r) { return r.checked && !r.disabled; });
         var hasItems   = Array.prototype.some.call(itemCheckboxes, function (cb) { return cb.checked; });
         placeOrderBtn.disabled = !(hasPayment && hasItems);
     }
@@ -566,8 +666,12 @@
                 if (modalConfirmText) modalConfirmText.textContent = 'Proceed to PayMongo';
                 if (modalGcashFulfillment) modalGcashFulfillment.classList.remove('hidden');
 
-                // Determine currently checked modal fulfillment choice
-                var chosenFulfillment = document.querySelector('input[name="modal_fulfillment_choice"]:checked');
+                // Determine currently checked modal fulfillment choice (non-disabled)
+                var chosenFulfillment = document.querySelector('input[name="modal_fulfillment_choice"]:checked:not(:disabled)') 
+                    || document.querySelector('input[name="modal_fulfillment_choice"]:not(:disabled)');
+                if (chosenFulfillment) {
+                    chosenFulfillment.checked = true;
+                }
                 var fVal = chosenFulfillment ? chosenFulfillment.value : 'delivery';
                 if (fVal === 'pickup') {
                     if (modalTotal) modalTotal.textContent = money(subtotal);

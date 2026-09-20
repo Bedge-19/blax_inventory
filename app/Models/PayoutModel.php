@@ -17,11 +17,23 @@ class PayoutModel extends Model
         'amount',
         'destination_method',
         'destination_detail',
+        'recipient_account_name',
+        'recipient_institution',
         'fee',
         'deduction_percent',
+        'net_amount',
         'status',
         'requested_at',
         'completed_at',
+        'processed_at',
+        'processed_by',
+        'paymongo_transfer_id',
+        'paymongo_batch_id',
+        'transfer_initiated_at',
+        'transfer_status',
+        'failure_reason',
+        'idempotency_key',
+        'last_webhook_event_id',
     ];
 
     public function getAdminRevenueTotal(?string $status = 'completed'): float
@@ -98,8 +110,10 @@ class PayoutModel extends Model
         string $group = 'payments'
     ): array {
         $this->builder()
-            ->select('payout_requests.*, s.shop_name, s.gcash_number')
+            ->select('payout_requests.*, s.shop_name, s.gcash_number as shop_gcash_number, u.first_name as processor_first_name, u.last_name as processor_last_name, owner.first_name as owner_first_name, owner.last_name as owner_last_name, owner.email as owner_email')
             ->join('shops s', 's.id = payout_requests.shop_id', 'left')
+            ->join('users owner', 'owner.id = s.owner_id', 'left')
+            ->join('users u', 'u.id = payout_requests.processed_by', 'left')
             ->where('payout_requests.destination_method', 'gcash')
             ->orderBy('payout_requests.requested_at', 'DESC');
 
@@ -107,10 +121,14 @@ class PayoutModel extends Model
             $this->builder()->groupStart()
                 ->like('payout_requests.reference_number', $search)
                 ->orLike('s.shop_name', $search)
+                ->orLike('payout_requests.recipient_account_name', $search)
+                ->orLike('payout_requests.destination_detail', $search)
+                ->orLike('owner.first_name', $search)
+                ->orLike('owner.last_name', $search)
                 ->groupEnd();
         }
 
-        if ($status !== null && in_array($status, ['pending', 'processing', 'completed', 'failed'], true)) {
+        if ($status !== null && in_array($status, ['pending', 'processing', 'transfer_pending', 'completed', 'failed', 'cancelled'], true)) {
             $this->builder()->where('payout_requests.status', $status);
         }
 

@@ -21,8 +21,8 @@ function pr_spec_line(array $r): string {
 
 $nextStates = [
     'new'                => ['in_production' => 'Start Production', 'cancelled' => 'Cancel Request'],
-    'in_production'      => ['ready_for_pickup' => 'Ready for Pickup', 'ready_for_delivery' => 'Ready for Delivery', 'cancelled' => 'Cancel Request'],
-    'ready_for_pickup'   => ['ready_for_delivery' => 'Mark Ready for Delivery', 'completed' => 'Mark Completed', 'cancelled' => 'Cancel Request'],
+    'in_production'      => ['ready_for_pickup' => 'Ready for Pickup', 'ready_for_delivery' => 'In Transit', 'cancelled' => 'Cancel Request'],
+    'ready_for_pickup'   => ['ready_for_delivery' => 'Mark In Transit', 'completed' => 'Mark Completed', 'cancelled' => 'Cancel Request'],
     'ready_for_delivery' => ['ready_for_pickup' => 'Mark Ready for Pickup', 'completed' => 'Mark Completed', 'cancelled' => 'Cancel Request'],
     'completed'          => [],
     'cancelled'          => [],
@@ -320,13 +320,13 @@ $nextStates = [
                                                 <!-- Direct Fulfillment-Aware Action Button for In Production & New Requests -->
                                                 <?php if ($r['status'] === 'in_production'): ?>
                                                     <?php if ($isDeliv): ?>
-                                                        <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="inline">
+                                                        <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="inline" onsubmit="return confirm('Dispatch Request #<?= esc($r['request_number'] ?? ('PR-' . $r['id'])) ?> as In Transit for delivery?');">
                                                             <?= csrf_field() ?>
                                                             <input type="hidden" name="request_id" value="<?= (int) $r['id'] ?>">
                                                             <input type="hidden" name="status" value="ready_for_delivery">
-                                                            <button type="submit" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95" title="Mark Shipped for Delivery">
+                                                            <button type="submit" class="px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all active:scale-95 cursor-pointer" title="Dispatch as In Transit for Doorstep Delivery">
                                                                 <span class="material-symbols-outlined text-[15px]">local_shipping</span>
-                                                                <span>Shipped</span>
+                                                                <span>In Transit</span>
                                                             </button>
                                                         </form>
                                                     <?php else: ?>
@@ -747,13 +747,13 @@ $nextStates = [
                                 <!-- PRIMARY FULFILLMENT ACTION BUTTON -->
                                 <div class="pt-1">
                                     <?php if ($qIsDelivery): ?>
-                                        <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="w-full">
+                                        <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="w-full" onsubmit="return confirm('Dispatch Request #<?= esc($q['request_number'] ?? ('PR-' . $q['id'])) ?> as In Transit for delivery?');">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="request_id" value="<?= (int) $q['id'] ?>">
                                             <input type="hidden" name="status" value="ready_for_delivery">
-                                            <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all" title="Advance status to Shipped for Delivery">
+                                            <button type="submit" class="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Advance status to In Transit for Delivery">
                                                 <span class="material-symbols-outlined text-[17px]">local_shipping</span>
-                                                <span>Mark as Shipped</span>
+                                                <span>In Transit</span>
                                             </button>
                                         </form>
                                     <?php else: ?>

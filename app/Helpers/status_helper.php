@@ -58,6 +58,7 @@ if (!function_exists('status_badge')) {
             'inactive'         => ['bg-surface-variant text-on-surface-variant border border-outline-variant/40', 'dot:on-surface-variant'],
             // processing / blue
             'processing'       => ['bg-blue-100 text-blue-800 border border-blue-300', 'dot:blue-600'],
+            'transfer_pending' => ['bg-purple-100 text-purple-800 border border-purple-300', 'dot:purple-600'],
             'in_production'    => ['bg-blue-100 text-blue-800 border border-blue-300', 'dot:blue-600'],
             'under_review'     => ['bg-blue-100 text-blue-800 border border-blue-300', 'dot:blue-600'],
             // transit / ready

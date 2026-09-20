@@ -44,8 +44,15 @@
                     <option value="flagged" <?= ($filters['status']??'')==='flagged'?'selected':'' ?>>Flagged</option>
                     <option value="resolved" <?= ($filters['status']??'')==='resolved'?'selected':'' ?>>Resolved</option>
                 </select>
+                <div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                    <label for="per_page_select" class="font-medium">Show:</label>
+                    <select name="per_page" id="per_page_select" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-primary/30">
+                        <option value="5" <?= ($per_page ?? 10) == 5 ? 'selected' : '' ?>>5</option>
+                        <option value="10" <?= ($per_page ?? 10) == 10 ? 'selected' : '' ?>>10</option>
+                        <option value="20" <?= ($per_page ?? 10) == 20 ? 'selected' : '' ?>>20</option>
+                    </select>
+                </div>
                 <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-sm font-semibold">Filter</button>
-                <a href="<?= base_url('admin/compliance') ?>" class="px-md py-sm text-sm text-on-surface-variant hover:underline">Reset</a>
             </form>
         </div>
         <div class="responsive-table">
@@ -127,7 +134,7 @@
         <?php if (isset($pager)): ?>
             <?php
             $total   = (int) $pager->getTotal('compliance');
-            $perPage = 15;
+            $perPage = (int) ($per_page ?? ($pager ? $pager->getPerPage('compliance') : 10));
             $cur     = (int) $pager->getCurrentPage('compliance');
             $pages   = (int) $pager->getPageCount('compliance');
             $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;

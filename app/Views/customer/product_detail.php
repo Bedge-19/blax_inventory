@@ -413,7 +413,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-md">
+            <div class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-md">
                 <?php foreach ($relatedProducts as $rel): ?>
                     <?php
                         $relImg = product_image_url($rel['image_url'] ?? null);
@@ -424,7 +424,7 @@
                         $relRating = round((float) ($rel['rating_average'] ?? 0), 1);
                         $relRatingCount = (int) ($rel['rating_count'] ?? 0);
                     ?>
-                    <div class="group bg-surface-container-lowest border border-outline-variant/30 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                    <div class="group bg-surface-container-lowest border border-outline-variant/30 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
                         <div>
                             <div class="relative aspect-square overflow-hidden bg-surface-container-low">
                                 <a href="<?= base_url('product/' . $rel['id']) ?>" class="block w-full h-full">
@@ -432,38 +432,38 @@
                                 </a>
 
                                 <?php if (!empty($rel['is_bestseller'])): ?>
-                                    <span class="absolute top-2 left-2 bg-primary-container text-on-primary text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">Bestseller</span>
+                                    <span class="absolute top-1.5 left-1.5 bg-primary-container text-on-primary text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">Bestseller</span>
                                 <?php elseif ($hasDiscount): ?>
-                                    <span class="absolute top-2 left-2 bg-error text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">-<?= $discountPct ?>%</span>
+                                    <span class="absolute top-1.5 left-1.5 bg-error text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">-<?= $discountPct ?>%</span>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="p-sm md:p-md">
-                                <a href="<?= base_url('product/' . $rel['id']) ?>" class="text-body-sm font-semibold text-on-surface line-clamp-2 group-hover:text-primary transition-colors leading-snug min-h-[2.5rem]" title="<?= esc($rel['name']) ?>">
+                            <div class="p-1.5 sm:p-md">
+                                <a href="<?= base_url('product/' . $rel['id']) ?>" class="text-[11px] sm:text-body-sm font-semibold text-on-surface line-clamp-2 group-hover:text-primary transition-colors leading-snug min-h-[2rem] sm:min-h-[2.5rem]" title="<?= esc($rel['name']) ?>">
                                     <?= esc($rel['name']) ?>
                                 </a>
 
-                                <div class="flex items-center gap-1 mt-xs text-xs text-on-surface-variant">
+                                <div class="hidden sm:flex items-center gap-1 mt-xs text-xs text-on-surface-variant">
                                     <span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
                                     <span class="font-bold text-on-surface"><?= $relRating > 0 ? number_format($relRating, 1) : '5.0' ?></span>
                                     <span class="text-[11px] text-outline font-normal">(<?= $relRatingCount ?>)</span>
                                 </div>
 
-                                <div class="mt-sm">
+                                <div class="mt-1 sm:mt-sm">
                                     <div class="flex items-baseline gap-1 flex-wrap">
-                                        <span class="text-title-sm md:text-title-md font-bold text-primary">₱<?= number_format($relPrice, 2) ?></span>
+                                        <span class="text-xs sm:text-title-sm md:text-title-md font-bold text-primary">₱<?= number_format($relPrice, 2) ?></span>
                                         <?php if ($hasDiscount): ?>
-                                            <span class="text-[11px] text-outline line-through">₱<?= number_format($relCompare, 2) ?></span>
+                                            <span class="text-[9px] sm:text-[11px] text-outline line-through">₱<?= number_format($relCompare, 2) ?></span>
                                         <?php endif; ?>
                                     </div>
                                     <?php if (!empty($rel['shop_name'])): ?>
-                                        <p class="text-[11px] text-on-surface-variant/70 truncate mt-0.5"><?= esc($rel['shop_name']) ?></p>
+                                        <p class="text-[10px] sm:text-[11px] text-on-surface-variant/70 truncate mt-0.5"><?= esc($rel['shop_name']) ?></p>
                                     <?php endif; ?>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="px-sm pb-sm md:px-md md:pb-md pt-0">
+                        <div class="hidden sm:block px-sm pb-sm md:px-md md:pb-md pt-0">
                             <a href="<?= base_url('product/' . $rel['id']) ?>" class="w-full block text-center py-1.5 px-2 bg-surface-container hover:bg-primary hover:text-on-primary text-primary text-xs font-bold rounded-lg transition-colors">
                                 View Details
                             </a>

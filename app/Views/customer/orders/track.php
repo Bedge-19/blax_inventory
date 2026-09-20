@@ -45,10 +45,10 @@
                 
                 <!-- 1. Top Navigation & Back Button -->
                 <div class="flex items-center justify-between">
-                    <a href="<?= base_url('customer/orders') ?>" 
+                    <a href="<?= !empty($backUrl) ? esc($backUrl) : base_url('customer/orders') ?>" 
                        class="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:text-primary/80 transition-colors group">
                         <span class="material-symbols-outlined text-[18px] transition-transform group-hover:-translate-x-1">arrow_back</span>
-                        <span>Back to My Orders</span>
+                        <span><?= !empty($backLabel) ? esc($backLabel) : 'Back to My Orders' ?></span>
                     </a>
 
                     <!-- Status & Fulfillment Badges -->
@@ -623,7 +623,7 @@
         if (['delivered', 'completed', 'cancelled'].includes(ORDER_STATUS)) return;
 
         pollInterval = setInterval(() => {
-            fetch('<?= base_url('customer/orders/track/' . ($order['order_number'] ?? $order['id']) . '/position') ?>', {
+            fetch('<?= !empty($pollPositionUrl) ? esc($pollPositionUrl) : base_url('customer/orders/track/' . ($order['order_number'] ?? $order['id']) . '/position') ?>', {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest'
                 }

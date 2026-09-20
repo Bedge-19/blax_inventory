@@ -29,13 +29,14 @@ class Tenant extends BaseController
      * The only order statuses that exist in the orders.status enum.
      */
     private const ORDER_STATUSES = [
-        'pending'         => 'Pending',
-        'processing'      => 'Processing',
-        'shipped'         => 'Shipped',
+        'pending'          => 'Pending',
+        'processing'       => 'Processing',
+        'shipped'          => 'Shipped',
+        'in_transit'       => 'In Transit',
         'ready_for_pickup' => 'Ready for Pickup',
-        'delivered'       => 'Delivered',
-        'completed'       => 'Completed',
-        'cancelled'       => 'Cancelled',
+        'delivered'        => 'Delivered',
+        'completed'        => 'Completed',
+        'cancelled'        => 'Cancelled',
     ];
 
     private function getShopOrRedirect()
@@ -413,12 +414,18 @@ class Tenant extends BaseController
 
         $orderModel = new OrderModel();
 
-        $search   = trim((string) $this->request->getGet('q'));
-        $status   = (string) $this->request->getGet('status');
-        $status   = in_array($status, array_keys(self::ORDER_STATUSES), true) ? $status : '';
-        $dateFrom = $this->isDate((string) $this->request->getGet('from')) ? (string) $this->request->getGet('from') : '';
-        $dateTo   = $this->isDate((string) $this->request->getGet('to')) ? (string) $this->request->getGet('to') : '';
-        $page     = max(1, (int) $this->request->getGet('page_orders'));
+        $search      = trim((string) $this->request->getGet('q'));
+        $status      = (string) $this->request->getGet('status');
+        $status      = in_array($status, array_keys(self::ORDER_STATUSES), true) ? $status : '';
+        $fulfillment = (string) $this->request->getGet('fulfillment');
+        $fulfillment = in_array($fulfillment, ['pickup', 'delivery'], true) ? $fulfillment : '';
+        $dateFrom    = $this->isDate((string) $this->request->getGet('from')) ? (string) $this->request->getGet('from') : '';
+        $dateTo      = $this->isDate((string) $this->request->getGet('to')) ? (string) $this->request->getGet('to') : '';
+        $perPage     = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 15, 20], true)) {
+            $perPage = 10;
+        }
+        $page        = max(1, (int) $this->request->getGet('page_orders'));
 
         $result = $orderModel->getOrdersByShopPaginated(
             $shopId,
@@ -426,9 +433,10 @@ class Tenant extends BaseController
             $status !== '' ? $status : null,
             $dateFrom !== '' ? $dateFrom : null,
             $dateTo !== '' ? $dateTo : null,
-            10,
+            $perPage,
             $page,
-            'orders'
+            'orders',
+            $fulfillment !== '' ? $fulfillment : null
         );
 
         $processingOrders = $orderModel->getProcessingOrdersForShop($shopId);
@@ -438,13 +446,15 @@ class Tenant extends BaseController
             'orders'           => $result['orders'],
             'processingOrders' => $processingOrders,
             'pager'            => $result['pager'],
+            'per_page'         => $perPage,
             'summary'          => $orderModel->getOrdersSummary($shopId),
-            'filters'          => ['q' => $search, 'status' => $status, 'from' => $dateFrom, 'to' => $dateTo],
+            'filters'          => ['q' => $search, 'status' => $status, 'fulfillment' => $fulfillment, 'from' => $dateFrom, 'to' => $dateTo],
             'statusOptions'    => [
                 'pending'          => 'Pending',
                 'processing'       => 'Processing',
                 'ready_for_pickup' => 'Ready for Pickup',
                 'shipped'          => 'Shipped',
+                'in_transit'       => 'In Transit',
                 'delivered'        => 'Delivered',
                 'completed'        => 'Completed',
                 'cancelled'        => 'Cancelled',
@@ -1151,25 +1161,39 @@ class Tenant extends BaseController
         $shopId = $res['shopId'];
         $shop   = $res['shop'];
 
+        $perPage = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 15, 20], true)) {
+            $perPage = 10;
+        }
         $page = max(1, (int) $this->request->getGet('page_withdrawals'));
 
         $payoutModel = new PayoutModel();
-        $result      = $payoutModel->getWithdrawalsByShopPaginated($shopId, 15, $page, 'withdrawals');
+        $result      = $payoutModel->getWithdrawalsByShopPaginated($shopId, $perPage, $page, 'withdrawals');
         $payouts     = $result['withdrawals'];
 
         $balanceData = $this->getShopEscrowAndBalance($shopId);
 
+        // Verify GCash information completeness
+        $rawGcashNum  = preg_replace('/\D/', '', (string) ($shop['gcash_number'] ?? ''));
+        $rawGcashName = trim((string) ($shop['gcash_account_name'] ?? ''));
+        $isGcashComplete = ($rawGcashName !== '' && mb_strlen($rawGcashName) >= 2 && preg_match('/^09\d{9}$/', $rawGcashNum));
+        $maskedGcashNum  = $isGcashComplete ? ('09' . str_repeat('•', 5) . substr($rawGcashNum, -4)) : '';
+
         return view('tenant/withdrawals', [
-            'shop'              => $shop,
-            'withdrawals'       => $payouts,
-            'payouts'           => $payouts,
-            'pager'             => $result['pager'],
-            'available_balance' => $balanceData['available_balance'],
-            'escrow_holding'    => $balanceData['escrow_holding'],
-            'released_earnings' => $balanceData['released_earnings'],
-            'settled_records'   => $balanceData['settled_records'] ?? [],
-            'escrow_records'    => $balanceData['escrow_records'] ?? [],
-            'deduction_percent' => (new SiteContentModel())->getPlatformDeductionPercent(),
+            'shop'                => $shop,
+            'withdrawals'         => $payouts,
+            'payouts'             => $payouts,
+            'pager'               => $result['pager'],
+            'per_page'            => $perPage,
+            'available_balance'   => $balanceData['available_balance'],
+            'escrow_holding'      => $balanceData['escrow_holding'],
+            'released_earnings'   => $balanceData['released_earnings'],
+            'settled_records'     => $balanceData['settled_records'] ?? [],
+            'escrow_records'      => $balanceData['escrow_records'] ?? [],
+            'deduction_percent'   => (new SiteContentModel())->getPlatformDeductionPercent(),
+            'is_gcash_complete'   => $isGcashComplete,
+            'masked_gcash_number' => $maskedGcashNum,
+            'gcash_account_name'  => $rawGcashName,
         ]);
     }
 
@@ -1358,10 +1382,10 @@ class Tenant extends BaseController
             return strtotime($b['placed_at']) <=> strtotime($a['placed_at']);
         });
 
-        // Deduct active payout requests (exclude rejected or failed)
+        // Deduct active payout requests (exclude rejected, failed, or cancelled)
         $payouts = $db->table('payout_requests')
             ->where('shop_id', $shopId)
-            ->whereNotIn('status', ['rejected', 'failed'])
+            ->whereNotIn('status', ['rejected', 'failed', 'cancelled'])
             ->selectSum('amount')
             ->get()->getRowArray();
         $payoutDeductions = (float) ($payouts['amount'] ?? 0);
@@ -1485,9 +1509,13 @@ class Tenant extends BaseController
 
         $type   = trim((string) $this->request->getGet('type'));
         $search = trim((string) $this->request->getGet('q'));
+        $perPage = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 15, 20], true)) {
+            $perPage = 10;
+        }
         $page   = max(1, (int) $this->request->getGet('page_archive'));
 
-        $result = (new ArchivedItemModel())->getArchivedForShopPaginated($shopId, 15, $page, 'archive', $type, $search);
+        $result = (new ArchivedItemModel())->getArchivedForShopPaginated($shopId, $perPage, $page, 'archive', $type, $search);
         $items  = $result['items'];
 
         // Enrich items with metadata
@@ -1557,6 +1585,7 @@ class Tenant extends BaseController
             'shop'          => $shop,
             'archivedItems' => $items,
             'pager'         => $result['pager'],
+            'per_page'      => $perPage,
             'activeNav'     => 'archive',
             'title'         => 'Archive & Recovery',
             'activeType'    => $type,
@@ -1897,14 +1926,15 @@ class Tenant extends BaseController
             'in_production'      => 1,
             'ready_for_pickup'   => 2,
             'ready_for_delivery' => 2,
+            'in_transit'         => 2,
             'completed'          => 3,
         ];
         if (!isset($level[$current]) || !isset($level[$target])) {
             return false;
         }
 
-        $isPeer = ($current === 'ready_for_pickup' && $target === 'ready_for_delivery')
-            || ($current === 'ready_for_delivery' && $target === 'ready_for_pickup');
+        $isPeer = in_array($current, ['ready_for_pickup', 'ready_for_delivery', 'in_transit'], true)
+            && in_array($target, ['ready_for_pickup', 'ready_for_delivery', 'in_transit'], true);
 
         return $isPeer || $level[$target] > $level[$current];
     }
@@ -2249,6 +2279,8 @@ class Tenant extends BaseController
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'returned']);
             } elseif ($dbStatus === 'shipped') {
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'shipped']);
+            } elseif ($dbStatus === 'in_transit') {
+                (new OrderModel())->update($row['deliverable_id'], ['status' => 'in_transit']);
             } elseif ($dbStatus === 'cancelled') {
                 (new OrderModel())->update($row['deliverable_id'], ['status' => 'cancelled']);
             }
@@ -2259,10 +2291,75 @@ class Tenant extends BaseController
                 (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'cancelled']);
             } elseif ($dbStatus === 'shipped') {
                 (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'ready_for_delivery']);
+            } elseif ($dbStatus === 'in_transit') {
+                (new PrintingRequestModel())->update($row['deliverable_id'], ['status' => 'in_transit']);
             }
         }
 
         return redirect()->back()->with('success', 'Delivery status updated.');
+    }
+
+    /**
+     * Batch advance all 'shipped' deliveries for this tenant's shop to 'in_transit'.
+     */
+    public function bulkInTransit()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $res;
+        }
+
+        $shopId = (int) $res['shopId'];
+        $db     = \Config\Database::connect();
+
+        $rows = $db->table('deliveries d')
+            ->select('d.id, d.deliverable_type, d.deliverable_id')
+            ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
+            ->join('printing_requests pr', "pr.id = d.deliverable_id AND d.deliverable_type = 'printing_request'", 'left')
+            ->where('d.status', 'shipped')
+            ->groupStart()
+                ->where('o.shop_id', $shopId)
+                ->orWhere('pr.shop_id', $shopId)
+            ->groupEnd()
+            ->get()->getResultArray();
+
+        if (empty($rows)) {
+            return redirect()->back()->with('info', 'No shipped packages to update.');
+        }
+
+        $delIds   = array_column($rows, 'id');
+        $now      = date('Y-m-d H:i:s');
+
+        // 1. Update deliveries to in_transit
+        $db->table('deliveries')->whereIn('id', $delIds)->update([
+            'status'              => 'in_transit',
+            'location_updated_at' => $now,
+        ]);
+
+        // 2. Synchronize linked orders and printing requests
+        $orderIds = [];
+        $prIds    = [];
+        foreach ($rows as $r) {
+            if ($r['deliverable_type'] === 'order') {
+                $orderIds[] = (int) $r['deliverable_id'];
+            } elseif ($r['deliverable_type'] === 'printing_request') {
+                $prIds[] = (int) $r['deliverable_id'];
+            }
+        }
+
+        if (!empty($orderIds)) {
+            $db->table('orders')->whereIn('id', $orderIds)->update([
+                'status' => 'in_transit',
+            ]);
+        }
+
+        if (!empty($prIds)) {
+            $db->table('printing_requests')->whereIn('id', $prIds)->update([
+                'status' => 'in_transit',
+            ]);
+        }
+
+        return redirect()->back()->with('success', count($delIds) . ' shipped package(s) updated to In Transit.');
     }
 
     public function requestWithdrawal()
@@ -2272,47 +2369,83 @@ class Tenant extends BaseController
             return $res;
         }
 
-        $shopId = $res['shopId'];
+        $shopId = (int) $res['shopId'];
+        $shopModel = new ShopModel();
+        $shop = $shopModel->find($shopId);
 
-        $amount         = (float) $this->request->getPost('amount');
-        $method         = $this->request->getPost('method');
-        $accountDetails = trim($this->request->getPost('account_details') ?? '');
+        // Pre-condition: Verify authoritative GCash info from database
+        $rawGcashNum  = preg_replace('/\D/', '', (string) ($shop['gcash_number'] ?? ''));
+        $rawGcashName = trim((string) ($shop['gcash_account_name'] ?? ''));
 
-        if ($amount <= 0 || empty($accountDetails)) {
-            return redirect()->back()->with('error', 'Please enter a valid amount and account details.');
+        if ($rawGcashName === '' || mb_strlen($rawGcashName) < 2 || !preg_match('/^09\d{9}$/', $rawGcashNum)) {
+            return redirect()->to('/tenant/settings?tab=payment')->with('error', 'Please complete your GCash account information before requesting a withdrawal.');
         }
 
-        $balanceData = $this->getShopEscrowAndBalance($shopId);
-        $availableBalance = $balanceData['available_balance'];
-
-        if ($amount > $availableBalance) {
-            return redirect()->back()->with('error', 'Amount exceeds your available balance (₱' . number_format($availableBalance, 2) . '). Funds awaiting delivery are held in escrow.');
+        $amount = (float) $this->request->getPost('amount');
+        if ($amount < 50) {
+            return redirect()->back()->with('error', 'Minimum withdrawal amount is ₱50.00.');
         }
-
-        // GCash only — ignore any bank/maya input, enforce gcash + 3% fee
-        $destMethod = 'gcash';
-        $cleaned = preg_replace('/\D/', '', $accountDetails);
-        if (!preg_match('/^09\d{9}$/', $cleaned)) {
-            return redirect()->back()->with('error', 'Please enter a valid GCash number (09XXXXXXXXX). Only GCash withdrawals are supported.');
-        }
-        $accountDetails = $cleaned;
-        $deductionPercent = (new SiteContentModel())->getPlatformDeductionPercent();
-        $fee = round($amount * ($deductionPercent / 100), 2);
 
         $db = \Config\Database::connect();
-        $db->table('payout_requests')->insert([
-            'shop_id'            => $shopId,
-            'reference_number'   => 'WD-' . date('Ymd') . '-' . rand(1000, 9999),
-            'amount'             => $amount,
-            'destination_method' => $destMethod,
-            'destination_detail' => $accountDetails,
-            'fee'                => $fee,
-            'deduction_percent'  => $deductionPercent,
-            'status'             => 'pending',
-            'requested_at'       => date('Y-m-d H:i:s'),
-        ]);
+        $db->transBegin();
 
-        return redirect()->back()->with('success', 'Withdrawal request submitted.');
+        try {
+            // Re-evaluate available balance inside transaction
+            $balanceData = $this->getShopEscrowAndBalance($shopId);
+            $availableBalance = (float) $balanceData['available_balance'];
+
+            if ($amount > $availableBalance) {
+                $db->transRollback();
+                return redirect()->back()->with('error', 'Amount exceeds your available balance (₱' . number_format($availableBalance, 2) . '). Funds awaiting delivery are held in escrow.');
+            }
+
+            $deductionPercent = (new SiteContentModel())->getPlatformDeductionPercent();
+            $fee = round($amount * ($deductionPercent / 100), 2);
+            $netAmount = max(0.0, round($amount - $fee, 2));
+            $refNumber = 'WD-' . date('Ymd') . '-' . rand(1000, 9999);
+
+            $insertData = [
+                'shop_id'                => $shopId,
+                'reference_number'       => $refNumber,
+                'amount'                 => $amount,
+                'destination_method'     => 'gcash',
+                'destination_detail'     => $rawGcashNum,          // Immutable recipient number snapshot
+                'recipient_account_name' => $rawGcashName,         // Immutable recipient name snapshot
+                'recipient_institution'  => 'G-Xchange, Inc.',     // Immutable institution snapshot
+                'fee'                    => $fee,
+                'deduction_percent'      => $deductionPercent,
+                'net_amount'             => $netAmount,
+                'status'                 => 'pending',
+                'requested_at'           => date('Y-m-d H:i:s'),
+            ];
+
+            $db->table('payout_requests')->insert($insertData);
+            $payoutId = $db->insertID();
+
+            (new AuditLogModel())->log(
+                (int) session()->get('user_id'),
+                'tenant',
+                'Requested Withdrawal',
+                'payout_request',
+                'success',
+                $payoutId
+            );
+
+            (new NotificationModel())->create(
+                (int) session()->get('user_id'),
+                'payout',
+                'Withdrawal Requested',
+                "Your GCash withdrawal request #{$refNumber} for ₱" . number_format($amount, 2) . " (Net: ₱" . number_format($netAmount, 2) . ") has been submitted.",
+                '/tenant/withdrawals'
+            );
+
+            $db->transCommit();
+            return redirect()->back()->with('success', 'Withdrawal request submitted successfully.');
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            log_message('error', 'Withdrawal submission error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while submitting your withdrawal request. Please try again.');
+        }
     }
 
     public function saveSettings()
@@ -2337,7 +2470,39 @@ class Tenant extends BaseController
             return $this->saveNotificationPreferences($shopId);
         }
 
+        if ($section === 'services') {
+            return $this->saveServiceModules($shopId);
+        }
+
         return $this->saveShopProfile($shopId);
+    }
+
+    private function saveServiceModules(int $shopId)
+    {
+        $module = $this->request->getPost('module');
+        $allowed = ['offers_printing', 'offers_delivery', 'offers_pickup'];
+        $shopModel = new ShopModel();
+
+        if ($module && in_array($module, $allowed, true)) {
+            $enabled = (int) $this->request->getPost('enabled') ? 1 : 0;
+            $shopModel->update($shopId, [$module => $enabled]);
+        } else {
+            $update = [];
+            foreach ($allowed as $field) {
+                if ($this->request->getPost($field) !== null) {
+                    $update[$field] = $this->request->getPost($field) ? 1 : 0;
+                }
+            }
+            if (!empty($update)) {
+                $shopModel->update($shopId, $update);
+            }
+        }
+
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Service module updated successfully.']);
+        }
+
+        return redirect()->to(base_url('tenant/settings#preferences'))->with('success', 'Service module updated.');
     }
 
     private function saveShopProfile(int $shopId)
@@ -2367,13 +2532,22 @@ class Tenant extends BaseController
         $lng = $this->request->getPost('longitude');
 
         $updateData = [
-            'shop_name'       => $shopName,
-            'description'     => $description,
-            'street'          => $street,
-            'barangay'        => $barangay,
-            'address_line'    => $addressLine,
-            'offers_printing' => $this->request->getPost('offers_printing') ? 1 : 0,
+            'shop_name'    => $shopName,
+            'description'  => $description,
+            'street'       => $street,
+            'barangay'     => $barangay,
+            'address_line' => $addressLine,
         ];
+
+        if ($this->request->getPost('offers_printing') !== null) {
+            $updateData['offers_printing'] = $this->request->getPost('offers_printing') ? 1 : 0;
+        }
+        if ($this->request->getPost('offers_delivery') !== null) {
+            $updateData['offers_delivery'] = $this->request->getPost('offers_delivery') ? 1 : 0;
+        }
+        if ($this->request->getPost('offers_pickup') !== null) {
+            $updateData['offers_pickup'] = $this->request->getPost('offers_pickup') ? 1 : 0;
+        }
 
         if ($lat !== null && $lng !== null && is_numeric($lat) && is_numeric($lng) && (float) $lat != 0 && (float) $lng != 0) {
             $updateData['latitude']    = (float) $lat;
@@ -2404,25 +2578,52 @@ class Tenant extends BaseController
 
     private function savePaymentDetails(int $shopId)
     {
-        $gcashNumber = trim((string) $this->request->getPost('gcash_number'));
-        $gcashName   = trim((string) $this->request->getPost('gcash_account_name'));
+        $gcashNumber        = trim((string) $this->request->getPost('gcash_number'));
+        $confirmGcashNumber = trim((string) $this->request->getPost('confirm_gcash_number'));
+        $gcashName          = trim((string) $this->request->getPost('gcash_account_name'));
+        $confirmOwnership   = $this->request->getPost('gcash_confirm_ownership');
 
-        if ($gcashNumber !== '') {
-            $digits = preg_replace('/\D/', '', $gcashNumber);
-            if (!preg_match('/^09\d{9}$/', $digits)) {
-                return $this->settingsResponse(false, 'Please enter a valid GCash number (e.g. 0917 123 4567).');
-            }
+        if ($gcashName === '') {
+            return $this->settingsResponse(false, 'GCash registered account name is required.');
         }
-        if (mb_strlen($gcashName) > 100) {
-            return $this->settingsResponse(false, 'Account name must be 100 characters or fewer.');
+        if (mb_strlen($gcashName) < 2 || mb_strlen($gcashName) > 100) {
+            return $this->settingsResponse(false, 'GCash registered account name must be between 2 and 100 characters.');
+        }
+
+        $digits        = preg_replace('/\D/', '', $gcashNumber);
+        if (str_starts_with($digits, '63') && strlen($digits) === 12) {
+            $digits = '0' . substr($digits, 2);
+        }
+        $confirmDigits = preg_replace('/\D/', '', $confirmGcashNumber);
+        if (str_starts_with($confirmDigits, '63') && strlen($confirmDigits) === 12) {
+            $confirmDigits = '0' . substr($confirmDigits, 2);
+        }
+
+        if (!preg_match('/^09\d{9}$/', $digits)) {
+            return $this->settingsResponse(false, 'Please enter a valid 11-digit GCash mobile number starting with 09 (e.g. 09171234567).');
+        }
+        if ($digits !== $confirmDigits) {
+            return $this->settingsResponse(false, 'The GCash mobile number and confirmation number do not match.');
+        }
+        if (empty($confirmOwnership)) {
+            return $this->settingsResponse(false, 'Please confirm that the GCash account information provided is correct and belongs to you or your business.');
         }
 
         (new ShopModel())->update($shopId, [
-            'gcash_number'       => $gcashNumber,
+            'gcash_number'       => $digits,
             'gcash_account_name' => $gcashName,
         ]);
 
-        return $this->settingsResponse(true, 'Payment details updated.');
+        (new AuditLogModel())->log(
+            (int) session()->get('user_id'),
+            'tenant',
+            'Updated GCash Payment Details',
+            'shop',
+            'success',
+            $shopId
+        );
+
+        return $this->settingsResponse(true, 'GCash payment details updated successfully.');
     }
 
     private function saveBusinessHours(int $shopId)
@@ -3450,6 +3651,7 @@ class Tenant extends BaseController
                 return 40;
             case 'ready_for_pickup':
             case 'ready_for_delivery':
+            case 'in_transit':
                 return 80;
             case 'completed':
                 return 100;
@@ -3543,12 +3745,14 @@ class Tenant extends BaseController
         $order = null;
         foreach ($tokens as $t) {
             $qb = $orderModel
+                ->select('orders.*, u.first_name, u.last_name, u.phone as customer_phone')
+                ->join('users u', 'u.id = orders.customer_id', 'left')
                 ->groupStart()
-                    ->where('order_number', $t)
-                    ->orWhere('order_number', 'ORD-' . $t)
-                    ->orWhere('order_number', '#' . $t);
+                    ->where('orders.order_number', $t)
+                    ->orWhere('orders.order_number', 'ORD-' . $t)
+                    ->orWhere('orders.order_number', '#' . $t);
             if (is_numeric($t)) {
-                $qb->orWhere('id', (int) $t);
+                $qb->orWhere('orders.id', (int) $t);
             }
             $qb->groupEnd();
             $order = $qb->first();
@@ -3605,15 +3809,17 @@ class Tenant extends BaseController
                     ]);
                 }
 
-                if ($pr['status'] === 'cancelled') {
+                if ($pr['status'] === 'cancelled' || $pr['status'] === 'returned') {
                     return $this->response->setStatusCode(400)->setJSON([
                         'success' => false,
-                        'error'   => "Printing Request #{$pr['request_number']} has been cancelled.",
-                        'message' => "Printing Request #{$pr['request_number']} has been cancelled.",
+                        'error'   => "Printing Request #{$pr['request_number']} has already been " . ($pr['status'] === 'returned' ? 'returned' : 'cancelled') . ".",
+                        'message' => "Printing Request #{$pr['request_number']} has already been " . ($pr['status'] === 'returned' ? 'returned' : 'cancelled') . ".",
                     ]);
                 }
 
                 if (in_array($pr['status'], ['completed', 'delivered'], true)) {
+                    $prUser = (new \App\Models\UserModel())->find($pr['customer_id'] ?? 0);
+                    $prCustomerName = $prUser ? trim(($prUser['first_name'] ?? '') . ' ' . ($prUser['last_name'] ?? '')) : 'Online Customer';
                     return $this->response->setJSON([
                         'success'        => true,
                         'is_printing'    => true,
@@ -3622,6 +3828,33 @@ class Tenant extends BaseController
                         'request_id'     => (int) $pr['id'],
                         'request_number' => $pr['request_number'],
                         'redirect_url'   => site_url('tenant/pos?printing_id=' . $pr['id']),
+                        'order'          => [
+                            'id'             => (int) $pr['id'],
+                            'order_number'   => $pr['request_number'],
+                            'customer_name'  => $prCustomerName,
+                            'customer_phone' => $prUser['phone'] ?? '',
+                            'status'         => $pr['status'],
+                            'payment_method' => 'ONLINE / COUNTER',
+                            'subtotal'       => (float) ($pr['total_price'] ?? 0),
+                            'total_amount'   => (float) ($pr['total_price'] ?? 0),
+                            'placed_at'      => !empty($pr['created_at']) ? date('M d, Y h:i A', strtotime($pr['created_at'])) : date('M d, Y h:i A'),
+                            'completed_at'   => !empty($pr['completed_at']) ? date('M d, Y h:i A', strtotime($pr['completed_at'])) : date('M d, Y h:i A'),
+                            'receipt_url'    => site_url('tenant/printing/receipt/' . $pr['id']),
+                        ],
+                        'items'          => [
+                            [
+                                'id'             => (int) $pr['id'],
+                                'product_id'     => 0,
+                                'variant_id'     => 0,
+                                'variant_label'  => '',
+                                'name'           => 'Printing: ' . ($pr['file_name'] ?? 'Document.pdf'),
+                                'price'          => (float) ($pr['total_price'] ?? 0),
+                                'quantity'       => 1,
+                                'line_total'     => (float) ($pr['total_price'] ?? 0),
+                                'stock_quantity' => 999,
+                                'image_url'      => null,
+                            ]
+                        ],
                     ]);
                 }
 
@@ -3684,15 +3917,62 @@ class Tenant extends BaseController
             ]);
         }
 
+        if ($order['status'] === 'returned') {
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => "Order #{$order['order_number']} has already been marked as RETURNED.",
+                'message' => "Order #{$order['order_number']} has already been marked as RETURNED.",
+            ]);
+        }
+
         if (in_array($order['status'], ['completed', 'delivered'], true)) {
+            $orderItemModel = new \App\Models\OrderItemModel();
+            $rawItems = $orderItemModel
+                ->select('order_items.*, p.stock_quantity as current_stock, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as gallery_image')
+                ->join('products p', 'p.id = order_items.product_id', 'left')
+                ->where('order_items.order_id', $order['id'])
+                ->findAll();
+
+            $customerName = trim(($order['first_name'] ?? '') . ' ' . ($order['last_name'] ?? ''));
+            if ($customerName === '' || $customerName === 'Walk-in Customer') {
+                $customerName = 'Counter Customer';
+            }
+
             return $this->response->setJSON([
-                'success'      => true,
-                'already_done' => true,
-                'message'      => "Order #{$order['order_number']} has already been completed / released.",
-                'order_id'     => (int) $order['id'],
-                'order_number' => $order['order_number'],
-                'customer_id'  => (int) ($order['customer_id'] ?? 0),
-                'redirect_url' => site_url('tenant/pos?order_id=' . $order['id']),
+                'success'        => true,
+                'already_done'   => true,
+                'message'        => "Order #{$order['order_number']} has already been completed / released.",
+                'order_id'       => (int) $order['id'],
+                'order_number'   => $order['order_number'],
+                'customer_id'    => (int) ($order['customer_id'] ?? 0),
+                'redirect_url'   => site_url('tenant/pos?order_id=' . $order['id']),
+                'order'          => [
+                    'id'             => (int) $order['id'],
+                    'order_number'   => $order['order_number'],
+                    'customer_name'  => $customerName,
+                    'customer_phone' => trim((string) ($order['customer_phone'] ?? '')),
+                    'status'         => $order['status'],
+                    'payment_method' => strtoupper($order['pos_payment_method'] ?: ($order['payment_method'] ?: 'CASH')),
+                    'subtotal'       => (float) $order['subtotal'],
+                    'total_amount'   => (float) $order['total_amount'],
+                    'placed_at'      => !empty($order['placed_at']) ? date('M d, Y h:i A', strtotime($order['placed_at'])) : date('M d, Y h:i A'),
+                    'completed_at'   => !empty($order['completed_at']) ? date('M d, Y h:i A', strtotime($order['completed_at'])) : (!empty($order['placed_at']) ? date('M d, Y h:i A', strtotime($order['placed_at'])) : date('M d, Y h:i A')),
+                    'receipt_url'    => site_url('tenant/orders/receipt/' . $order['order_number']),
+                ],
+                'items'          => array_map(function($it) {
+                    return [
+                        'id'             => (int) $it['id'],
+                        'product_id'     => (int) $it['product_id'],
+                        'variant_id'     => (int) ($it['variant_id'] ?? 0),
+                        'variant_label'  => $it['variant_label'] ?? '',
+                        'name'           => $it['product_name'],
+                        'price'          => (float) $it['unit_price'],
+                        'quantity'       => (int) $it['quantity'],
+                        'line_total'     => (float) $it['line_total'],
+                        'stock_quantity' => (int) ($it['current_stock'] ?? 99),
+                        'image_url'      => !empty($it['gallery_image']) ? product_image_url($it['gallery_image']) : null,
+                    ];
+                }, $rawItems),
             ]);
         }
 
@@ -3724,6 +4004,198 @@ class Tenant extends BaseController
             'order_number' => $order['order_number'],
             'customer_id'  => (int) $order['customer_id'],
             'redirect_url' => site_url('tenant/pos?order_id=' . $order['id']),
+        ]);
+    }
+
+    /**
+     * Mark a completed order or item as Returned from POS.
+     * Restores product and variant inventory stock quantities,
+     * synchronizes delivery status, and notifies customer.
+     */
+    public function posReturnOrder()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized.']);
+        }
+
+        $shopId = (int) $res['shopId'];
+        $shop   = $res['shop'];
+
+        $orderId    = (int) $this->request->getPost('order_id');
+        $printingId = (int) $this->request->getPost('printing_id');
+
+        $db = \Config\Database::connect();
+
+        if ($orderId > 0) {
+            $orderModel = new OrderModel();
+            $order = $orderModel->where('id', $orderId)->where('shop_id', $shopId)->first();
+
+            if (!$order) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success'   => false,
+                    'error'     => 'Order not found or does not belong to your shop.',
+                    'csrf_hash' => csrf_hash(),
+                ]);
+            }
+
+            if ($order['status'] === 'returned') {
+                return $this->response->setStatusCode(400)->setJSON([
+                    'success'   => false,
+                    'error'     => "Order #{$order['order_number']} has already been marked as Returned.",
+                    'csrf_hash' => csrf_hash(),
+                ]);
+            }
+
+            $db->transStart();
+
+            $now = date('Y-m-d H:i:s');
+            // 1. Update order status to returned
+            $orderModel->update($orderId, [
+                'status'        => 'returned',
+                'cancelled_at'  => $now,
+                'cancel_reason' => 'Returned via POS Counter',
+            ]);
+
+            // 2. Restore inventory stock for all products and variants in this order
+            $orderItemModel = new OrderItemModel();
+            $orderItems = $orderItemModel->where('order_id', $orderId)->findAll();
+            $restoredCount = 0;
+
+            foreach ($orderItems as $item) {
+                $qty = (int) ($item['quantity'] ?? 1);
+                $pId = (int) ($item['product_id'] ?? 0);
+                $vId = (int) ($item['variant_id'] ?? 0);
+
+                if ($pId > 0 && $qty > 0) {
+                    $db->table('products')
+                        ->where('id', $pId)
+                        ->where('shop_id', $shopId)
+                        ->set('stock_quantity', 'stock_quantity + ' . $qty, false)
+                        ->update();
+
+                    if ($vId > 0) {
+                        $db->table('product_variants')
+                            ->where('id', $vId)
+                            ->set('stock_quantity', 'stock_quantity + ' . $qty, false)
+                            ->update();
+                    }
+                    $restoredCount += $qty;
+                }
+            }
+
+            // 3. Update any linked delivery
+            $deliveryModel = new DeliveryModel();
+            $delivery = $deliveryModel
+                ->where('deliverable_type', 'order')
+                ->where('deliverable_id', $orderId)
+                ->first();
+
+            if ($delivery && $delivery['status'] !== 'returned') {
+                $deliveryModel->update($delivery['id'], [
+                    'status' => 'returned',
+                ]);
+            }
+
+            // 4. Notify customer if valid registered user
+            $customerId = (int) ($order['customer_id'] ?? 0);
+            if ($customerId > 0) {
+                $shopName = $shop['shop_name'] ?? 'the shop';
+                (new NotificationModel())->create(
+                    $customerId,
+                    'order_status',
+                    'Order Marked as Returned',
+                    "Your order #{$order['order_number']} has been processed as Returned at {$shopName}.",
+                    '/customer/orders'
+                );
+            }
+
+            // 5. Audit Log
+            try {
+                (new AuditLogModel())->log(
+                    (int) session()->get('user_id'),
+                    'tenant',
+                    'order_returned',
+                    'order',
+                    'success',
+                    $orderId,
+                    $this->request->getIPAddress()
+                );
+            } catch (\Throwable $t) {}
+
+            $db->transComplete();
+
+            if ($db->transStatus() === false) {
+                return $this->response->setStatusCode(500)->setJSON([
+                    'success'   => false,
+                    'error'     => 'Database error while processing return. Please try again.',
+                    'csrf_hash' => csrf_hash(),
+                ]);
+            }
+
+            return $this->response->setJSON([
+                'success'        => true,
+                'message'        => "Order #{$order['order_number']} successfully marked as RETURNED. {$restoredCount} items restored to inventory.",
+                'order_number'   => $order['order_number'],
+                'restored_items' => $restoredCount,
+                'csrf_hash'      => csrf_hash(),
+            ]);
+        }
+
+        if ($printingId > 0) {
+            $prModel = new PrintingRequestModel();
+            $pr = $prModel->where('id', $printingId)->where('shop_id', $shopId)->first();
+
+            if (!$pr) {
+                return $this->response->setStatusCode(404)->setJSON([
+                    'success'   => false,
+                    'error'     => 'Printing request not found or does not belong to your shop.',
+                    'csrf_hash' => csrf_hash(),
+                ]);
+            }
+
+            $db->transStart();
+            $prModel->update($printingId, [
+                'status' => 'cancelled',
+            ]);
+
+            $deliveryModel = new DeliveryModel();
+            $delivery = $deliveryModel
+                ->where('deliverable_type', 'printing_request')
+                ->where('deliverable_id', $printingId)
+                ->first();
+
+            if ($delivery && $delivery['status'] !== 'returned') {
+                $deliveryModel->update($delivery['id'], [
+                    'status' => 'returned',
+                ]);
+            }
+
+            $customerId = (int) ($pr['customer_id'] ?? 0);
+            if ($customerId > 0) {
+                $shopName = $shop['shop_name'] ?? 'the shop';
+                (new NotificationModel())->create(
+                    $customerId,
+                    'printing',
+                    'Printing Request Returned',
+                    "Your printing request #{$pr['request_number']} has been processed as Returned at {$shopName}.",
+                    '/customer/printing'
+                );
+            }
+
+            $db->transComplete();
+
+            return $this->response->setJSON([
+                'success'      => true,
+                'message'      => "Printing Request #{$pr['request_number']} successfully processed as returned.",
+                'csrf_hash'    => csrf_hash(),
+            ]);
+        }
+
+        return $this->response->setStatusCode(400)->setJSON([
+            'success'   => false,
+            'error'     => 'No valid order or printing request specified.',
+            'csrf_hash' => csrf_hash(),
         ]);
     }
 
@@ -3950,6 +4422,9 @@ class Tenant extends BaseController
 
             $combinedCounterDue = round($orderCounterOwed + $prRemainingBalance, 2);
 
+            $custRow = !empty($order['customer_id']) ? (new UserModel())->find((int) $order['customer_id']) : null;
+            $custNameCombined = $custRow ? trim(($custRow['first_name'] ?? '') . ' ' . ($custRow['last_name'] ?? '')) : 'Counter Customer';
+
             return $this->response->setJSON([
                 'success'             => true,
                 'type'                => 'combined',
@@ -3957,6 +4432,7 @@ class Tenant extends BaseController
                 'message'             => "Combined Pick-up (Order #{$order['order_number']} & Printing #{$pr['request_number']}) completed successfully!",
                 'order_id'            => (int) $order['id'],
                 'order_number'        => $order['order_number'],
+                'customer_name'       => $custNameCombined,
                 'printing_id'         => (int) $pr['id'],
                 'printing_number'     => $pr['request_number'],
                 'additional_subtotal' => $additionalSubtotal,
@@ -4136,12 +4612,16 @@ class Tenant extends BaseController
                 ]);
             }
 
+            $custRowPrint = !empty($pr['customer_id']) ? (new UserModel())->find((int) $pr['customer_id']) : null;
+            $custNamePrint = $custRowPrint ? trim(($custRowPrint['first_name'] ?? '') . ' ' . ($custRowPrint['last_name'] ?? '')) : 'Counter Customer';
+
             return $this->response->setJSON([
                 'success'             => true,
                 'is_printing'         => true,
                 'message'             => 'Printing pick-up completed successfully.',
                 'order_id'            => $pr['request_number'],
                 'order_number'        => $pr['request_number'],
+                'customer_name'       => $custNamePrint,
                 'additional_subtotal' => $additionalSubtotal,
                 'remaining_balance'   => $remainingBalance,
                 'final_total'         => $counterAmountDue,
@@ -4316,11 +4796,15 @@ class Tenant extends BaseController
             ]);
         }
 
+        $custRowOrder = !empty($order['customer_id']) ? (new UserModel())->find((int) $order['customer_id']) : null;
+        $custNamePickup = $custRowOrder ? trim(($custRowOrder['first_name'] ?? '') . ' ' . ($custRowOrder['last_name'] ?? '')) : 'Counter Customer';
+
         return $this->response->setJSON([
             'success'             => true,
             'message'             => 'Store pick-up completed successfully.',
             'order_id'            => (int) $orderId,
             'order_number'        => $order['order_number'],
+            'customer_name'       => $custNamePickup,
             'additional_subtotal' => $additionalSubtotal,
             'final_total'         => $finalTotal,
         ]);
@@ -4521,11 +5005,12 @@ class Tenant extends BaseController
         }
 
         return $this->response->setJSON([
-            'success'      => true,
-            'message'      => "Walk-in sale completed successfully! Order #{$orderNumber}",
-            'order_id'     => $orderId,
-            'order_number' => $orderNumber,
-            'total_amount' => $totalAmount,
+            'success'       => true,
+            'message'       => "Walk-in sale completed successfully! Order #{$orderNumber}",
+            'order_id'      => $orderId,
+            'order_number'  => $orderNumber,
+            'total_amount'  => $totalAmount,
+            'customer_name' => $customerNameNote !== '' ? $customerNameNote : 'Counter Customer',
         ]);
     }
 

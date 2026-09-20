@@ -45,8 +45,8 @@
 
             </div>
 
-            <!-- Product Grid -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter">
+            <!-- Product Grid (3 Columns on Mobile) -->
+            <div class="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-gutter">
 
                 <?php if (!empty($products)): ?>
 
@@ -56,7 +56,7 @@
                             $imageUrl = product_image_url($p['image_url'] ?? null);
                         ?>
 
-                        <div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div class="group bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
 
                             <div class="relative aspect-square overflow-hidden bg-surface-container-low">
 
@@ -68,15 +68,15 @@
 
                                 <?php if (!empty($p['is_bestseller'])): ?>
 
-                                    <span class="absolute top-md left-md bg-primary-container text-on-primary px-sm py-xs rounded-full text-label-sm font-label-sm shadow-sm">Bestseller</span>
+                                    <span class="absolute top-1 left-1 sm:top-md sm:left-md bg-primary-container text-on-primary px-1.5 py-0.5 sm:px-sm sm:py-xs rounded-full text-[9px] sm:text-label-sm font-label-sm shadow-sm">Hot</span>
 
                                 <?php endif; ?>
 
-                                <div class="absolute top-md right-md">
+                                <div class="absolute top-1 right-1 sm:top-md sm:right-md">
 
-                                    <button type="button" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-on-surface hover:text-error active:scale-90 transition-all hover:scale-105 duration-300" aria-label="Add to favorites">
+                                    <button type="button" class="w-6 h-6 sm:w-10 sm:h-10 rounded-full glass-card flex items-center justify-center text-on-surface hover:text-error active:scale-90 transition-all hover:scale-105 duration-300" aria-label="Add to favorites">
 
-                                        <span class="material-symbols-outlined">favorite</span>
+                                        <span class="material-symbols-outlined text-[13px] sm:text-base">favorite</span>
 
                                     </button>
 
@@ -84,13 +84,13 @@
 
                             </div>
 
-                            <div class="p-md">
+                            <div class="p-1.5 sm:p-md flex flex-col flex-grow justify-between">
 
-                                <a href="<?= base_url('product/' . $p['id']) ?>" class="font-title-lg text-title-lg text-on-surface mb-xs truncate block group-hover:text-primary transition-colors"><?= esc($p['name']) ?></a>
+                                <a href="<?= base_url('product/' . $p['id']) ?>" class="font-bold text-[11px] sm:text-title-lg text-on-surface mb-0.5 sm:mb-xs line-clamp-2 block group-hover:text-primary transition-colors leading-tight"><?= esc($p['name']) ?></a>
 
-                                <div class="flex items-center justify-between mt-md">
+                                <div class="flex items-center justify-between mt-1 sm:mt-md pt-1 border-t border-outline-variant/10">
 
-                                    <span class="font-headline-md text-headline-md text-primary">₱<?= number_format($p['price'], 2) ?></span>
+                                    <span class="font-bold text-xs sm:text-headline-md text-primary">₱<?= number_format($p['price'], 2) ?></span>
 
                                     <form action="<?= base_url('cart/add') ?>" method="POST">
 
@@ -99,9 +99,9 @@
                                         <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                                         <input type="hidden" name="quantity" value="1">
 
-                                        <button type="submit" aria-label="Add to cart" class="w-10 h-10 bg-primary text-on-primary rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors hover:scale-105 transition-all duration-300">
+                                        <button type="submit" aria-label="Add to cart" class="w-6 h-6 sm:w-10 sm:h-10 bg-primary text-on-primary rounded-md sm:rounded-lg flex items-center justify-center hover:bg-primary-fixed-dim transition-colors hover:scale-105 transition-all duration-300">
 
-                                            <span class="material-symbols-outlined">shopping_cart</span>
+                                            <span class="material-symbols-outlined text-[13px] sm:text-base">shopping_cart</span>
 
                                         </button>
 

@@ -38,11 +38,11 @@
         <div class="max-w-4xl mx-auto space-y-lg pb-xl">
 
             <!-- Profile Header -->
-            <section class="glass-card rounded-xl p-lg flex flex-col md:flex-row items-center gap-lg shadow-sm hover:shadow-md transition-all duration-300">
+            <section class="glass-card rounded-2xl p-4 sm:p-lg flex flex-col md:flex-row items-center gap-4 sm:gap-lg shadow-sm hover:shadow-md transition-all duration-300 text-center md:text-left">
 
-                <div class="relative group">
+                <div class="relative group shrink-0">
 
-                    <div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-primary/10 flex items-center justify-center text-4xl font-bold text-primary">
+                    <div class="w-20 h-20 sm:w-32 sm:h-32 rounded-full border-2 sm:border-4 border-white shadow-md overflow-hidden bg-primary/10 flex items-center justify-center text-2xl sm:text-4xl font-bold text-primary">
 
                         <?php if (!empty($profileImage)): ?>
 
@@ -58,13 +58,13 @@
 
                 </div>
 
-                <div class="text-center md:text-left flex-1">
+                <div class="text-center md:text-left flex-1 min-w-0">
 
-                    <h1 class="text-headline-lg font-headline-lg text-on-surface"><?= esc($fullName) ?></h1>
+                    <h1 class="text-xl sm:text-headline-lg font-bold text-on-surface truncate"><?= esc($fullName) ?></h1>
 
-                    <p class="text-body-md font-body-md text-on-surface-variant opacity-80 flex items-center justify-center md:justify-start gap-xs mt-xs">
+                    <p class="text-xs sm:text-body-md font-body-md text-on-surface-variant opacity-80 flex items-center justify-center md:justify-start gap-xs mt-1">
 
-                        <span class="material-symbols-outlined text-[18px] text-primary">verified</span>
+                        <span class="material-symbols-outlined text-[16px] sm:text-[18px] text-primary">verified</span>
                         Member since <?= esc($memberSince) ?>
 
                     </p>
@@ -73,42 +73,42 @@
 
                 <div class="w-full md:w-auto">
 
-                    <button type="button" data-open-edit-modal class="w-full md:w-auto bg-primary text-on-primary px-xl py-sm rounded-lg font-button hover:translate-y-[-2px] transition-all shadow-md active:scale-95 inline-block text-center">Edit Profile</button>
+                    <button type="button" data-open-edit-modal class="w-full md:w-auto bg-primary text-on-primary px-xl py-2.5 sm:py-sm rounded-xl font-button text-xs sm:text-button hover:translate-y-[-2px] transition-all shadow-sm active:scale-95 inline-block text-center font-bold">Edit Profile</button>
 
                 </div>
 
             </section>
 
-            <!-- Quick Stats Bento -->
-            <section class="grid grid-cols-1 sm:grid-cols-2 gap-lg">
+            <!-- Quick Stats Bento (2 Columns on Mobile) -->
+            <section class="grid grid-cols-2 gap-2 sm:gap-lg">
 
-                <div class="bg-surface-container-lowest border border-outline-variant/30 p-xl rounded-xl shadow-sm hover:shadow-md transition-all group">
+                <div class="bg-surface-container-lowest border border-outline-variant/30 p-3 sm:p-xl rounded-2xl shadow-xs hover:shadow-md transition-all group flex flex-col justify-between">
 
-                    <div class="flex items-center justify-between mb-md">
+                    <div class="flex items-center justify-between mb-1 sm:mb-md">
 
-                        <span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Total Orders</span>
-                        <span class="material-symbols-outlined text-primary opacity-40 group-hover:opacity-100 transition-opacity">shopping_cart</span>
+                        <span class="text-on-surface-variant text-[10px] sm:text-label-sm uppercase tracking-wider font-semibold">Total Orders</span>
+                        <span class="material-symbols-outlined text-primary text-base sm:text-2xl opacity-40 group-hover:opacity-100 transition-opacity">shopping_cart</span>
 
                     </div>
 
-                    <p class="text-[32px] font-bold leading-tight"><?= (int) $totalOrders ?></p>
+                    <p class="text-xl sm:text-[32px] font-bold leading-tight"><?= (int) $totalOrders ?></p>
 
-                    <p class="text-label-sm text-primary mt-sm font-semibold"><?= $totalOrders === 1 ? '1 order placed' : ($totalOrders . ' orders placed') ?></p>
+                    <p class="text-[10px] sm:text-label-sm text-primary mt-1 sm:mt-sm font-semibold"><?= $totalOrders === 1 ? '1 order placed' : ($totalOrders . ' orders placed') ?></p>
 
                 </div>
 
-                <div class="bg-surface-container-lowest border border-outline-variant/30 p-xl rounded-xl shadow-sm hover:shadow-md transition-all group">
+                <div class="bg-surface-container-lowest border border-outline-variant/30 p-3 sm:p-xl rounded-2xl shadow-xs hover:shadow-md transition-all group flex flex-col justify-between">
 
-                    <div class="flex items-center justify-between mb-md">
+                    <div class="flex items-center justify-between mb-1 sm:mb-md">
 
-                        <span class="text-on-surface-variant font-label-sm uppercase tracking-wider">Active Printing</span>
-                        <span class="material-symbols-outlined text-primary opacity-40 group-hover:opacity-100 transition-opacity">print</span>
+                        <span class="text-on-surface-variant text-[10px] sm:text-label-sm uppercase tracking-wider font-semibold">Active Printing</span>
+                        <span class="material-symbols-outlined text-primary text-base sm:text-2xl opacity-40 group-hover:opacity-100 transition-opacity">print</span>
 
                     </div>
 
-                    <p class="text-[32px] font-bold leading-tight"><?= str_pad((string) (int) $activePrinting, 2, '0', STR_PAD_LEFT) ?></p>
+                    <p class="text-xl sm:text-[32px] font-bold leading-tight"><?= str_pad((string) (int) $activePrinting, 2, '0', STR_PAD_LEFT) ?></p>
 
-                    <p class="text-label-sm text-tertiary mt-sm font-semibold"><?= $activePrinting === 1 ? '1 in production' : ($activePrinting . ' in production') ?></p>
+                    <p class="text-[10px] sm:text-label-sm text-tertiary mt-1 sm:mt-sm font-semibold"><?= $activePrinting === 1 ? '1 in production' : ($activePrinting . ' in production') ?></p>
 
                 </div>
 

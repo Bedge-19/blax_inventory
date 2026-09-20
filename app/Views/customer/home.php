@@ -107,19 +107,19 @@
             </a>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-md lg:gap-lg">
+        <div class="flex overflow-x-auto no-scrollbar gap-3 pb-2 sm:grid sm:grid-cols-3 md:grid-cols-5 sm:gap-md lg:gap-lg snap-x snap-mandatory">
 
             <?php if (!empty($shops)): ?>
 
                 <?php foreach ($shops as $s): ?>
 
-                    <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="glass-card bg-surface-container-lowest border border-outline-variant/20 rounded-2xl p-md md:p-lg flex flex-col items-center text-center group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-primary/40 relative overflow-hidden">
+                    <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="glass-card bg-surface-container-lowest border border-outline-variant/20 rounded-2xl p-3 sm:p-md lg:p-lg flex flex-col items-center text-center group cursor-pointer transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl hover:border-primary/40 relative overflow-hidden w-32 sm:w-auto shrink-0 snap-start">
 
                         <!-- Ambient Glow -->
                         <div class="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
                         <!-- Shop Avatar with Gradient Ring -->
-                        <div class="relative w-20 h-20 md:w-22 md:h-22 rounded-full p-1 bg-gradient-to-tr from-primary/30 via-primary/10 to-primary/50 group-hover:from-primary group-hover:to-primary/80 transition-all duration-300 shadow-sm shrink-0 mb-sm">
+                        <div class="relative w-14 h-14 sm:w-20 sm:h-20 rounded-full p-0.5 sm:p-1 bg-gradient-to-tr from-primary/30 via-primary/10 to-primary/50 group-hover:from-primary group-hover:to-primary/80 transition-all duration-300 shadow-sm shrink-0 mb-2">
                             <div class="w-full h-full rounded-full bg-white flex items-center justify-center overflow-hidden">
 
                                 <?php if (!empty($s['logo_url'])): ?>
@@ -129,8 +129,8 @@
                                 <?php else: ?>
 
                                     <div class="w-full h-full bg-gradient-to-br from-primary/10 via-primary-container/20 to-primary/20 flex flex-col items-center justify-center text-primary font-bold">
-                                        <span class="material-symbols-outlined text-[28px] mb-[-2px]">storefront</span>
-                                        <span class="text-[10px] tracking-wider uppercase font-extrabold"><?= esc(substr($s['shop_name'], 0, 3)) ?></span>
+                                        <span class="material-symbols-outlined text-[20px] sm:text-[28px] mb-[-2px]">storefront</span>
+                                        <span class="text-[9px] sm:text-[10px] tracking-wider uppercase font-extrabold"><?= esc(substr($s['shop_name'], 0, 3)) ?></span>
                                     </div>
 
                                 <?php endif; ?>
@@ -139,25 +139,25 @@
                         </div>
 
                         <!-- Shop Info -->
-                        <div class="w-full space-y-xs flex flex-col items-center">
-                            <h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1 w-full text-center" title="<?= esc($s['shop_name']) ?>">
+                        <div class="w-full space-y-0.5 sm:space-y-xs flex flex-col items-center">
+                            <h3 class="text-xs sm:text-body-md font-bold text-on-surface group-hover:text-primary transition-colors line-clamp-1 w-full text-center" title="<?= esc($s['shop_name']) ?>">
                                 <?= esc($s['shop_name']) ?>
                             </h3>
 
                             <!-- Rating & Reviews -->
-                            <div class="flex items-center justify-center gap-xs text-xs text-on-surface-variant font-medium">
-                                <span class="material-symbols-outlined text-[16px] text-amber-500 fill-icon">star</span>
+                            <div class="flex items-center justify-center gap-0.5 sm:gap-xs text-[10px] sm:text-xs text-on-surface-variant font-medium">
+                                <span class="material-symbols-outlined text-[13px] sm:text-[16px] text-amber-500 fill-icon">star</span>
                                 <span class="font-bold text-on-surface"><?= number_format($s['rating_average'] ?? 5.0, 1) ?></span>
-                                <span class="text-on-surface-variant/70 text-[11px]">(<?= number_format($s['rating_count'] ?? 0) ?>)</span>
+                                <span class="text-on-surface-variant/70 text-[9px] sm:text-[11px]">(<?= number_format($s['rating_count'] ?? 0) ?>)</span>
                             </div>
 
                             <?php if (!empty($s['offers_printing'])): ?>
-                                <span class="inline-flex items-center gap-xs text-[10px] font-bold text-primary bg-primary/10 px-xs py-[2px] rounded-full mt-xs">
-                                    <span class="material-symbols-outlined text-[12px]">print</span>
+                                <span class="inline-flex items-center gap-0.5 sm:gap-xs text-[9px] sm:text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-[1px] sm:px-xs sm:py-[2px] rounded-full mt-1">
+                                    <span class="material-symbols-outlined text-[10px] sm:text-[12px]">print</span>
                                     Printing
                                 </span>
                             <?php else: ?>
-                                <span class="inline-flex items-center gap-xs text-[10px] font-bold text-on-surface-variant bg-surface-container-high px-xs py-[2px] rounded-full mt-xs">
+                                <span class="inline-flex items-center gap-0.5 sm:gap-xs text-[9px] sm:text-[10px] font-bold text-on-surface-variant bg-surface-container-high px-1.5 py-[1px] sm:px-xs sm:py-[2px] rounded-full mt-1">
                                     Merchant
                                 </span>
                             <?php endif; ?>
@@ -242,7 +242,7 @@
 
             </div>
 
-            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-gutter">
+            <div id="product-grid" class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 md:gap-gutter">
 
                 <?php if (!empty($products)): ?>
 
@@ -260,29 +260,29 @@
                                 <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
                                     <img src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
                                 </a>
-                                <button type="button" class="absolute top-sm right-sm bg-white/80 backdrop-blur p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Add to favorites">
+                                <button type="button" class="absolute top-1 right-1 sm:top-sm sm:right-sm bg-white/80 backdrop-blur p-1 sm:p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Add to favorites">
 
-                                    <span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+                                    <span class="material-symbols-outlined text-[13px] sm:text-on-surface-variant">favorite</span>
 
                                 </button>
 
                             </div>
 
-                            <div class="p-md flex flex-col flex-grow">
+                            <div class="p-1.5 sm:p-3 md:p-md flex flex-col flex-grow">
 
-                                <span class="text-label-sm text-primary font-medium mb-xs uppercase tracking-tighter"><?= esc($p['shop_name'] ?? 'RHK Store') ?></span>
-                                <h4 class="font-title-lg text-body-md text-on-surface mb-xs group-hover:text-primary transition-colors line-clamp-1"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h4>
+                                <span class="text-[9px] sm:text-label-sm text-primary font-medium mb-0.5 sm:mb-xs uppercase tracking-tighter truncate block"><?= esc($p['shop_name'] ?? 'RHK Store') ?></span>
+                                <h4 class="text-[11px] sm:text-body-md font-semibold text-on-surface mb-0.5 sm:mb-xs group-hover:text-primary transition-colors line-clamp-2 leading-tight"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h4>
 
-                                <div class="flex items-center gap-xs mb-md">
+                                <div class="flex items-center gap-0.5 sm:gap-xs mb-1 sm:mb-md">
 
-                                    <span class="material-symbols-outlined text-amber-500 text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
-                                    <span class="text-label-sm font-semibold"><?= number_format((float) $rating, 1) ?></span>
+                                    <span class="material-symbols-outlined text-amber-500 text-[11px] sm:text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    <span class="text-[10px] sm:text-label-sm font-semibold"><?= number_format((float) $rating, 1) ?></span>
 
                                 </div>
 
-                                <div class="mt-auto flex justify-between items-center">
+                                <div class="mt-auto flex justify-between items-center pt-1 border-t border-outline-variant/10">
 
-                                    <span class="font-headline-md text-title-lg text-on-surface">₱<?= number_format($p['price'], 2) ?></span>
+                                    <span class="text-xs sm:text-title-lg font-bold text-primary">₱<?= number_format($p['price'], 2) ?></span>
 
                                     <form action="<?= base_url('cart/add') ?>" method="POST">
 
@@ -291,9 +291,9 @@
                                         <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                                         <input type="hidden" name="quantity" value="1">
 
-                                        <button type="submit" class="bg-surface-container-high p-sm rounded-lg hover:bg-primary-container hover:text-white transition-all" aria-label="Add to cart">
+                                        <button type="submit" class="bg-surface-container-high p-1 sm:p-sm rounded-md sm:rounded-lg hover:bg-primary-container hover:text-white transition-all flex items-center justify-center" aria-label="Add to cart">
 
-                                            <span class="material-symbols-outlined text-base">add_shopping_cart</span>
+                                            <span class="material-symbols-outlined text-[14px] sm:text-base">add_shopping_cart</span>
 
                                         </button>
 

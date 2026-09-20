@@ -19,9 +19,15 @@
 </button>
 
 <!-- AI Assistant Modal Window -->
-<div id="ai-modal" class="fixed inset-0 sm:inset-auto sm:bottom-6 sm:right-6 z-50 pointer-events-none hidden justify-end items-end p-3 sm:p-0">
+<div id="ai-modal" class="fixed inset-0 z-50 pointer-events-none hidden flex-col justify-end sm:justify-end sm:items-end p-0 sm:p-0 sm:inset-auto sm:bottom-6 sm:right-6">
 
-    <div class="glass-panel w-full sm:w-[420px] h-[calc(100vh_-_48px)] sm:h-[600px] max-h-[660px] rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col pointer-events-auto transition-all duration-300 border border-outline-variant/30 bg-surface-container-lowest/95 backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <!-- Mobile Backdrop Scrim -->
+    <div id="ai-backdrop" class="fixed inset-0 bg-black/40 backdrop-blur-xs sm:hidden pointer-events-auto -z-10 transition-opacity"></div>
+
+    <div class="glass-panel w-full sm:w-[420px] h-[92dvh] sm:h-[600px] max-h-[92dvh] sm:max-h-[660px] rounded-t-3xl sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col pointer-events-auto transition-all duration-300 border-t sm:border border-outline-variant/30 bg-surface-container-lowest/98 backdrop-blur-xl overflow-hidden animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200">
+
+        <!-- Mobile Drawer Drag Handle -->
+        <div class="w-12 h-1 rounded-full bg-outline-variant/50 mx-auto mt-2.5 mb-1 sm:hidden shrink-0"></div>
 
         <!-- Modern Header -->
         <div class="px-md py-sm bg-gradient-to-r from-surface-container-lowest via-surface-container-low to-surface-container-lowest border-b border-outline-variant/20 flex items-center justify-between shrink-0">
@@ -122,7 +128,7 @@
         </div>
 
         <!-- Modern Input Dock -->
-        <div class="p-sm sm:p-md bg-surface-container-lowest border-t border-outline-variant/20 rounded-b-3xl shrink-0">
+        <div class="p-sm sm:p-md bg-surface-container-lowest border-t border-outline-variant/20 rounded-b-none sm:rounded-b-3xl shrink-0 pb-4 sm:pb-md">
             <form id="ai-chat-form" class="relative flex items-center gap-1 bg-surface-container-low/70 rounded-2xl border border-outline-variant/40 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15 transition-all p-1">
                 <?= csrf_field() ?>
                 <input type="hidden" name="csrf_name" value="<?= esc($csrfName) ?>">
@@ -158,6 +164,7 @@
 (function () {
     const toggleBtn = document.getElementById('ai-toggle-btn');
     const closeBtn  = document.getElementById('ai-close-btn');
+    const backdrop  = document.getElementById('ai-backdrop');
     const resetBtn  = document.getElementById('ai-reset-btn');
     const modal     = document.getElementById('ai-modal');
     const form      = document.getElementById('ai-chat-form');
@@ -243,6 +250,13 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     });
+
+    if (backdrop) {
+        backdrop.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        });
+    }
 
     // Reset conversation
     if (resetBtn) {

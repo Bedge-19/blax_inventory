@@ -44,44 +44,51 @@
 
     </section>
 
-    <!-- Trending Bento Grid -->
+    <!-- Trending Categories (Distinct Mobile Rail vs Desktop Bento) -->
     <?php if (!empty($trending)): ?>
 
-        <section class="flex flex-col gap-lg">
+        <section class="flex flex-col gap-sm sm:gap-lg">
 
             <div class="flex items-center justify-between">
 
-                <h2 class="text-title-lg font-title-lg text-on-surface">Trending Categories</h2>
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary text-xl">trending_up</span>
+                    <h2 class="text-title-lg font-title-lg text-on-surface">Trending Categories</h2>
+                </div>
 
-                <a href="#all-categories" class="text-primary-container hover:text-primary text-button font-button flex items-center gap-1 transition-colors">
-                    View All Trending <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                <a href="#all-categories" class="text-primary-container hover:text-primary text-label-sm sm:text-button font-button flex items-center gap-1 transition-colors">
+                    <span>View All</span> <span class="material-symbols-outlined text-sm">arrow_forward</span>
                 </a>
 
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter h-auto md:min-h-[400px]">
+            <!-- Mobile: Horizontal snap rail. Desktop: Bento grid -->
+            <div class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-3 pb-2 md:grid md:grid-cols-12 md:gap-gutter h-auto md:min-h-[400px]">
 
                 <?php if (isset($trending[0])): ?>
 
-                    <!-- Main Trending -->
-                    <a href="<?= base_url('category/' . ($trending[0]['slug'] ?? $trending[0]['id'])) ?>" class="md:col-span-8 rounded-lg overflow-hidden relative group cursor-pointer border border-outline-variant/20 shadow-sm hover:shadow-md transition-all duration-300">
+                    <!-- Main Trending Card -->
+                    <a href="<?= base_url('category/' . ($trending[0]['slug'] ?? $trending[0]['id'])) ?>" class="w-64 sm:w-72 md:w-auto shrink-0 snap-start md:col-span-8 rounded-2xl overflow-hidden relative group cursor-pointer border border-outline-variant/20 shadow-sm hover:shadow-md transition-all duration-300">
 
-                        <div class="bg-cover bg-center w-full h-full min-h-[300px] group-hover:scale-105 transition-transform duration-700" style="background-image: url('<?= esc($trending[0]['image_url']) ?>');"></div>
+                        <div class="bg-cover bg-center w-full h-full min-h-[220px] md:min-h-[300px] group-hover:scale-105 transition-transform duration-700" style="background-image: url('<?= esc($trending[0]['image_url']) ?>');"></div>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/80 via-inverse-surface/20 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"></div>
 
-                        <div class="absolute bottom-0 left-0 p-lg w-full flex justify-between items-end">
+                        <div class="absolute bottom-0 left-0 p-3 sm:p-lg w-full flex justify-between items-end">
 
                             <div>
 
-                                <span class="px-2 py-1 bg-primary-container text-on-primary text-xs font-semibold rounded mb-2 inline-block">Popular</span>
-                                <h3 class="text-headline-md font-headline-md text-on-primary"><?= esc($trending[0]['name']) ?></h3>
-                                <p class="text-body-md font-body-md text-on-primary/80 mt-1"><?= (int) ($trending[0]['product_count'] ?? 0) ?> items available.</p>
+                                <span class="px-2 py-0.5 bg-primary text-on-primary text-[10px] sm:text-xs font-bold rounded-md mb-1 sm:mb-2 inline-flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-[12px]">local_fire_department</span>
+                                    #1 Trending
+                                </span>
+                                <h3 class="text-title-md sm:text-headline-md font-bold text-white"><?= esc($trending[0]['name']) ?></h3>
+                                <p class="text-xs sm:text-body-md text-white/80 mt-0.5"><?= (int) ($trending[0]['product_count'] ?? 0) ?> items available</p>
 
                             </div>
 
-                            <span class="bg-on-primary/20 backdrop-blur-md text-on-primary p-2 rounded-full hover:bg-on-primary hover:text-primary-container transition-colors">
-                                <span class="material-symbols-outlined">arrow_outward</span>
+                            <span class="bg-white/20 backdrop-blur-md text-white p-1.5 sm:p-2 rounded-full hover:bg-white hover:text-primary transition-colors shrink-0">
+                                <span class="material-symbols-outlined text-sm sm:text-base">arrow_outward</span>
                             </span>
 
                         </div>
@@ -92,23 +99,24 @@
 
                 <?php if (isset($trending[1]) || isset($trending[2])): ?>
 
-                    <!-- Secondary Trending Stack -->
-                    <div class="md:col-span-4 flex flex-col gap-gutter h-full">
+                    <!-- Secondary Trending Items -->
+                    <div class="flex gap-3 md:contents">
 
-                        <?php for ($ti = 1; $ti <= 2; $ti++): ?>
+                        <?php for ($ti = 1; $ti <= 3; $ti++): ?>
 
                             <?php if (isset($trending[$ti])): ?>
 
-                                <a href="<?= base_url('category/' . ($trending[$ti]['slug'] ?? $trending[$ti]['id'])) ?>" class="flex-1 rounded-lg overflow-hidden relative group cursor-pointer border border-outline-variant/20 shadow-sm hover:shadow-md transition-all duration-300">
+                                <a href="<?= base_url('category/' . ($trending[$ti]['slug'] ?? $trending[$ti]['id'])) ?>" class="w-56 sm:w-64 md:w-auto shrink-0 snap-start md:col-span-4 rounded-2xl overflow-hidden relative group cursor-pointer border border-outline-variant/20 shadow-sm hover:shadow-md transition-all duration-300">
 
-                                    <div class="bg-cover bg-center w-full h-full min-h-[188px] group-hover:scale-105 transition-transform duration-700" style="background-image: url('<?= esc($trending[$ti]['image_url']) ?>');"></div>
+                                    <div class="bg-cover bg-center w-full h-full min-h-[220px] md:min-h-[188px] group-hover:scale-105 transition-transform duration-700" style="background-image: url('<?= esc($trending[$ti]['image_url']) ?>');"></div>
 
-                                    <div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/70 to-transparent"></div>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent"></div>
 
-                                    <div class="absolute bottom-0 left-0 p-md w-full">
+                                    <div class="absolute bottom-0 left-0 p-3 sm:p-md w-full">
 
-                                        <h3 class="text-title-lg font-title-lg text-on-primary"><?= esc($trending[$ti]['name']) ?></h3>
-                                        <p class="text-label-sm font-label-sm text-on-primary/80"><?= (int) ($trending[$ti]['product_count'] ?? 0) ?> items available.</p>
+                                        <span class="px-1.5 py-0.5 bg-secondary text-white text-[9px] font-bold rounded mb-1 inline-block">Trending</span>
+                                        <h3 class="text-sm sm:text-title-lg font-bold text-white"><?= esc($trending[$ti]['name']) ?></h3>
+                                        <p class="text-[11px] sm:text-label-sm text-white/80"><?= (int) ($trending[$ti]['product_count'] ?? 0) ?> items</p>
 
                                     </div>
 
@@ -128,20 +136,26 @@
 
     <?php endif; ?>
 
-    <!-- All Categories Grid -->
-    <section id="all-categories" class="flex flex-col gap-lg">
+    <!-- All Categories Grid (3 Columns on Mobile) -->
+    <section id="all-categories" class="flex flex-col gap-sm sm:gap-lg">
 
-        <h2 class="text-title-lg font-title-lg text-on-surface">All Categories</h2>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-xl">grid_view</span>
+                <h2 class="text-title-lg font-title-lg text-on-surface">All Categories</h2>
+            </div>
+            <span class="text-xs text-on-surface-variant font-medium"><?= count($categories ?? []) ?> categories</span>
+        </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter">
+        <div class="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-gutter">
 
             <?php if (!empty($categories)): ?>
 
                 <?php foreach ($categories as $cat): ?>
 
-                    <a class="group flex flex-col bg-surface-container-lowest rounded-lg border border-outline-variant/30 overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300" href="<?= base_url('category/' . ($cat['slug'] ?? $cat['id'])) ?>">
+                    <a class="group flex flex-col bg-surface-container-lowest rounded-xl border border-outline-variant/30 overflow-hidden shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-300" href="<?= base_url('category/' . ($cat['slug'] ?? $cat['id'])) ?>">
 
-                        <div class="aspect-video w-full overflow-hidden relative">
+                        <div class="aspect-[4/3] sm:aspect-video w-full overflow-hidden relative bg-surface-container-low">
 
                             <?php if (!empty($cat['image_url'])): ?>
 
@@ -151,7 +165,7 @@
 
                                 <div class="w-full h-full bg-surface-container flex items-center justify-center">
 
-                                    <span class="material-symbols-outlined text-primary text-4xl">category</span>
+                                    <span class="material-symbols-outlined text-primary text-2xl sm:text-4xl">category</span>
 
                                 </div>
 
@@ -159,10 +173,10 @@
 
                         </div>
 
-                        <div class="p-md flex items-center justify-between">
+                        <div class="p-1.5 sm:p-md flex items-center justify-between">
 
-                            <span class="text-body-md font-body-md font-medium text-on-surface group-hover:text-primary-container transition-colors"><?= esc($cat['name']) ?></span>
-                            <span class="material-symbols-outlined text-outline group-hover:text-primary-container transition-colors transform group-hover:translate-x-1">arrow_forward</span>
+                            <span class="text-[11px] sm:text-body-md font-bold text-on-surface group-hover:text-primary transition-colors truncate w-full text-center sm:text-left"><?= esc($cat['name']) ?></span>
+                            <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors transform group-hover:translate-x-1 hidden sm:block">arrow_forward</span>
 
                         </div>
 

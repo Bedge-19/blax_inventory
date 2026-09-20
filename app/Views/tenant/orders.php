@@ -93,23 +93,32 @@
                 </div>
             </div>
 
-            <!-- Fast Sub-filters -->
-            <?php if ($procCount > 0): ?>
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs">
-                    <button type="button" onclick="filterProcessingQueue('all')" id="proc-tab-all" class="proc-filter-tab px-3 py-1.5 rounded-full font-bold bg-primary text-on-primary shadow-2xs transition-all">
-                        All (<?= $procCount ?>)
-                    </button>
-                    <button type="button" onclick="filterProcessingQueue('pickup')" id="proc-tab-pickup" class="proc-filter-tab px-3 py-1.5 rounded-full font-medium bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 transition-all">
-                        Store Pick-up (<?= $pickupProcCount ?>)
-                    </button>
-                    <button type="button" onclick="filterProcessingQueue('delivery')" id="proc-tab-delivery" class="proc-filter-tab px-3 py-1.5 rounded-full font-medium bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 transition-all">
-                        Doorstep Delivery (<?= $deliveryProcCount ?>)
-                    </button>
-                </div>
-            <?php endif; ?>
+            <div class="flex items-center gap-2">
+                <!-- Sub-filters -->
+                <?php if ($procCount > 0): ?>
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar text-xs">
+                        <button type="button" onclick="filterProcessingQueue('all')" id="proc-tab-all" class="proc-filter-tab px-3 py-1.5 rounded-full font-bold bg-primary text-on-primary shadow-2xs transition-all">
+                            All (<?= $procCount ?>)
+                        </button>
+                        <button type="button" onclick="filterProcessingQueue('pickup')" id="proc-tab-pickup" class="proc-filter-tab px-3 py-1.5 rounded-full font-medium bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 transition-all">
+                            Store Pick-up (<?= $pickupProcCount ?>)
+                        </button>
+                        <button type="button" onclick="filterProcessingQueue('delivery')" id="proc-tab-delivery" class="proc-filter-tab px-3 py-1.5 rounded-full font-medium bg-surface-container-low text-on-surface-variant hover:bg-surface-container border border-outline-variant/30 transition-all">
+                            Doorstep Delivery (<?= $deliveryProcCount ?>)
+                        </button>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Toggle Hide/Show Button -->
+                <button type="button" id="toggleQueueBtn" onclick="toggleProcessingQueue()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant hover:text-on-surface text-xs font-semibold transition-all shadow-2xs active:scale-95 shrink-0 cursor-pointer" title="Hide/Show Queue">
+                    <span class="material-symbols-outlined text-[18px] transition-transform duration-300" id="toggleQueueIcon">expand_less</span>
+                    <span id="toggleQueueLabel" class="hidden sm:inline">Hide</span>
+                </button>
+            </div>
         </div>
 
-        <!-- Queue Cards List -->
+        <!-- Collapsible Queue Content -->
+        <div id="queueContent" class="transition-all duration-300 overflow-hidden">
         <?php if (!empty($processingOrders)): ?>
             <div id="processingQueueGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
                 <?php foreach ($processingOrders as $pOrd): ?>
@@ -117,6 +126,7 @@
                     $isPickup = ($pOrd['fulfillment_method'] ?? 'delivery') === 'pickup';
                     $custName = trim(($pOrd['first_name'] ?? '') . ' ' . ($pOrd['last_name'] ?? ''));
                     $custInitials = $custName !== '' ? mb_strtoupper(mb_substr($custName, 0, 2)) : 'GU';
+                    $custProfileImg = trim((string) ($pOrd['profile_image_url'] ?? ''));
                     $custPhone = esc($pOrd['customer_phone'] ?? 'N/A');
                     $deliveryAddr = trim(($pOrd['address_line1'] ?? '') . ', ' . ($pOrd['city'] ?? '')) ?: 'Polomolok, South Cotabato';
                     $orderItemsList = $pOrd['items'] ?? [];
@@ -143,33 +153,40 @@
                                 <?php endif; ?>
                             </div>
                             <div class="flex items-center justify-between text-[11px] text-outline">
-                                <span>Placed: <?= esc(date('M d, h:i A', strtotime($pOrd['placed_at']))) ?></span>
-                                <span class="font-mono font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded">In Prep</span>
+                                <span>Placed: <?= esc(date('M d, h:i A', strtotime($pOrd['placed_at'] ?? 'now'))) ?></span>
+                                <?php if ($pOrd['status'] === 'pending'): ?>
+                                    <span class="font-mono font-semibold text-amber-800 bg-amber-100 px-1.5 py-0.5 rounded">New Pending</span>
+                                <?php else: ?>
+                                    <span class="font-mono font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded">In Prep</span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
-                        <!-- Customer & Destination Info -->
-                        <div class="p-2.5 bg-surface-container-lowest rounded-xl border border-outline-variant/20 space-y-1.5 text-xs">
-                            <div class="flex items-center justify-between gap-2">
-                                <div class="flex items-center gap-2 min-w-0 flex-1">
-                                    <div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-[10px] font-bold shrink-0">
-                                        <?= esc($custInitials) ?>
+                        <!-- Customer & Destination Info matching reference image -->
+                        <div class="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/20 space-y-2 text-xs">
+                            <div class="flex items-center justify-between gap-2.5">
+                                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs relative overflow-hidden">
+                                        <span><?= esc($custInitials) ?></span>
+                                        <?php if ($custProfileImg !== ''): ?>
+                                            <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(base_url($custProfileImg)) ?>" alt="<?= esc($custName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                        <?php endif; ?>
                                     </div>
-                                    <span class="font-semibold text-on-surface truncate"><?= esc($custName !== '' ? $custName : 'Customer') ?></span>
+                                    <span class="font-bold text-sm text-on-surface truncate"><?= esc($custName !== '' ? $custName : 'Customer') ?></span>
                                 </div>
-                                <?php if ($custPhone !== 'N/A'): ?>
-                                    <a href="tel:<?= $custPhone ?>" class="text-[11px] font-mono font-medium text-primary hover:underline flex items-center gap-0.5 shrink-0">
-                                        <span class="material-symbols-outlined text-[13px]">phone</span>
-                                        <?= $custPhone ?>
+                                <?php if ($custPhone !== 'N/A' && $custPhone !== ''): ?>
+                                    <a href="tel:<?= $custPhone ?>" class="text-xs font-mono font-semibold text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1 shrink-0">
+                                        <span class="material-symbols-outlined text-[15px] text-blue-600">call</span>
+                                        <span><?= $custPhone ?></span>
                                     </a>
                                 <?php endif; ?>
                             </div>
 
-                            <div class="flex items-start gap-1 text-[11px] text-on-surface-variant pt-1 border-t border-outline-variant/10">
-                                <span class="material-symbols-outlined text-[14px] text-outline shrink-0 mt-0.5">
-                                    <?= $isPickup ? 'storefront' : 'location_on' ?>
+                            <div class="flex items-center gap-1.5 text-xs text-on-surface-variant pt-2 border-t border-outline-variant/15">
+                                <span class="material-symbols-outlined text-[16px] text-outline shrink-0">
+                                    <?= $isPickup ? 'storefront' : 'local_shipping' ?>
                                 </span>
-                                <span class="truncate leading-tight">
+                                <span class="truncate leading-tight font-medium">
                                     <?= $isPickup ? 'Store Counter Pick-up' : esc($deliveryAddr) ?>
                                 </span>
                             </div>
@@ -221,7 +238,18 @@
 
                         <!-- Action Buttons: Context-Aware Button + Utilities -->
                         <div class="pt-2 border-t border-outline-variant/20 flex items-center gap-1.5">
-                            <?php if ($isPickup): ?>
+                            <?php if ($pOrd['status'] === 'pending'): ?>
+                                <!-- Pending Order: Button is 'Accept & Start Prep' -->
+                                <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="flex-1">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="order_id" value="<?= (int) $pOrd['id'] ?>">
+                                    <input type="hidden" name="status" value="processing">
+                                    <button type="submit" class="w-full min-h-[42px] py-2 px-3 bg-primary hover:bg-primary/90 active:scale-95 text-on-primary rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer" title="Accept order and start packaging">
+                                        <span class="material-symbols-outlined text-[18px]">check_circle</span>
+                                        <span>Accept & Pack</span>
+                                    </button>
+                                </form>
+                            <?php elseif ($isPickup): ?>
                                 <!-- Store Pick-up: Button is 'Ready for Pick-up' -->
                                 <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="flex-1">
                                     <?= csrf_field() ?>
@@ -233,14 +261,14 @@
                                     </button>
                                 </form>
                             <?php else: ?>
-                                <!-- Doorstep Delivery: Button is 'Shipped' -->
-                                <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="flex-1">
+                                <!-- Doorstep Delivery: Button is 'In Transit' -->
+                                <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="flex-1" onsubmit="return confirm('Dispatch Order #<?= esc($pOrd['order_number']) ?> as In Transit for delivery?');">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="order_id" value="<?= (int) $pOrd['id'] ?>">
                                     <input type="hidden" name="status" value="shipped">
-                                    <button type="submit" class="w-full min-h-[42px] py-2 px-3 bg-primary hover:bg-primary/90 active:scale-95 text-on-primary rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5" title="Mark order as dispatched and hand over to delivery">
+                                    <button type="submit" class="w-full min-h-[42px] py-2 px-3 bg-primary hover:bg-primary/90 active:scale-95 text-on-primary rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer" title="Dispatch order as In Transit and hand over to delivery">
                                         <span class="material-symbols-outlined text-[18px]">local_shipping</span>
-                                        <span>Shipped</span>
+                                        <span>In Transit</span>
                                     </button>
                                 </form>
                             <?php endif; ?>
@@ -284,6 +312,7 @@
                 </div>
             </div>
         <?php endif; ?>
+        </div>
 
     </div>
 
@@ -301,10 +330,6 @@
             </div>
             
             <div class="flex items-center gap-2">
-                <a href="<?= base_url('tenant/orders/export') . '?' . http_build_query($filters) ?>" class="flex items-center gap-1 px-3 py-2 bg-surface-container-low hover:bg-surface-container border border-outline-variant/40 text-on-surface-variant rounded-xl text-xs font-bold transition-all shadow-2xs">
-                    <span class="material-symbols-outlined text-[16px]">download</span>
-                    <span>Export CSV</span>
-                </a>
                 <a href="<?= base_url('tenant/pos') ?>" class="flex items-center gap-1 px-3.5 py-2 bg-secondary text-on-secondary rounded-xl text-xs font-bold hover:bg-secondary/90 shadow-2xs transition-all">
                     <span class="material-symbols-outlined text-[16px]">point_of_sale</span>
                     <span>Open POS</span>
@@ -326,9 +351,16 @@
                     <?php endforeach; ?>
                 </select>
                 <input name="from" value="<?= esc($filters['from']) ?>" type="date" class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl px-2.5 py-2 text-xs text-on-surface font-medium focus:ring-2 focus:ring-primary transition-all" title="Start date">
-                <input name="to" value="<?= esc($filters['to']) ?>" type="date" class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl px-2.5 py-2 text-xs text-on-surface font-medium focus:ring-2 focus:ring-primary transition-all" title="End date">
+                <div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                    <label for="orders_per_page" class="font-medium">Show:</label>
+                    <select name="per_page" id="orders_per_page" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant/50 rounded-xl px-2.5 py-2 text-xs font-semibold text-on-surface focus:ring-2 focus:ring-primary transition-all">
+                        <option value="5" <?= ($per_page ?? 10) == 5 ? 'selected' : '' ?>>5</option>
+                        <option value="10" <?= ($per_page ?? 10) == 10 ? 'selected' : '' ?>>10</option>
+                        <option value="15" <?= ($per_page ?? 10) == 15 ? 'selected' : '' ?>>15</option>
+                        <option value="20" <?= ($per_page ?? 10) == 20 ? 'selected' : '' ?>>20</option>
+                    </select>
+                </div>
                 <button type="submit" class="bg-primary text-on-primary px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-2xs">Filter</button>
-                <a href="<?= base_url('tenant/orders') ?>" class="text-on-surface-variant hover:text-on-surface text-xs font-semibold px-2 py-2 transition-colors">Reset</a>
             </form>
         </div>
 
@@ -426,6 +458,32 @@
                                             </button>
                                         <?php endif; ?>
 
+                                        <?php if ($o['status'] === 'pending'): ?>
+                                            <!-- Direct Accept Order button for pending orders -->
+                                            <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="inline">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="order_id" value="<?= (int) $o['id'] ?>">
+                                                <input type="hidden" name="status" value="processing">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer" title="Accept order and start processing">
+                                                    <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                                    <span>Accept Order</span>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+
+                                        <?php if (!$isPickup && $o['status'] === 'processing'): ?>
+                                            <!-- Exposed In Transit button for Doorstep Delivery -->
+                                            <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="inline" onsubmit="return confirm('Dispatch Order #<?= esc($o['order_number']) ?> as In Transit for delivery?');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="order_id" value="<?= (int) $o['id'] ?>">
+                                                <input type="hidden" name="status" value="shipped">
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer" title="Dispatch order as In Transit for Doorstep Delivery">
+                                                    <span class="material-symbols-outlined text-[16px]">local_shipping</span>
+                                                    <span>In Transit</span>
+                                                </button>
+                                            </form>
+                                        <?php endif; ?>
+
                                         <?php if ($isPickup && !in_array($o['status'], ['pending', 'completed', 'delivered', 'cancelled'], true)): ?>
                                             <a href="<?= base_url('tenant/pos?order_id=' . $o['id']) ?>" 
                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-secondary-container/40 hover:bg-secondary-container/70 text-secondary border border-secondary/40 text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer" 
@@ -465,7 +523,8 @@
                                                         : [
                                                             'pending'          => 'Pending',
                                                             'processing'       => 'Processing',
-                                                            'shipped'          => 'Shipped',
+                                                            'shipped'          => 'In Transit',
+                                                            'in_transit'       => 'In Transit',
                                                             'cancelled'        => 'Cancelled',
                                                         ];
 
@@ -526,11 +585,12 @@
         </div>
 
         <?php
-        $oTot  = (int) $pager->getTotal('orders');
-        $oCur  = (int) $pager->getCurrentPage('orders');
-        $oPag  = (int) $pager->getPageCount('orders');
-        $oStart = $oTot === 0 ? 0 : ($oCur - 1) * 10 + 1;
-        $oEnd   = min($oCur * 10, $oTot);
+        $oTot     = (int) $pager->getTotal('orders');
+        $oCur     = (int) $pager->getCurrentPage('orders');
+        $oPag     = (int) $pager->getPageCount('orders');
+        $oPerPage = (int) ($per_page ?? ($pager ? $pager->getPerPage('orders') : 10));
+        $oStart   = $oTot === 0 ? 0 : ($oCur - 1) * $oPerPage + 1;
+        $oEnd     = min($oCur * $oPerPage, $oTot);
         ?>
         <?php if ($oPag > 1): ?>
             <div class="px-lg py-md bg-surface-container-low flex justify-between items-center border-t border-outline-variant/30 flex-wrap gap-sm">
@@ -1211,6 +1271,43 @@
             }
         });
     }
+
+    function toggleProcessingQueue() {
+        const content = document.getElementById('queueContent');
+        const icon = document.getElementById('toggleQueueIcon');
+        const label = document.getElementById('toggleQueueLabel');
+        const btn = document.getElementById('toggleQueueBtn');
+        if (!content) return;
+
+        const isHidden = content.classList.contains('hidden');
+        if (isHidden) {
+            content.classList.remove('hidden');
+            if (icon) icon.textContent = 'expand_less';
+            if (label) label.textContent = 'Hide';
+            if (btn) btn.setAttribute('title', 'Hide Queue');
+            localStorage.setItem('tenant_processing_queue_hidden', 'false');
+        } else {
+            content.classList.add('hidden');
+            if (icon) icon.textContent = 'expand_more';
+            if (label) label.textContent = 'Show';
+            if (btn) btn.setAttribute('title', 'Show Queue');
+            localStorage.setItem('tenant_processing_queue_hidden', 'true');
+        }
+    }
+
+    // Restore saved hide/show state
+    document.addEventListener('DOMContentLoaded', function() {
+        if (localStorage.getItem('tenant_processing_queue_hidden') === 'true') {
+            const content = document.getElementById('queueContent');
+            const icon = document.getElementById('toggleQueueIcon');
+            const label = document.getElementById('toggleQueueLabel');
+            const btn = document.getElementById('toggleQueueBtn');
+            if (content) content.classList.add('hidden');
+            if (icon) icon.textContent = 'expand_more';
+            if (label) label.textContent = 'Show';
+            if (btn) btn.setAttribute('title', 'Show Queue');
+        }
+    });
 </script>
 
 <!-- Modal: Report Customer -->

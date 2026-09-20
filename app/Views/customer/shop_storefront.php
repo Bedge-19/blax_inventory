@@ -8,9 +8,9 @@
 <main class="max-w-container-max mx-auto px-4 md:px-8 lg:px-10 py-8 md:py-xl flex-grow w-full">
 
     <!-- Shop Header -->
-    <section class="mb-xxl flex flex-col md:flex-row gap-lg items-start md:items-center">
+    <section class="mb-lg sm:mb-xxl flex flex-col md:flex-row gap-md sm:gap-lg items-center md:items-center text-center md:text-left">
 
-        <div class="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
+        <div class="w-20 h-20 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-full border-2 sm:border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
 
             <?php if (!empty($shop['logo_url'])): ?>
 
@@ -18,7 +18,7 @@
 
             <?php else: ?>
 
-                <span class="material-symbols-outlined text-primary text-6xl">store</span>
+                <span class="material-symbols-outlined text-primary text-3xl sm:text-6xl">store</span>
 
             <?php endif; ?>
 
@@ -476,49 +476,108 @@
 
                             <!-- Fulfillment Method -->
                             <div>
-
+                                <?php
+                                    $shopOffersPickup   = !isset($shop['offers_pickup']) || (int)$shop['offers_pickup'] === 1;
+                                    $shopOffersDelivery = !isset($shop['offers_delivery']) || (int)$shop['offers_delivery'] === 1;
+                                    $defaultFulfillment = $shopOffersPickup ? 'pickup' : ($shopOffersDelivery ? 'delivery' : '');
+                                ?>
                                 <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Fulfillment Method</label>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-sm">
 
-                                    <label class="cursor-pointer">
-
-                                        <input checked class="peer sr-only" name="fulfillment_method" type="radio" value="pickup">
-                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2">
-
+                                    <!-- Store Pick-up Option -->
+                                    <label class="<?= $shopOffersPickup ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 pointer-events-none' ?>" title="<?= $shopOffersPickup ? 'Store Pick-up' : 'Store Pick-up is not available for this shop' ?>">
+                                        <input <?= ($defaultFulfillment === 'pickup') ? 'checked' : '' ?> <?= !$shopOffersPickup ? 'disabled' : '' ?> class="peer sr-only" name="fulfillment_method" type="radio" value="pickup">
+                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2 h-full">
                                             <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                                                 <span class="material-symbols-outlined text-[18px]">storefront</span>
                                             </div>
-
                                             <div class="min-w-0">
                                                 <p class="text-xs font-bold text-on-surface truncate">Store Pick-up</p>
-                                                <p class="text-[11px] text-outline truncate">Free at shop branch</p>
+                                                <p class="text-[11px] text-outline truncate"><?= $shopOffersPickup ? 'Free at shop branch' : 'Service currently unavailable' ?></p>
                                             </div>
-
                                         </div>
-
                                     </label>
 
-                                    <label class="cursor-pointer">
-
-                                        <input class="peer sr-only" name="fulfillment_method" type="radio" value="delivery">
-                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2">
-
+                                    <!-- Doorstep Delivery Option -->
+                                    <label class="<?= $shopOffersDelivery ? 'cursor-pointer' : 'cursor-not-allowed opacity-50 pointer-events-none' ?>" title="<?= $shopOffersDelivery ? 'Doorstep Delivery' : 'Doorstep Delivery is not available for this shop' ?>">
+                                        <input <?= ($defaultFulfillment === 'delivery') ? 'checked' : '' ?> <?= !$shopOffersDelivery ? 'disabled' : '' ?> class="peer sr-only" name="fulfillment_method" type="radio" value="delivery">
+                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2 h-full">
                                             <div class="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                                                 <span class="material-symbols-outlined text-[18px]">local_shipping</span>
                                             </div>
-
                                             <div class="min-w-0">
                                                 <p class="text-xs font-bold text-on-surface truncate">Doorstep Delivery</p>
-                                                <p class="text-[11px] text-outline truncate">Polomolok area only</p>
+                                                <p class="text-[11px] text-outline truncate"><?= $shopOffersDelivery ? 'Polomolok area only' : 'Service currently unavailable' ?></p>
                                             </div>
-
                                         </div>
-
                                     </label>
 
                                 </div>
 
+                                <?php if (!$shopOffersDelivery && $shopOffersPickup): ?>
+                                    <div class="mt-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">info</span>
+                                        <span><strong>Paalala:</strong> Kasalukuyang walang Doorstep Delivery service ang tindahang ito. Store Pick-up lamang ang maaari.</span>
+                                    </div>
+                                <?php elseif (!$shopOffersPickup && $shopOffersDelivery): ?>
+                                    <div class="mt-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">info</span>
+                                        <span><strong>Paalala:</strong> Kasalukuyang walang Store Pick-up service ang tindahang ito. Doorstep Delivery lamang ang maaari.</span>
+                                    </div>
+                                <?php elseif (!$shopOffersPickup && !$shopOffersDelivery): ?>
+                                    <div class="mt-2 p-2 rounded-xl bg-error-container/20 border border-error/30 text-error text-xs flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-[16px] shrink-0">warning</span>
+                                        <span><strong>Paalala:</strong> Kasalukuyang sarado ang lahat ng fulfillment services ng tindahang ito.</span>
+                                    </div>
+                                <?php endif; ?>
+
+                            </div>
+
+                            <!-- Payment Method -->
+                            <div>
+                                <?php $dpPercent = (float) ($printingSettings['down_payment_percent'] ?? 50.00); ?>
+                                <label class="text-label-sm font-bold text-on-surface-variant uppercase tracking-wider mb-1 block">Payment Method</label>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-sm" id="prPaymentMethodGroup">
+                                    <label class="cursor-pointer">
+                                        <input checked class="peer sr-only" name="payment_method" type="radio" value="gcash" id="payMethodGcash">
+                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-lg bg-[#007DFE]/10 text-[#007DFE] flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-bold text-on-surface truncate">GCash Online</p>
+                                                <p class="text-[11px] text-outline truncate"><?= round($dpPercent) ?>% Down Payment</p>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="cursor-pointer" id="payMethodPickupLabel">
+                                        <input class="peer sr-only" name="payment_method" type="radio" value="pickup" id="payMethodPickup">
+                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">storefront</span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-bold text-on-surface truncate">Pay at Counter</p>
+                                                <p class="text-[11px] text-outline truncate">Upon Store Pick-up</p>
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="cursor-pointer hidden" id="payMethodCodLabel">
+                                        <input class="peer sr-only" name="payment_method" type="radio" value="cod" id="payMethodCod">
+                                        <div class="p-2.5 rounded-xl border border-outline-variant/40 bg-surface-container-low hover:bg-surface-container transition-all peer-checked:border-primary peer-checked:bg-primary/5 peer-checked:ring-1 peer-checked:ring-primary flex items-center gap-2">
+                                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-700 flex items-center justify-center shrink-0">
+                                                <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="text-xs font-bold text-on-surface truncate">Cash on Delivery</p>
+                                                <p class="text-[11px] text-outline truncate">Pay upon Arrival</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- Special Instructions -->
@@ -556,7 +615,7 @@
                                 <!-- Trust & Security Subtext -->
                                 <div class="flex items-center gap-2 px-1 text-[11px] text-on-surface-variant">
                                     <span class="material-symbols-outlined text-[16px] text-[#007DFE]">verified_user</span>
-                                    <span>Pay <?= round($dpPercent) ?>% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.</span>
+                                    <span id="prTrustSubtext">Pay <?= round($dpPercent) ?>% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.</span>
                                 </div>
 
                                 <!-- Primary Submit Button -->
@@ -612,13 +671,13 @@
 
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter">
+        <div class="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-gutter">
 
             <?php if (!empty($products)): ?>
 
                 <?php foreach ($products as $p): ?>
 
-                    <div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                    <div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
 
                         <a href="<?= base_url('product/' . $p['id']) ?>" class="block relative aspect-square overflow-hidden bg-surface-container">
 
@@ -626,20 +685,22 @@
 
                             <?php if (!empty($p['is_bestseller'])): ?>
 
-                                <span class="absolute top-md right-md bg-primary-container text-on-primary-container px-sm py-xs rounded-full text-label-sm font-label-sm shadow-sm">Bestseller</span>
+                                <span class="absolute top-1 right-1 sm:top-md sm:right-md bg-primary-container text-on-primary-container px-1.5 py-0.5 sm:px-sm sm:py-xs rounded-full text-[9px] sm:text-label-sm font-label-sm shadow-sm">Hot</span>
 
                             <?php endif; ?>
 
                         </a>
 
-                        <div class="p-md">
+                        <div class="p-1.5 sm:p-md flex flex-col flex-grow justify-between">
 
-                            <h3 class="text-title-lg font-title-lg mb-xs group-hover:text-primary transition-colors"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h3>
-                            <p class="text-on-surface-variant text-label-sm font-label-sm mb-md line-clamp-1"><?= esc($p['description'] ?? '') ?></p>
+                            <div>
+                                <h3 class="text-[11px] sm:text-title-lg font-bold mb-0.5 sm:mb-xs group-hover:text-primary transition-colors line-clamp-2 leading-tight"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h3>
+                                <p class="text-on-surface-variant text-label-sm font-label-sm mb-md line-clamp-1 hidden sm:block"><?= esc($p['description'] ?? '') ?></p>
+                            </div>
 
-                            <div class="flex justify-between items-center">
+                            <div class="flex justify-between items-center mt-1 sm:mt-md pt-1 border-t border-outline-variant/10">
 
-                                <span class="text-headline-md font-headline-md text-on-surface">₱<?= number_format($p['price'], 2) ?></span>
+                                <span class="text-xs sm:text-headline-md font-bold text-primary">₱<?= number_format($p['price'], 2) ?></span>
 
                                 <form action="<?= base_url('cart/add') ?>" method="POST">
 
@@ -648,9 +709,9 @@
                                     <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                                     <input type="hidden" name="quantity" value="1">
 
-                                    <button type="submit" class="w-10 h-10 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors">
+                                    <button type="submit" class="w-6 h-6 sm:w-10 sm:h-10 rounded-md sm:rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors" aria-label="Add to cart">
 
-                                        <span class="material-symbols-outlined">add_shopping_cart</span>
+                                        <span class="material-symbols-outlined text-[13px] sm:text-base">add_shopping_cart</span>
 
                                     </button>
 
@@ -1133,12 +1194,13 @@ function validatePrintingSubmit(e) {
         }
     }
 
+    const payMethodVal = document.querySelector('input[name="payment_method"]:checked')?.value || 'gcash';
     const btn = document.getElementById('btnSubmitPrinting');
     if (btn) {
         btn.disabled = true;
         btn.classList.add('opacity-70');
         const btnText = document.getElementById('submitBtnText');
-        if (btnText) btnText.textContent = 'Connecting to PayMongo...';
+        if (btnText) btnText.textContent = payMethodVal === 'gcash' ? 'Connecting to PayMongo...' : 'Submitting Request...';
     }
 
     return true;
@@ -1317,7 +1379,56 @@ if (dropzone && fileInput) {
             if (copies > 1) helper += ` × ${copies} copies`;
             elHelper.textContent = helper;
         }
+
+        updatePrintingPaymentUI();
     }
+
+    function updatePrintingPaymentUI() {
+        const fulfillmentVal = document.querySelector('input[name="fulfillment_method"]:checked')?.value || 'pickup';
+        const pickupPayLabel = document.getElementById('payMethodPickupLabel');
+        const codPayLabel = document.getElementById('payMethodCodLabel');
+        const payPickupInput = document.getElementById('payMethodPickup');
+        const payCodInput = document.getElementById('payMethodCod');
+        const payGcashInput = document.getElementById('payMethodGcash');
+
+        if (fulfillmentVal === 'delivery') {
+            if (pickupPayLabel) pickupPayLabel.classList.add('hidden');
+            if (codPayLabel) codPayLabel.classList.remove('hidden');
+            if (payPickupInput && payPickupInput.checked && payCodInput) {
+                payCodInput.checked = true;
+            }
+        } else {
+            if (pickupPayLabel) pickupPayLabel.classList.remove('hidden');
+            if (codPayLabel) codPayLabel.classList.add('hidden');
+            if (payCodInput && payCodInput.checked && payPickupInput) {
+                payPickupInput.checked = true;
+            }
+        }
+
+        const payMethodVal = document.querySelector('input[name="payment_method"]:checked')?.value || 'gcash';
+        const btn = document.getElementById('btnSubmitPrinting');
+        const btnText = document.getElementById('submitBtnText');
+        const subtext = document.getElementById('prTrustSubtext');
+        const dpPercent = <?= (float) ($printingSettings['down_payment_percent'] ?? 50.00) ?>;
+
+        if (payMethodVal === 'gcash') {
+            if (btn) btn.className = 'w-full py-3 bg-[#007DFE] hover:bg-[#006bd6] text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
+            if (btnText) btnText.textContent = 'Pay ' + Math.round(dpPercent) + '% Down Payment via GCash';
+            if (subtext) subtext.textContent = 'Pay ' + Math.round(dpPercent) + '% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.';
+        } else if (payMethodVal === 'pickup') {
+            if (btn) btn.className = 'w-full py-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
+            if (btnText) btnText.textContent = 'Submit Printing Request (Pay at Counter)';
+            if (subtext) subtext.textContent = 'No online payment required now. Pay down payment or total upon picking up at the store.';
+        } else {
+            if (btn) btn.className = 'w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
+            if (btnText) btnText.textContent = 'Submit Printing Request (Cash on Delivery)';
+            if (subtext) subtext.textContent = 'No online payment required now. Payment will be collected upon doorstep delivery.';
+        }
+    }
+
+    document.querySelectorAll('input[name="payment_method"], input[name="fulfillment_method"]').forEach(r => {
+        r.addEventListener('change', updatePrintingPaymentUI);
+    });
 
     const copiesInput = document.getElementById('copiesInput');
     const btnMinus = document.getElementById('btnCopiesMinus');

@@ -296,9 +296,23 @@
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
                             <span class="material-symbols-outlined text-[18px]">phone_iphone</span>
                         </span>
-                        <input type="text" name="gcash_number" id="gcash_number" value="<?= esc($shop['gcash_number'] ?? '') ?>" placeholder="0917 123 4567" maxlength="13" class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-mono font-semibold focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all">
+                        <input type="text" name="gcash_number" id="gcash_number" value="<?= esc($shop['gcash_number'] ?? '') ?>" placeholder="09171234567" maxlength="13" required class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-mono font-semibold focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all">
                     </div>
                     <p class="text-[11px] text-on-surface-variant">Format: 11-digit Philippine mobile number starting with 09.</p>
+                </div>
+
+                <!-- Confirm GCash Number -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-on-surface uppercase tracking-wider block" for="confirm_gcash_number">
+                        Confirm GCash Mobile Number <span class="text-error">*</span>
+                    </label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[18px]">verified</span>
+                        </span>
+                        <input type="text" name="confirm_gcash_number" id="confirm_gcash_number" value="<?= esc($shop['gcash_number'] ?? '') ?>" placeholder="Re-enter 09XXXXXXXXX" maxlength="13" required class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-mono font-semibold focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all">
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant">Must exactly match the GCash mobile number entered above.</p>
                 </div>
 
                 <!-- Account Name -->
@@ -310,15 +324,23 @@
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-on-surface-variant">
                             <span class="material-symbols-outlined text-[18px]">person</span>
                         </span>
-                        <input type="text" name="gcash_account_name" id="gcash_account_name" value="<?= esc($shop['gcash_account_name'] ?? '') ?>" placeholder="e.g. Juan Dela Cruz / RHK Merchandise" maxlength="100" class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all">
+                        <input type="text" name="gcash_account_name" id="gcash_account_name" value="<?= esc($shop['gcash_account_name'] ?? '') ?>" placeholder="e.g. Juan Dela Cruz / RHK Merchandise" maxlength="100" required class="w-full pl-10 pr-4 py-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-sm font-medium focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary focus:outline-none transition-all">
                     </div>
                     <p class="text-[11px] text-on-surface-variant">The full name registered with your verified GCash mobile wallet.</p>
+                </div>
+
+                <!-- Ownership Declaration Checkbox -->
+                <div class="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/40 flex items-start gap-3">
+                    <input type="checkbox" name="gcash_confirm_ownership" id="gcash_confirm_ownership" value="1" required class="mt-0.5 w-4 h-4 rounded text-primary focus:ring-primary border-outline-variant cursor-pointer">
+                    <label for="gcash_confirm_ownership" class="text-xs text-on-surface leading-snug cursor-pointer select-none font-medium">
+                        I confirm that the GCash account information I provided is correct and belongs to me/my business.
+                    </label>
                 </div>
 
                 <div class="pt-3 border-t border-outline-variant/20 flex justify-end">
                     <button type="submit" class="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-2 text-xs">
                         <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
-                        <span>Update Payment Details</span>
+                        <span>Save Payment Details</span>
                     </button>
                 </div>
             </form>
@@ -429,33 +451,63 @@
 
             <!-- Service Offerings -->
             <div class="space-y-4">
-                <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Service Modules</h4>
+                <div class="flex items-center justify-between">
+                    <h4 class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Service Modules</h4>
+                    <span id="servicesFeedback" class="text-xs text-emerald-700 font-semibold"></span>
+                </div>
 
-                <!-- Printing Service Toggle -->
-                <form action="<?= base_url('tenant/settings/save') ?>" method="POST" id="printingServiceForm" class="p-4 rounded-2xl bg-surface-container-low/50 border border-outline-variant/30 flex items-center justify-between gap-4">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="section" value="profile">
-                    <input type="hidden" name="shop_name" value="<?= esc($shop['shop_name'] ?? '') ?>">
-                    <input type="hidden" name="street" value="<?= esc($shop['street'] ?? '') ?>">
-                    <input type="hidden" name="barangay" value="<?= esc($shop['barangay'] ?? '') ?>">
-                    <input type="hidden" name="address_line" value="<?= esc($shop['address_line'] ?? '') ?>">
-                    <input type="hidden" name="description" value="<?= esc($shop['description'] ?? '') ?>">
-
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[20px] text-primary">print</span>
-                            <span class="font-bold text-sm text-on-surface">Document & Photo Printing Services</span>
+                <div class="space-y-3">
+                    <!-- Printing Service Toggle -->
+                    <div class="p-4 rounded-2xl bg-surface-container-low/50 border border-outline-variant/30 flex items-center justify-between gap-4 transition-all hover:bg-surface-container-low">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-primary">print</span>
+                                <span class="font-bold text-sm text-on-surface">Document &amp; Photo Printing Services</span>
+                            </div>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">
+                                Allows customers in Polomolok to submit custom printing requests (PDF, DOCX, photos) directly to your store counter.
+                            </p>
                         </div>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">
-                            Allows customers in Polomolok to submit custom printing requests (PDF, DOCX, photos) directly to your store counter.
-                        </p>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="service_offers_printing" data-module="offers_printing" <?= !empty($shop['offers_printing']) ? 'checked' : '' ?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-surface-container-highest border border-outline-variant/50 rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5 peer-checked:after:border-white"></div>
+                        </label>
                     </div>
 
-                    <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                        <input type="checkbox" name="offers_printing" value="1" <?= !empty($shop['offers_printing']) ? 'checked' : '' ?> onchange="document.getElementById('printingServiceForm').submit()" class="sr-only peer">
-                        <div class="w-11 h-6 bg-surface-container-highest border border-outline-variant/50 rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5 peer-checked:after:border-white"></div>
-                    </label>
-                </form>
+                    <!-- Doorstep Delivery Service Toggle -->
+                    <div class="p-4 rounded-2xl bg-surface-container-low/50 border border-outline-variant/30 flex items-center justify-between gap-4 transition-all hover:bg-surface-container-low">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-[#007DFE]">local_shipping</span>
+                                <span class="font-bold text-sm text-on-surface">Doorstep Delivery Services</span>
+                            </div>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">
+                                Allows customers in Polomolok to request direct doorstep delivery (COD &amp; Online) straight to their residence or business address.
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="service_offers_delivery" data-module="offers_delivery" <?= (isset($shop['offers_delivery']) && (int)$shop['offers_delivery'] === 0) ? '' : 'checked' ?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-surface-container-highest border border-outline-variant/50 rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5 peer-checked:after:border-white"></div>
+                        </label>
+                    </div>
+
+                    <!-- Store Pick-up Service Toggle -->
+                    <div class="p-4 rounded-2xl bg-surface-container-low/50 border border-outline-variant/30 flex items-center justify-between gap-4 transition-all hover:bg-surface-container-low">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[20px] text-secondary">storefront</span>
+                                <span class="font-bold text-sm text-on-surface">Store Pick-up Services</span>
+                            </div>
+                            <p class="text-xs text-on-surface-variant leading-relaxed">
+                                Allows customers to place orders online and personally claim packages at your physical counter with verified pick-up passes.
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                            <input type="checkbox" id="service_offers_pickup" data-module="offers_pickup" <?= (isset($shop['offers_pickup']) && (int)$shop['offers_pickup'] === 0) ? '' : 'checked' ?> class="sr-only peer">
+                            <div class="w-11 h-6 bg-surface-container-highest border border-outline-variant/50 rounded-full peer peer-checked:bg-primary transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all after:shadow-sm peer-checked:after:translate-x-5 peer-checked:after:border-white"></div>
+                        </label>
+                    </div>
+                </div>
             </div>
 
             <!-- Merchant Notification Alerts -->
@@ -540,10 +592,15 @@
         history.replaceState(null, null, '#' + tabName);
     };
 
-    // Auto-select tab based on URL hash on page load
+    // Auto-select tab based on URL query param (?tab=...) or hash (#...) on page load
     document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
         const hash = window.location.hash.replace('#', '');
-        if (tabs.includes(hash)) {
+
+        if (tabParam && tabs.includes(tabParam)) {
+            switchSettingsTab(tabParam);
+        } else if (tabs.includes(hash)) {
             switchSettingsTab(hash);
         }
     });
@@ -705,6 +762,29 @@
         });
     }
 
+    // ── 7.1 Service Modules Auto-Save ──────────────────────────────
+    function wireServices() {
+        ['service_offers_printing', 'service_offers_delivery', 'service_offers_pickup'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('change', function () {
+                    var moduleName = el.getAttribute('data-module');
+                    var feedback = document.getElementById('servicesFeedback');
+                    if (feedback) { feedback.textContent = 'Saving...'; }
+                    var fd = new FormData();
+                    fd.append('csrf_test_name', csrfToken());
+                    fd.append('section', 'services');
+                    fd.append('module', moduleName);
+                    fd.append('enabled', el.checked ? 1 : 0);
+                    postSettings(fd).then(function (ok) {
+                        if (feedback) { feedback.textContent = ok ? 'Service updated.' : 'Save failed.'; }
+                        if (!ok) { el.checked = !el.checked; }
+                    });
+                });
+            }
+        });
+    }
+
     // ── 8. Street & Barangay Auto-Sync to Address Line ─────────────
     var streetEl = document.getElementById('street');
     var brgyEl = document.getElementById('barangay');
@@ -734,6 +814,7 @@
 
     wireHours();
     wireNotifs();
+    wireServices();
 
     // ── 9. Google Maps Autocomplete & Geocoding ────────────────────
     let shopAutocomplete = null;

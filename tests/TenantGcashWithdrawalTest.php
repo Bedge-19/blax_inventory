@@ -15,6 +15,22 @@ class TenantGcashWithdrawalTest extends CIUnitTestCase
 
     protected function tearDown(): void
     {
+        $db = \Config\Database::connect();
+        $testShops = $db->table('shops')->like('shop_name', 'CashTestShop_')->orLike('shop_name', 'GcashTestShop_')->get()->getResultArray();
+        $shopIds = array_column($testShops, 'id');
+        if (!empty($shopIds)) {
+            $testOrders = $db->table('orders')->whereIn('shop_id', $shopIds)->get()->getResultArray();
+            $orderIds = array_column($testOrders, 'id');
+            if (!empty($orderIds)) {
+                $db->table('payments')->where('payable_type', 'order')->whereIn('payable_id', $orderIds)->delete();
+                $db->table('order_items')->whereIn('order_id', $orderIds)->delete();
+                $db->table('orders')->whereIn('id', $orderIds)->delete();
+            }
+            $db->table('shops')->whereIn('id', $shopIds)->delete();
+        }
+        $db->table('orders')->like('order_number', 'ORD-COD-')->orLike('order_number', 'ORD-PICKUP-')->orLike('order_number', 'ORD-GCASH-')->delete();
+        $db->table('payments')->like('reference_number', 'ref_gcash_')->orLike('reference_number', 'ref_pr_')->delete();
+
         \Config\Services::resetSingle('renderer');
         parent::tearDown();
     }

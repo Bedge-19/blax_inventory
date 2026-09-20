@@ -76,9 +76,21 @@
 
     <!-- Recent Shop Registrations — no financials -->
     <section class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow overflow-hidden">
-        <div class="p-6 border-b border-outline-variant/20 flex justify-between items-center">
-            <h3 class="text-title-lg font-bold text-on-surface">Active Tenants & Recent Registrations</h3>
-            <a href="<?= base_url('admin/tenants') ?>" class="text-primary text-label-sm font-semibold hover:underline">View All Tenants</a>
+        <div class="p-6 border-b border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-sm">
+            <div>
+                <h3 class="text-title-lg font-bold text-on-surface">Active Tenants &amp; Recent Registrations</h3>
+            </div>
+            <div class="flex items-center gap-md">
+                <form method="get" action="<?= base_url('admin/dashboard') ?>" class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                    <label for="dashboard_per_page" class="font-medium">Show:</label>
+                    <select name="per_page" id="dashboard_per_page" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-primary/30">
+                        <option value="5" <?= ($per_page ?? 5) == 5 ? 'selected' : '' ?>>5</option>
+                        <option value="10" <?= ($per_page ?? 5) == 10 ? 'selected' : '' ?>>10</option>
+                        <option value="20" <?= ($per_page ?? 5) == 20 ? 'selected' : '' ?>>20</option>
+                    </select>
+                </form>
+                <a href="<?= base_url('admin/tenants') ?>" class="text-primary text-label-sm font-semibold hover:underline">View All Tenants</a>
+            </div>
         </div>
         <div class="responsive-table">
             <table class="w-full text-left border-collapse">
@@ -111,6 +123,43 @@
                 </tbody>
             </table>
         </div>
+        <?php if (isset($pager)): ?>
+            <?php
+            $total   = (int) $pager->getTotal('recent');
+            $perPage = (int) ($per_page ?? 5);
+            $cur     = (int) $pager->getCurrentPage('recent');
+            $pages   = (int) $pager->getPageCount('recent');
+            $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
+            $end     = min($cur * $perPage, $total);
+            ?>
+            <div class="px-6 py-3 bg-surface-container-low/30 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">
+                <p class="text-xs text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> registrations</p>
+                <?php if ($pages > 1): ?>
+                    <div class="flex items-center gap-xs">
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('recent') ?>" title="Previous">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </a>
+                        <?php
+                        $window = [];
+                        for ($i = 1; $i <= $pages; $i++) {
+                            if ($i === 1 || $i === $pages || abs($i - $cur) <= 2) {
+                                $window[] = $i;
+                            }
+                        }
+                        $prev = 0;
+                        foreach ($window as $num):
+                            if ($num - $prev > 1): ?>
+                                <span class="px-xs text-outline text-xs">...</span>
+                            <?php endif; ?>
+                            <a class="w-8 h-8 rounded flex items-center justify-center text-xs <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high text-on-surface' ?>" href="<?= $pager->getPageURI($num, 'recent') ?>"><?= $num ?></a>
+                        <?php $prev = $num; endforeach; ?>
+                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('recent') ?>" title="Next">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </section>
 
 </div>

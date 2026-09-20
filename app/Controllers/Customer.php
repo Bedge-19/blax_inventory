@@ -421,6 +421,26 @@ class Customer extends BaseController
     }
 
     /**
+     * Dedicated live tracking page for Doorstep Delivery printing requests.
+     */
+    public function trackPrintingRequest($ref = null)
+    {
+        $controller = new CustomerOrderController();
+        $controller->initController($this->request, $this->response, $this->logger);
+        return $controller->trackPrintingRequest($ref);
+    }
+
+    /**
+     * AJAX endpoint for customer live position polling on printing requests.
+     */
+    public function getPrintingDeliveryPosition($ref = null)
+    {
+        $controller = new CustomerOrderController();
+        $controller->initController($this->request, $this->response, $this->logger);
+        return $controller->getPrintingDeliveryPosition($ref);
+    }
+
+    /**
      * Cancel an active order by customer.
      * Validates customer ownership, restricts cancellation to pending/processing only,
      * restores inventory quantities (including variants), and sends notification.
@@ -1174,6 +1194,14 @@ class Customer extends BaseController
         $copies = max(1, min(500, (int) $this->request->getPost('copies')));
 
         $fulfillment = $this->request->getPost('fulfillment_method') === 'delivery' ? 'delivery' : 'pickup';
+        if ($fulfillment === 'delivery' && isset($shop['offers_delivery']) && (int) $shop['offers_delivery'] === 0) {
+            session()->setFlashdata('error', 'Kasalukuyang hindi nag-aalok ng Doorstep Delivery service ang tindahang ito.');
+            return redirect()->back();
+        }
+        if ($fulfillment === 'pickup' && isset($shop['offers_pickup']) && (int) $shop['offers_pickup'] === 0) {
+            session()->setFlashdata('error', 'Kasalukuyang hindi nag-aalok ng Store Pick-up service ang tindahang ito.');
+            return redirect()->back();
+        }
 
         // Fetch dynamic pricing and supported sizes for shop
         $shopPaperSizes = (new \App\Models\ShopPaperSizeSettingModel())->getForShop($shopId);
@@ -1222,6 +1250,107 @@ class Customer extends BaseController
             'progress_percent'     => 0,
             'reference_photos'     => $stagedRefPhotos,
         ];
+
+        $paymentMethod = strtolower(trim((string) $this->request->getPost('payment_method')) ?: 'gcash');
+
+        // Non-GCash orders (Store Pick-up pay at counter or Cash on Delivery) insert immediately
+        if ($paymentMethod !== 'gcash') {
+            $db = \Config\Database::connect();
+            $db->transStart();
+
+            $prModel = new PrintingRequestModel();
+            $insertData = [
+                'request_number'       => $pendingPrinting['request_number'],
+                'customer_id'          => $userId,
+                'shop_id'              => $shopId,
+                'file_name'            => $file->getClientName(),
+                'file_url'             => $fileUrl,
+                'document_type'        => $documentType,
+                'doc_change_type'      => $docChangeType,
+                'special_instructions' => $notes !== '' ? $notes : null,
+                'paper_size'           => $paperSize,
+                'color_mode'           => $colorMode,
+                'copies'               => $copies,
+                'page_count'           => $pageCount,
+                'binding_option'       => $binding,
+                'paper_stock'          => trim((string) $this->request->getPost('paper_stock')) ?: 'standard',
+                'fulfillment_method'   => $fulfillment,
+                'total_price'          => $totalPrice,
+                'down_payment'         => $downPayment,
+                'status'               => 'new',
+                'progress_percent'     => 0,
+            ];
+
+            $prId = $prModel->insert($insertData);
+
+            if (!empty($stagedRefPhotos) && is_array($stagedRefPhotos)) {
+                $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
+                foreach ($stagedRefPhotos as $attachment) {
+                    $attPath = is_array($attachment) ? ($attachment['file_path'] ?? ($attachment['image_url'] ?? '')) : (string) $attachment;
+                    if ($attPath !== '') {
+                        $attachmentModel->insert([
+                            'printing_request_id' => $prId,
+                            'image_url'           => $attPath,
+                            'created_at'          => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
+            }
+
+            $paymentModel = new \App\Models\PaymentModel();
+            $paymentModel->insert([
+                'payable_type'     => 'printing_request',
+                'payable_id'       => $prId,
+                'method'           => $paymentMethod,
+                'amount'           => $downPayment,
+                'reference_number' => 'OFFLINE-' . bin2hex(random_bytes(8)),
+                'proof_image_url'  => null,
+                'status'           => 'pending',
+                'processed_at'     => null,
+                'created_at'       => date('Y-m-d H:i:s'),
+            ]);
+
+            if ($fulfillment === 'delivery') {
+                $delModel = new \App\Models\DeliveryModel();
+                $delModel->insert([
+                    'deliverable_type'    => 'printing_request',
+                    'deliverable_id'      => $prId,
+                    'tracking_id'         => $insertData['request_number'],
+                    'courier_name'        => 'Store Courier',
+                    'destination_address' => 'Doorstep Delivery',
+                    'status'              => 'shipped',
+                    'created_at'          => date('Y-m-d H:i:s'),
+                ]);
+            }
+
+            $db->transComplete();
+
+            if ($db->transStatus() !== false) {
+                // Trigger shop owner notification
+                $shop = (new ShopModel())->find($shopId);
+                if ($shop && !empty($shop['owner_id'])) {
+                    $customerUser = (new UserModel())->find($userId);
+                    $cName = $customerUser ? trim(($customerUser['first_name'] ?? '') . ' ' . ($customerUser['last_name'] ?? '')) : 'A customer';
+                    if ($cName === '') $cName = 'A customer';
+                    $prTime = date('M d, Y h:i A');
+                    $fileName = $file->getClientName();
+                    (new NotificationModel())->create(
+                        (int) $shop['owner_id'],
+                        'new_printing_request',
+                        "New Printing Request for {$fileName} (#{$insertData['request_number']})",
+                        "Received printing request for {$fileName} (#{$insertData['request_number']}) from {$cName} at {$prTime}.",
+                        '/tenant/printing'
+                    );
+                }
+
+                $msg = $paymentMethod === 'pickup'
+                    ? 'Your printing request has been submitted! You can pay down payment or balance at the shop counter upon pick-up.'
+                    : 'Your printing request has been submitted! Payment will be collected upon doorstep delivery.';
+                return redirect()->to('/customer/printing')->with('success', $msg);
+            }
+
+            return redirect()->back()->with('error', 'Failed to submit printing request. Please try again.');
+        }
 
         // Initiate PayMongo GCash checkout session for down payment
         $token = bin2hex(random_bytes(16));
@@ -1382,7 +1511,7 @@ class Customer extends BaseController
                 'fulfillment_method'   => $fulfillmentMethod = $pending['fulfillment_method'] ?? 'pickup',
                 'total_price'          => $pending['total_price'],
                 'down_payment'         => $pending['down_payment'],
-                'status'               => 'Paid (Down Payment)',
+                'status'               => 'new',
                 'progress_percent'     => 0,
             ];
 
@@ -1505,17 +1634,23 @@ class Customer extends BaseController
         ]);
     }
 
-    public function cancelPrintingRequest()
+    public function cancelPrintingRequest(?int $id = null)
     {
         $session = session();
         $userId  = $session->get('user_id');
 
         if (!$userId) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized.']);
+            }
             return redirect()->to('/login');
         }
 
-        $requestId = (int) $this->request->getPost('request_id');
+        $requestId = $id ?? (int) $this->request->getPost('request_id') ?? (int) $this->request->getPost('id');
         if ($requestId <= 0) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid printing request.']);
+            }
             session()->setFlashdata('error', 'Invalid printing request.');
             return redirect()->back();
         }
@@ -1524,16 +1659,52 @@ class Customer extends BaseController
         $row     = $prModel->find($requestId);
 
         if (!$row || (int) $row['customer_id'] !== (int) $userId) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Printing request not found.']);
+            }
             session()->setFlashdata('error', 'Printing request not found.');
             return redirect()->back();
         }
 
-        if (strtolower((string) $row['status']) !== 'new') {
-            session()->setFlashdata('error', 'This printing request is already approved and cannot be cancelled.');
+        $status = strtolower((string) $row['status']);
+        if (!in_array($status, ['new', 'in_production'], true)) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'This printing request cannot be cancelled once packed or completed.']);
+            }
+            session()->setFlashdata('error', 'This printing request cannot be cancelled once packed or completed.');
             return redirect()->back();
         }
 
-        $prModel->update($requestId, ['status' => 'cancelled']);
+        $prModel->update($requestId, [
+            'status'       => 'cancelled',
+            'completed_at' => null,
+        ]);
+
+        // Sync linked delivery if any
+        $deliveryModel = new DeliveryModel();
+        $deliveryModel->where('deliverable_type', 'printing_request')
+            ->where('deliverable_id', $requestId)
+            ->set(['status' => 'cancelled'])
+            ->update();
+
+        // Send shop notification
+        $shop = (new ShopModel())->find($row['shop_id']);
+        if ($shop && !empty($shop['owner_id'])) {
+            $customerUser = (new UserModel())->find($userId);
+            $cName = $customerUser ? trim(($customerUser['first_name'] ?? '') . ' ' . ($customerUser['last_name'] ?? '')) : 'A customer';
+            $reqNum = $row['request_number'] ?? ('PR-' . $requestId);
+            (new NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'printing_cancelled',
+                "Printing Request Cancelled (#{$reqNum})",
+                "{$cName} has cancelled printing request #{$reqNum}.",
+                '/tenant/printing'
+            );
+        }
+
+        if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+            return $this->response->setJSON(['success' => true, 'message' => 'Printing request cancelled successfully.']);
+        }
 
         session()->setFlashdata('success', 'Printing request cancelled successfully.');
         return redirect()->back();

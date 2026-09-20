@@ -11,6 +11,7 @@ use App\Models\DeliveryModel;
 use App\Models\PayoutModel;
 use App\Models\SiteContentModel;
 use App\Models\NotificationModel;
+use App\Services\PaymongoService;
 
 class Admin extends BaseController
 {
@@ -47,8 +48,19 @@ class Admin extends BaseController
         // Admin revenue only: 3% of completed GCash withdrawals
         $adminRevenue = $payoutModel->getAdminRevenueTotal('completed');
         $adminRevenue30 = $payoutModel->getAdminRevenueChartData('30','completed');
-        // Recent shops without financials
-        $recentShops = array_slice($shops, 0, 5);
+
+        // Recent shops pagination with selectable per_page (5, 10, 20)
+        $perPage = (int) ($this->request->getGet('per_page') ?: 5);
+        if (!in_array($perPage, [5, 10, 20], true)) {
+            $perPage = 5;
+        }
+        $page = max(1, (int) ($this->request->getGet('page_recent') ?: $this->request->getGet('page')));
+        $totalShops = count($shops);
+        $offset = ($page - 1) * $perPage;
+        $recentShops = array_slice($shops, $offset, $perPage);
+
+        $pager = service('pager');
+        $pager->store('recent', $page, $perPage, $totalShops);
 
         // Active shops count
         $activeShops = 0;
@@ -69,6 +81,8 @@ class Admin extends BaseController
             'pending_payments'     => $pendingPayments,
             'recent_shops'         => $recentShops,
             'shops'                => $shops,
+            'pager'                => $pager,
+            'per_page'             => $perPage,
         ]);
     }
 
@@ -80,9 +94,13 @@ class Admin extends BaseController
         $shopModel = new ShopModel();
         $search    = trim((string)$this->request->getGet('q'));
         $status    = trim((string)$this->request->getGet('status'));
+        $perPage   = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 20], true)) {
+            $perPage = 10;
+        }
         $page      = max(1, (int) $this->request->getGet('page_tenants'));
 
-        $result = $shopModel->getTenantsPaginated($search, $status, 15, $page, 'tenants');
+        $result = $shopModel->getTenantsPaginated($search, $status, $perPage, $page, 'tenants');
         $shops  = $result['tenants'];
 
         $db = \Config\Database::connect();
@@ -93,6 +111,7 @@ class Admin extends BaseController
             'tenants'      => $shops,
             'shops'        => $shops,
             'pager'        => $result['pager'],
+            'per_page'     => $perPage,
             'filters'      => ['q'=>$search,'status'=>$status],
             'active_count' => $activeCount,
             'pending_count'=> $pendingCount,
@@ -108,9 +127,13 @@ class Admin extends BaseController
         $userModel = new UserModel();
         $search    = trim((string)$this->request->getGet('q'));
         $status    = trim((string)$this->request->getGet('status'));
+        $perPage   = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 20], true)) {
+            $perPage = 10;
+        }
         $page      = max(1, (int) $this->request->getGet('page_customers'));
 
-        $result    = $userModel->getCustomersPaginated($search, $status, 15, $page, 'customers');
+        $result    = $userModel->getCustomersPaginated($search, $status, $perPage, $page, 'customers');
         $customers = $result['customers'];
 
         $db = \Config\Database::connect();
@@ -122,6 +145,7 @@ class Admin extends BaseController
         return view('admin/customers', [
             'customers'     => $customers,
             'pager'         => $result['pager'],
+            'per_page'      => $perPage,
             'filters'       => ['q'=>$search,'status'=>$status],
             'total_count'   => $total,
             'active_today'  => $activeToday,
@@ -137,24 +161,33 @@ class Admin extends BaseController
         $payoutModel = new PayoutModel();
         $search      = trim((string)$this->request->getGet('q'));
         $status      = trim((string)$this->request->getGet('status'));
+        $perPage     = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 15, 20], true)) {
+            $perPage = 10;
+        }
         $page        = max(1, (int) $this->request->getGet('page_payments'));
 
-        $result          = $payoutModel->getPaymentsPaginated($search, $status, 15, $page, 'payments');
+        $result          = $payoutModel->getPaymentsPaginated($search, $status, $perPage, $page, 'payments');
         $paymentRequests = $result['payments'];
 
         $db = \Config\Database::connect();
         $pendingTotal = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->selectSum('amount','total')->get()->getRow()->total ?? 0;
+        $processingTotal = $db->table('payout_requests')->whereIn('status', ['processing', 'transfer_pending'])->where('destination_method','gcash')->selectSum('amount','total')->get()->getRow()->total ?? 0;
         $completedTotal = $db->table('payout_requests')->where('status','completed')->where('destination_method','gcash')->selectSum('amount','total')->get()->getRow()->total ?? 0;
         $pendingCount = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->countAllResults();
+        $processingCount = $db->table('payout_requests')->whereIn('status', ['processing', 'transfer_pending'])->where('destination_method','gcash')->countAllResults();
 
         return view('admin/payments', [
             'payment_requests'  => $paymentRequests,
             'payments'          => $paymentRequests,
             'pager'             => $result['pager'],
+            'per_page'          => $perPage,
             'filters'           => ['q'=>$search,'status'=>$status],
             'pending_total'     => (float)$pendingTotal,
+            'processing_total'  => (float)$processingTotal,
             'completed_total'   => (float)$completedTotal,
             'pending_count'     => (int)$pendingCount,
+            'processing_count'  => (int)$processingCount,
             'deduction_percent' => (new SiteContentModel())->getPlatformDeductionPercent(),
         ]);
     }
@@ -167,9 +200,13 @@ class Admin extends BaseController
         $complianceModel = new ComplianceModel();
         $search          = trim((string)$this->request->getGet('q'));
         $status          = trim((string)$this->request->getGet('status'));
+        $perPage         = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 20], true)) {
+            $perPage = 10;
+        }
         $page            = max(1, (int) $this->request->getGet('page_compliance'));
 
-        $result  = $complianceModel->getCompliancePaginated($search, $status, 15, $page, 'compliance');
+        $result  = $complianceModel->getCompliancePaginated($search, $status, $perPage, $page, 'compliance');
         $reports = $result['reports'];
 
         $db = \Config\Database::connect();
@@ -181,6 +218,7 @@ class Admin extends BaseController
             'compliance_items' => $reports,
             'reports'          => $reports,
             'pager'            => $result['pager'],
+            'per_page'         => $perPage,
             'filters'          => ['q'=>$search,'status'=>$status],
             'total_reports'    => $totalReports,
             'pending_reviews'  => $pendingReviews,
@@ -329,10 +367,14 @@ class Admin extends BaseController
         $status    = trim((string) $this->request->getGet('status'));
         $dateRange = trim((string) $this->request->getGet('range'));
         $ip        = trim((string) $this->request->getGet('ip'));
+        $perPage   = (int) ($this->request->getGet('per_page') ?: 10);
+        if (!in_array($perPage, [5, 10, 20], true)) {
+            $perPage = 10;
+        }
         $page      = max(1, (int) $this->request->getGet('page_audit_log'));
 
         $auditLogModel = new AuditLogModel();
-        $result = $auditLogModel->getAuditLogsPaginated($search, $role, $status, 25, $page, 'audit_log', $dateRange, $ip);
+        $result = $auditLogModel->getAuditLogsPaginated($search, $role, $status, $perPage, $page, 'audit_log', $dateRange, $ip);
         $logs   = $result['logs'];
 
         $db = \Config\Database::connect();
@@ -357,6 +399,7 @@ class Admin extends BaseController
             'audit_logs'    => $logs,
             'logs'          => $logs,
             'pager'         => $result['pager'],
+            'per_page'      => $perPage,
             'filters'       => [
                 'q'      => $search,
                 'role'   => $role,
@@ -1006,46 +1049,453 @@ class Admin extends BaseController
         return $this->response->download($path, null, true)->inline()->noCache();
     }
 
-    public function approvePayout()
+    /**
+     * Move a pending withdrawal to processing.
+     * CRITICAL: This action MUST NOT call PayMongo.
+     */
+    public function processPayout()
     {
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
-        $withdrawalId = (int) $this->request->getPost('withdrawal_id');
+        $withdrawalId = (int) ($this->request->getPost('withdrawal_id') ?: $this->request->getPost('payout_id'));
         $payoutModel  = new PayoutModel();
         $payout       = $payoutModel->find($withdrawalId);
 
         if (!$payout) {
             return redirect()->back()->with('error', 'Payout request not found.');
         }
-        if (($payout['destination_method'] ?? '') !== 'gcash') {
-            return redirect()->back()->with('error', 'Only GCash payouts can be approved.');
+
+        if (($payout['status'] ?? '') !== 'pending') {
+            return redirect()->back()->with('error', 'Only pending payout requests can be moved to processing.');
         }
 
-        // Ensure 3% fee is recorded (if previously 0, compute now)
-        $fee = (float)($payout['fee'] ?? 0);
-        if ($fee <= 0) {
-            $fee = round((float)$payout['amount'] * 0.03, 2);
+        if (!empty($payout['paymongo_transfer_id'])) {
+            return redirect()->back()->with('error', 'This withdrawal has already been submitted to PayMongo.');
         }
+
+        $adminId = (int) session()->get('user_id');
 
         $payoutModel->update($withdrawalId, [
-            'status'       => 'completed',
-            'fee'          => $fee,
-            'completed_at' => date('Y-m-d H:i:s'),
+            'status'       => 'processing',
+            'processed_at' => date('Y-m-d H:i:s'),
+            'processed_by' => $adminId,
         ]);
+
+        (new AuditLogModel())->log(
+            $adminId,
+            'admin',
+            'Moved Withdrawal to Processing',
+            'payout_request',
+            'success',
+            $withdrawalId
+        );
 
         $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
         if ($shop && !empty($shop['owner_id'])) {
             (new NotificationModel())->create(
                 (int) $shop['owner_id'],
                 'payout',
-                'Payout Completed',
-                'Your GCash payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') has been approved and completed.',
+                'Payout In Processing',
+                'Your GCash payout request #' . ($payout['reference_number'] ?? $withdrawalId) . ' (₱' . number_format((float) $payout['amount'], 2) . ') has been reviewed and moved to processing.',
                 '/tenant/withdrawals'
             );
         }
 
-        return redirect()->back()->with('success', 'GCash payout approved. 3% admin fee recorded.');
+        return redirect()->back()->with('success', 'Withdrawal moved to Processing. You may now review and send via PayMongo.');
+    }
+
+    /**
+     * Initiate external GCash transfer via PayMongo Wallet Transfer API.
+     * Only PROCESSING withdrawals may be sent.
+     */
+    public function sendTransfer()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $withdrawalId = (int) ($this->request->getPost('withdrawal_id') ?: $this->request->getPost('payout_id'));
+        $db           = \Config\Database::connect();
+        $adminId      = (int) session()->get('user_id');
+
+        // Start transaction with row locking
+        $db->transBegin();
+        $payout = $db->table('payout_requests')
+            ->where('id', $withdrawalId)
+            ->get()->getRowArray();
+
+        if (!$payout) {
+            $db->transRollback();
+            return redirect()->back()->with('error', 'Withdrawal request not found.');
+        }
+
+        $currentStatus = strtolower((string) ($payout['status'] ?? ''));
+        if ($currentStatus !== 'processing') {
+            $db->transRollback();
+            return redirect()->back()->with('error', 'Only withdrawals in Processing status can be sent to GCash.');
+        }
+
+        if (!empty($payout['paymongo_transfer_id']) || $currentStatus === 'transfer_pending' || $currentStatus === 'completed') {
+            $db->transRollback();
+            return redirect()->back()->with('error', 'Transfer already initiated or completed for this withdrawal.');
+        }
+
+        // Authoritative recipient data from immutable snapshot
+        $destNumber = preg_replace('/\D/', '', (string) ($payout['destination_detail'] ?? ''));
+        $destName   = trim((string) ($payout['recipient_account_name'] ?? ''));
+
+        // Fallback to shop record only if snapshot was missing from legacy row
+        if (empty($destNumber) || empty($destName)) {
+            $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+            if (empty($destNumber)) $destNumber = preg_replace('/\D/', '', (string) ($shop['gcash_number'] ?? ''));
+            if (empty($destName)) $destName = trim((string) ($shop['gcash_account_name'] ?? ''));
+        }
+
+        if (!preg_match('/^09\d{9}$/', $destNumber) || $destName === '') {
+            $db->transRollback();
+            return redirect()->back()->with('error', 'Withdrawal lacks complete recipient GCash information.');
+        }
+
+        $amount     = (float) ($payout['amount'] ?? 0);
+        $rate       = (float) ($payout['deduction_percent'] ?? (new SiteContentModel())->getPlatformDeductionPercent());
+        $fee        = (float) (($payout['fee'] ?? 0) > 0 ? $payout['fee'] : round($amount * ($rate / 100), 2));
+        $netAmount  = (float) (($payout['net_amount'] ?? 0) > 0 ? $payout['net_amount'] : max(0.0, round($amount - $fee, 2)));
+
+        if ($netAmount <= 0) {
+            $db->transRollback();
+            return redirect()->back()->with('error', 'Net transfer amount must be greater than zero.');
+        }
+
+        $idempotencyKey = (string) (!empty($payout['idempotency_key']) ? $payout['idempotency_key'] : ('WD-TR-' . $withdrawalId . '-' . substr(md5(($payout['reference_number'] ?? '') . $netAmount), 0, 10)));
+
+        // Transition to transfer_pending to prevent duplicate concurrent clicks
+        $db->table('payout_requests')->where('id', $withdrawalId)->update([
+            'status'                 => 'transfer_pending',
+            'transfer_status'        => 'pending',
+            'transfer_initiated_at'  => date('Y-m-d H:i:s'),
+            'idempotency_key'        => $idempotencyKey,
+            'fee'                    => $fee,
+            'net_amount'             => $netAmount,
+            'recipient_account_name' => $destName,
+            'destination_detail'     => $destNumber,
+            'recipient_institution'  => $payout['recipient_institution'] ?? 'G-Xchange, Inc.',
+        ]);
+        $db->transCommit();
+
+        // 2. Call PayMongo Service
+        $pmService   = new PaymongoService();
+        $transferRes = $pmService->createTransfer([
+            'amount'             => $netAmount,
+            'destination_number' => $destNumber,
+            'destination_name'   => $destName,
+            'reference_number'   => (string) ($payout['reference_number'] ?? ('WD ' . $withdrawalId)),
+            'description'        => 'GCash payout ' . ($payout['reference_number'] ?? ('WD-' . $withdrawalId)),
+            'callback_url'       => base_url('payment/transfer-webhook'),
+            'metadata'           => [
+                'withdrawal_id'    => (string) $withdrawalId,
+                'shop_id'          => (string) ($payout['shop_id'] ?? ''),
+                'reference_number' => (string) ($payout['reference_number'] ?? ''),
+            ],
+        ], $idempotencyKey);
+
+        $shop    = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        $ownerId = (int) ($shop['owner_id'] ?? 0);
+
+        if (!$transferRes['success']) {
+            $errorMsg = $transferRes['error'] ?? 'Transfer could not be completed. Please check your PayMongo wallet balance.';
+
+            // Revert status back to processing so admin can retry after resolving issue
+            $db->table('payout_requests')->where('id', $withdrawalId)->update([
+                'status'          => 'processing',
+                'transfer_status' => 'failed',
+                'failure_reason'  => mb_substr($errorMsg, 0, 500),
+            ]);
+
+            (new AuditLogModel())->log(
+                $adminId,
+                'admin',
+                'PayMongo Transfer Failed',
+                'payout_request',
+                'failed',
+                $withdrawalId
+            );
+
+            return redirect()->back()->with('error', $errorMsg);
+        }
+
+        $trId     = $transferRes['transfer_id'] ?? '';
+        $batchId  = $transferRes['batch_id'] ?? '';
+        $trStatus = strtolower((string) ($transferRes['status'] ?? 'pending'));
+
+        if ($trStatus === 'succeeded') {
+            $db->table('payout_requests')->where('id', $withdrawalId)->update([
+                'status'               => 'completed',
+                'transfer_status'      => 'succeeded',
+                'completed_at'         => date('Y-m-d H:i:s'),
+                'paymongo_transfer_id' => $trId,
+                'paymongo_batch_id'    => $batchId,
+                'failure_reason'       => null,
+            ]);
+
+            (new AuditLogModel())->log(
+                $adminId,
+                'admin',
+                'PayMongo Transfer Succeeded',
+                'payout_request',
+                'success',
+                $withdrawalId
+            );
+
+            if ($ownerId > 0) {
+                (new NotificationModel())->create(
+                    $ownerId,
+                    'payout',
+                    'Payout Completed',
+                    'Your GCash payout #' . ($payout['reference_number'] ?? $withdrawalId) . ' (₱' . number_format($netAmount, 2) . ') has been successfully transferred to your GCash account.',
+                    '/tenant/withdrawals'
+                );
+            }
+
+            return redirect()->back()->with('success', 'Transfer completed successfully via PayMongo. ₱' . number_format($netAmount, 2) . ' sent to GCash.');
+        }
+
+        // Standard InstaPay asynchronous transfer (pending)
+        $db->table('payout_requests')->where('id', $withdrawalId)->update([
+            'status'               => 'transfer_pending',
+            'transfer_status'      => 'pending',
+            'paymongo_transfer_id' => $trId,
+            'paymongo_batch_id'    => $batchId,
+        ]);
+
+        (new AuditLogModel())->log(
+            $adminId,
+            'admin',
+            'Initiated PayMongo GCash Transfer',
+            'payout_request',
+            'success',
+            $withdrawalId
+        );
+
+        if ($ownerId > 0) {
+            (new NotificationModel())->create(
+                $ownerId,
+                'payout',
+                'Payout Transfer Pending',
+                'Your GCash payout #' . ($payout['reference_number'] ?? $withdrawalId) . ' (₱' . number_format($netAmount, 2) . ') has been initiated via PayMongo and is processing.',
+                '/tenant/withdrawals'
+            );
+        }
+
+        return redirect()->back()->with('success', 'Transfer initiated via PayMongo (Ref: ' . esc($trId) . '). Waiting for InstaPay settlement.');
+    }
+
+    /**
+     * Query PayMongo API to refresh transfer status for a transfer_pending withdrawal.
+     */
+    public function syncTransferStatus()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) return $auth;
+
+        $withdrawalId = (int) ($this->request->getPost('withdrawal_id') ?: $this->request->getPost('payout_id'));
+        $payoutModel  = new PayoutModel();
+        $payout       = $payoutModel->find($withdrawalId);
+
+        if (!$payout || empty($payout['paymongo_transfer_id'])) {
+            return redirect()->back()->with('error', 'No PayMongo transfer ID found for this withdrawal.');
+        }
+
+        $pmService = new PaymongoService();
+        $res = $pmService->getTransfer($payout['paymongo_transfer_id']);
+
+        if (!$res['success']) {
+            return redirect()->back()->with('error', 'Failed to check status with PayMongo: ' . ($res['error'] ?? 'Unknown error'));
+        }
+
+        $status  = strtolower((string) ($res['status'] ?? 'pending'));
+        $shop    = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        $ownerId = (int) ($shop['owner_id'] ?? 0);
+
+        if ($status === 'succeeded' && $payout['status'] !== 'completed') {
+            $payoutModel->update($withdrawalId, [
+                'status'          => 'completed',
+                'transfer_status' => 'succeeded',
+                'completed_at'    => date('Y-m-d H:i:s'),
+                'failure_reason'  => null,
+            ]);
+
+            if ($ownerId > 0) {
+                (new NotificationModel())->create(
+                    $ownerId,
+                    'payout',
+                    'Payout Completed',
+                    'Your GCash payout #' . ($payout['reference_number'] ?? $withdrawalId) . ' has been successfully delivered.',
+                    '/tenant/withdrawals'
+                );
+            }
+
+            return redirect()->back()->with('success', 'PayMongo transfer verified: Succeeded. Withdrawal marked as Completed.');
+        }
+
+        if ($status === 'failed' && $payout['status'] !== 'failed') {
+            $payoutModel->update($withdrawalId, [
+                'status'          => 'failed',
+                'transfer_status' => 'failed',
+                'failure_reason'  => 'Transfer marked failed by gateway.',
+            ]);
+
+            if ($ownerId > 0) {
+                (new NotificationModel())->create(
+                    $ownerId,
+                    'payout',
+                    'Payout Failed',
+                    'Your GCash payout #' . ($payout['reference_number'] ?? $withdrawalId) . ' failed. Funds have been returned to your available balance.',
+                    '/tenant/withdrawals'
+                );
+            }
+
+            return redirect()->back()->with('error', 'PayMongo transfer returned Failed status. Available balance restored.');
+        }
+
+        return redirect()->back()->with('success', 'PayMongo transfer status is currently: ' . strtoupper($status));
+    }
+
+    /**
+     * Webhook endpoint for PayMongo transfer events (transfer.outward.successful, transfer.outward.failed).
+     */
+    public function paymongoTransferWebhook()
+    {
+        $payload = (string) $this->request->getBody();
+        $signatureHeader = $this->request->getHeaderLine('Paymongo-Signature');
+
+        if (empty($signatureHeader)) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Missing signature header']);
+        }
+
+        $webhookSecret = (string) (env('PAYMONGO_WEBHOOK_SECRET') ?: (getenv('PAYMONGO_WEBHOOK_SECRET') ?: ($_ENV['PAYMONGO_WEBHOOK_SECRET'] ?? '')));
+        if (empty($webhookSecret) && (defined('ENVIRONMENT') && ENVIRONMENT === 'testing' || getenv('CI_ENVIRONMENT') === 'testing')) {
+            $webhookSecret = 'test_secret_key_123';
+        }
+        if (empty($webhookSecret)) {
+            log_message('error', 'PAYMONGO_WEBHOOK_SECRET is not configured.');
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Webhook secret not configured']);
+        }
+
+        $parts = [];
+        foreach (explode(',', $signatureHeader) as $pair) {
+            $pairParts = explode('=', trim($pair), 2);
+            if (count($pairParts) === 2) {
+                $parts[$pairParts[0]] = $pairParts[1];
+            }
+        }
+
+        if (empty($parts['t'])) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid signature header']);
+        }
+
+        $timestamp = $parts['t'];
+        $expectedSignature = hash_hmac('sha256', $timestamp . '.' . $payload, $webhookSecret);
+
+        $signatures = [];
+        if (!empty($parts['te'])) $signatures[] = $parts['te'];
+        if (!empty($parts['li'])) $signatures[] = $parts['li'];
+
+        $isValid = false;
+        foreach ($signatures as $sig) {
+            if (hash_equals($expectedSignature, $sig)) {
+                $isValid = true;
+                break;
+            }
+        }
+
+        if (!$isValid) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid signature']);
+        }
+
+        $data = json_decode($payload, true);
+        if (!$data) {
+            return $this->response->setStatusCode(400)->setJSON(['error' => 'Invalid JSON payload']);
+        }
+
+        $eventId      = (string) ($data['data']['id'] ?? '');
+        $eventType    = (string) ($data['data']['attributes']['type'] ?? '');
+        $transferData = $data['data']['attributes']['data'] ?? [];
+        $transferId   = (string) ($transferData['id'] ?? '');
+        $trStatus     = strtolower((string) ($transferData['attributes']['status'] ?? ($transferData['status'] ?? '')));
+
+        if (empty($transferId) && empty($transferData)) {
+            return $this->response->setJSON(['status' => 'ignored', 'reason' => 'no_transfer_data']);
+        }
+
+        $db = \Config\Database::connect();
+        $builder = $db->table('payout_requests');
+
+        // Look up by transfer ID or reference
+        $payout = $builder->where('paymongo_transfer_id', $transferId)->get()->getRowArray();
+        if (!$payout && !empty($transferData['attributes']['metadata']['withdrawal_id'])) {
+            $payout = $builder->where('id', (int) $transferData['attributes']['metadata']['withdrawal_id'])->get()->getRowArray();
+        }
+
+        if (!$payout) {
+            return $this->response->setJSON(['status' => 'ignored', 'reason' => 'payout_not_found']);
+        }
+
+        // Idempotency check: ignore if already processed this event
+        if (!empty($payout['last_webhook_event_id']) && $payout['last_webhook_event_id'] === $eventId) {
+            return $this->response->setJSON(['status' => 'already_processed']);
+        }
+
+        $shop    = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
+        $ownerId = (int) ($shop['owner_id'] ?? 0);
+
+        if ($eventType === 'transfer.outward.successful' || $trStatus === 'succeeded') {
+            if ($payout['status'] !== 'completed') {
+                $builder->where('id', $payout['id'])->update([
+                    'status'                => 'completed',
+                    'transfer_status'       => 'succeeded',
+                    'completed_at'          => date('Y-m-d H:i:s'),
+                    'last_webhook_event_id' => $eventId,
+                    'failure_reason'        => null,
+                ]);
+
+                if ($ownerId > 0) {
+                    (new NotificationModel())->create(
+                        $ownerId,
+                        'payout',
+                        'Payout Completed',
+                        'Your GCash payout #' . ($payout['reference_number'] ?? $payout['id']) . ' has been completed via PayMongo.',
+                        '/tenant/withdrawals'
+                    );
+                }
+            }
+        } elseif ($eventType === 'transfer.outward.failed' || $trStatus === 'failed') {
+            if ($payout['status'] !== 'failed') {
+                $failureReason = $transferData['attributes']['failure_reason'] ?? 'Gateway transfer failed.';
+                $builder->where('id', $payout['id'])->update([
+                    'status'                => 'failed',
+                    'transfer_status'       => 'failed',
+                    'failure_reason'        => mb_substr((string) $failureReason, 0, 500),
+                    'last_webhook_event_id' => $eventId,
+                ]);
+
+                if ($ownerId > 0) {
+                    (new NotificationModel())->create(
+                        $ownerId,
+                        'payout',
+                        'Payout Failed',
+                        'Your GCash payout #' . ($payout['reference_number'] ?? $payout['id']) . ' could not be processed. Funds were restored to your available balance.',
+                        '/tenant/withdrawals'
+                    );
+                }
+            }
+        }
+
+        return $this->response->setJSON(['status' => 'success']);
+    }
+
+    public function approvePayout()
+    {
+        return $this->processPayout();
     }
 
     public function rejectPayout()
@@ -1053,7 +1503,7 @@ class Admin extends BaseController
         $auth = $this->checkAdminAuth();
         if ($auth !== true) return $auth;
 
-        $withdrawalId = (int) $this->request->getPost('withdrawal_id');
+        $withdrawalId = (int) ($this->request->getPost('withdrawal_id') ?: $this->request->getPost('payout_id'));
         $payoutModel  = new PayoutModel();
         $payout       = $payoutModel->find($withdrawalId);
 
@@ -1061,7 +1511,21 @@ class Admin extends BaseController
             return redirect()->back()->with('error', 'Payout request not found.');
         }
 
-        $payoutModel->update($withdrawalId, ['status' => 'failed']);
+        $reason = trim((string) ($this->request->getPost('rejection_reason') ?: $this->request->getPost('reason') ?: 'Rejected by Admin'));
+
+        $payoutModel->update($withdrawalId, [
+            'status'         => 'rejected',
+            'failure_reason' => $reason,
+        ]);
+
+        (new AuditLogModel())->log(
+            (int) session()->get('user_id'),
+            'admin',
+            'Rejected Withdrawal Request',
+            'payout_request',
+            'failed',
+            $withdrawalId
+        );
 
         $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
         if ($shop && !empty($shop['owner_id'])) {
@@ -1069,12 +1533,12 @@ class Admin extends BaseController
                 (int) $shop['owner_id'],
                 'payout',
                 'Payout Rejected',
-                'Your payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') was rejected.',
+                'Your payout request #' . ($payout['reference_number'] ?? $withdrawalId) . ' (₱' . number_format((float) $payout['amount'], 2) . ') was rejected.',
                 '/tenant/withdrawals'
             );
         }
 
-        return redirect()->back()->with('success', 'Payout rejected.');
+        return redirect()->back()->with('success', 'Payout rejected. Available balance restored.');
     }
 
     /**
@@ -1089,50 +1553,15 @@ class Admin extends BaseController
         $withdrawalId = (int) $this->request->getPost('withdrawal_id');
         $status       = trim((string) $this->request->getPost('status'));
 
-        $payoutModel = new PayoutModel();
-        $payout      = $payoutModel->find($withdrawalId);
-
-        if (!$payout) {
-            return redirect()->back()->with('error', 'Payout request not found.');
+        if ($status === 'processing') {
+            return $this->processPayout();
         }
 
-        $allowedStatuses = ['processing', 'completed', 'failed'];
-        if (!in_array($status, $allowedStatuses, true)) {
-            return redirect()->back()->with('error', 'Invalid status.');
+        if ($status === 'failed') {
+            return $this->rejectPayout();
         }
 
-        $updateData = ['status' => $status];
-
-        if ($status === 'completed') {
-            $fee = (float) ($payout['fee'] ?? 0);
-            if ($fee <= 0) {
-                $fee = round((float) $payout['amount'] * 0.03, 2);
-            }
-            $updateData['fee'] = $fee;
-            $updateData['completed_at'] = date('Y-m-d H:i:s');
-        }
-
-        $payoutModel->update($withdrawalId, $updateData);
-
-        $statusLabel = match ($status) {
-            'processing' => 'In Progress',
-            'completed'  => 'Completed',
-            'failed'     => 'Rejected',
-            default      => $status,
-        };
-
-        $shop = (new ShopModel())->find((int) ($payout['shop_id'] ?? 0));
-        if ($shop && !empty($shop['owner_id'])) {
-            (new NotificationModel())->create(
-                (int) $shop['owner_id'],
-                'payout',
-                'Payout ' . $statusLabel,
-                'Your payout request #' . $withdrawalId . ' (₱' . number_format((float) $payout['amount'], 2) . ') is now ' . $statusLabel . '.',
-                '/tenant/withdrawals'
-            );
-        }
-
-        return redirect()->back()->with('success', "Payout status updated to {$statusLabel}.");
+        return redirect()->back()->with('error', 'Please use the Process and Send to GCash workflow actions.');
     }
 
     /**

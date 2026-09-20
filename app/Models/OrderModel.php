@@ -78,7 +78,8 @@ class OrderModel extends Model
         ?string $search = null,
         ?string $status = null,
         ?string $dateFrom = null,
-        ?string $dateTo = null
+        ?string $dateTo = null,
+        ?string $fulfillment = null
     ) {
         // NOTE: the primary table must be referenced by its real name
         // (orders.*) because Model::paginate() regenerates a count query
@@ -119,6 +120,9 @@ class OrderModel extends Model
         if ($status !== null && $status !== '') {
             $builder->where('orders.status', $status);
         }
+        if ($fulfillment !== null && in_array($fulfillment, ['pickup', 'delivery'], true)) {
+            $builder->where('orders.fulfillment_method', $fulfillment);
+        }
         if ($dateFrom !== null && $dateFrom !== '') {
             $builder->where('orders.placed_at >=', $dateFrom . ' 00:00:00');
         }
@@ -137,9 +141,10 @@ class OrderModel extends Model
         ?string $dateTo = null,
         int $perPage = 10,
         int $page = 1,
-        string $group = 'orders'
+        string $group = 'orders',
+        ?string $fulfillment = null
     ): array {
-        $this->buildOrderQuery($shopId, $search, $status, $dateFrom, $dateTo)
+        $this->buildOrderQuery($shopId, $search, $status, $dateFrom, $dateTo, $fulfillment)
             ->orderBy("CASE 
                 WHEN LOWER(orders.status) = 'pending' THEN 1 
                 WHEN LOWER(orders.status) IN ('processing', 'in_progress') THEN 2 
@@ -152,6 +157,32 @@ class OrderModel extends Model
             ->orderBy('orders.placed_at', 'DESC');
 
         $orders = $this->paginate($perPage, $group, $page);
+
+        if (!empty($orders)) {
+            $orderIds = array_column($orders, 'id');
+            $items = $this->db->table('order_items')
+                ->select('order_id, product_name, quantity')
+                ->whereIn('order_id', $orderIds)
+                ->get()
+                ->getResultArray();
+
+            $grouped = [];
+            $unitTotals = [];
+            foreach ($items as $it) {
+                $oid = (int) $it['order_id'];
+                $grouped[$oid][] = $it['product_name'] . ((int) $it['quantity'] > 1 ? ' (' . (int) $it['quantity'] . 'x)' : '');
+                $unitTotals[$oid] = ($unitTotals[$oid] ?? 0) + (int) $it['quantity'];
+            }
+
+            foreach ($orders as &$ord) {
+                $oid = (int) $ord['id'];
+                $list = $grouped[$oid] ?? [];
+                $ord['items_summary'] = !empty($list) ? implode(', ', array_slice($list, 0, 2)) . (count($list) > 2 ? ' +' . (count($list) - 2) . ' more' : '') : '';
+                $ord['total_units'] = $unitTotals[$oid] ?? 0;
+                $ord['items_count'] = count($list);
+            }
+            unset($ord);
+        }
 
         return [
             'orders' => $orders ?: [],
@@ -196,7 +227,7 @@ class OrderModel extends Model
             ->join('users u', 'u.id = orders.customer_id', 'left')
             ->join('shipping_addresses sa', 'sa.id = orders.shipping_address_id', 'left')
             ->where('orders.shop_id', $shopId)
-            ->where('orders.status', 'processing')
+            ->whereIn('orders.status', ['pending', 'processing'])
             ->whereNotIn('orders.id', $archived, false)
             ->orderBy('orders.placed_at', 'ASC')
             ->get()
@@ -245,11 +276,39 @@ class OrderModel extends Model
             ->whereIn('d.status', ['ready_for_pickup', 'shipped', 'in_transit'])
             ->get()->getRow()->c ?? 0);
 
+        $archived = $this->db->table('archived_items')
+            ->select('item_id')
+            ->where('shop_id', $shopId)
+            ->where('item_type', 'order');
+
+        $statusRow = $db->table('orders')
+            ->select("
+                COUNT(*) as all_count,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'processing' THEN 1 ELSE 0 END) as processing,
+                SUM(CASE WHEN status = 'ready_for_pickup' THEN 1 ELSE 0 END) as ready_for_pickup,
+                SUM(CASE WHEN status IN ('shipped', 'in_transit') THEN 1 ELSE 0 END) as in_transit,
+                SUM(CASE WHEN status IN ('delivered', 'completed') THEN 1 ELSE 0 END) as completed,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled
+            ")
+            ->where('shop_id', $shopId)
+            ->whereNotIn('id', $archived, false)
+            ->get()->getRowArray() ?: [];
+
         return [
-            'total_orders'     => $totalOrders,
+            'total_orders'      => $totalOrders,
             'pending_shipments' => $pendingShip,
-            'ready_for_pickup' => $readyPickup,
-            'revenue_today'    => $this->getRevenueTodayForShop($shopId),
+            'ready_for_pickup'  => $readyPickup,
+            'revenue_today'     => $this->getRevenueTodayForShop($shopId),
+            'status_counts'     => [
+                'all'              => (int) ($statusRow['all_count'] ?? $totalOrders),
+                'pending'          => (int) ($statusRow['pending'] ?? 0),
+                'processing'       => (int) ($statusRow['processing'] ?? 0),
+                'ready_for_pickup' => (int) ($statusRow['ready_for_pickup'] ?? 0),
+                'in_transit'       => (int) ($statusRow['in_transit'] ?? 0),
+                'completed'        => (int) ($statusRow['completed'] ?? 0),
+                'cancelled'        => (int) ($statusRow['cancelled'] ?? 0),
+            ],
         ];
     }
 

@@ -160,9 +160,16 @@
                 </div>
             <?php endif; ?>
 
-            <!-- Submit and Reset Actions -->
-            <div class="md:col-span-5 flex items-center justify-end gap-2 pt-1 border-t border-outline-variant/10">
-                <a href="<?= base_url('admin/audit-log') ?>" class="px-4 py-2 text-label-sm font-semibold text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high rounded-xl transition-colors">Reset</a>
+            <!-- Submit Actions & Page Size -->
+            <div class="md:col-span-5 flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-outline-variant/10">
+                <div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                    <label for="audit_per_page" class="font-medium">Show per page:</label>
+                    <select name="per_page" id="audit_per_page" onchange="this.form.submit()" class="bg-surface-container-low border border-outline-variant/30 rounded-xl px-3 py-1.5 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary">
+                        <option value="5" <?= ($per_page ?? 10) == 5 ? 'selected' : '' ?>>5</option>
+                        <option value="10" <?= ($per_page ?? 10) == 10 ? 'selected' : '' ?>>10</option>
+                        <option value="20" <?= ($per_page ?? 10) == 20 ? 'selected' : '' ?>>20</option>
+                    </select>
+                </div>
                 <button type="submit" class="px-5 py-2 bg-primary text-on-primary rounded-xl text-label-sm font-bold hover:bg-primary/90 transition-colors shadow-sm inline-flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">filter_list</span>
                     <span>Apply Filters</span>
@@ -300,7 +307,7 @@
         <?php if (isset($pager)): ?>
             <?php
             $total   = (int) $pager->getTotal('audit_log');
-            $perPage = 25;
+            $perPage = (int) ($per_page ?? ($pager ? $pager->getPerPage('audit_log') : 10));
             $cur     = (int) $pager->getCurrentPage('audit_log');
             $pages   = (int) $pager->getPageCount('audit_log');
             $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;

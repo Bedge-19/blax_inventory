@@ -1136,26 +1136,29 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
 </div>
 
 <!-- Receipt / Success Modal -->
-<div id="posSuccessModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-md">
-    <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl max-w-md w-full p-lg shadow-2xl space-y-md">
-        <div class="text-center space-y-xs">
-            <div class="w-14 h-14 bg-green-100 text-green-700 rounded-full mx-auto flex items-center justify-center">
-                <span class="material-symbols-outlined text-3xl">done_all</span>
+<div id="posSuccessModal" class="hidden fixed inset-0 bg-black/65 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="w-full max-w-[420px] my-auto space-y-3">
+        <!-- Floating Success Notification Banner -->
+        <div class="bg-emerald-600 text-white px-4 py-2.5 rounded-2xl shadow-lg flex items-center justify-between text-xs font-bold animate-fade-in">
+            <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                <span id="posSuccessModalMessage">Sale Completed Successfully!</span>
             </div>
-            <h3 class="text-headline-md font-bold text-on-surface">Sale Completed!</h3>
-            <p id="posSuccessModalMessage" class="text-xs text-on-surface-variant">Transaction processed successfully.</p>
+            <span class="bg-white/20 px-2 py-0.5 rounded-full text-[10px] tracking-wider uppercase font-mono">Paid & Verified</span>
         </div>
 
-        <div id="posReceiptSummary" class="bg-surface-container-low p-md rounded-xl space-y-xs text-xs">
+        <!-- The Exact Receipt Ticket matching Scan Image -->
+        <div id="posReceiptSummary" class="bg-white text-slate-900 border border-slate-200/90 rounded-2xl p-5 sm:p-6 shadow-2xl space-y-3 max-h-[75vh] overflow-y-auto custom-scrollbar font-sans text-xs">
             <!-- Receipt lines populated dynamically -->
         </div>
 
-        <div class="flex items-center gap-sm pt-xs">
-            <button type="button" id="posPrintReceiptBtn" class="flex-1 py-2.5 border border-outline-variant hover:bg-surface-container text-on-surface rounded-xl text-xs font-bold flex items-center justify-center gap-xs">
+        <!-- Action Control Buttons -->
+        <div class="flex items-center gap-2.5 pt-1">
+            <button type="button" id="posPrintReceiptBtn" class="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">print</span>
                 Print Receipt
             </button>
-            <button type="button" id="posNewSaleBtn" class="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-xs">
+            <button type="button" id="posNewSaleBtn" class="flex-1 py-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">autorenew</span>
                 Next Sale
             </button>
@@ -1247,6 +1250,113 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
     </div>
 </div>
 
+<!-- Completed Order / Item Action Modal (Returned vs Add) -->
+<div id="posCompletedOrderModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+    <div class="glass-card bg-surface-container-lowest rounded-3xl p-5 sm:p-7 max-w-lg w-full border border-outline-variant/30 shadow-2xl space-y-5 my-auto">
+        <!-- Header -->
+        <div class="flex justify-between items-start border-b border-outline-variant/20 pb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0 shadow-inner">
+                    <span class="material-symbols-outlined text-2xl">history</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-base sm:text-lg font-extrabold text-on-surface">Completed Order Scanned</h3>
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            COMPLETED
+                        </span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant font-medium mt-0.5" id="posCompletedModalSubtitle">
+                        Na-record na ang transaksyong ito. Pumili ng aksyon sa ibaba:
+                    </p>
+                </div>
+            </div>
+            <button type="button" onclick="closeCompletedOrderModal()" class="text-on-surface-variant hover:text-on-surface p-1.5 rounded-full hover:bg-surface-container transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!-- Recorded Receipt Overview Card -->
+        <div class="bg-surface-container-low rounded-2xl p-4 border border-outline-variant/25 space-y-3">
+            <!-- Meta details row -->
+            <div class="grid grid-cols-2 gap-2 text-xs border-b border-outline-variant/20 pb-3">
+                <div>
+                    <span class="text-[10px] font-bold text-outline uppercase tracking-wider block">Reference / Receipt</span>
+                    <span class="font-mono font-extrabold text-sm text-on-surface" id="posCompletedRefText">#ORD-00000</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-bold text-outline uppercase tracking-wider block">Customer</span>
+                    <span class="font-bold text-xs text-on-surface truncate max-w-[160px] inline-block" id="posCompletedCustomerText">Counter Customer</span>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-outline uppercase tracking-wider block">Completed Date</span>
+                    <span class="font-medium text-xs text-on-surface-variant" id="posCompletedDateText">Sep 20, 2026</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[10px] font-bold text-outline uppercase tracking-wider block">Total Recorded</span>
+                    <span class="font-mono font-black text-sm text-primary" id="posCompletedTotalText">₱0.00</span>
+                </div>
+            </div>
+
+            <!-- Itemized List Header -->
+            <div class="flex items-center justify-between text-[11px] font-bold text-outline uppercase tracking-wider">
+                <span>Recorded Items (<span id="posCompletedItemCount">0</span>)</span>
+                <span>Subtotal</span>
+            </div>
+
+            <!-- Itemized List Scrollbox -->
+            <div id="posCompletedItemsList" class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <!-- Dynamically populated rows -->
+            </div>
+        </div>
+
+        <!-- Feedback Alert Container -->
+        <div id="posCompletedModalFeedback" class="hidden text-xs rounded-xl p-3 font-semibold"></div>
+
+        <!-- 2 Primary Touch Action Buttons (Returned vs Add) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <!-- Action 1: RETURNED -->
+            <button type="button" 
+                    id="posBtnActionReturn"
+                    onclick="confirmReturnScannedOrder()"
+                    class="p-4 rounded-2xl border-2 border-purple-500/40 bg-purple-50 hover:bg-purple-100 text-purple-950 flex flex-col items-center text-center gap-1 transition-all active:scale-95 group cursor-pointer shadow-xs hover:shadow-md">
+                <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-2xl">assignment_return</span>
+                </div>
+                <span class="font-black text-sm text-purple-900 tracking-wide mt-1">Returned</span>
+                <span class="text-[11px] text-purple-700 font-medium leading-tight">
+                    I-mark as returned &amp; ibalik sa inventory stock
+                </span>
+            </button>
+
+            <!-- Action 2: ADD TO POS -->
+            <button type="button" 
+                    id="posBtnActionAdd"
+                    onclick="addScannedOrderToPos()"
+                    class="p-4 rounded-2xl border-2 border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary flex flex-col items-center text-center gap-1 transition-all active:scale-95 group cursor-pointer shadow-xs hover:shadow-md">
+                <div class="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-2xl">add_shopping_cart</span>
+                </div>
+                <span class="font-black text-sm tracking-wide mt-1">Add to POS</span>
+                <span class="text-[11px] text-on-surface-variant font-medium leading-tight">
+                    I-load ang lahat ng items sa aktibong POS cart
+                </span>
+            </button>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="flex items-center justify-between pt-2 border-t border-outline-variant/20 text-xs">
+            <a id="posCompletedViewReceiptLink" href="#" target="_blank" class="text-primary hover:underline font-bold flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                <span>View Full Receipt</span>
+            </a>
+            <button type="button" onclick="closeCompletedOrderModal()" class="px-4 py-2 rounded-xl border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-container">
+                Cancel
+            </button>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Remove Html5Qrcode blocking dark region box in POS */
 #posQrReader #qr-shaded-region {
@@ -1312,6 +1422,25 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
     const BASE_URL = '<?= rtrim(site_url(), '/') ?>';
     const CSRF_TOKEN_NAME = '<?= csrf_token() ?>';
     let CSRF_HASH_VAL = '<?= csrf_hash() ?>';
+
+    <?php
+    $shopAddressStr = implode(', ', array_filter([
+        $shop['street'] ?? '',
+        $shop['barangay'] ?? '',
+        $shop['address_line'] ?? '',
+        $shop['city'] ?? 'Polomolok',
+        $shop['province'] ?? 'South Cotabato',
+    ])) ?: '8 Pioneer Avenue, Poblacion, Polomolok, South Cotabato';
+    $cashierDisplayName = session()->get('user_name') ?? 'Sarah Jenkins';
+    $printingCustomerName = !empty($printingRequest) ? trim(($printingRequest['first_name'] ?? '') . ' ' . ($printingRequest['last_name'] ?? '')) : '';
+    ?>
+    const SHOP_INFO = {
+        name: <?= json_encode($shop['shop_name'] ?? 'InkMaster') ?>,
+        address: <?= json_encode($shopAddressStr) ?>,
+        phone: <?= json_encode($shop['phone_number'] ?? '') ?>,
+        cashier: <?= json_encode($cashierDisplayName) ?>,
+    };
+    const ORDER_CUSTOMER_NAME = <?= json_encode(!empty($customerFullName) ? $customerFullName : (!empty($printingCustomerName) ? $printingCustomerName : '')) ?>;
 
     let cart = []; // Array of { product_id, name, price, stock_quantity, quantity, sku, image_url }
     let currentCategoryId = '';
@@ -1818,163 +1947,245 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
             window.dispatchEvent(new CustomEvent('blax:sale_completed', { detail: data }));
         } catch (e) {}
 
-        successMessage.textContent = data.message || 'Sale processed successfully.';
+        const successMsgEl = document.getElementById('posSuccessModalMessage');
+        if (successMsgEl) {
+            successMsgEl.textContent = data.message || 'Sale Completed Successfully!';
+        }
 
         const tendered = parseFloat(cashInput.value) || dueAmount;
         const change = Math.max(0, tendered - dueAmount);
 
-        let refHtml = `<span class="font-bold text-on-surface font-mono">${esc(data.order_number || ('#' + data.order_id))}</span>`;
-        if (lastIsCombined && (data.printing_number || lastCompletedPrintingId)) {
-            refHtml += `<div class="text-[11px] text-indigo-700 font-bold font-mono">Print Ref: #${esc(data.printing_number || lastCompletedPrintingId)}</div>`;
+        // Reference number format: e.g. #ORD-90113
+        const rawRef = String(data.order_number || (data.order_id ? ('ORD-' + data.order_id) : 'ORD-COMPLETED'));
+        const cleanRef = '#' + rawRef.replace(/^#+/, '');
+
+        // Customer Name resolution
+        const customerName = (data.customer_name && data.customer_name !== 'Counter Customer')
+            ? data.customer_name
+            : (document.getElementById('posCustomerName')?.value.trim()
+                || ORDER_CUSTOMER_NAME
+                || data.customer_name
+                || 'Counter Customer');
+
+        // Fulfillment Label
+        let fulfillmentLabel = 'Store Pick-up';
+        if (isPrintingPickup && !isStorePickup) {
+            fulfillmentLabel = 'Store Pick-up';
+        } else if (!isStorePickup && !isPrintingPickup) {
+            fulfillmentLabel = 'Store Pick-up';
         }
 
-        // Build itemized breakdown of products and printing
-        let itemsBreakdownHtml = '';
-        if (lastIsCombined || isCombinedPickup) {
-            itemsBreakdownHtml += `
-                <div class="py-2.5 border-b border-outline-variant/20 text-xs">
-                    <span class="text-[11px] font-bold text-outline uppercase tracking-wider block mb-1.5">Fulfilled Items & Printing:</span>
-                    <div class="space-y-1.5 max-h-32 overflow-y-auto pr-1">`;
-            if (orderItemsSummary && orderItemsSummary.length > 0) {
-                orderItemsSummary.forEach(it => {
-                    const varLabel = it.variant ? ` (${esc(it.variant)})` : '';
-                    itemsBreakdownHtml += `
-                        <div class="flex justify-between items-center text-on-surface text-[11px]">
-                            <span class="truncate flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px] text-secondary">inventory_2</span>
-                                <strong class="font-semibold">${esc(it.name)}${varLabel}</strong> <span class="text-outline font-mono">&times;${it.qty}</span>
-                            </span>
-                            <span class="font-mono text-outline">${formatMoney(it.total)}</span>
-                        </div>`;
-                });
-            }
-            if (printingItemSummary) {
-                itemsBreakdownHtml += `
-                    <div class="flex justify-between items-center text-on-surface text-[11px]">
-                        <span class="truncate flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-primary">print</span>
-                            <strong class="font-semibold text-primary">${esc(printingItemSummary.file_name)}</strong>
-                            ${printingItemSummary.specs ? `<span class="text-[10px] text-outline">(${esc(printingItemSummary.specs)})</span>` : ''}
-                        </span>
-                        <span class="font-mono text-outline">${formatMoney(printingItemSummary.total)}</span>
-                    </div>`;
-            }
-            if (cart && cart.length > 0) {
-                cart.forEach(it => {
-                    itemsBreakdownHtml += `
-                        <div class="flex justify-between items-center text-on-surface text-[11px]">
-                            <span class="truncate flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px] text-amber-600">add_shopping_cart</span>
-                                <strong class="font-semibold">${esc(it.name)}</strong> <span class="text-outline font-mono">&times;${it.quantity} (Counter)</span>
-                            </span>
-                            <span class="font-mono text-outline">${formatMoney(it.price * it.quantity)}</span>
-                        </div>`;
-                });
-            }
-            itemsBreakdownHtml += `</div></div>`;
-        } else if (isStorePickup && orderItemsSummary && orderItemsSummary.length > 0) {
-            itemsBreakdownHtml += `
-                <div class="py-2.5 border-b border-outline-variant/20 text-xs">
-                    <span class="text-[11px] font-bold text-outline uppercase tracking-wider block mb-1.5">Fulfilled Order Items:</span>
-                    <div class="space-y-1.5 max-h-32 overflow-y-auto pr-1">`;
+        // Formatted Date & Time (e.g. Sep 20, 2026 • 09:26 PM)
+        const now = new Date();
+        const datePart = now.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+        const timePart = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        const formattedDateTime = `${datePart} • ${timePart}`;
+
+        // Normalized Payment Method (e.g. CASH, GCASH)
+        let pmLabel = String(paymentMethod || 'cash').toUpperCase();
+        if (pmLabel === 'COD') pmLabel = 'CASH';
+
+        // Render item rows matching image exactly
+        let itemsHtml = '';
+        let calculatedSubtotal = 0;
+
+        // Fulfilled / Online items (Store Pick-up)
+        if ((lastIsCombined || isStorePickup) && orderItemsSummary && orderItemsSummary.length > 0) {
             orderItemsSummary.forEach(it => {
-                const varLabel = it.variant ? ` (${esc(it.variant)})` : '';
-                itemsBreakdownHtml += `
-                    <div class="flex justify-between items-center text-on-surface text-[11px]">
-                        <span class="truncate flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-secondary">inventory_2</span>
-                            <strong class="font-semibold">${esc(it.name)}${varLabel}</strong> <span class="text-outline font-mono">&times;${it.qty}</span>
-                        </span>
-                        <span class="font-mono text-outline">${formatMoney(it.total)}</span>
-                    </div>`;
+                const lineTotal = it.total || (it.price * it.qty);
+                calculatedSubtotal += lineTotal;
+                itemsHtml += `
+                    <div class="flex justify-between items-start gap-2 text-left">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-xs text-slate-900 leading-snug">${esc(it.name)}</div>
+                            ${it.variant ? `<div class="text-[10px] font-semibold text-blue-600">${esc(it.variant)}</div>` : ''}
+                            <div class="text-[11px] text-slate-500 font-mono mt-0.5">${it.qty} &times; ${formatMoney(it.price || (lineTotal / it.qty))}</div>
+                        </div>
+                        <div class="font-bold font-mono text-xs text-slate-900 text-right whitespace-nowrap pt-0.5">
+                            ${formatMoney(lineTotal)}
+                        </div>
+                    </div>
+                `;
             });
-            if (cart && cart.length > 0) {
-                cart.forEach(it => {
-                    itemsBreakdownHtml += `
-                        <div class="flex justify-between items-center text-on-surface text-[11px]">
-                            <span class="truncate flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px] text-amber-600">add_shopping_cart</span>
-                                <strong class="font-semibold">${esc(it.name)}</strong> <span class="text-outline font-mono">&times;${it.quantity} (Counter)</span>
-                            </span>
-                            <span class="font-mono text-outline">${formatMoney(it.price * it.quantity)}</span>
-                        </div>`;
-                });
-            }
-            itemsBreakdownHtml += `</div></div>`;
-        } else if (isPrintingPickup && printingItemSummary) {
-            itemsBreakdownHtml += `
-                <div class="py-2.5 border-b border-outline-variant/20 text-xs">
-                    <span class="text-[11px] font-bold text-outline uppercase tracking-wider block mb-1.5">Fulfilled Printing Job:</span>
-                    <div class="space-y-1.5">
-                        <div class="flex justify-between items-center text-on-surface text-[11px]">
-                            <span class="truncate flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px] text-primary">print</span>
-                                <strong class="font-semibold text-primary">${esc(printingItemSummary.file_name)}</strong>
-                                ${printingItemSummary.specs ? `<span class="text-[10px] text-outline">(${esc(printingItemSummary.specs)})</span>` : ''}
-                            </span>
-                            <span class="font-mono text-outline">${formatMoney(printingItemSummary.total)}</span>
-                        </div>`;
-            if (cart && cart.length > 0) {
-                cart.forEach(it => {
-                    itemsBreakdownHtml += `
-                        <div class="flex justify-between items-center text-on-surface text-[11px]">
-                            <span class="truncate flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[14px] text-amber-600">add_shopping_cart</span>
-                                <strong class="font-semibold">${esc(it.name)}</strong> <span class="text-outline font-mono">&times;${it.quantity} (Counter)</span>
-                            </span>
-                            <span class="font-mono text-outline">${formatMoney(it.price * it.quantity)}</span>
-                        </div>`;
-                });
-            }
-            itemsBreakdownHtml += `</div></div>`;
-        } else if (cart && cart.length > 0) {
-            itemsBreakdownHtml += `
-                <div class="py-2.5 border-b border-outline-variant/20 text-xs">
-                    <span class="text-[11px] font-bold text-outline uppercase tracking-wider block mb-1.5">Sale Items:</span>
-                    <div class="space-y-1.5 max-h-32 overflow-y-auto pr-1">`;
-            cart.forEach(it => {
-                itemsBreakdownHtml += `
-                    <div class="flex justify-between items-center text-on-surface text-[11px]">
-                        <span class="truncate flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px] text-primary">shopping_bag</span>
-                            <strong class="font-semibold">${esc(it.name)}</strong> <span class="text-outline font-mono">&times;${it.quantity}</span>
-                        </span>
-                        <span class="font-mono text-outline">${formatMoney(it.price * it.quantity)}</span>
-                    </div>`;
-            });
-            itemsBreakdownHtml += `</div></div>`;
         }
 
-        let linesHtml = `
-            <div class="flex justify-between py-1 border-b border-outline-variant/20">
-                <span class="text-outline">Reference:</span>
-                <div class="text-right">${refHtml}</div>
-            </div>
-            ${itemsBreakdownHtml}
-            <div class="flex justify-between py-1 border-b border-outline-variant/20">
-                <span class="text-outline">Payment Method:</span>
-                <span class="font-bold uppercase text-on-surface">${paymentMethod}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-outline-variant/20">
-                <span class="text-outline">Total Collected:</span>
-                <span class="font-bold font-mono text-primary">${formatMoney(dueAmount)}</span>
-            </div>
-        `;
-
-        if (paymentMethod === 'cash' && dueAmount > 0) {
-            linesHtml += `
-                <div class="flex justify-between py-1 border-b border-outline-variant/20">
-                    <span class="text-outline">Cash Tendered:</span>
-                    <span class="font-bold font-mono">${formatMoney(tendered)}</span>
-                </div>
-                <div class="flex justify-between py-1 border-b border-outline-variant/20">
-                    <span class="text-outline">Change Returned:</span>
-                    <span class="font-bold font-mono text-green-700">${formatMoney(change)}</span>
+        // Printing Item (Printing Pick-up)
+        if ((lastIsCombined || isPrintingPickup) && printingItemSummary) {
+            const printTotal = printingItemSummary.total || 0;
+            calculatedSubtotal += printTotal;
+            itemsHtml += `
+                <div class="flex justify-between items-start gap-2 text-left">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-xs text-slate-900 leading-snug">${esc(printingItemSummary.file_name)}</div>
+                        <div class="text-[10px] font-semibold text-blue-600">${esc(printingItemSummary.specs || 'Custom Printing Job')}</div>
+                        <div class="text-[11px] text-slate-500 font-mono mt-0.5">Printing Fulfillment</div>
+                    </div>
+                    <div class="font-bold font-mono text-xs text-slate-900 text-right whitespace-nowrap pt-0.5">
+                        ${formatMoney(printTotal)}
+                    </div>
                 </div>
             `;
         }
 
-        receiptSummary.innerHTML = linesHtml;
+        // POS Counter Cart Items
+        if (cart && cart.length > 0) {
+            cart.forEach(it => {
+                const lineTotal = (it.price || 0) * (it.quantity || 1);
+                calculatedSubtotal += lineTotal;
+                itemsHtml += `
+                    <div class="flex justify-between items-start gap-2 text-left">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-xs text-slate-900 leading-snug">${esc(it.name)}</div>
+                            ${it.variant ? `<div class="text-[10px] font-semibold text-blue-600">${esc(it.variant)}</div>` : ''}
+                            <div class="text-[11px] text-slate-500 font-mono mt-0.5">${it.quantity} &times; ${formatMoney(it.price)}</div>
+                        </div>
+                        <div class="font-bold font-mono text-xs text-slate-900 text-right whitespace-nowrap pt-0.5">
+                            ${formatMoney(lineTotal)}
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Fallback row if cart & summaries are empty
+        if (!itemsHtml) {
+            itemsHtml = `
+                <div class="flex justify-between items-start gap-2 text-left">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-xs text-slate-900 leading-snug">Retail Purchase</div>
+                        <div class="text-[11px] text-slate-500 font-mono mt-0.5">1 &times; ${formatMoney(dueAmount)}</div>
+                    </div>
+                    <div class="font-bold font-mono text-xs text-slate-900 text-right whitespace-nowrap pt-0.5">
+                        ${formatMoney(dueAmount)}
+                    </div>
+                </div>
+            `;
+            calculatedSubtotal = dueAmount;
+        }
+
+        const finalTotalAmount = dueAmount > 0 ? dueAmount : calculatedSubtotal;
+        const subtotalToDisplay = calculatedSubtotal > 0 ? calculatedSubtotal : finalTotalAmount;
+
+        let cashBreakdownHtml = '';
+        if (pmLabel === 'CASH' && dueAmount > 0 && tendered > dueAmount) {
+            cashBreakdownHtml = `
+                <div class="flex justify-between text-slate-500 font-mono text-xs pt-1 border-t border-dashed border-slate-200">
+                    <span>Cash Tendered:</span>
+                    <span>${formatMoney(tendered)}</span>
+                </div>
+                <div class="flex justify-between text-emerald-700 font-bold font-mono text-xs">
+                    <span>Change Returned:</span>
+                    <span>${formatMoney(change)}</span>
+                </div>
+            `;
+        }
+
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(cleanRef)}`;
+
+        // Build exact HTML matching image layout & typography
+        const receiptHtml = `
+            <!-- 1. Shop Header -->
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-black text-slate-950 tracking-tight">${esc(SHOP_INFO.name)}</h2>
+                <p class="text-[11px] text-slate-500 max-w-[280px] mx-auto leading-relaxed">${esc(SHOP_INFO.address)}</p>
+                <div class="pt-1.5">
+                    <span class="inline-block px-3.5 py-0.5 rounded-full border border-slate-300 text-[10px] font-extrabold uppercase tracking-widest text-slate-700 bg-slate-50/80">
+                        OFFICIAL SALES RECEIPT
+                    </span>
+                </div>
+            </div>
+
+            <!-- Dashed Divider -->
+            <div class="border-t border-dashed border-slate-300 my-3"></div>
+
+            <!-- 2. Meta Grid (2 columns) -->
+            <div class="grid grid-cols-2 gap-y-2.5 text-xs text-left">
+                <div>
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">REFERENCE</span>
+                    <span class="font-bold font-mono text-slate-900 text-xs">${esc(cleanRef)}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">DATE & TIME</span>
+                    <span class="font-bold text-slate-900 text-xs">${formattedDateTime}</span>
+                </div>
+                <div>
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">CUSTOMER</span>
+                    <span class="font-bold text-slate-900 text-xs">${esc(customerName)}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">FULFILLMENT</span>
+                    <span class="font-bold text-slate-900 text-xs">${esc(fulfillmentLabel)}</span>
+                </div>
+                <div>
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">CASHIER / STAFF</span>
+                    <span class="font-bold text-slate-900 text-xs">${esc(SHOP_INFO.cashier)}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">STATUS</span>
+                    <span class="font-bold text-emerald-600 text-xs tracking-wider">PAID</span>
+                </div>
+            </div>
+
+            <!-- Dashed Divider -->
+            <div class="border-t border-dashed border-slate-300 my-3"></div>
+
+            <!-- 3. Items & Details -->
+            <div>
+                <div class="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2.5">
+                    <span>ITEM & DETAILS</span>
+                    <span>SUBTOTAL</span>
+                </div>
+                <div class="space-y-3">
+                    ${itemsHtml}
+                </div>
+            </div>
+
+            <!-- Dashed Divider -->
+            <div class="border-t border-dashed border-slate-300 my-3"></div>
+
+            <!-- 4. Financial Summary -->
+            <div class="space-y-1.5 text-xs text-left">
+                <div class="flex justify-between font-mono text-slate-500">
+                    <span>Subtotal:</span>
+                    <span>${formatMoney(subtotalToDisplay)}</span>
+                </div>
+                <div class="border-t border-slate-950 my-1.5"></div>
+                <div class="flex justify-between font-black font-mono text-sm text-slate-950 tracking-wider">
+                    <span>TOTAL AMOUNT:</span>
+                    <span>${formatMoney(finalTotalAmount)}</span>
+                </div>
+                <div class="border-t border-slate-950 my-1.5"></div>
+                <div class="flex justify-between font-bold text-slate-900">
+                    <span>Payment Method:</span>
+                    <span class="uppercase font-mono">${esc(pmLabel)}</span>
+                </div>
+                ${cashBreakdownHtml}
+            </div>
+
+            <!-- Dashed Divider -->
+            <div class="border-t border-dashed border-slate-300 my-3"></div>
+
+            <!-- 5. QR Code Section -->
+            <div class="text-center pt-1 space-y-1">
+                <div class="inline-block p-1.5 bg-white border-2 border-slate-950 rounded-2xl shadow-xs">
+                    <img src="${qrUrl}" alt="Order QR Code" class="w-32 h-32 block mx-auto rounded-lg" />
+                </div>
+                <div class="font-mono font-bold text-xs text-slate-900 mt-1">${esc(cleanRef)}</div>
+                <p class="text-[10px] text-slate-500 max-w-[240px] mx-auto">Scan with Blax POS or Camera to verify order authenticity</p>
+            </div>
+
+            <!-- Dashed Divider -->
+            <div class="border-t border-dashed border-slate-300 my-3"></div>
+
+            <!-- 6. Receipt Footer -->
+            <div class="text-center text-xs space-y-0.5 pt-0.5">
+                <p class="font-bold text-slate-900">Thank you for choosing ${esc(SHOP_INFO.name)}!</p>
+                <p class="text-[10px] text-slate-500">Please keep this receipt for order tracking & pick-up verification.</p>
+                <p class="text-[9px] text-slate-400 mt-1">Powered by Blax Inventory • Polomolok, South Cotabato</p>
+            </div>
+        `;
+
+        receiptSummary.innerHTML = receiptHtml;
         successModal.classList.remove('hidden');
     }
 
@@ -2294,6 +2505,12 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
             }
 
             if (data.success) {
+                if (data.already_done) {
+                    closeQrScannerModal();
+                    openCompletedOrderModal(data);
+                    return;
+                }
+
                 if (feedback) {
                     feedback.className = 'text-xs rounded-xl p-sm font-semibold bg-green-100 text-green-900 border border-green-300';
                     feedback.textContent = `${data.message} Redirecting...`;
@@ -2317,6 +2534,233 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
             }
         });
     }
+
+    // Completed Order / Receipt Detected Modal Handlers
+    let currentScannedCompletedData = null;
+
+    window.openCompletedOrderModal = function(data) {
+        currentScannedCompletedData = data;
+        const modal = document.getElementById('posCompletedOrderModal');
+        const feedback = document.getElementById('posCompletedModalFeedback');
+        if (feedback) {
+            feedback.classList.add('hidden');
+            feedback.textContent = '';
+        }
+
+        const order = data.order || {};
+        const items = data.items || [];
+
+        const refEl = document.getElementById('posCompletedRefText');
+        const custEl = document.getElementById('posCompletedCustomerText');
+        const dateEl = document.getElementById('posCompletedDateText');
+        const totalEl = document.getElementById('posCompletedTotalText');
+        const countEl = document.getElementById('posCompletedItemCount');
+        const listEl = document.getElementById('posCompletedItemsList');
+        const receiptLink = document.getElementById('posCompletedViewReceiptLink');
+        const returnBtn = document.getElementById('posBtnActionReturn');
+
+        const cleanRef = '#' + String(order.order_number || data.order_number || 'COMPLETED').replace(/^#+/, '');
+        if (refEl) refEl.textContent = cleanRef;
+        if (custEl) custEl.textContent = order.customer_name || 'Counter Customer';
+        if (dateEl) dateEl.textContent = order.completed_at || order.placed_at || 'Recently';
+        if (totalEl) totalEl.textContent = formatMoney(order.total_amount || 0);
+        if (countEl) countEl.textContent = items.length;
+
+        if (receiptLink) {
+            receiptLink.href = order.receipt_url || `${BASE_URL}/tenant/orders/receipt/${encodeURIComponent(order.order_number || '')}`;
+        }
+
+        if (returnBtn) {
+            returnBtn.disabled = false;
+            returnBtn.innerHTML = `
+                <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-2xl">assignment_return</span>
+                </div>
+                <span class="font-black text-sm text-purple-900 tracking-wide mt-1">Returned</span>
+                <span class="text-[11px] text-purple-700 font-medium leading-tight">I-mark as returned &amp; ibalik sa inventory stock</span>
+            `;
+        }
+
+        if (listEl) {
+            if (items.length === 0) {
+                listEl.innerHTML = '<p class="text-xs text-outline text-center py-3">Walang indibidwal na items na na-record.</p>';
+            } else {
+                listEl.innerHTML = items.map(it => `
+                    <div class="flex items-center justify-between gap-2 p-2.5 bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-2xs">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-xs text-on-surface truncate">${esc(it.name)}</div>
+                            <div class="flex items-center gap-2 mt-0.5 text-[11px] text-outline font-mono">
+                                ${it.variant_label ? `<span class="px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold">${esc(it.variant_label)}</span>` : ''}
+                                <span>${it.quantity} &times; ${formatMoney(it.price)}</span>
+                            </div>
+                        </div>
+                        <div class="font-mono font-bold text-xs text-on-surface text-right shrink-0">
+                            ${formatMoney(it.line_total || (it.price * it.quantity))}
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        if (modal) modal.classList.remove('hidden');
+    };
+
+    window.closeCompletedOrderModal = function() {
+        const modal = document.getElementById('posCompletedOrderModal');
+        if (modal) modal.classList.add('hidden');
+        currentScannedCompletedData = null;
+    };
+
+    window.confirmReturnScannedOrder = function() {
+        if (!currentScannedCompletedData) return;
+        const order = currentScannedCompletedData.order || {};
+        const orderId = order.id || currentScannedCompletedData.order_id;
+        const isPrinting = currentScannedCompletedData.is_printing;
+        const refNumber = order.order_number || currentScannedCompletedData.order_number || currentScannedCompletedData.request_number || '';
+
+        if (!confirm(`Kumpirmahin ang pag-return ng Order #${refNumber}?\nAwtomatikong ibabalik ang lahat ng items sa inventory stock ng tindahan.`)) {
+            return;
+        }
+
+        const returnBtn = document.getElementById('posBtnActionReturn');
+        const feedback = document.getElementById('posCompletedModalFeedback');
+
+        if (returnBtn) {
+            returnBtn.disabled = true;
+            returnBtn.innerHTML = '<span class="material-symbols-outlined text-2xl animate-spin text-purple-700">progress_activity</span><span class="font-black text-sm text-purple-900 tracking-wide mt-1">Processing Return...</span>';
+        }
+
+        const fd = new FormData();
+        if (isPrinting) {
+            fd.append('printing_id', currentScannedCompletedData.request_id || order.id);
+        } else {
+            fd.append('order_id', orderId);
+        }
+        fd.append(CSRF_TOKEN_NAME, CSRF_HASH_VAL);
+
+        fetch(`${BASE_URL}/tenant/pos/return-order`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.csrf_hash) {
+                CSRF_HASH_VAL = res.csrf_hash;
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) meta.setAttribute('content', res.csrf_hash);
+            }
+
+            if (res.success) {
+                if (feedback) {
+                    feedback.className = 'text-xs rounded-xl p-3 font-semibold bg-green-100 text-green-900 border border-green-300 flex items-center gap-2';
+                    feedback.innerHTML = '<span class="material-symbols-outlined text-[18px] text-green-700">check_circle</span> ' + (res.message || 'Matagumpay na na-mark bilang RETURNED.');
+                    feedback.classList.remove('hidden');
+                }
+
+                // Refresh catalog so restored inventory quantities are immediately visible in POS
+                loadCatalog(searchInput ? searchInput.value.trim() : '', currentCategoryId);
+
+                setTimeout(() => {
+                    closeCompletedOrderModal();
+                }, 1600);
+            } else {
+                if (returnBtn) {
+                    returnBtn.disabled = false;
+                    returnBtn.innerHTML = `
+                        <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-2xl">assignment_return</span>
+                        </div>
+                        <span class="font-black text-sm text-purple-900 tracking-wide mt-1">Returned</span>
+                        <span class="text-[11px] text-purple-700 font-medium leading-tight">I-mark as returned &amp; ibalik sa inventory stock</span>
+                    `;
+                }
+                if (feedback) {
+                    feedback.className = 'text-xs rounded-xl p-3 font-semibold bg-red-100 text-red-900 border border-red-300';
+                    feedback.textContent = res.error || 'Hindi na-proseso ang return.';
+                    feedback.classList.remove('hidden');
+                }
+            }
+        })
+        .catch(() => {
+            if (returnBtn) {
+                returnBtn.disabled = false;
+                returnBtn.innerHTML = `
+                    <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-xs group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-2xl">assignment_return</span>
+                    </div>
+                    <span class="font-black text-sm text-purple-900 tracking-wide mt-1">Returned</span>
+                    <span class="text-[11px] text-purple-700 font-medium leading-tight">I-mark as returned &amp; ibalik sa inventory stock</span>
+                `;
+            }
+            if (feedback) {
+                feedback.className = 'text-xs rounded-xl p-3 font-semibold bg-red-100 text-red-900 border border-red-300';
+                feedback.textContent = 'Server o network error habang pino-proseso ang return.';
+                feedback.classList.remove('hidden');
+            }
+        });
+    };
+
+    window.addScannedOrderToPos = function() {
+        if (!currentScannedCompletedData) return;
+        const order = currentScannedCompletedData.order || {};
+        const items = currentScannedCompletedData.items || [];
+        const isPrinting = currentScannedCompletedData.is_printing;
+
+        if (isPrinting) {
+            window.location.href = `${BASE_URL}/tenant/pos?printing_id=${encodeURIComponent(currentScannedCompletedData.request_id || order.id)}`;
+            return;
+        }
+
+        if (items.length === 0) {
+            alert('Walang nakitang items sa resibong ito.');
+            return;
+        }
+
+        // Add items to active POS cart with their recorded receipt details
+        items.forEach(it => {
+            const pId = parseInt(it.product_id);
+            if (pId <= 0) return;
+
+            const qtyToAdd = parseInt(it.quantity || 1);
+            const existing = cart.find(x => x.product_id === pId);
+            if (existing) {
+                existing.quantity += qtyToAdd;
+            } else {
+                cart.push({
+                    product_id: pId,
+                    name: it.name,
+                    price: parseFloat(it.price || 0),
+                    stock_quantity: parseInt(it.stock_quantity || 99),
+                    sku: '',
+                    variant_id: it.variant_id || 0,
+                    variant_label: it.variant_label || '',
+                    quantity: qtyToAdd
+                });
+            }
+        });
+
+        // Pre-fill customer name if walk-in input exists and customer name is available
+        const custNameInput = document.getElementById('posCustomerName');
+        if (custNameInput && order.customer_name && order.customer_name !== 'Counter Customer') {
+            custNameInput.value = order.customer_name;
+        }
+
+        renderCart();
+        closeCompletedOrderModal();
+
+        // Inform user via errBox styled as positive banner
+        if (errBox) {
+            errBox.className = 'p-3 rounded-xl bg-green-500/10 text-green-800 border border-green-500/25 text-xs font-semibold flex items-center gap-2 mb-3';
+            errBox.innerHTML = `<span class="material-symbols-outlined text-[16px] text-green-700">check_circle</span> Naidagdag na ang ${items.length} item(s) mula sa resibo #${order.order_number || 'completed'} sa POS cart!`;
+            errBox.classList.remove('hidden');
+            setTimeout(() => {
+                errBox.classList.add('hidden');
+                errBox.className = 'p-3 rounded-xl bg-error/10 text-error border border-error/20 text-xs font-medium hidden mb-3';
+            }, 3500);
+        }
+    };
 
     // Initialize catalog
     loadCatalog('', '');

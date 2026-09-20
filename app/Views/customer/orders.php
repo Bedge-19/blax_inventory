@@ -114,10 +114,10 @@
                                     default                                    => 1,
                                 };
                                 $steps = [
-                                    1 => ['label' => 'Placed', 'icon' => 'shopping_bag'],
-                                    2 => ['label' => 'Processing', 'icon' => 'inventory_2'],
-                                    3 => ['label' => $isPickup ? 'Ready for Pick-up' : 'Shipped', 'icon' => $isPickup ? 'storefront' : 'local_shipping'],
-                                    4 => ['label' => 'Completed', 'icon' => 'check_circle'],
+                                    1 => ['label' => 'Placed'],
+                                    2 => ['label' => 'Processing'],
+                                    3 => ['label' => $isPickup ? 'Ready' : 'Shipped'],
+                                    4 => ['label' => 'Completed'],
                                 ];
                             ?>
                             <?php if ($isCancelled): ?>
@@ -126,24 +126,37 @@
                                     <span>This order has been cancelled.</span>
                                 </div>
                             <?php else: ?>
-                                <div class="my-md py-sm px-md bg-surface-container-low/70 rounded-xl border border-outline-variant/20">
-                                    <div class="flex items-center justify-between relative">
-                                        <div class="absolute left-6 right-6 top-3 h-0.5 bg-outline-variant/30 z-0"></div>
-                                        <div class="absolute left-6 top-3 h-0.5 bg-primary z-0 transition-all duration-500" style="width: calc(<?= (($currentStep - 1) / 3) * 100 ?>% - 12px);"></div>
-                                        <?php foreach ($steps as $stepNum => $stepData): ?>
-                                            <?php 
-                                                $isCompleted = ($stepNum < $currentStep);
-                                                $isCurrent   = ($stepNum === $currentStep);
-                                            ?>
-                                            <div class="flex flex-col items-center gap-1 z-10">
-                                                <div class="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all <?= $isCompleted ? 'bg-primary text-white' : ($isCurrent ? 'bg-primary text-white ring-4 ring-primary/20' : 'bg-surface-container-high text-outline border border-outline-variant/40') ?>">
-                                                    <?php if ($isCompleted): ?>
-                                                        <span class="material-symbols-outlined text-[13px]">check</span>
-                                                    <?php else: ?>
-                                                        <span class="material-symbols-outlined text-[13px]"><?= $stepData['icon'] ?></span>
-                                                    <?php endif; ?>
-                                                </div>
-                                                <span class="text-[10px] md:text-[11px] whitespace-nowrap <?= $isCurrent ? 'font-bold text-primary' : ($isCompleted ? 'font-semibold text-on-surface' : 'text-outline') ?>"><?= $stepData['label'] ?></span>
+                                <div class="my-md py-sm">
+                                    <div class="flex items-center w-full">
+                                        <?php foreach ($steps as $stepNum => $stepData):
+                                            $isCompleted = ($stepNum < $currentStep) || ($orderStatus === 'delivered' || $orderStatus === 'completed');
+                                            $isCurrent   = ($stepNum === $currentStep) && !($orderStatus === 'delivered' || $orderStatus === 'completed');
+                                        ?>
+                                            <?php if ($stepNum > 1): ?>
+                                                <!-- Connector line -->
+                                                <div class="flex-1 h-[3px] mx-0.5 rounded-full transition-all duration-500 <?= ($isCompleted || ($isCurrent && $stepNum <= $currentStep)) ? 'bg-blue-600' : 'bg-outline-variant/30' ?>"></div>
+                                            <?php endif; ?>
+
+                                            <!-- Step node -->
+                                            <div class="flex flex-col items-center gap-1 shrink-0">
+                                                <?php if ($isCompleted): ?>
+                                                    <!-- Completed step -->
+                                                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm ring-2 ring-blue-600/20">
+                                                        <span class="material-symbols-outlined text-[16px]">check</span>
+                                                    </div>
+                                                <?php elseif ($isCurrent): ?>
+                                                    <!-- Active step -->
+                                                    <div class="relative w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm">
+                                                        <span class="absolute w-full h-full rounded-full bg-blue-500 animate-ping opacity-30"></span>
+                                                        <span class="w-3 h-3 rounded-full bg-white relative z-10"></span>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <!-- Pending step -->
+                                                    <div class="w-8 h-8 rounded-full bg-surface-container-high border-2 border-outline-variant/50 flex items-center justify-center">
+                                                        <span class="w-2 h-2 rounded-full bg-outline-variant/60"></span>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <span class="text-[10px] md:text-[11px] whitespace-nowrap font-bold <?= $isCompleted ? 'text-blue-700' : ($isCurrent ? 'text-blue-600' : 'text-on-surface-variant/60') ?>"><?= $stepData['label'] ?></span>
                                             </div>
                                         <?php endforeach; ?>
                                     </div>

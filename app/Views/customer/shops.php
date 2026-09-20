@@ -61,8 +61,8 @@
 
         </form>
 
-        <!-- Shop Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-lg">
+        <!-- Shop Grid (3 Columns on Mobile) -->
+        <div class="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-lg">
 
             <?php if (!empty($shops)): ?>
 
@@ -72,11 +72,11 @@
 
                     <?php $borderIndex = $i % 3; ?>
 
-                    <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all border border-outline-variant/30 flex flex-col justify-between">
+                    <div class="bg-white p-2 sm:p-lg rounded-2xl sm:rounded-3xl text-center shadow-xs hover:shadow-lg transition-all border border-outline-variant/30 flex flex-col justify-between">
 
                         <div>
 
-                            <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 <?= $borderColors[$borderIndex] ?> overflow-hidden bg-primary/10 flex items-center justify-center">
+                            <div class="w-12 h-12 sm:w-24 sm:h-24 rounded-full mx-auto mb-1.5 sm:mb-md border-2 sm:border-4 <?= $borderColors[$borderIndex] ?> overflow-hidden bg-primary/10 flex items-center justify-center">
 
                                 <?php if (!empty($s['logo_url'])): ?>
 
@@ -84,26 +84,26 @@
 
                                 <?php else: ?>
 
-                                    <span class="material-symbols-outlined text-primary text-4xl">store</span>
+                                    <span class="material-symbols-outlined text-primary text-xl sm:text-4xl">store</span>
 
                                 <?php endif; ?>
 
                             </div>
 
-                            <h5 class="text-title-lg font-title-lg font-bold text-on-surface mb-xs"><?= esc($s['shop_name']) ?></h5>
+                            <h5 class="text-xs sm:text-title-lg font-bold text-on-surface mb-0.5 sm:mb-xs truncate" title="<?= esc($s['shop_name']) ?>"><?= esc($s['shop_name']) ?></h5>
 
-                            <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm">
+                            <div class="flex justify-center items-center gap-0.5 sm:gap-xs text-yellow-500 mb-1 sm:mb-sm">
 
-                                <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="text-label-sm font-label-sm font-bold"><?= number_format($s['rating_average'] ?? 5.0, 1) ?> (<?= $compactCount($s['rating_count'] ?? 0) ?>)</span>
+                                <span class="material-symbols-outlined text-[12px] sm:text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="text-[10px] sm:text-label-sm font-bold"><?= number_format($s['rating_average'] ?? 5.0, 1) ?> <span class="hidden sm:inline">(<?= $compactCount($s['rating_count'] ?? 0) ?>)</span></span>
 
                             </div>
 
-                            <p class="text-label-sm text-on-surface-variant mb-lg line-clamp-2"><?= esc($s['description'] ?? 'Verified RHK Merchant') ?></p>
+                            <p class="text-label-sm text-on-surface-variant mb-lg line-clamp-2 hidden sm:block"><?= esc($s['description'] ?? 'Verified RHK Merchant') ?></p>
 
                         </div>
 
-                        <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="w-full py-md bg-primary text-on-primary rounded-xl font-button text-button hover:bg-primary/90 transition-colors inline-block">Visit Shop</a>
+                        <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="w-full py-1 sm:py-md bg-primary text-on-primary rounded-lg sm:rounded-xl font-bold text-[10px] sm:text-button hover:bg-primary/90 transition-colors inline-block mt-1">Visit Shop</a>
 
                     </div>
 

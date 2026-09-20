@@ -23,6 +23,15 @@
             <p class="text-body-md text-on-surface-variant mt-0.5">Track, search, and manage your shipments across Polomolok.</p>
         </div>
         <div class="flex items-center gap-sm flex-wrap">
+            <?php if (($kpis['shipped'] ?? 0) > 0): ?>
+                <form action="<?= base_url('tenant/deliveries/bulk-in-transit') ?>" method="POST" class="inline" onsubmit="return confirm('Dispatch and change all <?= (int) ($kpis['shipped'] ?? 0) ?> shipped package(s) to In Transit?');">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="inline-flex items-center gap-sm px-md py-sm bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-label-sm font-bold transition-all shadow-sm active:scale-95 cursor-pointer" title="Dispatch all shipped packages to In Transit">
+                        <span class="material-symbols-outlined text-[18px]">navigation</span>
+                        <span>In Transit (<?= (int) ($kpis['shipped'] ?? 0) ?>)</span>
+                    </button>
+                </form>
+            <?php endif; ?>
             <button type="button" id="btnOpenDeliveryScanner" onclick="openScanner()" class="inline-flex items-center gap-sm px-md py-sm bg-primary text-on-primary rounded-xl text-label-sm font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95 cursor-pointer">
                 <span class="material-symbols-outlined text-[18px]">qr_code_scanner</span>
                 <span>Scan QR Code</span>
@@ -130,7 +139,7 @@
     </div>
 
     <!-- Section Heading & Realtime Count -->
-    <div class="flex items-center justify-between px-1">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-sm px-1">
         <div>
             <h2 class="text-title-md font-bold text-on-surface flex items-center gap-sm">
                 <span>Shipment Packages</span>
@@ -140,6 +149,15 @@
             </h2>
             <p class="text-xs text-on-surface-variant mt-0.5">Click any shipment card to open its dedicated live route &amp; GPS mapping page.</p>
         </div>
+        <?php if (($kpis['shipped'] ?? 0) > 0): ?>
+            <form action="<?= base_url('tenant/deliveries/bulk-in-transit') ?>" method="POST" class="inline" onsubmit="return confirm('Change all <?= (int) ($kpis['shipped'] ?? 0) ?> shipped package(s) to In Transit?');">
+                <?= csrf_field() ?>
+                <button type="submit" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer" title="Update all shipped packages to In Transit">
+                    <span class="material-symbols-outlined text-[16px]">navigation</span>
+                    <span>Set All Shipped to In Transit (<?= (int) ($kpis['shipped'] ?? 0) ?>)</span>
+                </button>
+            </form>
+        <?php endif; ?>
     </div>
 
     <!-- Shipment Cards Grid (Replaces old table & side map) -->
@@ -171,6 +189,17 @@
                         <div class="flex items-center justify-between gap-sm mb-sm">
                             <div class="flex items-center gap-1.5 flex-wrap">
                                 <?= status_badge($d['status']) ?>
+                                <?php if ($d['status'] === 'shipped'): ?>
+                                    <form action="<?= base_url('tenant/deliveries/update-status') ?>" method="POST" class="inline" onclick="event.stopPropagation();" onsubmit="return confirm('Set package #<?= esc($d['tracking_id']) ?> to In Transit?');">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="delivery_id" value="<?= (int) $d['id'] ?>">
+                                        <input type="hidden" name="delivery_status" value="in_transit">
+                                        <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-2xs transition-all active:scale-95 cursor-pointer" title="Advance status to In Transit">
+                                            <span class="material-symbols-outlined text-[13px]">navigation</span>
+                                            <span>In Transit</span>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                                 <span class="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full">
                                     <span class="material-symbols-outlined text-[13px]">local_shipping</span>
                                     <span>Doorstep Delivery</span>

@@ -142,7 +142,7 @@
 
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-lg">
+        <div class="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-lg">
 
             <?php if (!empty($shops)): ?>
 
@@ -152,36 +152,40 @@
 
                     <?php $borderIndex = $i % 3; ?>
 
-                    <div class="bg-white p-lg rounded-3xl text-center shadow-sm hover:shadow-lg transition-all transform hover:-translate-y-1">
+                    <div class="bg-white p-2 sm:p-lg rounded-2xl sm:rounded-3xl text-center shadow-xs hover:shadow-lg transition-all transform hover:-translate-y-1 flex flex-col justify-between border border-outline-variant/20">
 
-                        <div class="w-24 h-24 rounded-full mx-auto mb-md border-4 <?= $borderColors[$borderIndex] ?> overflow-hidden">
+                        <div>
 
-                            <?php if (!empty($s['logo_url'])): ?>
+                            <div class="w-12 h-12 sm:w-24 sm:h-24 rounded-full mx-auto mb-1.5 sm:mb-md border-2 sm:border-4 <?= $borderColors[$borderIndex] ?> overflow-hidden">
 
-                                <img class="w-full h-full object-cover" src="<?= esc(logo_url($s['logo_url'])) ?>" alt="<?= esc($s['shop_name']) ?>">
+                                <?php if (!empty($s['logo_url'])): ?>
 
-                            <?php else: ?>
+                                    <img class="w-full h-full object-cover" src="<?= esc(logo_url($s['logo_url'])) ?>" alt="<?= esc($s['shop_name']) ?>">
 
-                                <div class="w-full h-full bg-primary/10 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-primary text-4xl">print</span>
-                                </div>
+                                <?php else: ?>
 
-                            <?php endif; ?>
+                                    <div class="w-full h-full bg-primary/10 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-primary text-xl sm:text-4xl">print</span>
+                                    </div>
+
+                                <?php endif; ?>
+
+                            </div>
+
+                            <h5 class="text-xs sm:text-title-lg font-bold truncate" title="<?= esc($s['shop_name']) ?>"><?= esc($s['shop_name']) ?></h5>
+
+                            <div class="flex justify-center items-center gap-0.5 sm:gap-xs text-yellow-500 mb-1 sm:mb-sm">
+
+                                <span class="material-symbols-outlined text-[12px] sm:text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="text-[10px] sm:text-label-sm font-bold"><?= number_format($s['rating_average'] ?? 5.0, 1) ?> <span class="hidden sm:inline">(<?= $compactCount($s['rating_count'] ?? 0) ?>)</span></span>
+
+                            </div>
+
+                            <p class="text-label-sm text-on-surface-variant mb-lg hidden sm:block"><?= esc($s['description'] ?? 'Specialists in high-quality printing services.') ?></p>
 
                         </div>
 
-                        <h5 class="text-title-lg font-bold"><?= esc($s['shop_name']) ?></h5>
-
-                        <div class="flex justify-center items-center gap-xs text-yellow-500 mb-sm">
-
-                            <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">star</span>
-                            <span class="text-label-sm font-bold"><?= number_format($s['rating_average'] ?? 5.0, 1) ?> (<?= $compactCount($s['rating_count'] ?? 0) ?>)</span>
-
-                        </div>
-
-                        <p class="text-label-sm text-on-surface-variant mb-lg"><?= esc($s['description'] ?? 'Specialists in high-quality printing services.') ?></p>
-
-                        <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="block w-full py-sm border border-outline rounded-lg text-label-sm font-bold hover:bg-surface-container transition-colors text-center">Visit Shop</a>
+                        <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="block w-full py-1 sm:py-sm border border-outline rounded-lg text-[10px] sm:text-label-sm font-bold hover:bg-primary hover:text-white transition-colors text-center mt-1">Visit Shop</a>
 
                     </div>
 

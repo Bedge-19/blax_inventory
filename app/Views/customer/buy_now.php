@@ -118,6 +118,10 @@
                 <input type="hidden" name="fulfillment_method" id="form-fulfillment-method" value="delivery">
 
                 <!-- Payment Method Section -->
+                <?php
+                    $shopOffersPickup   = !isset($shop['offers_pickup']) || (int)$shop['offers_pickup'] === 1;
+                    $shopOffersDelivery = !isset($shop['offers_delivery']) || (int)$shop['offers_delivery'] === 1;
+                ?>
                 <div class="glass-card rounded-2xl p-xl shadow-sm border border-outline-variant/30 space-y-md">
                     <h2 class="text-title-sm font-bold text-on-surface uppercase tracking-wider text-xs">Payment &amp; Fulfillment</h2>
 
@@ -134,29 +138,45 @@
                         </label>
 
                         <!-- Store Pick-up Option -->
-                        <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-xl border border-outline-variant/30 cursor-pointer group">
-                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="pickup">
-                            <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">storefront</span>
+                        <label class="flex items-center gap-md p-md bg-surface-container-low transition-all rounded-xl border border-outline-variant/30 <?= $shopOffersPickup ? 'hover:bg-surface-container cursor-pointer group' : 'opacity-40 cursor-not-allowed pointer-events-none' ?>">
+                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="pickup" <?= !$shopOffersPickup ? 'disabled' : '' ?>>
+                            <span class="material-symbols-outlined text-secondary <?= $shopOffersPickup ? 'group-hover:scale-110' : '' ?> transition-transform">storefront</span>
                             <div class="flex flex-col">
                                 <div class="flex items-center gap-2">
                                     <span class="text-body-md font-bold">Store Pick-up</span>
                                     <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">FREE</span>
                                 </div>
-                                <span class="text-xs text-on-surface-variant">Pick up directly at <?= esc($shop['shop_name'] ?? 'shop branch') ?></span>
+                                <span class="text-xs text-on-surface-variant">
+                                    <?= $shopOffersPickup ? 'Pick up directly at ' . esc($shop['shop_name'] ?? 'shop branch') : 'Kasalukuyang hindi available ang store pick-up' ?>
+                                </span>
                             </div>
                         </label>
 
                         <!-- Cash on Delivery Option -->
-                        <label class="flex items-center gap-md p-md bg-surface-container-low hover:bg-surface-container transition-all rounded-xl border border-outline-variant/30 cursor-pointer group">
-                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="cod">
-                            <span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform">local_shipping</span>
+                        <label class="flex items-center gap-md p-md bg-surface-container-low transition-all rounded-xl border border-outline-variant/30 <?= $shopOffersDelivery ? 'hover:bg-surface-container cursor-pointer group' : 'opacity-40 cursor-not-allowed pointer-events-none' ?>">
+                            <input class="w-4 h-4 text-primary border-outline-variant focus:ring-primary payment-radio" name="payment_method" type="radio" value="cod" <?= !$shopOffersDelivery ? 'disabled' : '' ?>>
+                            <span class="material-symbols-outlined text-secondary <?= $shopOffersDelivery ? 'group-hover:scale-110' : '' ?> transition-transform">local_shipping</span>
                             <div class="flex flex-col">
                                 <span class="text-body-md font-bold">Cash on Delivery</span>
-                                <span class="text-xs text-on-surface-variant">Pay when delivered to doorstep</span>
+                                <span class="text-xs text-on-surface-variant">
+                                    <?= $shopOffersDelivery ? 'Pay when delivered to doorstep' : 'Kasalukuyang hindi available ang doorstep delivery' ?>
+                                </span>
                             </div>
                         </label>
 
                     </div>
+
+                    <?php if (!$shopOffersDelivery && $shopOffersPickup): ?>
+                        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">info</span>
+                            <span><strong>Paalala:</strong> Walang doorstep delivery service ang shop na ito ngayon. Store Pick-up lamang ang available.</span>
+                        </div>
+                    <?php elseif (!$shopOffersPickup && $shopOffersDelivery): ?>
+                        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">info</span>
+                            <span><strong>Paalala:</strong> Walang store pick-up service ang shop na ito ngayon. Doorstep Delivery lamang ang available.</span>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- Shipping Address Section (Hidden if Store Pick-up) -->
@@ -236,25 +256,29 @@
         </p>
 
         <div class="flex flex-col gap-3">
-            <button type="button" id="btn-choose-delivery" class="p-4 rounded-xl border-2 border-primary/40 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-start gap-3 group">
-                <span class="material-symbols-outlined text-primary text-2xl group-hover:scale-110 transition-transform">local_shipping</span>
+            <button type="button" id="btn-choose-delivery" <?= !$shopOffersDelivery ? 'disabled' : '' ?> class="p-4 rounded-xl border-2 <?= $shopOffersDelivery ? 'border-primary/40 hover:border-primary hover:bg-primary/5 cursor-pointer group' : 'border-outline-variant/30 opacity-40 cursor-not-allowed pointer-events-none' ?> transition-all text-left flex items-start gap-3">
+                <span class="material-symbols-outlined text-primary text-2xl <?= $shopOffersDelivery ? 'group-hover:scale-110' : '' ?> transition-transform">local_shipping</span>
                 <div class="flex-1">
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-bold text-on-surface">Doorstep Delivery</span>
-                        <span class="text-xs font-bold text-primary">₱<?= number_format($shipping, 2) ?></span>
+                        <span class="text-xs font-bold text-primary"><?= $shopOffersDelivery ? '₱' . number_format($shipping, 2) : 'Unavailable' ?></span>
                     </div>
-                    <p class="text-[11px] text-on-surface-variant mt-0.5">Delivered straight to your address in Polomolok</p>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5">
+                        <?= $shopOffersDelivery ? 'Delivered straight to your address in Polomolok' : 'Kasalukuyang walang doorstep delivery ang shop na ito.' ?>
+                    </p>
                 </div>
             </button>
 
-            <button type="button" id="btn-choose-pickup" class="p-4 rounded-xl border-2 border-outline-variant hover:border-secondary hover:bg-secondary/5 transition-all text-left flex items-start gap-3 group">
-                <span class="material-symbols-outlined text-secondary text-2xl group-hover:scale-110 transition-transform">storefront</span>
+            <button type="button" id="btn-choose-pickup" <?= !$shopOffersPickup ? 'disabled' : '' ?> class="p-4 rounded-xl border-2 <?= $shopOffersPickup ? 'border-outline-variant hover:border-secondary hover:bg-secondary/5 cursor-pointer group' : 'border-outline-variant/30 opacity-40 cursor-not-allowed pointer-events-none' ?> transition-all text-left flex items-start gap-3">
+                <span class="material-symbols-outlined text-secondary text-2xl <?= $shopOffersPickup ? 'group-hover:scale-110' : '' ?> transition-transform">storefront</span>
                 <div class="flex-1">
                     <div class="flex justify-between items-center">
                         <span class="text-sm font-bold text-on-surface">Store Pick-up</span>
-                        <span class="text-xs font-bold text-emerald-600">FREE</span>
+                        <span class="text-xs font-bold text-emerald-600"><?= $shopOffersPickup ? 'FREE' : 'Unavailable' ?></span>
                     </div>
-                    <p class="text-[11px] text-on-surface-variant mt-0.5">Pick up at store counter with your digital QR pass</p>
+                    <p class="text-[11px] text-on-surface-variant mt-0.5">
+                        <?= $shopOffersPickup ? 'Pick up at store counter with your digital QR pass' : 'Kasalukuyang walang store pick-up ang shop na ito.' ?>
+                    </p>
                 </div>
             </button>
         </div>
@@ -288,16 +312,28 @@
     var btnChooseDelivery = document.getElementById('btn-choose-delivery');
     var btnChoosePickup = document.getElementById('btn-choose-pickup');
 
+    var shopOffersDelivery = <?= json_encode($shopOffersDelivery) ?>;
+    var shopOffersPickup   = <?= json_encode($shopOffersPickup) ?>;
+
     function formatMoney(amount) {
         return '₱' + Number(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
 
     function getSelectedPayment() {
-        var selected = 'gcash';
+        var selected = '';
         paymentRadios.forEach(function (r) {
-            if (r.checked) selected = r.value;
+            if (r.checked && !r.disabled) selected = r.value;
         });
-        return selected;
+        if (!selected) {
+            for (var i = 0; i < paymentRadios.length; i++) {
+                if (!paymentRadios[i].disabled) {
+                    paymentRadios[i].checked = true;
+                    selected = paymentRadios[i].value;
+                    break;
+                }
+            }
+        }
+        return selected || 'gcash';
     }
 
     function updateFulfillmentAndTotals() {

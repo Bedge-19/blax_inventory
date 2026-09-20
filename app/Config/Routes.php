@@ -52,6 +52,7 @@ $routes->post('cart/remove-selected', 'Cart::removeSelected');
 $routes->post('cart/checkout', 'Cart::checkout', ['filter' => 'actionThrottle']);
 $routes->get('cart/payment/callback', 'Cart::paymentCallback');
 $routes->post('payment/webhook', 'Cart::paymongoWebhook');
+$routes->post('payment/transfer-webhook', 'Admin::paymongoTransferWebhook');
 $routes->get('cart/remove/(:num)', 'Cart::remove/$1');
 $routes->get('buy-now', 'Checkout::direct');
 $routes->post('buy-now/place', 'Checkout::placeOrder', ['filter' => 'actionThrottle']);
@@ -67,6 +68,10 @@ $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
     $routes->post('orders/(:num)/cancel', 'Customer::cancelOrder/$1');
     $routes->post('orders/cancel', 'Customer::cancelOrder');
     $routes->get('printing', 'Customer::printingRequests');
+    $routes->get('printing/track/(:any)/position', 'Customer::getPrintingDeliveryPosition/$1');
+    $routes->get('printing/track/(:any)', 'Customer::trackPrintingRequest/$1');
+    $routes->post('printing/(:num)/cancel', 'Customer::cancelPrintingRequest/$1');
+    $routes->post('printing/cancel', 'Customer::cancelPrintingRequest');
     $routes->get('favorites', 'Customer::favorites');
     $routes->get('addresses', 'Customer::addresses');
     $routes->get('profile', 'Customer::profile');
@@ -84,6 +89,8 @@ $routes->group('reviews', ['filter' => 'customerAuth'], function ($routes) {
     $routes->post('product/save', 'Customer::saveProductReview');
     $routes->post('shop/save', 'Customer::saveShopReview');
 });
+$routes->post('customer/reviews/shop', 'Customer::saveShopReview', ['filter' => 'customerAuth']);
+$routes->post('customer/reviews/product', 'Customer::saveProductReview', ['filter' => 'customerAuth']);
 
 // AI Assistant AJAX Endpoint
 $routes->post('ai-assistant/chat', 'AiAssistant::chat', ['filter' => 'actionThrottle']);
@@ -114,6 +121,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('printing/update-status', 'Tenant::updatePrintingStatus');
     $routes->post('printing/settings/save', 'Tenant::savePrintingSettings');
     $routes->post('deliveries/update-status', 'Tenant::updateDeliveryStatus');
+    $routes->post('deliveries/bulk-in-transit', 'Tenant::bulkInTransit');
     $routes->post('deliveries/update-location', 'Tenant::updateDeliveryLocation');
     $routes->post('deliveries/lookup', 'Tenant::deliveryLookup');
     $routes->post('withdrawals/request', 'Tenant::requestWithdrawal');
@@ -142,6 +150,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('pos/verify-qr', 'Tenant::posVerifyQr');
     $routes->post('pos/complete-pickup', 'Tenant::posCompletePickup');
     $routes->post('pos/complete-walkin', 'Tenant::posCompleteWalkin');
+    $routes->post('pos/return-order', 'Tenant::posReturnOrder');
     $routes->get('pos', 'Tenant::pos');
     $routes->get('deliveries/(:num)', 'Tenant::deliveryDetail/$1');
     $routes->get('orders/detail-json/(:num)', 'Tenant::orderDetailJson/$1');
@@ -171,6 +180,10 @@ $routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->post('tenants/reject', 'Admin::rejectTenant');
     $routes->get('tenants/permit/(:num)', 'Admin::tenantPermit/$1');
     $routes->post('payments/update-status', 'Admin::updatePayoutStatus');
+    $routes->post('payments/process', 'Admin::processPayout');
+    $routes->post('payments/send', 'Admin::sendTransfer');
+    $routes->post('payments/sync-status', 'Admin::syncTransferStatus');
+    $routes->post('payments/reject', 'Admin::rejectPayout');
     $routes->post('payments/deduction', 'Admin::updateDeductionPercent');
     $routes->post('compliance/resolve', 'Admin::resolveCompliance');
     $routes->post('compliance/warn', 'Admin::warnCompliance');

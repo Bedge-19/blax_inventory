@@ -49,9 +49,9 @@
         </form>
     </div>
 
-    <!-- Results Grid -->
+    <!-- Results Grid (3 Columns on Mobile) -->
     <?php if (!empty($products)): ?>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-gutter" id="product-grid">
+        <div class="grid grid-cols-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-gutter" id="product-grid">
             <?php foreach ($products as $p): ?>
                 <?php
                     $imageUrl = product_image_url($p['image_url'] ?? null);
@@ -59,48 +59,48 @@
                     $comparePrice = (float) ($p['compare_at_price'] ?? 0);
                     $hasDiscount = $comparePrice > $price;
                 ?>
-                <div class="group bg-surface-container-lowest border border-outline-variant/40 rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 flex flex-col justify-between">
+                <div class="group bg-surface-container-lowest border border-outline-variant/40 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col justify-between">
                     <div class="relative aspect-square overflow-hidden bg-surface-container-high/40">
                         <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
                             <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" loading="lazy">
                         </a>
 
                         <?php if ($hasDiscount): ?>
-                            <span class="absolute top-3 left-3 bg-error text-on-error px-2.5 py-1 rounded-full text-xs font-bold shadow-md">
+                            <span class="absolute top-1 left-1 sm:top-3 sm:left-3 bg-error text-on-error px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold shadow-md">
                                 SALE
                             </span>
                         <?php endif; ?>
 
                         <?php if (!empty($p['shop_name'])): ?>
-                            <span class="absolute bottom-3 left-3 bg-black/60 backdrop-blur-sm text-white px-2.5 py-0.5 rounded-full text-[11px] font-medium truncate max-w-[80%]">
+                            <span class="absolute bottom-1 left-1 sm:bottom-3 sm:left-3 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.2 sm:px-2.5 sm:py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium truncate max-w-[85%]">
                                 <?= esc($p['shop_name']) ?>
                             </span>
                         <?php endif; ?>
                     </div>
 
-                    <div class="p-md flex flex-col flex-grow justify-between gap-sm">
+                    <div class="p-1.5 sm:p-md flex flex-col flex-grow justify-between gap-1 sm:gap-sm">
                         <div>
                             <?php if (!empty($p['category_name'])): ?>
-                                <span class="text-[11px] text-outline font-semibold uppercase tracking-wider block mb-1">
+                                <span class="text-[9px] sm:text-[11px] text-outline font-semibold uppercase tracking-wider block mb-0.5 truncate">
                                     <?= esc($p['category_name']) ?>
                                 </span>
                             <?php endif; ?>
 
-                            <a href="<?= base_url('product/' . $p['id']) ?>" class="font-title-sm font-bold text-on-surface hover:text-primary transition-colors line-clamp-2 block leading-snug">
+                            <a href="<?= base_url('product/' . $p['id']) ?>" class="font-bold text-[11px] sm:text-title-sm text-on-surface hover:text-primary transition-colors line-clamp-2 block leading-tight">
                                 <?= esc($p['name']) ?>
                             </a>
                         </div>
 
-                        <div class="pt-2 border-t border-outline-variant/20 flex items-center justify-between">
+                        <div class="pt-1 sm:pt-2 border-t border-outline-variant/20 flex items-center justify-between">
                             <div>
-                                <span class="text-title-md font-extrabold text-primary">₱<?= number_format($price, 2) ?></span>
+                                <span class="text-xs sm:text-title-md font-extrabold text-primary">₱<?= number_format($price, 2) ?></span>
                                 <?php if ($hasDiscount): ?>
-                                    <span class="text-xs text-outline line-through ml-1">₱<?= number_format($comparePrice, 2) ?></span>
+                                    <span class="text-[9px] sm:text-xs text-outline line-through ml-0.5 hidden sm:inline">₱<?= number_format($comparePrice, 2) ?></span>
                                 <?php endif; ?>
                             </div>
 
-                            <a href="<?= base_url('product/' . $p['id']) ?>" class="p-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center shadow-sm" title="View product">
-                                <span class="material-symbols-outlined text-[18px]">visibility</span>
+                            <a href="<?= base_url('product/' . $p['id']) ?>" class="p-1 sm:p-2 rounded-lg sm:rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-on-primary transition-all flex items-center justify-center shadow-xs" title="View product">
+                                <span class="material-symbols-outlined text-[14px] sm:text-[18px]">visibility</span>
                             </a>
                         </div>
                     </div>

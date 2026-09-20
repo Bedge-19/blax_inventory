@@ -51,6 +51,22 @@ trait CheckoutProcessorTrait
             }
         }
 
+        // Validate each merchant's service module availability for the chosen fulfillment method
+        $shopModel = new ShopModel();
+        foreach (array_keys($itemsByShop) as $shopId) {
+            $shop = $shopModel->find((int) $shopId);
+            if ($shop) {
+                if ($fulfillmentMethod === 'delivery' && isset($shop['offers_delivery']) && (int) $shop['offers_delivery'] === 0) {
+                    $shopName = esc($shop['shop_name'] ?? 'The merchant');
+                    return redirect()->to($failureRedirectUrl)->with('error', "Ang tindahan na \"{$shopName}\" ay kasalukuyang hindi nag-aalok ng Doorstep Delivery service.");
+                }
+                if ($fulfillmentMethod === 'pickup' && isset($shop['offers_pickup']) && (int) $shop['offers_pickup'] === 0) {
+                    $shopName = esc($shop['shop_name'] ?? 'The merchant');
+                    return redirect()->to($failureRedirectUrl)->with('error', "Ang tindahan na \"{$shopName}\" ay kasalukuyang hindi nag-aalok ng Store Pick-up service.");
+                }
+            }
+        }
+
         // Branch 1: PayMongo GCash Session Creation
         if ($paymentMethod === 'gcash') {
             $grandTotal = 0;
@@ -196,6 +212,7 @@ trait CheckoutProcessorTrait
                 'total_amount'        => $totalAmount,
                 'status'              => 'pending',
                 'payment_status'      => 'unpaid',
+                'placed_at'           => date('Y-m-d H:i:s'),
             ]);
 
             $createdOrderIds[] = $orderId;
@@ -249,7 +266,7 @@ trait CheckoutProcessorTrait
         }
 
         $prefs = (new ShopNotificationPreferenceModel())->getForShop($shopId);
-        if (empty($prefs['new_orders'])) {
+        if (isset($prefs['new_orders']) && (int) $prefs['new_orders'] === 0) {
             return;
         }
 

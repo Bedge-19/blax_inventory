@@ -31,6 +31,8 @@ class ShopModel extends Model
         'rejection_reason',
         'verified_at',
         'offers_printing',
+        'offers_delivery',
+        'offers_pickup',
         'rating_average',
         'rating_count',
         'gcash_number',
