@@ -153,10 +153,10 @@ trait CheckoutProcessorTrait
                 $productId = (int) $item['product_id'];
                 $quantity  = (int) $item['quantity'];
 
-                $prod = $db->table('products')
-                    ->where('id', $productId)
-                    ->where('deleted_at IS NULL')
-                    ->get()->getRowArray();
+                $prod = $db->query(
+                    'SELECT * FROM products WHERE id = ? AND deleted_at IS NULL FOR UPDATE',
+                    [$productId]
+                )->getRowArray();
 
                 if (!$prod || (int) $prod['stock_quantity'] < $quantity) {
                     $db->transRollback();
@@ -164,10 +164,10 @@ trait CheckoutProcessorTrait
                 }
 
                 if (!empty($item['variant_id'])) {
-                    $var = $db->table('product_variants')
-                        ->where('id', (int) $item['variant_id'])
-                        ->where('product_id', $productId)
-                        ->get()->getRowArray();
+                    $var = $db->query(
+                        'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
+                        [(int) $item['variant_id'], $productId]
+                    )->getRowArray();
 
                     if (!$var || (int) $var['stock_quantity'] < $quantity) {
                         $db->transRollback();
@@ -200,7 +200,7 @@ trait CheckoutProcessorTrait
             $totalAmount = $subtotal + $shippingFee;
 
             $orderId = $orderModel->insert([
-                'order_number'        => 'ORD-' . rand(10000, 99999),
+                'order_number'        => 'ORD-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8)),
                 'customer_id'         => $userId,
                 'shop_id'             => $shopId,
                 'shipping_address_id' => $addressId,

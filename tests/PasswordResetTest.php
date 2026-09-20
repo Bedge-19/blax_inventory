@@ -31,10 +31,22 @@ class PasswordResetTest extends CIUnitTestCase
         $this->assertStringContainsString('name="email"', $result->getBody());
     }
 
-    public function testDirectResetPasswordSuccess()
+    public function testDirectResetPasswordRouteIsRemoved()
+    {
+        $this->expectException(\CodeIgniter\Exceptions\PageNotFoundException::class);
+        $this->withSession([])->post('reset-password-direct', [
+            csrf_token()       => csrf_hash(),
+            'email'            => 'someuser@example.com',
+            'password'         => 'NewPassword123!',
+            'confirm_password' => 'NewPassword123!',
+        ]);
+    }
+
+    public function testTokenBasedPasswordResetFlow()
     {
         $userModel = new UserModel();
-        $testEmail = 'test_reset_' . uniqid() . '@example.com';
+        $tokenModel = new PasswordResetTokenModel();
+        $testEmail = 'test_token_reset_' . uniqid() . '@example.com';
         $userId = $userModel->insert([
             'role'          => 'customer',
             'first_name'    => 'Reset',
@@ -45,44 +57,43 @@ class PasswordResetTest extends CIUnitTestCase
             'status'        => 'active',
         ]);
 
-        $result = $this->withSession([])->post('reset-password-direct', [
+        // 1. Request password reset via forgot-password
+        $result = $this->withSession([])->post('forgot-password', [
+            csrf_token() => csrf_hash(),
+            'email'      => $testEmail,
+        ]);
+        $result->assertRedirectTo('/forgot-password');
+        $result->assertSessionHas('success');
+
+        // Verify token record in database
+        $tokenRecord = $tokenModel->where('user_id', $userId)->orderBy('id', 'DESC')->first();
+        $this->assertNotNull($tokenRecord);
+        $this->assertNull($tokenRecord['used_at']);
+
+        // 2. Perform reset using raw token matching the hash
+        $rawToken = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $rawToken);
+        $tokenModel->update($tokenRecord['id'], ['token_hash' => $tokenHash]);
+
+        $resetResult = $this->withSession([])->post('reset-password/' . $rawToken, [
             csrf_token()       => csrf_hash(),
-            'email'            => $testEmail,
             'password'         => 'NewPassword123!',
             'confirm_password' => 'NewPassword123!',
         ]);
 
-        $result->assertRedirectTo('/login');
-        $result->assertSessionHas('success');
+        $resetResult->assertRedirectTo('/login');
+        $resetResult->assertSessionHas('success');
 
+        // Verify user password changed and token marked used
         $updatedUser = $userModel->find($userId);
         $this->assertTrue(password_verify('NewPassword123!', $updatedUser['password_hash']));
 
+        $updatedToken = $tokenModel->find($tokenRecord['id']);
+        $this->assertNotNull($updatedToken['used_at']);
+
         // Clean up
+        $tokenModel->where('user_id', $userId)->delete();
         $userModel->delete($userId, true);
-    }
-
-    public function testDirectResetPasswordValidationErrors()
-    {
-        // Passwords mismatch
-        $result = $this->withSession([])->post('reset-password-direct', [
-            csrf_token()       => csrf_hash(),
-            'email'            => 'someuser@example.com',
-            'password'         => 'NewPassword123!',
-            'confirm_password' => 'DifferentPassword123!',
-        ]);
-        $result->assertRedirectTo('/login');
-        $result->assertSessionHas('error');
-
-        // Short password
-        $result = $this->withSession([])->post('reset-password-direct', [
-            csrf_token()       => csrf_hash(),
-            'email'            => 'someuser@example.com',
-            'password'         => 'short',
-            'confirm_password' => 'short',
-        ]);
-        $result->assertRedirectTo('/login');
-        $result->assertSessionHas('error');
     }
 }
 

@@ -16,7 +16,6 @@ $routes->get('login', 'Auth::login');
 $routes->post('login', 'Auth::login', ['filter' => 'authThrottle']);
 $routes->get('forgot-password', 'Auth::forgotPassword');
 $routes->post('forgot-password', 'Auth::forgotPassword', ['filter' => 'authThrottle']);
-$routes->post('reset-password-direct', 'Auth::directResetPassword', ['filter' => 'authThrottle']);
 $routes->get('reset-password/(:any)', 'Auth::resetPassword/$1');
 $routes->post('reset-password/(:any)', 'Auth::resetPassword/$1', ['filter' => 'authThrottle']);
 $routes->get('signup', 'Auth::signup');

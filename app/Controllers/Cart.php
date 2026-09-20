@@ -434,7 +434,7 @@ class Cart extends BaseController
         $createdOrderIds = [];
         foreach ($pendingData['shop_orders'] as $so) {
             $orderId = $orderModel->insert([
-                'order_number'        => 'ORD-' . rand(10000, 99999),
+                'order_number'        => 'ORD-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8)),
                 'customer_id'         => $userId,
                 'shop_id'             => $so['shop_id'],
                 'shipping_address_id' => $pendingData['shipping_address_id'],
@@ -468,12 +468,12 @@ class Cart extends BaseController
                 $pQty = (int) $it['quantity'];
                 if (!empty($it['variant_id'])) {
                     $vId = (int) $it['variant_id'];
-                    $vRow = $db->table('product_variants')->where('id', $vId)->get()->getRowArray();
+                    $vRow = $db->query('SELECT * FROM product_variants WHERE id = ? FOR UPDATE', [$vId])->getRowArray();
                     if ($vRow) {
                         $db->table('product_variants')->where('id', $vId)->update(['stock_quantity' => max(0, (int) $vRow['stock_quantity'] - $pQty)]);
                     }
                 }
-                $pRow = $db->table('products')->where('id', $pId)->get()->getRowArray();
+                $pRow = $db->query('SELECT * FROM products WHERE id = ? FOR UPDATE', [$pId])->getRowArray();
                 if ($pRow) {
                     $db->table('products')->where('id', $pId)->update(['stock_quantity' => max(0, (int) $pRow['stock_quantity'] - $pQty)]);
                 }
@@ -622,7 +622,7 @@ class Cart extends BaseController
             $createdOrderIds = [];
             foreach ($pendingData['shop_orders'] as $so) {
                 $orderId = $orderModel->insert([
-                    'order_number'        => 'ORD-' . rand(10000, 99999),
+                    'order_number'        => 'ORD-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8)),
                     'customer_id'         => $userId,
                     'shop_id'             => $so['shop_id'],
                     'shipping_address_id' => $pendingData['shipping_address_id'],
@@ -656,12 +656,12 @@ class Cart extends BaseController
                     $pQty = (int) $it['quantity'];
                     if (!empty($it['variant_id'])) {
                         $vId = (int) $it['variant_id'];
-                        $vRow = $db->table('product_variants')->where('id', $vId)->get()->getRowArray();
+                        $vRow = $db->query('SELECT * FROM product_variants WHERE id = ? FOR UPDATE', [$vId])->getRowArray();
                         if ($vRow) {
                             $db->table('product_variants')->where('id', $vId)->update(['stock_quantity' => max(0, (int) $vRow['stock_quantity'] - $pQty)]);
                         }
                     }
-                    $pRow = $db->table('products')->where('id', $pId)->get()->getRowArray();
+                    $pRow = $db->query('SELECT * FROM products WHERE id = ? FOR UPDATE', [$pId])->getRowArray();
                     if ($pRow) {
                         $db->table('products')->where('id', $pId)->update(['stock_quantity' => max(0, (int) $pRow['stock_quantity'] - $pQty)]);
                     }

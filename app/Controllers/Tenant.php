@@ -2387,10 +2387,20 @@ class Tenant extends BaseController
         }
 
         $db = \Config\Database::connect();
-        $db->transBegin();
+        $lockName = 'withdrawal_lock_shop_' . $shopId;
+        $lockAcquired = false;
 
         try {
-            // Re-evaluate available balance inside transaction
+            $lockRes = $db->query('SELECT GET_LOCK(?, 5) AS lock_acquired', [$lockName])->getRowArray();
+            $lockAcquired = ((int) ($lockRes['lock_acquired'] ?? 0)) === 1;
+
+            if (!$lockAcquired) {
+                return redirect()->back()->with('error', 'Another withdrawal operation is currently in progress for your shop. Please try again.');
+            }
+
+            $db->transBegin();
+
+            // Re-evaluate available balance inside transaction under advisory lock
             $balanceData = $this->getShopEscrowAndBalance($shopId);
             $availableBalance = (float) $balanceData['available_balance'];
 
@@ -2402,7 +2412,7 @@ class Tenant extends BaseController
             $deductionPercent = (new SiteContentModel())->getPlatformDeductionPercent();
             $fee = round($amount * ($deductionPercent / 100), 2);
             $netAmount = max(0.0, round($amount - $fee, 2));
-            $refNumber = 'WD-' . date('Ymd') . '-' . rand(1000, 9999);
+            $refNumber = 'WD-' . date('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
 
             $insertData = [
                 'shop_id'                => $shopId,
@@ -2445,6 +2455,10 @@ class Tenant extends BaseController
             $db->transRollback();
             log_message('error', 'Withdrawal submission error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while submitting your withdrawal request. Please try again.');
+        } finally {
+            if ($lockAcquired) {
+                $db->query('SELECT RELEASE_LOCK(?)', [$lockName]);
+            }
         }
     }
 
@@ -4266,11 +4280,10 @@ class Tenant extends BaseController
                 $quantity  = max(1, (int) ($it['quantity'] ?? 1));
                 if ($productId <= 0) continue;
 
-                $product = $db->table('products')
-                    ->where('id', $productId)
-                    ->where('shop_id', $shopId)
-                    ->where('deleted_at IS NULL')
-                    ->get()->getRowArray();
+                $product = $db->query(
+                    'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
+                    [$productId, $shopId]
+                )->getRowArray();
 
                 if (!$product) {
                     $db->transRollback();
@@ -4480,11 +4493,10 @@ class Tenant extends BaseController
                 if ($productId <= 0) continue;
 
                 // Lock row FOR UPDATE to prevent race condition / negative stock
-                $product = $db->table('products')
-                    ->where('id', $productId)
-                    ->where('shop_id', $shopId)
-                    ->where('deleted_at IS NULL')
-                    ->get()->getRowArray();
+                $product = $db->query(
+                    'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
+                    [$productId, $shopId]
+                )->getRowArray();
 
                 if (!$product) {
                     $db->transRollback();
@@ -4666,11 +4678,10 @@ class Tenant extends BaseController
             if ($productId <= 0) continue;
 
             // Lock row FOR UPDATE to prevent race condition / negative stock
-            $product = $db->table('products')
-                ->where('id', $productId)
-                ->where('shop_id', $shopId)
-                ->where('deleted_at IS NULL')
-                ->get()->getRowArray();
+            $product = $db->query(
+                'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
+                [$productId, $shopId]
+            )->getRowArray();
 
             if (!$product) {
                 $db->transRollback();
@@ -4874,11 +4885,10 @@ class Tenant extends BaseController
 
             if ($productId <= 0) continue;
 
-            $product = $db->table('products')
-                ->where('id', $productId)
-                ->where('shop_id', $shopId)
-                ->where('deleted_at IS NULL')
-                ->get()->getRowArray();
+            $product = $db->query(
+                'SELECT * FROM products WHERE id = ? AND shop_id = ? AND deleted_at IS NULL FOR UPDATE',
+                [$productId, $shopId]
+            )->getRowArray();
 
             if (!$product) {
                 $db->transRollback();

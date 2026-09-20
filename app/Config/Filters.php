@@ -80,7 +80,7 @@ class Filters extends BaseFilters
         ],
         'after' => [
             // 'honeypot',
-            // 'secureheaders',
+            'secureheaders',
         ],
     ];
 
@@ -108,5 +108,9 @@ class Filters extends BaseFilters
      *
      * @var array<string, array<string, list<string>>>
      */
-    public array $filters = [];
+    public array $filters = [
+        'adminAuth'    => ['before' => ['admin/*']],
+        'tenantAuth'   => ['before' => ['tenant/*']],
+        'customerAuth' => ['before' => ['customer/*']],
+    ];
 }

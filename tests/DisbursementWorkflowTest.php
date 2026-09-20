@@ -415,4 +415,52 @@ class DisbursementWorkflowTest extends CIUnitTestCase
         $this->assertEquals('failed', $payout['transfer_status']);
         $this->assertNotEmpty($payout['failure_reason']);
     }
+
+    /**
+     * Test 8: Concurrent withdrawal request is blocked when MySQL advisory lock is held.
+     */
+    public function testConcurrentWithdrawalBlockedWhenAdvisoryLockHeld()
+    {
+        $setup = $this->createTestShopWithBalance(1000.00, 'Maria Clara', '09289876543');
+        $shopId = $setup['shop_id'];
+        $lockName = 'withdrawal_lock_shop_' . $shopId;
+
+        $dbConfig = config('Database')->default;
+        $port = !empty($dbConfig['port']) ? ";port={$dbConfig['port']}" : '';
+        $dsn = "mysql:host={$dbConfig['hostname']}{$port};dbname={$dbConfig['database']};charset={$dbConfig['charset']}";
+        $pdo = new \PDO($dsn, $dbConfig['username'], $dbConfig['password']);
+        $pdo->query("SELECT GET_LOCK('{$lockName}', 5)");
+
+        try {
+            $res = $this->asTenant($shopId)->post('tenant/withdrawals/request', [
+                'amount' => 200.00,
+                'method' => 'GCash',
+            ]);
+
+            $res->assertRedirect();
+            $this->assertStringContainsString('Another withdrawal operation is currently in progress', (string) session()->getFlashdata('error'));
+        } finally {
+            $pdo->query("SELECT RELEASE_LOCK('{$lockName}')");
+        }
+    }
+
+    /**
+     * Test 9: Withdrawal reference numbers are cryptographically hardened.
+     */
+    public function testWithdrawalReferenceNumberIsCryptographicallyHardened()
+    {
+        $setup = $this->createTestShopWithBalance(1000.00, 'Crisostomo Ibarra', '09191234567');
+        $shopId = $setup['shop_id'];
+
+        $res = $this->asTenant($shopId)->post('tenant/withdrawals/request', [
+            'amount' => 100.00,
+            'method' => 'GCash',
+        ]);
+
+        $res->assertRedirect();
+        $payoutModel = new PayoutModel();
+        $payout = $payoutModel->where('shop_id', $shopId)->orderBy('id', 'DESC')->first();
+        $this->assertNotNull($payout);
+        $this->assertMatchesRegularExpression('/^WD-\d{8}-[A-F0-9]{8}$/', $payout['reference_number']);
+    }
 }

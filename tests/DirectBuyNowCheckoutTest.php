@@ -250,6 +250,7 @@ class DirectBuyNowCheckoutTest extends CIUnitTestCase
         // Check order item has variant details
         $lastOrder = (new OrderModel())->where('customer_id', $userId)->orderBy('id', 'DESC')->first();
         $this->assertNotNull($lastOrder);
+        $this->assertMatchesRegularExpression('/^ORD-[A-F0-9]{8}$/', $lastOrder['order_number']);
         $orderItem = (new OrderItemModel())->where('order_id', $lastOrder['id'])->first();
         $this->assertNotNull($orderItem);
         $this->assertEquals($vId, (int) $orderItem['variant_id']);
