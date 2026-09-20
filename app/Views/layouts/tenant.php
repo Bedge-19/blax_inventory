@@ -14,7 +14,8 @@
         'pos' => ['pos', 'Point of Sale (POS)'],
     ];
 
-    $seg = service('request')->getUri()->getSegment(2) ?? 'dashboard';
+    $uri = service('request')->getUri();
+    $seg = ($uri->getTotalSegments() >= 2) ? $uri->getSegment(2) : 'dashboard';
     $resolved = $segMap[$seg] ?? ['', $seg];
     $activeNav = $activeNav ?? $resolved[0];
     $pageTitle = $title ?? $resolved[1];
