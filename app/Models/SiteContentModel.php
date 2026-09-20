@@ -51,7 +51,37 @@ class SiteContentModel extends Model
     }
 
     /**
+     * Fetch homepage content map cleanly combining home_banners,
+     * announcement_bar, and footer_info, ensuring home_banners entries
+     * take precedence and avoid collisions with other pages (e.g. printing_services, categories).
+     *
+     * @return array<string, array>
+     */
+    public function getHomeContentMap(): array
+    {
+        // First load global components (announcement_bar, footer_info)
+        $globalRows = $this->whereIn('page', ['announcement_bar', 'footer_info'])
+                           ->orderBy('sort_order', 'ASC')
+                           ->findAll();
+        $map = [];
+        foreach ($globalRows as $r) {
+            $map[$r['content_key']] = $r;
+        }
+
+        // Then overlay home_banners so homepage-specific keys are never overwritten
+        $homeRows = $this->where('page', 'home_banners')
+                         ->orderBy('sort_order', 'ASC')
+                         ->findAll();
+        foreach ($homeRows as $r) {
+            $map[$r['content_key']] = $r;
+        }
+
+        return $map;
+    }
+
+    /**
      * Fetch all site content entries indexed by content_key.
+     * home_banners takes precedence over generic/other page keys.
      *
      * @return array<string, array>
      */
@@ -60,7 +90,14 @@ class SiteContentModel extends Model
         $rows = $this->orderBy('sort_order', 'ASC')->findAll();
         $map = [];
         foreach ($rows as $r) {
-            $map[$r['content_key']] = $r;
+            if ($r['page'] !== 'home_banners') {
+                $map[$r['content_key']] = $r;
+            }
+        }
+        foreach ($rows as $r) {
+            if ($r['page'] === 'home_banners') {
+                $map[$r['content_key']] = $r;
+            }
         }
         return $map;
     }

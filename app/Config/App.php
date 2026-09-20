@@ -199,4 +199,25 @@ class App extends BaseConfig
      * @see http://www.w3.org/TR/CSP/
      */
     public bool $CSPEnabled = true;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // Dynamically adapt baseURL to current request host and port so local assets,
+        // uploaded CMS media, and routes work seamlessly across php spark serve (localhost:8080),
+        // local Apache, or Vercel deployments.
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'];
+
+            if (str_contains($host, 'localhost:8080') || str_contains($host, '127.0.0.1:8080')) {
+                $this->baseURL = $scheme . '://' . $host . '/';
+            } elseif (!empty($_SERVER['VERCEL'])) {
+                $this->baseURL = $scheme . '://' . $host . '/';
+            }
+        }
+    }
 }

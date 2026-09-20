@@ -11,7 +11,7 @@
     $barId = 'blax-global-announcement-bar';
     $storageKey = 'blax_announcement_dismissed_' . substr(md5($text), 0, 12);
 ?>
-<aside id="<?= $barId ?>" aria-label="Store Announcement" class="hidden bg-gradient-to-r from-primary via-primary-container to-primary text-on-primary text-xs py-2 px-4 relative z-40 transition-all duration-300 shadow-xs">
+<aside id="<?= $barId ?>" aria-label="Store Announcement" class="bg-gradient-to-r from-primary via-primary-container to-primary text-on-primary text-xs py-2 px-4 relative z-40 transition-all duration-300 shadow-xs">
     <div class="max-w-container-max mx-auto flex items-center justify-between gap-3">
         <div class="flex-1 flex items-center justify-center gap-2 text-center font-medium">
             <span class="material-symbols-outlined text-[16px] text-amber-300 shrink-0" aria-hidden="true">campaign</span>
@@ -26,9 +26,9 @@
 (function() {
     try {
         const key = '<?= $storageKey ?>';
-        if (!localStorage.getItem(key)) {
+        if (sessionStorage.getItem(key) || localStorage.getItem(key)) {
             const bar = document.getElementById('<?= $barId ?>');
-            if (bar) bar.classList.remove('hidden');
+            if (bar) bar.style.display = 'none';
         }
     } catch(e) {}
 })();

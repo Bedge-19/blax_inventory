@@ -21,6 +21,27 @@ if (!function_exists('product_image_url')) {
     }
 }
 
+if (!function_exists('cms_image_url')) {
+    /**
+     * Resolve a CMS banner or content image to a renderable URL.
+     * Handles null, empty string, local uploads ("uploads/..."), external URLs,
+     * and applies the provided fallback if empty.
+     */
+    function cms_image_url(?string $url, string $fallback = 'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80'): string
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return $fallback;
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return base_url($url);
+    }
+}
+
 if (!function_exists('logo_url')) {
     /**
      * Resolve a shop logo to a renderable URL. Locally-uploaded logos are

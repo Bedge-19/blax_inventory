@@ -9,15 +9,17 @@
         $heroBadge = $sc['hero_badge']['text_value'] ?? 'Seasonal Event';
         $heroTitle = $sc['hero_title']['text_value'] ?? 'The Ultimate Merchandise Selection';
         $heroSubtitle = $sc['hero_subtitle']['text_value'] ?? 'Discover premium goods, exclusive deals, and top-tier printing services all in one place from our network of verified elite shops.';
-        $heroImage = $sc['hero_image']['image_url'] ?? 'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80';
-        if ($heroImage && !str_starts_with($heroImage,'http')) $heroImage = base_url($heroImage);
+        $rawHeroImg = !empty($sc['hero_image']['image_url']) 
+            ? $sc['hero_image']['image_url'] 
+            : (!empty($sc['hero_image']['text_value']) ? $sc['hero_image']['text_value'] : null);
+        $heroImage = cms_image_url($rawHeroImg, 'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80');
         $catalogTitle = $sc['catalog_title']['text_value'] ?? 'Global Product Catalog';
         $catalogSubtitle = $sc['catalog_subtitle']['text_value'] ?? 'Aggregation of all products currently available across the entire RHK network.';
     ?>
-    <section class="relative w-full rounded-xl overflow-hidden shadow-md bg-surface-container-lowest h-[240px] sm:h-[320px] lg:h-[400px] flex items-center group">
+    <section class="relative w-full rounded-2xl overflow-hidden shadow-md bg-surface-container-lowest h-[260px] sm:h-[340px] lg:h-[420px] flex items-center group">
 
-        <div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-90 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('<?= esc($heroImage) ?>');"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/90 via-surface-container-lowest/50 to-transparent"></div>
+        <div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-95 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('<?= esc($heroImage) ?>');"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/95 via-surface-container-lowest/75 to-surface-container-lowest/20 sm:to-transparent"></div>
 
         <div class="relative z-10 px-4 md:px-8 lg:px-[80px] max-w-2xl flex flex-col gap-md">
 
