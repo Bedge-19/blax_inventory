@@ -4295,6 +4295,28 @@ class Tenant extends BaseController
                     return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => "Insufficient stock for '{$product['name']}'. Available: {$product['stock_quantity']}, Requested: {$quantity}."]);
                 }
 
+                $variantId = (int) ($it['variant_id'] ?? 0);
+                if ($variantId > 0) {
+                    $variant = $db->query(
+                        'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
+                        [$variantId, $productId]
+                    )->getRowArray();
+
+                    if (!$variant) {
+                        $db->transRollback();
+                        return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => "Selected variant for '{$product['name']}' is not available in your shop."]);
+                    }
+
+                    if ((int) $variant['stock_quantity'] < $quantity) {
+                        $db->transRollback();
+                        return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => "Insufficient stock for '{$product['name']}'. Available: {$variant['stock_quantity']}, Requested: {$quantity}."]);
+                    }
+
+                    $db->table('product_variants')->where('id', $variantId)->update([
+                        'stock_quantity' => max(0, (int) $variant['stock_quantity'] - $quantity),
+                    ]);
+                }
+
                 $unitPrice = (float) $product['price'];
                 $lineTotal = round($unitPrice * $quantity, 2);
                 $additionalSubtotal += $lineTotal;
@@ -4306,6 +4328,8 @@ class Tenant extends BaseController
                 $orderItemModel->insert([
                     'order_id'        => $orderId,
                     'product_id'      => $productId,
+                    'variant_id'      => $variantId > 0 ? $variantId : null,
+                    'variant_label'   => !empty($it['variant_label']) ? $it['variant_label'] : null,
                     'product_name'    => $product['name'],
                     'quantity'        => $quantity,
                     'unit_price'      => $unitPrice,
@@ -4514,6 +4538,34 @@ class Tenant extends BaseController
                     ]);
                 }
 
+                $variantId = (int) ($it['variant_id'] ?? 0);
+                if ($variantId > 0) {
+                    $variant = $db->query(
+                        'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
+                        [$variantId, $productId]
+                    )->getRowArray();
+
+                    if (!$variant) {
+                        $db->transRollback();
+                        return $this->response->setStatusCode(400)->setJSON([
+                            'success' => false,
+                            'error'   => "Selected variant for '{$product['name']}' is not available in your shop.",
+                        ]);
+                    }
+
+                    if ((int) $variant['stock_quantity'] < $quantity) {
+                        $db->transRollback();
+                        return $this->response->setStatusCode(400)->setJSON([
+                            'success' => false,
+                            'error'   => "Insufficient stock for '{$product['name']}'. Available: {$variant['stock_quantity']}, Requested: {$quantity}.",
+                        ]);
+                    }
+
+                    $db->table('product_variants')->where('id', $variantId)->update([
+                        'stock_quantity' => max(0, (int) $variant['stock_quantity'] - $quantity),
+                    ]);
+                }
+
                 $unitPrice = (float) $product['price'];
                 $lineTotal = round($unitPrice * $quantity, 2);
                 $additionalSubtotal += $lineTotal;
@@ -4699,6 +4751,34 @@ class Tenant extends BaseController
                 ]);
             }
 
+            $variantId = (int) ($it['variant_id'] ?? 0);
+            if ($variantId > 0) {
+                $variant = $db->query(
+                    'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
+                    [$variantId, $productId]
+                )->getRowArray();
+
+                if (!$variant) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Selected variant for '{$product['name']}' is not available in your shop.",
+                    ]);
+                }
+
+                if ((int) $variant['stock_quantity'] < $quantity) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Insufficient stock for '{$product['name']}'. Available: {$variant['stock_quantity']}, Requested: {$quantity}.",
+                    ]);
+                }
+
+                $db->table('product_variants')->where('id', $variantId)->update([
+                    'stock_quantity' => max(0, (int) $variant['stock_quantity'] - $quantity),
+                ]);
+            }
+
             $unitPrice = (float) $product['price'];
             $lineTotal = round($unitPrice * $quantity, 2);
             $additionalSubtotal += $lineTotal;
@@ -4714,6 +4794,8 @@ class Tenant extends BaseController
             $orderItemModel->insert([
                 'order_id'        => $orderId,
                 'product_id'      => $productId,
+                'variant_id'      => $variantId > 0 ? $variantId : null,
+                'variant_label'   => !empty($it['variant_label']) ? $it['variant_label'] : null,
                 'product_name'    => $product['name'],
                 'quantity'        => $quantity,
                 'unit_price'      => $unitPrice,
@@ -4906,6 +4988,34 @@ class Tenant extends BaseController
                 ]);
             }
 
+            $variantId = (int) ($it['variant_id'] ?? 0);
+            if ($variantId > 0) {
+                $variant = $db->query(
+                    'SELECT * FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE',
+                    [$variantId, $productId]
+                )->getRowArray();
+
+                if (!$variant) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Selected variant for '{$product['name']}' is not available in your shop catalog.",
+                    ]);
+                }
+
+                if ((int) $variant['stock_quantity'] < $quantity) {
+                    $db->transRollback();
+                    return $this->response->setStatusCode(400)->setJSON([
+                        'success' => false,
+                        'error'   => "Insufficient stock for '{$product['name']}'. Available: {$variant['stock_quantity']}, Requested: {$quantity}.",
+                    ]);
+                }
+
+                $db->table('product_variants')->where('id', $variantId)->update([
+                    'stock_quantity' => max(0, (int) $variant['stock_quantity'] - $quantity),
+                ]);
+            }
+
             $unitPrice = (float) $product['price'];
             $lineTotal = round($unitPrice * $quantity, 2);
             $totalAmount += $lineTotal;
@@ -4918,11 +5028,13 @@ class Tenant extends BaseController
             $this->maybeNotifyLowStock($shopId, $product, $newStock);
 
             $validatedItems[] = [
-                'product_id'   => $productId,
-                'product_name' => $product['name'],
-                'quantity'     => $quantity,
-                'unit_price'   => $unitPrice,
-                'line_total'   => $lineTotal,
+                'product_id'    => $productId,
+                'variant_id'    => $variantId > 0 ? $variantId : null,
+                'variant_label' => !empty($it['variant_label']) ? $it['variant_label'] : null,
+                'product_name'  => $product['name'],
+                'quantity'      => $quantity,
+                'unit_price'    => $unitPrice,
+                'line_total'    => $lineTotal,
             ];
         }
 
@@ -4968,13 +5080,14 @@ class Tenant extends BaseController
         // Insert items
         foreach ($validatedItems as $vIt) {
             $orderItemModel->insert([
-                'order_id'        => $orderId,
-                'product_id'      => $vIt['product_id'],
-                'product_name'    => $vIt['product_name'],
-                'quantity'        => $vIt['quantity'],
-                'unit_price'      => $vIt['unit_price'],
-                'line_total'      => $vIt['line_total'],
-                'is_pos_addition' => 1,
+                'order_id'      => $orderId,
+                'product_id'    => $vIt['product_id'],
+                'variant_id'    => $vIt['variant_id'] ?? null,
+                'variant_label' => $vIt['variant_label'] ?? null,
+                'product_name'  => $vIt['product_name'],
+                'quantity'      => $vIt['quantity'],
+                'unit_price'    => $vIt['unit_price'],
+                'line_total'    => $vIt['line_total'],
             ]);
         }
 

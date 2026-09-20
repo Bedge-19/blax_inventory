@@ -69,6 +69,35 @@ trait CheckoutProcessorTrait
 
         // Branch 1: PayMongo GCash Session Creation
         if ($paymentMethod === 'gcash') {
+            // Validate stock availability before creating PayMongo checkout session
+            $dbCheck = \Config\Database::connect();
+            foreach ($itemsByShop as $shopId => $items) {
+                foreach ($items as $item) {
+                    $productId = (int) $item['product_id'];
+                    $quantity  = (int) $item['quantity'];
+
+                    $prod = $dbCheck->query(
+                        'SELECT * FROM products WHERE id = ? AND deleted_at IS NULL',
+                        [$productId]
+                    )->getRowArray();
+
+                    if (!$prod || (int) $prod['stock_quantity'] < $quantity) {
+                        return redirect()->to($failureRedirectUrl)->with('error', "Item '{$item['product_name']}' is out of stock or does not have enough inventory.");
+                    }
+
+                    if (!empty($item['variant_id'])) {
+                        $var = $dbCheck->query(
+                            'SELECT * FROM product_variants WHERE id = ? AND product_id = ?',
+                            [(int) $item['variant_id'], $productId]
+                        )->getRowArray();
+
+                        if (!$var || (int) $var['stock_quantity'] < $quantity) {
+                            return redirect()->to($failureRedirectUrl)->with('error', "Selected option for '{$item['product_name']}' is out of stock.");
+                        }
+                    }
+                }
+            }
+
             $grandTotal = 0;
             $shopOrders = [];
 

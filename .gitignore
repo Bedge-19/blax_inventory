@@ -170,4 +170,5 @@ nb-configuration.xml
 # PHP tooling
 .php-version
 _modules/*
-/api/
+# /api/
+!/api/index.php
