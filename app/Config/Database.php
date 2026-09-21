@@ -208,7 +208,7 @@ class Database extends Config
             ?: (getenv('DB_USER') ?: (getenv('DB_USERNAME') ?: (getenv('DATABASE_USERNAME') ?: (getenv('database_default_username') ?: ($this->default['username'] ?: 'root')))));
 
         $this->default['password'] = env('database.default.password')
-            ?? (getenv('DB_PASS') ?: (getenv('DB_PASSWORD') ?: (getenv('DATABASE_PASSWORD') ?: (getenv('database_default_password') ?? ($this->default['password'] ?? '')))));
+            ?: (getenv('DB_PASS') ?: (getenv('DB_PASSWORD') ?: (getenv('DATABASE_PASSWORD') ?: (getenv('database_default_password') ?: ($this->default['password'] ?: '')))));
 
         $this->default['database'] = env('database.default.database')
             ?: (getenv('DB_DATABASE') ?: (getenv('DB_NAME') ?: (getenv('DATABASE_NAME') ?: (getenv('database_default_database') ?: ($this->default['database'] ?: 'blax_marketplace')))));
