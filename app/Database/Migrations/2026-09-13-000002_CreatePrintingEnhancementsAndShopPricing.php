@@ -66,7 +66,6 @@ class CreatePrintingEnhancementsAndShopPricing extends Migration
             ]);
             $this->forge->addKey('id', true);
             $this->forge->addKey('printing_request_id');
-            $this->forge->addForeignKey('printing_request_id', 'printing_requests', 'id', 'CASCADE', 'CASCADE');
             $this->forge->createTable('printing_request_attachments', true);
         }
 
@@ -111,7 +110,6 @@ class CreatePrintingEnhancementsAndShopPricing extends Migration
             ]);
             $this->forge->addKey('id', true);
             $this->forge->addUniqueKey('shop_id');
-            $this->forge->addForeignKey('shop_id', 'shops', 'id', 'CASCADE', 'CASCADE');
             $this->forge->createTable('shop_printing_settings', true);
         }
 
@@ -150,8 +148,8 @@ class CreatePrintingEnhancementsAndShopPricing extends Migration
                 ],
             ]);
             $this->forge->addKey('id', true);
+            $this->forge->addKey('shop_id');
             $this->forge->addUniqueKey(['shop_id', 'paper_size'], 'uq_pshop_size');
-            $this->forge->addForeignKey('shop_id', 'shops', 'id', 'CASCADE', 'CASCADE');
             $this->forge->createTable('shop_printing_paper_sizes', true);
         }
     }

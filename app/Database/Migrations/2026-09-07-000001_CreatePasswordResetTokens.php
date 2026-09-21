@@ -42,7 +42,7 @@ class CreatePasswordResetTokens extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->addKey('token_hash');
-        $this->forge->addForeignKey('user_id', 'users', 'id', 'CASCADE', 'CASCADE');
+        $this->forge->addKey('user_id');
         $this->forge->createTable('password_reset_tokens', true);
     }
 

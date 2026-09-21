@@ -63,7 +63,6 @@ class CreateProductVariantsAndItemColumns extends Migration
 
             $this->forge->addKey('id', true);
             $this->forge->addKey('product_id');
-            $this->forge->addForeignKey('product_id', 'products', 'id', 'CASCADE', 'CASCADE');
             $this->forge->createTable('product_variants', true);
         } else {
             // Table already exists from earlier migration; modify column definitions if needed

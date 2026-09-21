@@ -25,7 +25,6 @@ class CreateProductEmbeddings extends Migration
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('product_id');
         $this->forge->addKey('content_hash');
-        $this->forge->addForeignKey('product_id', 'products', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('product_embeddings', true);
     }
 

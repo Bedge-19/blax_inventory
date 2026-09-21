@@ -19,7 +19,6 @@ class CreateShopNotificationPreferences extends Migration
         ]);
         $this->forge->addKey('id', true);
         $this->forge->addUniqueKey('shop_id');
-        $this->forge->addForeignKey('shop_id', 'shops', 'id', 'CASCADE', 'CASCADE');
         $this->forge->createTable('shop_notification_preferences', true);
     }
 
