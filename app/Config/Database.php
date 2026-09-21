@@ -213,8 +213,9 @@ class Database extends Config
         $this->default['database'] = env('database.default.database')
             ?: (getenv('DB_DATABASE') ?: (getenv('DB_NAME') ?: (getenv('DATABASE_NAME') ?: (getenv('database_default_database') ?: ($this->default['database'] ?: 'blax_marketplace')))));
 
-        $port = env('database.default.port')
-            ?: (getenv('DB_PORT') ?: (getenv('DATABASE_PORT') ?: (getenv('database_default_port') ?: ($this->default['port'] ?: 3306))));
-        $this->default['port'] = (int) $port;
+        $defaultPort = (str_contains((string) $this->default['hostname'], 'tidbcloud.com')) ? 4000 : 3306;
+        $envPort = env('database.default.port')
+            ?: (getenv('DB_PORT') ?: (getenv('DATABASE_PORT') ?: getenv('database_default_port')));
+        $this->default['port'] = $envPort ? (int) $envPort : $defaultPort;
     }
 }

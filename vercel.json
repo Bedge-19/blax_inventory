@@ -4,7 +4,7 @@
     "VERCEL": "1"
   },
   "functions": {
-    "public/index.php": {
+    "api/index.php": {
       "runtime": "vercel-php@0.7.3",
       "memory": 1024,
       "maxDuration": 30
@@ -20,6 +20,6 @@
     { "src": "/images/(.*)", "dest": "/public/images/$1" },
     { "src": "/uploads/(.*)", "dest": "/public/uploads/$1" },
     { "src": "/public/(.*)", "dest": "/public/$1" },
-    { "src": "/(.*)", "dest": "/public/index.php" }
+    { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }

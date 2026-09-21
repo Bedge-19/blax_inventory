@@ -170,5 +170,14 @@ nb-configuration.xml
 # PHP tooling
 .php-version
 _modules/*
-# /api/
+
+# Local scratch directory & temporary test scripts
+scratch/
+
+# Vercel deployment tooling & configs
+.vercel/
+!vercel.json
+!.vercelignore
+
+# Deployment entrypoint
 !/api/index.php

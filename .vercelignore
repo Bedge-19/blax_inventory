@@ -1,0 +1,40 @@
+#--------------------------------------------------------------------
+# VERCEL DEPLOYMENT IGNORE
+# Exclude non-production assets and test files to keep serverless
+# function bundle well below Vercel's limits.
+#--------------------------------------------------------------------
+
+# Mockups and design prototypes
+Admin-prototype/
+tenant-prototype/
+final_user_design/
+
+# Test suites & scratch files
+tests/
+approval_test.php
+scratch/
+build/
+phpunit.xml*
+
+# Local writable runtime storage (redirected to /tmp on Vercel)
+writable/
+
+# Database dumps
+*.sql
+*.sql.gz
+*.sqlite
+*.db
+
+# Environment & credentials
+.env*
+!.env.example
+env
+
+# Git & IDE configs
+.git/
+.github/
+.vscode/
+.idea/
+.claude/
+.gemini/
+.agents/
