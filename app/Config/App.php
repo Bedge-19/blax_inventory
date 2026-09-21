@@ -16,7 +16,7 @@ class App extends BaseConfig
      *
      * E.g., http://example.com/
      */
-    public string $baseURL = 'http://localhost:8080/';
+    public string $baseURL = 'https://blaxmarketplace.vercel.app/';
 
     /**
      * Allowed Hostnames in the Site URL other than the hostname in the baseURL.
@@ -29,7 +29,7 @@ class App extends BaseConfig
      *
      * @var list<string>
      */
-    public array $allowedHostnames = [];
+    public array $allowedHostnames = ['blaxmarketplace.vercel.app', 'localhost', '127.0.0.1'];
 
     /**
      * --------------------------------------------------------------------------
@@ -204,10 +204,27 @@ class App extends BaseConfig
     {
         parent::__construct();
 
-        // Dynamically adapt baseURL to current request host and port so local assets,
-        // uploaded CMS media, and routes work seamlessly across php spark serve (localhost:8080),
-        // local Apache, or Vercel deployments.
-        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
+        $isProduction = (defined('ENVIRONMENT') && ENVIRONMENT === 'production')
+            || env('CI_ENVIRONMENT') === 'production'
+            || getenv('CI_ENVIRONMENT') === 'production';
+
+        $isVercel = !empty($_SERVER['VERCEL'])
+            || getenv('VERCEL') === '1'
+            || isset($_SERVER['VERCEL_ENV'])
+            || getenv('VERCEL_ENV') !== false
+            || (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'vercel.app'));
+
+        if ($isVercel || $isProduction) {
+            if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '' && !str_contains($_SERVER['HTTP_HOST'], 'localhost')) {
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                    ? 'https' : 'http';
+                $this->baseURL = $scheme . '://' . $_SERVER['HTTP_HOST'] . '/';
+            } else {
+                $this->baseURL = 'https://blaxmarketplace.vercel.app/';
+            }
+            $this->indexPage = '';
+        } elseif (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
             $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                 || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
                 ? 'https' : 'http';
@@ -215,8 +232,7 @@ class App extends BaseConfig
 
             if (str_contains($host, 'localhost:8080') || str_contains($host, '127.0.0.1:8080')) {
                 $this->baseURL = $scheme . '://' . $host . '/';
-            } elseif (!empty($_SERVER['VERCEL'])) {
-                $this->baseURL = $scheme . '://' . $host . '/';
+                $this->indexPage = '';
             }
         }
     }

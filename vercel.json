@@ -4,7 +4,7 @@
     "VERCEL": "1"
   },
   "functions": {
-    "api/index.php": {
+    "public/index.php": {
       "runtime": "vercel-php@0.7.3",
       "memory": 1024,
       "maxDuration": 30
@@ -13,11 +13,13 @@
   "routes": [
     { "src": "/favicon.ico", "dest": "/public/favicon.ico" },
     { "src": "/robots.txt", "dest": "/public/robots.txt" },
+    { "src": "/icon.png", "dest": "/public/icon.png" },
     { "src": "/assets/(.*)", "dest": "/public/assets/$1" },
     { "src": "/css/(.*)", "dest": "/public/css/$1" },
     { "src": "/js/(.*)", "dest": "/public/js/$1" },
     { "src": "/images/(.*)", "dest": "/public/images/$1" },
     { "src": "/uploads/(.*)", "dest": "/public/uploads/$1" },
-    { "src": "/(.*)", "dest": "/api/index.php" }
+    { "src": "/public/(.*)", "dest": "/public/$1" },
+    { "src": "/(.*)", "dest": "/public/index.php" }
   ]
 }

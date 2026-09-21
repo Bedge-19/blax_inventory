@@ -54,8 +54,14 @@ class Paths
 
     public function __construct()
     {
-        if (getenv('VERCEL') === '1') {
+        if (getenv('VERCEL') === '1' || !empty($_SERVER['VERCEL']) || isset($_SERVER['VERCEL_ENV'])) {
             $this->writableDirectory = '/tmp/blax';
+            foreach (['cache', 'logs', 'session', 'uploads', 'uploads/business_permits', 'debugbar'] as $sub) {
+                $dir = $this->writableDirectory . '/' . $sub;
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0775, true);
+                }
+            }
         }
     }
 

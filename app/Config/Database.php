@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'localhost',
-        'username'     => 'root',
+        'hostname'     => '',
+        'username'     => '',
         'password'     => '',
-        'database'     => 'blax_marketplace',
+        'database'     => '',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
@@ -41,7 +41,7 @@ class Database extends Config
         'compress'     => false,
         'strictOn'     => false,
         'failover'     => [],
-        'port'         => 4000,
+        'port'         => 3306,
         'numberNative' => false,
         'foundRows'    => false,
         'dateFormat'   => [
@@ -199,5 +199,22 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
+
+        // Populate database connection from environment variables (e.g. Vercel dashboard or .env)
+        $this->default['hostname'] = env('database.default.hostname')
+            ?: (getenv('DB_HOST') ?: (getenv('DATABASE_HOSTNAME') ?: (getenv('database_default_hostname') ?: ($this->default['hostname'] ?: 'localhost'))));
+
+        $this->default['username'] = env('database.default.username')
+            ?: (getenv('DB_USER') ?: (getenv('DB_USERNAME') ?: (getenv('DATABASE_USERNAME') ?: (getenv('database_default_username') ?: ($this->default['username'] ?: 'root')))));
+
+        $this->default['password'] = env('database.default.password')
+            ?? (getenv('DB_PASS') ?: (getenv('DB_PASSWORD') ?: (getenv('DATABASE_PASSWORD') ?: (getenv('database_default_password') ?? ($this->default['password'] ?? '')))));
+
+        $this->default['database'] = env('database.default.database')
+            ?: (getenv('DB_DATABASE') ?: (getenv('DB_NAME') ?: (getenv('DATABASE_NAME') ?: (getenv('database_default_database') ?: ($this->default['database'] ?: 'blax_marketplace')))));
+
+        $port = env('database.default.port')
+            ?: (getenv('DB_PORT') ?: (getenv('DATABASE_PORT') ?: (getenv('database_default_port') ?: ($this->default['port'] ?: 3306))));
+        $this->default['port'] = (int) $port;
     }
 }
