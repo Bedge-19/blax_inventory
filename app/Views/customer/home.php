@@ -1,7 +1,15 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<main class="flex-1 w-full max-w-container-max mx-auto px-4 md:px-8 lg:px-10 py-8 md:py-xl flex flex-col gap-8 md:gap-12 lg:gap-[80px]">
+<main class="flex-1 w-full max-w-container-max mx-auto px-4 md:px-8 lg:px-10 py-4 sm:py-8 md:py-xl flex flex-col gap-6 sm:gap-8 md:gap-12 lg:gap-[80px]">
+
+    <!-- Mobile Quick Search Bar (Prominent on small screens) -->
+    <div class="block md:hidden w-full">
+        <form action="<?= base_url('search') ?>" method="GET" class="flex items-center relative w-full shadow-xs">
+            <span class="material-symbols-outlined absolute left-3.5 text-primary text-[20px]">search</span>
+            <input name="q" value="<?= esc($searchQuery ?? '') ?>" maxlength="200" autocomplete="off" class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl pl-10 pr-4 py-2.5 w-full text-xs font-medium placeholder:text-outline focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Describe what you need in Polomolok..." type="text">
+        </form>
+    </div>
 
     <!-- Hero Section — content managed via Admin > Content Management -->
     <?php
@@ -16,23 +24,39 @@
         $catalogTitle = $sc['catalog_title']['text_value'] ?? 'Global Product Catalog';
         $catalogSubtitle = $sc['catalog_subtitle']['text_value'] ?? 'Aggregation of all products currently available across the entire RHK network.';
     ?>
-    <section class="relative w-full rounded-2xl overflow-hidden shadow-md bg-surface-container-lowest h-[260px] sm:h-[340px] lg:h-[420px] flex items-center group">
+    <section class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-surface-container-lowest min-h-[260px] sm:min-h-[340px] lg:h-[420px] py-6 sm:py-10 flex items-center group">
 
-        <div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-95 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('<?= esc($heroImage) ?>');"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/95 via-surface-container-lowest/75 to-surface-container-lowest/20 sm:to-transparent"></div>
+        <div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-90 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('<?= esc($heroImage) ?>');"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/98 via-surface-container-lowest/85 to-surface-container-lowest/40 sm:to-transparent"></div>
 
-        <div class="relative z-10 px-4 md:px-8 lg:px-[80px] max-w-2xl flex flex-col gap-md">
+        <div class="relative z-10 px-4 sm:px-8 lg:px-[80px] max-w-2xl flex flex-col gap-2.5 sm:gap-md">
 
-            <span class="text-label-sm font-label-sm text-primary uppercase tracking-wider font-semibold"><?= esc($heroBadge) ?></span>
-            <h1 class="text-2xl sm:text-3xl lg:text-display font-display text-on-surface"><?= esc($heroTitle) ?></h1>
-            <p class="text-sm sm:text-base lg:text-body-lg font-body-lg text-on-surface-variant max-w-md"><?= esc($heroSubtitle) ?></p>
+            <span class="text-[11px] sm:text-label-sm font-label-sm text-primary uppercase tracking-wider font-extrabold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                <?= esc($heroBadge) ?>
+            </span>
+            <h1 class="text-xl sm:text-3xl lg:text-display font-display text-on-surface font-extrabold leading-tight"><?= esc($heroTitle) ?></h1>
+            <p class="text-xs sm:text-base lg:text-body-lg font-body-lg text-on-surface-variant max-w-md line-clamp-3 sm:line-clamp-none leading-relaxed"><?= esc($heroSubtitle) ?></p>
 
-            <div class="mt-sm flex gap-md">
+            <div class="mt-2 sm:mt-sm flex flex-wrap items-center gap-2 sm:gap-md">
 
-                <a href="#catalog" class="bg-primary text-on-primary text-button font-button px-lg py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-300 hover:scale-105 hover:shadow-lg">
-                    <?= esc($sc['hero_cta_text']['text_value'] ?? 'Shop Now') ?>
+                <a href="#catalog" class="bg-primary text-on-primary text-xs sm:text-button font-semibold sm:font-button px-4 py-2.5 sm:px-lg sm:py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-300">
+                    <?= esc($sc['hero_cta_text']['text_value'] ?? 'Explore Marketplace') ?>
                 </a>
 
+                <?php if (!session()->get('isLoggedIn')): ?>
+                    <a href="<?= base_url('signup') ?>" class="bg-surface-container-lowest/90 backdrop-blur-xs text-primary border border-primary/30 text-xs sm:text-button font-semibold sm:font-button px-3.5 py-2.5 sm:px-lg sm:py-md rounded-lg hover:bg-primary/10 transition-all shadow-xs">
+                        Create Account
+                    </a>
+                <?php endif; ?>
+
+            </div>
+
+            <!-- Mobile Trust Badges -->
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[10px] sm:text-xs text-on-surface-variant font-medium opacity-90">
+                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-green-600">verified</span> Polomolok Verified</span>
+                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-primary">local_shipping</span> Fast Delivery</span>
+                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-amber-600">print</span> Rush Printing</span>
             </div>
 
         </div>
@@ -98,18 +122,18 @@
     <!-- Featured Shops - Most Rated, max 5 -->
     <section class="flex flex-col gap-lg">
 
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-sm mb-md">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-1 sm:gap-sm mb-3 sm:mb-md">
             <div>
-                <h2 class="font-headline-lg text-headline-lg text-on-surface">Featured Shops</h2>
-                <p class="text-body-md text-on-surface-variant mt-xs">Discover top-rated local merchants and specialty stores</p>
+                <h2 class="font-bold text-lg sm:text-headline-lg text-on-surface">Featured Shops</h2>
+                <p class="text-xs sm:text-body-md text-on-surface-variant mt-0.5">Discover top-rated local merchants and specialty stores</p>
             </div>
-            <a class="text-primary font-button text-button hover:underline inline-flex items-center gap-xs font-semibold" href="<?= base_url('shops') ?>">
+            <a class="text-primary text-xs sm:text-button font-semibold hover:underline inline-flex items-center gap-1 shrink-0" href="<?= base_url('shops') ?>">
                 <span>View All Shops</span>
-                <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
             </a>
         </div>
 
-        <div class="flex overflow-x-auto no-scrollbar gap-3 pb-2 sm:grid sm:grid-cols-3 md:grid-cols-5 sm:gap-md lg:gap-lg snap-x snap-mandatory">
+        <div class="flex overflow-x-auto no-scrollbar gap-2.5 sm:gap-md pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 md:grid-cols-5 lg:gap-lg snap-x snap-mandatory">
 
             <?php if (!empty($shops)): ?>
 
@@ -184,16 +208,38 @@
     <?php endif; ?>
 
     <!-- Global Product Catalog Section -->
-    <section id="catalog" class="bg-surface-container-low/50 py-8 md:py-12 lg:py-[80px] -mx-4 md:-mx-8 lg:-mx-10 px-4 md:px-8 lg:px-10 rounded-3xl">
+    <section id="catalog" class="bg-surface-container-low/50 py-6 sm:py-10 md:py-12 lg:py-[80px] -mx-4 md:-mx-8 lg:-mx-10 px-4 md:px-8 lg:px-10 rounded-2xl sm:rounded-3xl">
 
         <div class="max-w-container-max mx-auto">
 
-            <div class="flex flex-col md:flex-row justify-between items-end mb-xl gap-lg">
+            <!-- Mobile & Desktop Quick Category Chips -->
+            <?php if (!empty($categories)): ?>
+                <div class="mb-4 sm:mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                        <a href="<?= base_url('/') ?>#catalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= empty($categoryId) ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
+                            <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+                            <span>All Items</span>
+                        </a>
+                        <?php foreach ($categories as $cat): ?>
+                            <?php $isCatActive = ((int) ($categoryId ?? 0) === (int) $cat['id']); ?>
+                            <a href="<?= base_url('?category_id=' . $cat['id']) ?>#catalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= $isCatActive ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
+                                <span><?= esc($cat['name']) ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                        <a href="<?= base_url('printing-services') ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-white text-primary border border-primary/30 hover:bg-primary/5">
+                            <span class="material-symbols-outlined text-[14px]">print</span>
+                            <span>Printing Services</span>
+                        </a>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <div class="flex flex-col sm:flex-row justify-between sm:items-end items-start mb-4 sm:mb-xl gap-3 sm:gap-lg">
 
                 <div>
 
-                    <h2 class="font-headline-lg text-headline-lg mb-sm"><?= esc($catalogTitle) ?></h2>
-                    <p class="text-body-md text-on-surface-variant"><?= esc($catalogSubtitle) ?></p>
+                    <h2 class="font-bold text-lg sm:text-headline-lg mb-1 sm:mb-sm"><?= esc($catalogTitle) ?></h2>
+                    <p class="text-xs sm:text-body-md text-on-surface-variant"><?= esc($catalogSubtitle) ?></p>
 
                     <?php if (($searchQuery ?? '') !== ''): ?>
 
@@ -224,27 +270,28 @@
 
                 </div>
 
-                <div class="flex gap-sm">
+                <div class="flex gap-2 sm:gap-sm shrink-0">
 
-                    <div class="flex items-center gap-sm bg-white border border-outline-variant/30 rounded-lg px-md py-sm cursor-pointer hover:bg-surface-container transition-colors">
+                    <a href="<?= base_url('categories') ?>" class="flex items-center gap-1.5 sm:gap-sm bg-white border border-outline-variant/30 rounded-lg px-3 py-1.5 sm:px-md sm:py-sm cursor-pointer hover:bg-surface-container transition-colors shadow-xs">
 
-                        <span class="material-symbols-outlined text-outline text-base">filter_list</span>
-                        <span class="text-label-sm">Filter</span>
+                        <span class="material-symbols-outlined text-outline text-[16px] sm:text-base">filter_list</span>
+                        <span class="text-xs sm:text-label-sm font-medium">Filter</span>
 
-                    </div>
+                    </a>
 
-                    <div class="flex items-center gap-sm bg-white border border-outline-variant/30 rounded-lg px-md py-sm cursor-pointer hover:bg-surface-container transition-colors">
+                    <a href="<?= base_url('search?q=') ?>" class="flex items-center gap-1.5 sm:gap-sm bg-white border border-outline-variant/30 rounded-lg px-3 py-1.5 sm:px-md sm:py-sm cursor-pointer hover:bg-surface-container transition-colors shadow-xs">
 
-                        <span class="material-symbols-outlined text-outline text-base">swap_vert</span>
-                        <span class="text-label-sm">Sort By</span>
+                        <span class="material-symbols-outlined text-outline text-[16px] sm:text-base">swap_vert</span>
+                        <span class="text-xs sm:text-label-sm font-medium">Sort By</span>
 
-                    </div>
+                    </a>
 
                 </div>
 
             </div>
 
-            <div id="product-grid" class="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-4 md:gap-gutter">
+            <!-- Responsive Product Grid: 2 columns on mobile, 3 on tablet, 4-5 on desktop -->
+            <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 sm:gap-4 md:gap-gutter">
 
                 <?php if (!empty($products)): ?>
 
@@ -262,7 +309,7 @@
                                 <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
                                     <img src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
                                 </a>
-                                <button type="button" class="absolute top-1 right-1 sm:top-sm sm:right-sm bg-white/80 backdrop-blur p-1 sm:p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Add to favorites">
+                                <button type="button" class="absolute top-1.5 right-1.5 sm:top-sm sm:right-sm bg-white/80 backdrop-blur p-1 sm:p-xs rounded-full opacity-0 group-hover:opacity-100 transition-opacity" aria-label="Add to favorites">
 
                                     <span class="material-symbols-outlined text-[13px] sm:text-on-surface-variant">favorite</span>
 
@@ -270,21 +317,21 @@
 
                             </div>
 
-                            <div class="p-1.5 sm:p-3 md:p-md flex flex-col flex-grow">
+                            <div class="p-2 sm:p-3 md:p-md flex flex-col flex-grow">
 
-                                <span class="text-[9px] sm:text-label-sm text-primary font-medium mb-0.5 sm:mb-xs uppercase tracking-tighter truncate block"><?= esc($p['shop_name'] ?? 'RHK Store') ?></span>
-                                <h4 class="text-[11px] sm:text-body-md font-semibold text-on-surface mb-0.5 sm:mb-xs group-hover:text-primary transition-colors line-clamp-2 leading-tight"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h4>
+                                <span class="text-[9px] sm:text-label-sm text-primary font-bold mb-0.5 sm:mb-xs uppercase tracking-tight truncate block"><?= esc($p['shop_name'] ?? 'Blax Store') ?></span>
+                                <h4 class="text-xs sm:text-body-md font-semibold text-on-surface mb-1 group-hover:text-primary transition-colors line-clamp-2 leading-snug"><a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a></h4>
 
-                                <div class="flex items-center gap-0.5 sm:gap-xs mb-1 sm:mb-md">
+                                <div class="flex items-center gap-0.5 sm:gap-xs mb-1.5 sm:mb-md">
 
                                     <span class="material-symbols-outlined text-amber-500 text-[11px] sm:text-xs" style="font-variation-settings: 'FILL' 1;">star</span>
                                     <span class="text-[10px] sm:text-label-sm font-semibold"><?= number_format((float) $rating, 1) ?></span>
 
                                 </div>
 
-                                <div class="mt-auto flex justify-between items-center pt-1 border-t border-outline-variant/10">
+                                <div class="mt-auto flex justify-between items-center pt-1.5 border-t border-outline-variant/10">
 
-                                    <span class="text-xs sm:text-title-lg font-bold text-primary">₱<?= number_format($p['price'], 2) ?></span>
+                                    <span class="text-xs sm:text-title-lg font-extrabold text-primary">₱<?= number_format($p['price'], 2) ?></span>
 
                                     <form action="<?= base_url('cart/add') ?>" method="POST">
 
@@ -293,9 +340,9 @@
                                         <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
                                         <input type="hidden" name="quantity" value="1">
 
-                                        <button type="submit" class="bg-surface-container-high p-1 sm:p-sm rounded-md sm:rounded-lg hover:bg-primary-container hover:text-white transition-all flex items-center justify-center" aria-label="Add to cart">
+                                        <button type="submit" class="bg-surface-container-high hover:bg-primary hover:text-white p-1.5 sm:p-2 rounded-lg transition-all flex items-center justify-center shrink-0 w-8 h-8 sm:w-9 sm:h-9" aria-label="Add to cart">
 
-                                            <span class="material-symbols-outlined text-[14px] sm:text-base">add_shopping_cart</span>
+                                            <span class="material-symbols-outlined text-[16px] sm:text-[18px]">add_shopping_cart</span>
 
                                         </button>
 
@@ -371,41 +418,41 @@
 
             <?php if ($totalPages > 1): ?>
 
-                <div class="mt-lg flex justify-center items-center gap-md">
+                <div class="mt-6 sm:mt-lg flex flex-wrap justify-center items-center gap-1.5 sm:gap-md px-2">
 
                     <?php if ($currentPage > 1): ?>
 
-                        <a href="<?= $pageUrl($currentPage - 1) ?>" class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors" aria-label="Previous page">
+                        <a href="<?= $pageUrl($currentPage - 1) ?>" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors shrink-0" aria-label="Previous page">
 
-                            <span class="material-symbols-outlined">chevron_left</span>
+                            <span class="material-symbols-outlined text-[18px] sm:text-[22px]">chevron_left</span>
 
                         </a>
 
                     <?php else: ?>
 
-                        <span class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-outline-variant/50 cursor-not-allowed" aria-disabled="true">
+                        <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-outline-variant/40 flex items-center justify-center text-outline-variant/40 cursor-not-allowed shrink-0" aria-disabled="true">
 
-                            <span class="material-symbols-outlined">chevron_left</span>
+                            <span class="material-symbols-outlined text-[18px] sm:text-[22px]">chevron_left</span>
 
                         </span>
 
                     <?php endif; ?>
 
-                    <div class="flex gap-sm">
+                    <div class="flex flex-wrap items-center gap-1 sm:gap-sm">
 
                         <?php foreach ($windowPages as $pg): ?>
 
                             <?php if ($pg === '...'): ?>
 
-                                <span class="flex items-end pb-2 px-1 text-outline-variant" aria-hidden="true">...</span>
+                                <span class="flex items-end pb-1 sm:pb-2 px-0.5 sm:px-1 text-outline-variant text-xs sm:text-sm font-semibold" aria-hidden="true">...</span>
 
                             <?php elseif ((int) $pg === $currentPage): ?>
 
-                                <a href="<?= $pageUrl((int) $pg) ?>" aria-current="page" class="w-10 h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center font-button text-button"><?= (int) $pg ?></a>
+                                <a href="<?= $pageUrl((int) $pg) ?>" aria-current="page" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center font-bold text-xs sm:text-button shadow-xs"><?= (int) $pg ?></a>
 
                             <?php else: ?>
 
-                                <a href="<?= $pageUrl((int) $pg) ?>" class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors font-button text-button"><?= (int) $pg ?></a>
+                                <a href="<?= $pageUrl((int) $pg) ?>" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors font-medium text-xs sm:text-button"><?= (int) $pg ?></a>
 
                             <?php endif; ?>
 
@@ -415,17 +462,17 @@
 
                     <?php if ($currentPage < $totalPages): ?>
 
-                        <a href="<?= $pageUrl($currentPage + 1) ?>" class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors" aria-label="Next page">
+                        <a href="<?= $pageUrl($currentPage + 1) ?>" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors shrink-0" aria-label="Next page">
 
-                            <span class="material-symbols-outlined">chevron_right</span>
+                            <span class="material-symbols-outlined text-[18px] sm:text-[22px]">chevron_right</span>
 
                         </a>
 
                     <?php else: ?>
 
-                        <span class="w-10 h-10 rounded-lg border border-outline-variant flex items-center justify-center text-outline-variant/50 cursor-not-allowed" aria-disabled="true">
+                        <span class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg border border-outline-variant/40 flex items-center justify-center text-outline-variant/40 cursor-not-allowed shrink-0" aria-disabled="true">
 
-                            <span class="material-symbols-outlined">chevron_right</span>
+                            <span class="material-symbols-outlined text-[18px] sm:text-[22px]">chevron_right</span>
 
                         </span>
 

@@ -2,17 +2,18 @@
     $activeNav = $activeNav ?? '';
     if ($activeNav === '') {
         $seg = service('request')->getUri()->getSegment(1) ?? '';
-        $navMap = ['home' => 'home', 'categories' => 'categories', 'category' => 'categories', 'shops' => 'shops', 'shop' => 'shops', 'printing-services' => 'printing'];
+        $navMap = ['home' => 'home', 'categories' => 'categories', 'category' => 'categories', 'shops' => 'shops', 'shop' => 'shops', 'printing-services' => 'printing', 'cart' => 'cart'];
         $activeNav = $navMap[$seg] ?? '';
         if ($activeNav === '' && $seg === '') {
             $activeNav = 'home';
         }
     }
 
+    $isLogged = (bool) session()->get('isLoggedIn');
     $cartCount = 0;
     $unreadCount = 0;
     $recentNotifs = [];
-    if (session()->get('isLoggedIn')) {
+    if ($isLogged) {
         $userId = session()->get('user_id');
         $cartModel = new \App\Models\CartModel();
         $cartItemModel = new \App\Models\CartItemModel();
@@ -51,7 +52,7 @@
 
 </head>
 
-<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col relative">
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col relative pb-16 md:pb-0">
 
     <div class="flex-grow flex flex-col">
 
@@ -70,6 +71,55 @@
 
     </div>
 
+    <!-- Mobile Bottom Sticky Navigation (Guests & Users) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md border-t border-outline-variant/30 shadow-[0_-4px_16px_rgba(0,0,0,0.06)] px-2 pt-1.5 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))] flex items-center justify-around">
+        
+        <!-- 1. Home -->
+        <a href="<?= base_url('/') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center transition-colors <?= $activeNav === 'home' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-primary' ?>">
+            <span class="material-symbols-outlined text-[22px] <?= $activeNav === 'home' ? 'text-primary scale-105' : '' ?> transition-transform">home</span>
+            <span class="text-[10px] tracking-tight leading-none mt-1">Home</span>
+        </a>
+
+        <!-- 2. Categories -->
+        <a href="<?= base_url('categories') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center transition-colors <?= $activeNav === 'categories' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-primary' ?>">
+            <span class="material-symbols-outlined text-[22px] <?= $activeNav === 'categories' ? 'text-primary scale-105' : '' ?> transition-transform">grid_view</span>
+            <span class="text-[10px] tracking-tight leading-none mt-1">Categories</span>
+        </a>
+
+        <!-- 3. Printing Services (Rush/Featured) -->
+        <a href="<?= base_url('printing-services') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center relative transition-colors <?= $activeNav === 'printing' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-primary' ?>">
+            <span class="material-symbols-outlined text-[22px] <?= $activeNav === 'printing' ? 'text-primary scale-105' : '' ?> transition-transform">print</span>
+            <span class="text-[10px] tracking-tight leading-none mt-1">Printing</span>
+        </a>
+
+        <!-- 4. Cart -->
+        <a href="<?= base_url('cart') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center relative transition-colors <?= $activeNav === 'cart' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-primary' ?>">
+            <div class="relative inline-flex items-center justify-center">
+                <span class="material-symbols-outlined text-[22px] <?= $activeNav === 'cart' ? 'text-primary scale-105' : '' ?> transition-transform">shopping_cart</span>
+                <span id="mobile-bottom-cart-badge" class="<?= ($cartCount > 0) ? '' : 'hidden' ?> absolute -top-1 -right-2.5 bg-error text-on-error text-[9px] font-bold rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center leading-none shadow-xs">
+                    <?= $cartCount ?>
+                </span>
+            </div>
+            <span class="text-[10px] tracking-tight leading-none mt-1">Cart</span>
+        </a>
+
+        <!-- 5. Guest Sign In / Logged in Profile -->
+        <?php if ($isLogged): ?>
+            <a href="<?= base_url('customer/profile') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center transition-colors <?= $activeNav === 'profile' ? 'text-primary font-bold' : 'text-on-surface-variant hover:text-primary' ?>">
+                <span class="material-symbols-outlined text-[22px] <?= $activeNav === 'profile' ? 'text-primary scale-105' : '' ?> transition-transform">account_circle</span>
+                <span class="text-[10px] tracking-tight leading-none mt-1">Account</span>
+            </a>
+        <?php else: ?>
+            <a href="<?= base_url('login') ?>" class="flex flex-col items-center justify-center min-w-[56px] py-1 text-center group transition-colors">
+                <div class="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all shadow-2xs">
+                    <span class="material-symbols-outlined text-[16px]">login</span>
+                </div>
+                <span class="text-[10px] font-bold text-primary tracking-tight leading-none mt-1">Sign In</span>
+            </a>
+        <?php endif; ?>
+
+    </nav>
+
     <?php if (($showAiAssistant ?? true) !== false): ?>
 
         <?= view('components/ai_assistant') ?>
@@ -82,6 +132,7 @@
 /* ── AJAX Add-to-Cart (global) ─────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     const cartBadge = document.getElementById('cart-count-badge');
+    const mobileCartBadge = document.getElementById('mobile-bottom-cart-badge');
 
     document.body.addEventListener('submit', async (e) => {
         const form = e.target.closest('form[action*="cart/add"]');
@@ -125,11 +176,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     + ' bg-green-500 text-white scale-110';
                 if (icon) icon.textContent = 'check';
 
-                // Update cart badge
+                // Update cart badges
                 if (cartBadge) {
                     const cur = parseInt(cartBadge.textContent) || 0;
                     cartBadge.textContent = cur + 1;
                     cartBadge.classList.remove('hidden');
+                }
+                if (mobileCartBadge) {
+                    const cur = parseInt(mobileCartBadge.textContent) || 0;
+                    mobileCartBadge.textContent = cur + 1;
+                    mobileCartBadge.classList.remove('hidden');
                 }
 
                 setTimeout(() => {

@@ -6,7 +6,7 @@
 ?>
 
 <!-- AI Assistant Floating Action Button -->
-<button id="ai-toggle-btn" type="button" aria-label="Open Blax AI Assistant" class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 group z-40 flex items-center gap-2 p-1.5 bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 text-white rounded-full shadow-[0_8px_30px_rgb(37,99,235,0.4)] hover:shadow-[0_12px_36px_rgb(37,99,235,0.5)] hover:scale-105 active:scale-95 transition-all duration-300">
+<button id="ai-toggle-btn" type="button" aria-label="Open Blax AI Assistant" class="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 group z-40 flex items-center gap-2 p-1.5 bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-500 text-white rounded-full shadow-[0_8px_30px_rgb(37,99,235,0.4)] hover:shadow-[0_12px_36px_rgb(37,99,235,0.5)] hover:scale-105 active:scale-95 transition-all duration-300">
     <div class="relative w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center">
         <span class="material-symbols-outlined text-[26px] sm:text-[30px] group-hover:rotate-12 transition-transform duration-300">auto_awesome</span>
         <!-- Online Pulse Dot -->

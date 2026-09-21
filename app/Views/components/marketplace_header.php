@@ -9,11 +9,11 @@
 ?>
 
 <header class="bg-surface-container-lowest shadow-sm sticky top-0 z-40 w-full border-b border-outline-variant/30">
-    <div class="flex justify-between items-center w-full min-h-[72px] py-2 px-4 md:px-8 lg:px-10 max-w-container-max mx-auto">
+    <div class="flex justify-between items-center w-full min-h-[60px] sm:min-h-[72px] py-2 px-3 sm:px-6 md:px-8 lg:px-10 max-w-container-max mx-auto">
 
-    <div class="flex items-center gap-3 md:gap-6 lg:gap-xl">
+    <div class="flex items-center gap-2 sm:gap-4 md:gap-6 lg:gap-xl">
 
-        <a href="<?= base_url('/') ?>" class="text-title-lg font-bold text-primary">MarketPlace</a>
+        <a href="<?= base_url('/') ?>" class="text-base sm:text-title-lg font-bold text-primary tracking-tight">MarketPlace</a>
 
         <form id="ai-search-form" action="<?= base_url('search') ?>" method="GET" class="hidden md:flex items-center relative">
 
@@ -140,12 +140,12 @@
             <span class="material-symbols-outlined">menu</span>
         </button>
 
-        <div class="flex items-center gap-sm pl-md border-l border-outline-variant/30 relative">
+        <div class="flex items-center gap-xs sm:gap-sm pl-2 sm:pl-md border-l border-outline-variant/30 relative">
 
             <?php if ($isLogged): ?>
 
                 <div class="relative">
-                    <button id="profile-dropdown-toggle" type="button" class="profile-dropdown-toggle w-10 h-10 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary focus:ring-2 focus:ring-primary transition-all" aria-haspopup="true" aria-expanded="false" aria-label="Profile menu">
+                    <button id="profile-dropdown-toggle" type="button" class="profile-dropdown-toggle w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary focus:ring-2 focus:ring-primary transition-all text-xs sm:text-base" aria-haspopup="true" aria-expanded="false" aria-label="Profile menu">
 
                         <?php if (!empty($profileImage)): ?>
 
@@ -221,10 +221,8 @@
 
             <?php else: ?>
 
-                <a href="<?= base_url('login') ?>" class="bg-primary text-on-primary text-button font-button px-lg py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm">
-
-                      Sign In
-
+                <a href="<?= base_url('login') ?>" class="bg-primary text-on-primary text-xs sm:text-button font-semibold sm:font-button px-3 py-1.5 sm:px-lg sm:py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-xs sm:shadow-sm whitespace-nowrap">
+                    Sign In
                 </a>
 
             <?php endif; ?>
@@ -239,27 +237,82 @@
 
 <!-- Mobile Navigation Drawer -->
 <div id="mobile-drawer-backdrop" class="drawer-backdrop"></div>
-<div id="mobile-drawer" class="mobile-drawer flex flex-col">
-    <div class="flex justify-between items-center p-4 border-b border-outline-variant/30">
-        <span class="text-title-lg font-bold text-primary">Menu</span>
-        <button id="mobile-menu-close" type="button" class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full" aria-label="Close menu">
-            <span class="material-symbols-outlined">close</span>
-        </button>
-    </div>
-    
-    <div class="p-4 border-b border-outline-variant/30 md:hidden">
-        <form action="<?= base_url('/') ?>" method="GET" class="flex items-center relative w-full">
-            <span class="material-symbols-outlined absolute left-3 text-outline" data-icon="search">search</span>
-            <input name="q" value="<?= esc($searchQuery ?? '') ?>" maxlength="200" autocomplete="off" class="bg-surface-container-low border-none rounded-lg pl-10 pr-4 py-2 w-full text-label-sm focus:ring-2 focus:ring-primary" placeholder="Search..." type="text">
-        </form>
+<div id="mobile-drawer" class="mobile-drawer flex flex-col justify-between">
+    <div>
+        <div class="flex justify-between items-center p-4 border-b border-outline-variant/30">
+            <span class="text-lg font-bold text-primary flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-xl">storefront</span>
+                MarketPlace
+            </span>
+            <button id="mobile-menu-close" type="button" class="p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full" aria-label="Close menu">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <?php if (!$isLogged): ?>
+            <!-- Guest Welcome Card -->
+            <div class="p-4 bg-gradient-to-br from-primary/10 via-primary/5 to-surface-container-low border-b border-outline-variant/20">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold shrink-0">
+                        <span class="material-symbols-outlined text-[22px]">person</span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="font-bold text-xs text-on-surface">Welcome, Guest!</p>
+                        <p class="text-[11px] text-on-surface-variant truncate">Sign in for orders, printing & cart</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <a href="<?= base_url('login') ?>" class="bg-primary text-on-primary text-center font-semibold text-xs py-2 px-3 rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-xs flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">login</span>
+                        Sign In
+                    </a>
+                    <a href="<?= base_url('signup') ?>" class="bg-surface-container-lowest text-primary border border-primary/30 text-center font-semibold text-xs py-2 px-3 rounded-lg hover:bg-primary/5 transition-all flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-[14px]">person_add</span>
+                        Sign Up
+                    </a>
+                </div>
+            </div>
+        <?php endif; ?>
+        
+        <div class="p-4 border-b border-outline-variant/20 md:hidden">
+            <form action="<?= base_url('search') ?>" method="GET" class="flex items-center relative w-full">
+                <span class="material-symbols-outlined absolute left-3 text-outline text-[18px]">search</span>
+                <input name="q" value="<?= esc($searchQuery ?? '') ?>" maxlength="200" autocomplete="off" class="bg-surface-container-low border-none rounded-lg pl-9 pr-4 py-2 w-full text-xs focus:ring-2 focus:ring-primary" placeholder="Describe what you need..." type="text">
+            </form>
+        </div>
+
+        <nav class="flex flex-col py-2 divide-y divide-outline-variant/10">
+            <a class="<?= $activeNav === 'home' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface hover:bg-surface-container-low' ?> text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('/') ?>">
+                <span class="material-symbols-outlined text-[18px] <?= $activeNav === 'home' ? 'text-primary' : 'text-outline' ?>">home</span>
+                <span>Home</span>
+            </a>
+            <a class="<?= $activeNav === 'categories' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface hover:bg-surface-container-low' ?> text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('categories') ?>">
+                <span class="material-symbols-outlined text-[18px] <?= $activeNav === 'categories' ? 'text-primary' : 'text-outline' ?>">category</span>
+                <span>Categories</span>
+            </a>
+            <a class="<?= $activeNav === 'printing' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface hover:bg-surface-container-low' ?> text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('printing-services') ?>">
+                <span class="material-symbols-outlined text-[18px] <?= $activeNav === 'printing' ? 'text-primary' : 'text-outline' ?>">print</span>
+                <span>Printing Services</span>
+                <span class="ml-auto text-[9px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded-full">Rush</span>
+            </a>
+            <a class="<?= $activeNav === 'shops' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface hover:bg-surface-container-low' ?> text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('shops') ?>">
+                <span class="material-symbols-outlined text-[18px] <?= $activeNav === 'shops' ? 'text-primary' : 'text-outline' ?>">storefront</span>
+                <span>Featured Shops</span>
+            </a>
+        </nav>
     </div>
 
-    <nav class="flex flex-col py-2">
-        <a class="<?= $activeNav === 'home' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-surface-container-low' ?> font-body-md px-4 py-3" href="<?= base_url('/') ?>">Home</a>
-        <a class="<?= $activeNav === 'categories' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-surface-container-low' ?> font-body-md px-4 py-3" href="<?= base_url('categories') ?>">Categories</a>
-        <a class="<?= $activeNav === 'printing' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-surface-container-low' ?> font-body-md px-4 py-3" href="<?= base_url('printing-services') ?>">Printing Services</a>
-        <a class="<?= $activeNav === 'shops' ? 'text-primary bg-primary/10 font-bold' : 'text-on-surface-variant hover:bg-surface-container-low' ?> font-body-md px-4 py-3" href="<?= base_url('shops') ?>">Shops</a>
-    </nav>
+    <!-- Merchant Portal Callout at Bottom of Drawer -->
+    <div class="p-4 border-t border-outline-variant/20 bg-surface-container-low/50">
+        <div class="flex items-center gap-2.5 mb-2">
+            <span class="material-symbols-outlined text-primary text-[20px]">store</span>
+            <span class="text-xs font-bold text-on-surface">Are you a merchant?</span>
+        </div>
+        <p class="text-[11px] text-on-surface-variant mb-2.5 leading-snug">Sell school supplies, merchandise, or offer printing services in Polomolok.</p>
+        <a href="<?= base_url('signup/merchant') ?>" class="block w-full text-center text-xs font-semibold text-primary bg-surface-container-lowest border border-primary/30 py-2 px-3 rounded-lg hover:bg-primary hover:text-white transition-all">
+            Register Shop / Merchant
+        </a>
+    </div>
 </div>
 
 <?php if ($isLogged): ?>
