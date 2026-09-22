@@ -21,12 +21,14 @@ class NotificationController extends BaseController
         $notifModel = new NotificationModel();
 
         $notification = $notifModel->find($id);
-        if (!$notification || (int) $notification['user_id'] !== $userId) {
-            return redirect()->to('/');
+        if (!$notification) {
+            return redirect()->to($userRole === 'admin' ? '/admin/dashboard' : ($userRole === 'shop_owner' ? '/tenant/dashboard' : '/'));
         }
 
-        // Mark as read
-        $notifModel->markRead($id, $userId);
+        // Allow owner or admin to view/mark notification as read
+        if ((int) $notification['user_id'] === $userId || $userRole === 'admin') {
+            $notifModel->markRead($id, (int) $notification['user_id']);
+        }
 
         // Resolve safe redirection target
         $targetUrl = $this->resolveSafeRedirectUrl($notification, $userRole);
@@ -45,14 +47,19 @@ class NotificationController extends BaseController
         }
 
         $userId = (int) $session->get('user_id');
+        $userRole = (string) $session->get('user_role');
         $notifModel = new NotificationModel();
         $notification = $notifModel->find($id);
 
-        if (!$notification || (int) $notification['user_id'] !== $userId) {
+        if (!$notification) {
             return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Notification not found']);
         }
 
-        $notifModel->markRead($id, $userId);
+        if ((int) $notification['user_id'] !== $userId && $userRole !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['success' => false, 'error' => 'Forbidden']);
+        }
+
+        $notifModel->markRead($id, (int) $notification['user_id']);
 
         return $this->response->setJSON(['success' => true]);
     }
@@ -97,6 +104,12 @@ class NotificationController extends BaseController
 
         // 2. Fallback to server-controlled type mapping
         $type = (string) ($notification['type'] ?? '');
+        $title = (string) ($notification['title'] ?? '');
+
+        if ($type === 'customer_registration' || stripos($title, 'Customer') !== false) {
+            return '/admin/customers';
+        }
+
         return match ($type) {
             'order', 'order_status', 'delivery' => $userRole === 'shop_owner' ? '/tenant/orders' : '/customer/orders',
             'new_order'                         => '/tenant/orders',

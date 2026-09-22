@@ -103,52 +103,32 @@ class OptimizedDatabaseHandler extends DatabaseHandler
             return true;
         }
 
-        // New session insertion
-        if ($this->rowExists === false) {
-            $insertData = [
-                'id'         => $this->idPrefix . $id,
-                'ip_address' => $this->ipAddress,
-                'data'       => $this->prepareData($data),
-            ];
+        // Optimization: Skip database write on read-only requests if data is unchanged
+        // and timestamp was refreshed recently (within 5 minutes)
+        if ($this->rowExists && $isUnchanged && ($now - $this->lastTimestamp) < 300) {
+            return true;
+        }
 
-            $builder = $this->db->table($this->table);
-            if (! $builder->set('timestamp', 'NOW()', false)->insert($insertData)) {
-                return $this->fail();
-            }
+        $fullId = $this->idPrefix . $id;
+        $preparedData = $this->prepareData($data);
+        $escapedTable = $this->db->protectIdentifiers($this->table, true);
+
+        try {
+            $sql = "INSERT INTO {$escapedTable} (`id`, `ip_address`, `timestamp`, `data`)
+                    VALUES (?, ?, NOW(), ?)
+                    ON DUPLICATE KEY UPDATE `ip_address` = VALUES(`ip_address`), `timestamp` = NOW(), `data` = VALUES(`data`)";
+
+            $this->db->query($sql, [$fullId, $this->ipAddress, $preparedData]);
 
             $this->fingerprint   = md5($data);
             $this->rowExists     = true;
             $this->lastTimestamp = $now;
 
             return true;
-        }
-
-        // Optimization: Skip database write on read-only requests if data is unchanged
-        // and timestamp was refreshed recently (within 5 minutes)
-        if ($isUnchanged && ($now - $this->lastTimestamp) < 300) {
-            return true;
-        }
-
-        // Update existing session
-        $builder = $this->db->table($this->table)->where('id', $this->idPrefix . $id);
-
-        if ($this->matchIP) {
-            $builder->where('ip_address', $this->ipAddress);
-        }
-
-        $updateData = [];
-        if (! $isUnchanged) {
-            $updateData['data'] = $this->prepareData($data);
-        }
-
-        if (! $builder->set('timestamp', 'NOW()', false)->update($updateData)) {
+        } catch (\Throwable $e) {
+            log_message('error', 'Session write failed: ' . $e->getMessage());
             return $this->fail();
         }
-
-        $this->fingerprint   = md5($data);
-        $this->lastTimestamp = $now;
-
-        return true;
     }
 
     /**

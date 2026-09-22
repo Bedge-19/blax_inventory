@@ -142,7 +142,7 @@ class Auth extends BaseController
                     'customer_registration',
                     'New Customer Registered',
                     "{$firstName} {$lastName} ({$email}) registered on the platform.",
-                    '/admin/customers'
+                    '/admin/customers?q=' . urlencode($email)
                 );
             }
 
