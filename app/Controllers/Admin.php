@@ -701,7 +701,7 @@ class Admin extends BaseController
         $topShops = $db->table('orders o')
             ->select('s.id as shop_id, s.shop_name, s.logo_url, s.plan, s.offers_printing, s.rating_average, COUNT(o.id) as total_orders, COALESCE(SUM(o.total_amount), 0) as total_gmv')
             ->join('shops s', 's.id = o.shop_id', 'left')
-            ->groupBy('o.shop_id')
+            ->groupBy('o.shop_id, s.id, s.shop_name, s.logo_url, s.plan, s.offers_printing, s.rating_average')
             ->orderBy('total_orders', 'DESC')
             ->limit(6)
             ->get()->getResultArray();

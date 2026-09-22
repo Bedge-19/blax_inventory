@@ -45,9 +45,9 @@ class CategoryModel extends Model
     public function getTrendingCategories(int $limit = 3)
     {
         return $this->db->table('categories c')
-            ->select('c.*, COUNT(p.id) AS product_count')
+            ->select('c.id, c.parent_id, c.name, c.slug, c.image_url, c.sort_order, c.view_count, COUNT(p.id) AS product_count')
             ->join('products p', 'p.category_id = c.id', 'left')
-            ->groupBy('c.id')
+            ->groupBy('c.id, c.parent_id, c.name, c.slug, c.image_url, c.sort_order, c.view_count')
             ->orderBy('c.view_count', 'DESC')
             ->orderBy('product_count', 'DESC')
             ->orderBy('c.sort_order', 'ASC')

@@ -383,7 +383,7 @@ class ProductModel extends Model
             ->join('products p', 'p.category_id = c.id', 'inner')
             ->where('p.shop_id', $shopId)
             ->where('p.deleted_at', null)
-            ->groupBy('c.id')
+            ->groupBy('c.id, c.name, c.slug')
             ->orderBy('c.name', 'ASC')
             ->get()->getResultArray();
     }
