@@ -26,10 +26,10 @@ class Database extends Config
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => '',
-        'username'     => '',
-        'password'     => '',
-        'database'     => '',
+        'hostname'     => 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
+        'username'     => '2xsV5M53UudMfnZ.root',
+        'password'     => 'y3b0jACs14yRTEy7',
+        'database'     => 'blax_marketplace',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
