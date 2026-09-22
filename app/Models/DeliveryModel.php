@@ -429,19 +429,94 @@ class DeliveryModel extends Model
         ];
     }
 
-    // Polomolok municipality bounds (derived from system centre 6.2136,125.0661 tenant/deliveries.php:354)
+    // Operational bounds for Polomolok & Tupi, South Cotabato
     public const POLOMOLOK_LAT_MIN = 6.10;
-    public const POLOMOLOK_LAT_MAX = 6.32;
-    public const POLOMOLOK_LNG_MIN = 124.95;
-    public const POLOMOLOK_LNG_MAX = 125.18;
+    public const POLOMOLOK_LAT_MAX = 6.45;
+    public const POLOMOLOK_LNG_MIN = 124.85;
+    public const POLOMOLOK_LNG_MAX = 125.20;
     public const POLOMOLOK_CENTER_LAT = 6.2136;
     public const POLOMOLOK_CENTER_LNG = 125.0661;
+
+    public const TUPI_CENTER_LAT = 6.3333;
+    public const TUPI_CENTER_LNG = 124.9500;
+
+    public const SERVICE_CENTER_LAT = 6.2735;
+    public const SERVICE_CENTER_LNG = 125.0080;
 
     public static function isPolomolokCoordinate(?float $lat, ?float $lng): bool
     {
         if ($lat === null || $lng === null) return false;
         return $lat >= self::POLOMOLOK_LAT_MIN && $lat <= self::POLOMOLOK_LAT_MAX
             && $lng >= self::POLOMOLOK_LNG_MIN && $lng <= self::POLOMOLOK_LNG_MAX;
+    }
+
+    public static function isServiceAreaCoordinate(?float $lat, ?float $lng): bool
+    {
+        return self::isPolomolokCoordinate($lat, $lng);
+    }
+
+    /**
+     * Get real geographic centroid for any official barangay in Polomolok or Tupi.
+     */
+    public static function getBarangayCoordinate(string $barangay, string $city = ''): ?array
+    {
+        $b = strtolower(trim($barangay));
+        $centroids = [
+            // Polomolok Barangays
+            'bentung'           => [6.2625, 125.0480],
+            'cannery site'      => [6.2415, 125.0740],
+            'crossing palkan'   => [6.2580, 125.1050],
+            'glamang'           => [6.1785, 125.0390],
+            'kinilis'           => [6.2840, 125.0210],
+            'klinan 6'          => [6.1650, 125.0920],
+            'koronadal proper'  => [6.2250, 125.1020],
+            'lam-caliaf'        => [6.2910, 125.0680],
+            'landan'            => [6.3050, 125.0410],
+            'lumakil'           => [6.1950, 125.0780],
+            'maligo'            => [6.2890, 125.0990],
+            'palkan'            => [6.2710, 125.1180],
+            'poblacion'         => (stripos($city, 'tupi') !== false) ? [6.3333, 124.9500] : [6.2185, 125.0650],
+            'poblacion (tupi)'  => [6.3333, 124.9500],
+            'polo'              => [6.2080, 125.0350],
+            'pula bato'         => [6.2460, 125.0230],
+            'rubber'            => [6.1890, 125.1120],
+            'silway 7'          => [6.1550, 125.1250],
+            'silway 8'          => [6.1420, 125.1480],
+            'sulit'             => [6.2340, 125.1320],
+            'sumbakil'          => [6.2120, 125.1450],
+            'upper klinan'      => [6.1820, 125.0710],
+            'pagalungan'        => [6.1710, 125.0530],
+            'magsaysay'         => [6.2280, 125.0480],
+            // Tupi Barangays
+            'acmonan'           => [6.3350, 124.9650],
+            'bololmala'         => [6.3120, 124.9380],
+            'bunao'             => [6.3480, 124.9450],
+            'cebuano'           => [6.3620, 124.9320],
+            'crossing rubber'   => [6.3210, 124.9750],
+            'dajay'             => [6.3750, 124.9180],
+            'kablon'            => [6.3290, 125.0120],
+            'kalkam'            => [6.3420, 124.9850],
+            'linan'             => [6.2980, 124.9250],
+            'lunen'             => [6.3550, 124.9720],
+            'miaso'             => [6.3680, 124.9580],
+            'palian'            => [6.3150, 124.9920],
+            'polonoling'        => [6.3010, 124.9680],
+            'simbo'             => [6.3510, 124.9150],
+            'tubeng'            => [6.3820, 124.9350],
+        ];
+
+        // 1. Exact match first (prevents substring collisions like 'polo' matching 'polonoling')
+        if (isset($centroids[$b])) {
+            return ['lat' => $centroids[$b][0], 'lng' => $centroids[$b][1]];
+        }
+
+        // 2. Substring matching fallback
+        foreach ($centroids as $key => $coords) {
+            if (stripos($b, $key) !== false || stripos($key, $b) !== false) {
+                return ['lat' => $coords[0], 'lng' => $coords[1]];
+            }
+        }
+        return null;
     }
 
     /**
@@ -496,10 +571,13 @@ class DeliveryModel extends Model
     }
 
     /**
-     * Admin-scoped pins across all shops, Polomolok-restricted.
+     * Admin-scoped pins across all shops, Polomolok & Tupi restricted.
+     * Only returns shipments that are actively broadcasting (location updated within last 15 minutes).
      */
     public function getAllDeliveryPins(?string $search = null, ?string $shopFilter = null): array
     {
+        $activeCutoff = date('Y-m-d H:i:s', strtotime('-2 minutes'));
+
         $builder = $this->db->table('deliveries d')
             ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, d.location_updated_at, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, s.shop_name, s.id as shop_id, s.logo_url as shop_logo, s.latitude as shop_lat, s.longitude as shop_lng")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
@@ -507,33 +585,30 @@ class DeliveryModel extends Model
             ->join('users u', 'u.id = COALESCE(o.customer_id, pr.customer_id)', 'left')
             ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
             ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
-            ->whereIn('d.status', ['shipped', 'in_transit']);
+            ->whereIn('d.status', ['shipped', 'in_transit'])
+            ->where('d.location_updated_at IS NOT NULL')
+            ->where('d.location_updated_at >=', $activeCutoff);
+
         if ($search !== null && $search !== '') {
             $builder->groupStart()->like('d.tracking_id', $search)->orLike('d.destination_address', $search)->orLike('s.shop_name', $search)->groupEnd();
         }
         if ($shopFilter !== null && $shopFilter !== '') {
             $builder->where('s.shop_name', $shopFilter);
         }
-        $rows = $builder->orderBy('d.created_at', 'DESC')->get()->getResultArray();
+        $rows = $builder->orderBy('d.location_updated_at', 'DESC')->get()->getResultArray();
 
-        foreach ($rows as &$r) {
+        $activePins = [];
+        foreach ($rows as $r) {
             $lat = (float) ($r['current_lat'] ?? 0);
             $lng = (float) ($r['current_lng'] ?? 0);
-            if (!self::isPolomolokCoordinate($lat, $lng)) {
-                $shopLat = (float) ($r['shop_lat'] ?? 0);
-                $shopLng = (float) ($r['shop_lng'] ?? 0);
-                if (self::isPolomolokCoordinate($shopLat, $shopLng)) {
-                    $r['current_lat'] = number_format($shopLat, 7, '.', '');
-                    $r['current_lng'] = number_format($shopLng, 7, '.', '');
-                } else {
-                    $r['current_lat'] = number_format(self::POLOMOLOK_CENTER_LAT, 7, '.', '');
-                    $r['current_lng'] = number_format(self::POLOMOLOK_CENTER_LNG, 7, '.', '');
-                }
+            if ($lat != 0.0 && $lng != 0.0 && self::isPolomolokCoordinate($lat, $lng)) {
+                $r['current_lat'] = number_format($lat, 7, '.', '');
+                $r['current_lng'] = number_format($lng, 7, '.', '');
+                $activePins[] = $r;
             }
         }
-        unset($r);
 
-        return $rows;
+        return $activePins;
     }
 
     /**

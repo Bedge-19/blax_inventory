@@ -547,6 +547,121 @@ class Tenant extends BaseController
     }
 
     /**
+     * Real-time polling endpoint for tenant orders and printing requests.
+     * Route: GET /tenant/realtime/check
+     */
+    public function realtimeCheck()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $shopId = (int) $res['shopId'];
+        $lastOrderId = (int) $this->request->getGet('last_order_id');
+        $lastPrintingId = (int) $this->request->getGet('last_printing_id');
+
+        $orderModel = new OrderModel();
+        $userModel = new UserModel();
+        $printingModel = new PrintingRequestModel();
+
+        // 1. Fetch new orders for this shop
+        $newOrders = [];
+        if ($lastOrderId > 0) {
+            $rawOrders = $orderModel->where('shop_id', $shopId)
+                ->where('id >', $lastOrderId)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($rawOrders as $ord) {
+                $cust = $userModel->find($ord['customer_id']);
+                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                if ($custName === '') $custName = 'Customer';
+                $initials = strtoupper(substr($cust['first_name'] ?? 'C', 0, 1) . substr($cust['last_name'] ?? 'U', 0, 1));
+
+                $itemsCount = (int) (new OrderItemModel())->where('order_id', $ord['id'])->countAllResults();
+                if ($itemsCount === 0) $itemsCount = 1;
+
+                $addr = null;
+                if (!empty($ord['shipping_address_id'])) {
+                    $addr = (new ShippingAddressModel())->find($ord['shipping_address_id']);
+                }
+                $deliveryAddr = $addr ? trim(($addr['address_line1'] ?? '') . ', ' . ($addr['address_line2'] ?? '')) : 'Customer Address';
+
+                $isPickup = strtolower($ord['fulfillment_method'] ?? '') === 'pickup';
+
+                $newOrders[] = [
+                    'id'                 => (int) $ord['id'],
+                    'order_number'       => $ord['order_number'] ?? ('ORD-' . $ord['id']),
+                    'customer_name'      => $custName,
+                    'customer_initials'  => $initials,
+                    'customer_phone'     => $addr['phone'] ?? $cust['phone'] ?? 'N/A',
+                    'customer_image'     => $cust['profile_image_url'] ?? '',
+                    'total_amount'       => (float) ($ord['total_amount'] ?? 0),
+                    'total_amount_fmt'   => number_format((float) ($ord['total_amount'] ?? 0), 2),
+                    'items_count'        => $itemsCount,
+                    'fulfillment_method' => $ord['fulfillment_method'] ?? 'delivery',
+                    'is_pickup'          => $isPickup,
+                    'delivery_address'   => $deliveryAddr,
+                    'status'             => $ord['status'] ?? 'pending',
+                    'created_at'         => $ord['created_at'],
+                    'placed_at_fmt'      => date('M d, h:i A', strtotime($ord['created_at'] ?? 'now')),
+                ];
+            }
+        }
+
+        // 2. Fetch new printing requests for this shop
+        $newPrinting = [];
+        if ($lastPrintingId > 0) {
+            $rawPrinting = $printingModel->where('shop_id', $shopId)
+                ->where('id >', $lastPrintingId)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($rawPrinting as $pr) {
+                $cust = $userModel->find($pr['customer_id']);
+                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                if ($custName === '') $custName = 'Customer';
+                $initials = strtoupper(substr($cust['first_name'] ?? 'C', 0, 1) . substr($cust['last_name'] ?? 'U', 0, 1));
+
+                $newPrinting[] = [
+                    'id'                 => (int) $pr['id'],
+                    'request_number'     => $pr['request_number'] ?? ('PR-' . $pr['id']),
+                    'customer_name'      => $custName,
+                    'customer_initials'  => $initials,
+                    'service_name'       => $pr['service_type'] ?? 'Printing Request',
+                    'total_pages'        => (int) ($pr['total_pages'] ?? 1),
+                    'total_amount'       => (float) ($pr['total_price'] ?? 0),
+                    'total_amount_fmt'   => number_format((float) ($pr['total_price'] ?? 0), 2),
+                    'fulfillment_method' => strtolower($pr['fulfillment_method'] ?? 'delivery'),
+                    'status'             => $pr['status'] ?? 'new',
+                    'created_at'         => $pr['created_at'],
+                    'placed_at_fmt'      => date('M d, h:i A', strtotime($pr['created_at'] ?? 'now')),
+                ];
+            }
+        }
+
+        $summary = $orderModel->getOrdersSummary($shopId);
+
+        $maxOrdRow = $orderModel->where('shop_id', $shopId)->selectMax('id')->first();
+        $currentMaxOrderId = (int) ($maxOrdRow['id'] ?? 0);
+
+        $maxPrRow = $printingModel->where('shop_id', $shopId)->selectMax('id')->first();
+        $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
+
+        return $this->response->setJSON([
+            'success'          => true,
+            'max_order_id'     => $currentMaxOrderId,
+            'max_printing_id'  => $currentMaxPrintId,
+            'has_new_orders'   => !empty($newOrders),
+            'new_orders'       => $newOrders,
+            'has_new_printing' => !empty($newPrinting),
+            'new_printing'     => $newPrinting,
+            'summary'          => $summary,
+        ]);
+    }
+
+    /**
      * Dedicated Standalone Printable Receipt & Waybill for a Product Order / POS Sale.
      * Renders a clean receipt in a new tab without system UI, complete with product
      * names, purchase date/time, QR verification code, and shop details.
@@ -925,58 +1040,106 @@ class Tenant extends BaseController
         }
 
         $isPickup      = ($row['fulfillment_method'] ?? '') === 'pickup';
-        $currentStatus = $row['status'] ?? 'ready_for_pickup';
-        $newStatus     = null;
-        $statusMsg     = '';
-        $actionType    = '';
+        $isPrinting    = ($row['deliverable_type'] ?? '') === 'printing_request';
+        $typeLabel     = $isPrinting ? 'Printing Request' : 'Order';
+        $ref           = $row['ref_number'] ?: $row['tracking_id'];
+        $rawStatus     = strtolower((string) ($row['order_status'] ?? $row['status'] ?? ''));
 
-        $ref = $row['ref_number'] ?: $row['tracking_id'];
+        // Reject orders/requests still in preparation or production
+        if (in_array($rawStatus, ['pending', 'processing', 'in_progress', 'new', 'in_production'], true)) {
+            $statusName = strtoupper(humanize_status($rawStatus));
+            $errMsg = $isPickup
+                ? "{$typeLabel} #{$ref} is currently {$statusName}. Hindi pa ito maaaring i-scan o i-claim dahil kasalukuyan pa itong inihahanda / ginagawa. Paki-mark muna bilang Ready for Pick-up bago i-scan."
+                : "{$typeLabel} #{$ref} is currently {$statusName}. Hindi pa ito maaaring i-scan o i-deliver dahil kasalukuyan pa itong inihahanda / ginagawa. Paki-mark muna bilang Out for Delivery / Shipped bago i-scan.";
 
-        if ($currentStatus === 'cancelled') {
-            $statusMsg = ($isPickup ? 'Store Pick-up' : 'Delivery') . " Order #{$ref} was CANCELLED.";
-            $actionType = 'cancelled';
-        } elseif (in_array($currentStatus, ['shipped', 'in_transit', 'ready_for_pickup', 'processing', 'pending', 'ready_for_delivery'], true)) {
-            $newStatus = 'delivered';
-            $now = date('Y-m-d H:i:s');
-            
-            // Update delivery record
-            $deliveryModel->update($row['id'], [
-                'status'       => 'delivered',
-                'delivered_at' => $now,
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => $errMsg,
+                'message' => $errMsg,
+                'status'  => $rawStatus,
             ]);
+        }
 
-            // Update linked order or printing request
-            if ($row['deliverable_type'] === 'order') {
-                (new OrderModel())->update($row['deliverable_id'], [
-                    'status'       => 'delivered',
-                    'completed_at' => $now,
-                ]);
-            } elseif ($row['deliverable_type'] === 'printing_request') {
-                (new PrintingRequestModel())->update($row['deliverable_id'], [
-                    'status'       => 'completed',
-                    'completed_at' => $now,
-                ]);
-            }
+        if ($rawStatus === 'cancelled') {
+            $errMsg = "{$typeLabel} #{$ref} was CANCELLED. Hindi na ito maaaring i-scan o i-claim.";
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => $errMsg,
+                'message' => $errMsg,
+                'status'  => 'cancelled',
+            ]);
+        }
 
-            $currentStatus = 'delivered';
-            $row['delivered_at'] = $now;
-            $row['status'] = 'delivered';
-            $actionType = 'delivered';
-            $statusMsg = $isPickup
-                ? "Pick-up Order #{$ref} verified & marked as COLLECTED / COMPLETED!"
-                : "Delivery #{$ref} verified & marked as DELIVERED!";
-        } elseif (in_array($currentStatus, ['delivered', 'completed'], true)) {
+        if ($rawStatus === 'returned') {
+            $errMsg = "{$typeLabel} #{$ref} is currently marked as RETURNED.";
+            return $this->response->setStatusCode(400)->setJSON([
+                'success' => false,
+                'error'   => $errMsg,
+                'message' => $errMsg,
+                'status'  => 'returned',
+            ]);
+        }
+
+        if (in_array($rawStatus, ['delivered', 'completed'], true)) {
             $actionType = 'already_delivered';
             $statusMsg = $isPickup
-                ? "Store Pick-up Order #{$ref} is already verified as COMPLETED / PICKED UP."
+                ? "Store Pick-up {$typeLabel} #{$ref} is already verified as COMPLETED / PICKED UP."
                 : "Delivery #{$ref} is already verified as DELIVERED.";
-        } elseif ($currentStatus === 'returned') {
-            $actionType = 'already_returned';
-            $statusMsg = "Order/Request #{$ref} is currently marked as RETURNED.";
-        } else {
-            $actionType = 'verified';
-            $statusMsg = "Order #{$ref} verified. Current status: " . strtoupper(humanize_status($currentStatus));
+
+            return $this->response->setJSON([
+                'success'        => true,
+                'status_updated' => false,
+                'new_status'     => null,
+                'action_type'    => $actionType,
+                'message'        => $statusMsg,
+                'delivery'       => [
+                    'id'               => (int) $row['id'],
+                    'tracking_id'      => $row['tracking_id'],
+                    'ref_number'       => $row['ref_number'] ?? '',
+                    'product_name'     => $row['product_name'] ?? 'Order Item',
+                    'product_details'  => $row['all_products_list'] ?? ($row['product_name'] ?? ''),
+                    'deliverable_type' => $row['deliverable_type'],
+                    'courier_name'     => $row['courier_name'] ?? '',
+                    'destination'      => $row['destination_address'] ?? '',
+                    'status'           => humanize_status($rawStatus),
+                    'status_key'       => $rawStatus,
+                    'customer'         => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                    'created_at'       => date('M d, Y h:i A', strtotime($row['created_at'])),
+                    'shipped_at'       => !empty($row['shipped_at']) ? date('M d, Y h:i A', strtotime($row['shipped_at'])) : null,
+                    'delivered_at'     => !empty($row['delivered_at']) ? date('M d, Y h:i A', strtotime($row['delivered_at'])) : null,
+                ],
+            ]);
         }
+
+        // Fulfillable statuses: ['shipped', 'in_transit', 'ready_for_pickup', 'ready_for_delivery', 'ready']
+        $newStatus  = 'delivered';
+        $actionType = 'delivered';
+        $now        = date('Y-m-d H:i:s');
+
+        // Update delivery record
+        $deliveryModel->update($row['id'], [
+            'status'       => 'delivered',
+            'delivered_at' => $now,
+        ]);
+
+        // Update linked order or printing request
+        if ($row['deliverable_type'] === 'order') {
+            (new OrderModel())->update($row['deliverable_id'], [
+                'status'       => 'delivered',
+                'completed_at' => $now,
+            ]);
+        } elseif ($row['deliverable_type'] === 'printing_request') {
+            (new PrintingRequestModel())->update($row['deliverable_id'], [
+                'status'       => 'completed',
+                'completed_at' => $now,
+            ]);
+        }
+
+        $row['delivered_at'] = $now;
+        $row['status'] = 'delivered';
+        $statusMsg = $isPickup
+            ? "Pick-up {$typeLabel} #{$ref} verified & marked as COLLECTED / COMPLETED!"
+            : "Delivery #{$ref} verified & marked as DELIVERED!";
 
         // Send customer notification on QR status update
         $customerId = (int) ($row['customer_id'] ?? 0);
@@ -1014,8 +1177,8 @@ class Tenant extends BaseController
                 'deliverable_type' => $row['deliverable_type'],
                 'courier_name'     => $row['courier_name'] ?? '',
                 'destination'      => $row['destination_address'] ?? '',
-                'status'           => humanize_status($currentStatus),
-                'status_key'       => $currentStatus,
+                'status'           => humanize_status($row['status']),
+                'status_key'       => $row['status'],
                 'customer'         => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
                 'created_at'       => date('M d, Y h:i A', strtotime($row['created_at'])),
                 'shipped_at'       => !empty($row['shipped_at']) ? date('M d, Y h:i A', strtotime($row['shipped_at'])) : null,
@@ -2382,8 +2545,8 @@ class Tenant extends BaseController
         }
 
         $amount = (float) $this->request->getPost('amount');
-        if ($amount < 50) {
-            return redirect()->back()->with('error', 'Minimum withdrawal amount is ₱50.00.');
+        if ($amount < 20) {
+            return redirect()->back()->with('error', 'Minimum withdrawal amount is ₱20.00.');
         }
 
         $db = \Config\Database::connect();
@@ -3814,12 +3977,14 @@ class Tenant extends BaseController
                     ]);
                 }
 
-                // Status check: reject pending/in_production requests
-                if (in_array($pr['status'], ['new', 'in_production'], true)) {
+                // Status check: reject pending/in_production/new requests
+                if (in_array($pr['status'], ['new', 'in_production', 'pending'], true)) {
+                    $statusName = strtoupper(humanize_status($pr['status']));
+                    $errMsg = "Printing Request #{$pr['request_number']} is currently {$statusName}. Hindi pa ito maaaring i-scan o i-claim dahil ginagawa pa ito. Paki-mark muna bilang Ready for Pick-up bago i-scan sa POS.";
                     return $this->response->setStatusCode(400)->setJSON([
                         'success' => false,
-                        'error'   => "Printing Request #{$pr['request_number']} is still " . humanize_status($pr['status']) . ". Please mark it Ready for Pick-up before completing pick-up in POS.",
-                        'message' => "Printing Request #{$pr['request_number']} is still " . humanize_status($pr['status']) . ". Please mark it Ready for Pick-up before completing pick-up in POS.",
+                        'error'   => $errMsg,
+                        'message' => $errMsg,
                     ]);
                 }
 
@@ -3922,12 +4087,14 @@ class Tenant extends BaseController
             ]);
         }
 
-        // Order eligibility check: reject pending orders (must be accepted/processing first)
-        if ($order['status'] === 'pending') {
+        // Order eligibility check: reject pending and processing orders (must be marked ready_for_pickup first)
+        if (in_array($order['status'], ['pending', 'processing', 'in_progress'], true)) {
+            $statusName = strtoupper(humanize_status($order['status']));
+            $errMsg = "Order #{$order['order_number']} is currently {$statusName}. Hindi pa ito maaaring i-scan o i-claim dahil inihahanda pa ito. Paki-mark muna bilang Ready for Pick-up bago i-scan sa POS.";
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
-                'error'   => "Order #{$order['order_number']} is still pending. Please accept and process the order before using POS.",
-                'message' => "Order #{$order['order_number']} is still pending. Please accept and process the order before using POS.",
+                'error'   => $errMsg,
+                'message' => $errMsg,
             ]);
         }
 
@@ -5381,6 +5548,26 @@ class Tenant extends BaseController
             return redirect()->to('/tenant/delivery')->with('error', 'Unauthorized access to this delivery record.');
         }
 
+        // Activate live tracking broadcast when tenant views the live route
+        if (in_array($delivery['status'], ['shipped', 'in_transit'], true)) {
+            $now = date('Y-m-d H:i:s');
+            $startLat = !empty($delivery['current_lat']) && (float) $delivery['current_lat'] != 0
+                ? (float) $delivery['current_lat']
+                : (!empty($shop['latitude']) && (float) $shop['latitude'] != 0 ? (float) $shop['latitude'] : DeliveryModel::POLOMOLOK_CENTER_LAT);
+            $startLng = !empty($delivery['current_lng']) && (float) $delivery['current_lng'] != 0
+                ? (float) $delivery['current_lng']
+                : (!empty($shop['longitude']) && (float) $shop['longitude'] != 0 ? (float) $shop['longitude'] : DeliveryModel::POLOMOLOK_CENTER_LNG);
+
+            $deliveryModel->update($deliveryId, [
+                'current_lat'         => $startLat,
+                'current_lng'         => $startLng,
+                'location_updated_at' => $now,
+            ]);
+            $delivery['current_lat'] = $startLat;
+            $delivery['current_lng'] = $startLng;
+            $delivery['location_updated_at'] = $now;
+        }
+
         // Fetch customer and deliverable details
         $customer = null;
         $order = null;
@@ -5452,6 +5639,44 @@ class Tenant extends BaseController
             'activeNav'       => 'delivery',
             'title'           => 'Delivery #' . ($delivery['tracking_id'] ?? $deliveryId),
         ]);
+    }
+
+    /**
+     * Stop active delivery GPS broadcast when tenant exits live route page.
+     * Route: POST /tenant/deliveries/stop-broadcast
+     */
+    public function stopDeliveryBroadcast()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setStatusCode(401)->setJSON(['status' => 'error', 'message' => 'Unauthorized']);
+        }
+
+        $shopId = (int) $res['shopId'];
+        $deliveryId = (int) $this->request->getPost('delivery_id');
+
+        if ($deliveryId <= 0) {
+            return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Missing delivery_id']);
+        }
+
+        $deliveryModel = new DeliveryModel();
+        $delivery = $deliveryModel->find($deliveryId);
+
+        if (!$delivery) {
+            return $this->response->setStatusCode(404)->setJSON(['status' => 'error', 'message' => 'Delivery not found']);
+        }
+
+        $actualShopId = $deliveryModel->resolveShopId($deliveryId) ?? (int) ($delivery['shop_id'] ?? 0);
+        if ($actualShopId > 0 && $actualShopId !== $shopId && session()->get('user_role') !== 'admin') {
+            return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Forbidden']);
+        }
+
+        // Deactivate active broadcast session by setting location_updated_at to NULL
+        $deliveryModel->update($deliveryId, [
+            'location_updated_at' => null,
+        ]);
+
+        return $this->response->setJSON(['status' => 'success', 'message' => 'Broadcast stopped']);
     }
 }
 

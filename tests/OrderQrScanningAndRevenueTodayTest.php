@@ -79,7 +79,7 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
     public function testPosVerifyQrSupportsPrefixedAndJsonPayloads()
     {
         $db = \Config\Database::connect();
-        // Ensure test order ORD-TEST-QR1 is processing pickup for shop_id 1
+        // Ensure test order ORD-TEST-QR1 is ready_for_pickup for shop_id 1
         $existing = $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->get()->getRowArray();
         if (!$existing) {
             $db->table('orders')->insert([
@@ -92,13 +92,13 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
                 'shipping_fee'       => 0.00,
                 'tax_amount'         => 0.00,
                 'total_amount'       => 350.00,
-                'status'             => 'processing',
+                'status'             => 'ready_for_pickup',
                 'payment_status'     => 'unpaid',
                 'placed_at'          => date('Y-m-d H:i:s'),
             ]);
         } else {
             $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update([
-                'status' => 'processing',
+                'status'             => 'ready_for_pickup',
                 'fulfillment_method' => 'pickup',
             ]);
         }
@@ -120,6 +120,113 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
         $jsonPayload = json_decode($resJson->response()->getBody(), true);
         $this->assertTrue($jsonPayload['success']);
         $this->assertSame('ORD-TEST-QR1', $jsonPayload['order_number']);
+    }
+
+    public function testPosVerifyQrRejectsProcessingAndPendingOrdersWith400()
+    {
+        $db = \Config\Database::connect();
+        // 1. Test processing order
+        $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update(['status' => 'processing']);
+        $res = $this->asTenant(1)->post('tenant/pos/verify-qr', [
+            'qr_code' => 'ORD-TEST-QR1',
+        ]);
+        $res->assertStatus(400);
+        $json = json_decode($res->response()->getBody(), true);
+        $this->assertFalse($json['success']);
+        $this->assertStringContainsString('PROCESSING', $json['error']);
+
+        // 2. Test pending order
+        $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update(['status' => 'pending']);
+        $res2 = $this->asTenant(1)->post('tenant/pos/verify-qr', [
+            'qr_code' => 'ORD-TEST-QR1',
+        ]);
+        $res2->assertStatus(400);
+        $json2 = json_decode($res2->response()->getBody(), true);
+        $this->assertFalse($json2['success']);
+        $this->assertStringContainsString('PENDING', $json2['error']);
+
+        // Restore to ready_for_pickup
+        $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update(['status' => 'ready_for_pickup']);
+    }
+
+    public function testDeliveryLookupRejectsProcessingAndPendingOrdersWith400()
+    {
+        $db = \Config\Database::connect();
+        // Create an active delivery order for shop 1 in processing status
+        $order = $db->table('orders')->where('order_number', 'ORD-TEST-PROC1')->get()->getRowArray();
+        if (!$order) {
+            $db->table('orders')->insert([
+                'order_number'       => 'ORD-TEST-PROC1',
+                'customer_id'        => 3,
+                'shop_id'            => 1,
+                'fulfillment_method' => 'delivery',
+                'payment_method'     => 'cod',
+                'subtotal'           => 500.00,
+                'shipping_fee'       => 50.00,
+                'tax_amount'         => 0.00,
+                'total_amount'       => 550.00,
+                'status'             => 'processing',
+                'payment_status'     => 'unpaid',
+                'placed_at'          => date('Y-m-d H:i:s'),
+            ]);
+            $ordId = $db->insertID();
+        } else {
+            $ordId = (int) $order['id'];
+            $db->table('orders')->where('id', $ordId)->update(['status' => 'processing']);
+        }
+        $db->table('deliveries')->where('deliverable_type', 'order')->where('deliverable_id', $ordId)->delete();
+
+        $res = $this->asTenant(1)->post('tenant/deliveries/lookup', [
+            'tracking_id' => 'ORD-TEST-PROC1',
+        ]);
+        $res->assertStatus(400);
+        $json = json_decode($res->response()->getBody(), true);
+        $this->assertFalse($json['success']);
+        $this->assertStringContainsString('PROCESSING', $json['error']);
+    }
+
+    public function testPosAndDeliveryLookupRejectInProductionPrintingRequestWith400()
+    {
+        $db = \Config\Database::connect();
+        $pr = $db->table('printing_requests')->where('request_number', 'PR-TEST-PROD1')->get()->getRowArray();
+        if (!$pr) {
+            $db->table('printing_requests')->insert([
+                'request_number'       => 'PR-TEST-PROD1',
+                'customer_id'          => 3,
+                'shop_id'              => 1,
+                'file_name'            => 'thesis.pdf',
+                'file_url'             => 'uploads/thesis.pdf',
+                'page_count'           => 10,
+                'copies'               => 1,
+                'fulfillment_method'   => 'pickup',
+                'total_price'          => 50.00,
+                'down_payment'         => 25.00,
+                'status'               => 'in_production',
+                'created_at'           => date('Y-m-d H:i:s'),
+            ]);
+            $prId = $db->insertID();
+        } else {
+            $prId = (int) $pr['id'];
+            $db->table('printing_requests')->where('id', $prId)->update(['status' => 'in_production']);
+        }
+
+        // 1. POS scan rejection for in_production printing request
+        $resPos = $this->asTenant(1)->post('tenant/pos/verify-qr', [
+            'qr_code' => 'PR-TEST-PROD1',
+        ]);
+        $resPos->assertStatus(400);
+        $jsonPos = json_decode($resPos->response()->getBody(), true);
+        $this->assertFalse($jsonPos['success']);
+        $this->assertStringContainsString('IN PRODUCTION', $jsonPos['error']);
+
+        // 2. Deliveries scan rejection for in_production printing request
+        $resDel = $this->asTenant(1)->post('tenant/deliveries/lookup', [
+            'tracking_id' => 'PR-TEST-PROD1',
+        ]);
+        $resDel->assertStatus(400);
+        $jsonDel = json_decode($resDel->response()->getBody(), true);
+        $this->assertFalse($jsonDel['success']);
+        $this->assertStringContainsString('IN PRODUCTION', $jsonDel['error']);
     }
 
     public function testPosVerifyQrRejectsDoorstepDeliveryWithClearMessage()
@@ -189,7 +296,10 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
     public function testDeliveryLookupProcessesPickupOrderSuccessfully()
     {
         $db = \Config\Database::connect();
-        // ORD-TEST-QR1 is a pickup order
+        // ORD-TEST-QR1 is a ready_for_pickup order
+        $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update(['status' => 'ready_for_pickup']);
+        $db->table('deliveries')->where('tracking_id', 'ORD-TEST-QR1')->delete();
+
         $res = $this->asTenant(1)->post('tenant/deliveries/lookup', [
             'tracking_id' => 'ORD-TEST-QR1',
         ]);
@@ -202,9 +312,14 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
     public function testDeliveryLookupFindsByNumericIdAndRequestNumber()
     {
         $db = \Config\Database::connect();
-        // Find any order id for shop 1
-        $ord = $db->table('orders')->where('shop_id', 1)->get()->getRowArray();
+        // Find or create ready_for_pickup order for shop 1
+        $ord = $db->table('orders')->where('shop_id', 1)->whereIn('status', ['ready_for_pickup', 'shipped'])->get()->getRowArray();
+        if (!$ord) {
+            $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->update(['status' => 'ready_for_pickup']);
+            $ord = $db->table('orders')->where('order_number', 'ORD-TEST-QR1')->get()->getRowArray();
+        }
         if ($ord) {
+            $db->table('deliveries')->where('tracking_id', $ord['order_number'])->delete();
             // Test lookup by numeric ID
             $res = $this->asTenant(1)->post('tenant/deliveries/lookup', [
                 'tracking_id' => (string) $ord['id'],
@@ -212,7 +327,6 @@ class OrderQrScanningAndRevenueTodayTest extends CIUnitTestCase
             $res->assertOK();
             $json = json_decode($res->response()->getBody(), true);
             $this->assertTrue($json['success']);
-            $this->assertEquals((int) $ord['id'], (int) ($json['delivery']['id'] ?? 0) === (int) $ord['id'] ? (int) $ord['id'] : (int) $ord['id']);
         }
     }
 

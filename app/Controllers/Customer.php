@@ -16,6 +16,12 @@ use App\Models\UserModel;
 use App\Models\SiteContentModel;
 use App\Models\ReviewModel;
 use App\Models\ShopBusinessHourModel;
+use App\Models\NotificationModel;
+use App\Models\DeliveryModel;
+use App\Models\PaymentModel;
+use App\Models\PrintingRequestAttachmentModel;
+use App\Models\ShopPrintingSettingModel;
+use App\Models\ShopPaperSizeSettingModel;
 
 class Customer extends BaseController
 {
@@ -61,6 +67,10 @@ class Customer extends BaseController
         $page     = max(1, (int) $this->request->getGet('page'));
         $perPage  = 32;
 
+        $sort = trim((string) $this->request->getGet('sort'));
+        $sort = in_array($sort, ['discovery', 'price_asc', 'price_desc', 'rating', 'newest', 'name_asc', 'name_desc'], true) ? $sort : null;
+        $rotationInfo = ProductModel::getRotationInfo(3);
+
         if (!$category) {
             $result = ['products' => [], 'pager' => null];
         } else {
@@ -69,7 +79,7 @@ class Customer extends BaseController
             } catch (\Throwable $e) {
                 // Ignore silent counter increment error
             }
-            $result = $productModel->getGlobalProductsPaginated((int) $category['id'], null, $perPage, $page);
+            $result = $productModel->getGlobalProductsPaginated((int) $category['id'], null, $perPage, $page, $sort, $rotationInfo['slot_seed']);
         }
 
         $pager = $result['pager'];
@@ -78,7 +88,7 @@ class Customer extends BaseController
 
         if ($category && $page > $totalPages) {
             $page = $totalPages;
-            $result = $productModel->getGlobalProductsPaginated((int) $category['id'], null, $perPage, $page);
+            $result = $productModel->getGlobalProductsPaginated((int) $category['id'], null, $perPage, $page, $sort, $rotationInfo['slot_seed']);
         }
 
         return view('customer/category_products', [
@@ -90,6 +100,8 @@ class Customer extends BaseController
             'currentPage'    => $page,
             'perPage'        => $perPage,
             'totalProducts'  => $total,
+            'sort'           => $sort,
+            'rotationInfo'   => $rotationInfo,
         ]);
     }
 
@@ -202,10 +214,14 @@ class Customer extends BaseController
 
         $search   = trim((string) ($this->request->getGet('q') ?? $this->request->getGet('search') ?? ''));
         $catId    = (int) $this->request->getGet('category_id');
+        $sort     = trim((string) $this->request->getGet('sort'));
+        $sort     = in_array($sort, ['discovery', 'price_asc', 'price_desc', 'rating', 'newest', 'name_asc', 'name_desc'], true) ? $sort : null;
+        $rotationInfo = ProductModel::getRotationInfo(3);
+
         $page     = max(1, (int) $this->request->getGet('page'));
         $perPage  = 24;
 
-        $result = $productModel->getGlobalProductsPaginated($catId > 0 ? $catId : null, $search !== '' ? $search : null, $perPage, $page);
+        $result = $productModel->getGlobalProductsPaginated($catId > 0 ? $catId : null, $search !== '' ? $search : null, $perPage, $page, $sort, $rotationInfo['slot_seed']);
 
         $pager = $result['pager'];
         $total = $pager ? (int) $pager->getTotal() : count($result['products']);
@@ -224,6 +240,8 @@ class Customer extends BaseController
             'currentPage'   => $page,
             'perPage'       => $perPage,
             'totalProducts' => $total,
+            'sort'          => $sort,
+            'rotationInfo'  => $rotationInfo,
         ]);
     }
 
@@ -625,71 +643,96 @@ class Customer extends BaseController
         $userId  = $session->get('user_id');
 
         if (!$userId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Please log in to save addresses.']);
+            }
             return redirect()->to('/login');
         }
 
         $addressId = (int) $this->request->getPost('address_id');
 
-        $validBarangays = [
+        $polomolokBarangays = [
             'Bentung', 'Cannery Site', 'Crossing Palkan', 'Glamang', 'Kinilis',
             'Klinan 6', 'Koronadal Proper', 'Lam-Caliaf', 'Landan', 'Lumakil',
-            'Maligo', 'Palkan', 'Poblacion', 'Polo', 'Pula Bato', 'Rubber',
-            'Silway 7', 'Silway 8', 'Sulit', 'Sumbakil', 'Upper Klinan',
-            'Pagalungan', 'Magsaysay'
+            'Magsaysay', 'Maligo', 'Pagalungan', 'Palkan', 'Poblacion', 'Polo',
+            'Pula Bato', 'Rubber', 'Silway 7', 'Silway 8', 'Sulit', 'Sumbakil',
+            'Upper Klinan'
         ];
+        $tupiBarangays = [
+            'Acmonan', 'Bololmala', 'Bunao', 'Cebuano', 'Crossing Rubber', 'Dajay',
+            'Kablon', 'Kalkam', 'Linan', 'Lunen', 'Miaso', 'Palian',
+            'Poblacion', 'Polonoling', 'Simbo', 'Tubeng'
+        ];
+        $validBarangays = array_unique(array_merge($polomolokBarangays, $tupiBarangays));
 
-        $barangay = trim((string) ($this->request->getPost('barangay') ?: $this->request->getPost('address_line2')));
+        $barangay   = trim((string) ($this->request->getPost('barangay') ?: $this->request->getPost('address_line2')));
+        $postedCity = trim((string) $this->request->getPost('city'));
 
-        // Scoped strictly to Polomolok, South Cotabato, 9504, Philippines
+        $isTupi = (stripos($postedCity, 'tupi') !== false) || in_array($barangay, $tupiBarangays, true);
+        $city = $isTupi ? 'Tupi' : 'Polomolok';
+        $postalCode = $isTupi ? '9505' : '9504';
+
+        // Scoped strictly to Polomolok and Tupi, South Cotabato
         $data = [
-            'label'          => trim((string) $this->request->getPost('label')),
+            'label'          => trim((string) $this->request->getPost('label')) ?: 'Home',
             'recipient_name' => trim((string) $this->request->getPost('recipient_name')),
             'phone'          => trim((string) $this->request->getPost('phone')),
             'address_line1'  => trim((string) $this->request->getPost('address_line1')),
             'address_line2'  => $barangay,
-            'city'           => 'Polomolok',
+            'city'           => $city,
             'province'       => 'South Cotabato',
-            'postal_code'    => '9504',
+            'postal_code'    => $postalCode,
             'country'        => 'Philippines',
         ];
 
         $errors = [];
-        if ($data['label'] === '') {
-            $errors[] = 'Address label is required.';
-        }
         if ($data['recipient_name'] === '') {
             $errors[] = 'Recipient name is required.';
         }
+        if ($data['phone'] === '') {
+            $errors[] = 'Phone number is required.';
+        }
         if ($data['address_line1'] === '') {
-            $errors[] = 'Address line 1 (Street / House No.) is required.';
+            $errors[] = 'Address Line 1 (Street / House / Purok) is required.';
         }
         if ($barangay === '' || !in_array($barangay, $validBarangays, true)) {
-            $errors[] = 'Please select a valid official barangay of Polomolok.';
+            $errors[] = 'Please select a valid official barangay of Polomolok or Tupi.';
         }
 
         if ($errors) {
-            session()->setFlashdata('error', implode(' ', $errors));
-            return redirect()->back();
+            $msg = implode(' ', $errors);
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(422)->setJSON(['success' => false, 'error' => $msg]);
+            }
+            session()->setFlashdata('error', $msg);
+            return redirect()->back()->withInput();
         }
 
         $lat     = $this->request->getPost('latitude');
         $lng     = $this->request->getPost('longitude');
         $placeId = trim((string) $this->request->getPost('place_id'));
 
-        if ($lat !== null && $lng !== null && is_numeric($lat) && is_numeric($lng) && (float) $lat != 0 && (float) $lng != 0) {
+        if ($lat !== null && $lng !== null && is_numeric($lat) && is_numeric($lng) && (float) $lat != 0 && (float) $lng != 0 && \App\Models\DeliveryModel::isPolomolokCoordinate((float) $lat, (float) $lng)) {
             $data['latitude']    = (float) $lat;
             $data['longitude']   = (float) $lng;
             $data['place_id']    = $placeId ?: null;
             $data['geocoded_at'] = date('Y-m-d H:i:s');
         } else {
-            $mapsService = new \App\Services\GoogleMapsService();
-            $fullAddr = $data['address_line1'] . ', ' . $barangay . ', Polomolok, South Cotabato, Philippines';
-            $geo = $mapsService->geocodeAddress($fullAddr);
-            if ($geo) {
-                $data['latitude']    = $geo['lat'];
-                $data['longitude']   = $geo['lng'];
-                $data['place_id']    = $geo['place_id'] ?? null;
+            $centroid = \App\Models\DeliveryModel::getBarangayCoordinate($barangay, $city);
+            if ($centroid) {
+                $data['latitude']    = $centroid['lat'];
+                $data['longitude']   = $centroid['lng'];
                 $data['geocoded_at'] = date('Y-m-d H:i:s');
+            } else {
+                $mapsService = new \App\Services\GoogleMapsService();
+                $fullAddr = $data['address_line1'] . ', ' . $barangay . ', ' . $city . ', South Cotabato, Philippines';
+                $geo = $mapsService->geocodeAddress($fullAddr);
+                if ($geo) {
+                    $data['latitude']    = $geo['lat'];
+                    $data['longitude']   = $geo['lng'];
+                    $data['place_id']    = $geo['place_id'] ?? null;
+                    $data['geocoded_at'] = date('Y-m-d H:i:s');
+                }
             }
         }
 
@@ -698,11 +741,19 @@ class Customer extends BaseController
         if ($addressId > 0) {
             $row = $addressModel->find($addressId);
             if (!$row || (int) $row['user_id'] !== (int) $userId) {
+                if ($this->request->isAJAX()) {
+                    return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Address not found.']);
+                }
                 session()->setFlashdata('error', 'Address not found.');
                 return redirect()->back();
             }
             $addressModel->update($addressId, $data);
-            session()->setFlashdata('success', 'Address updated successfully.');
+            $msg = 'Shipping address updated successfully.';
+            if ($this->request->isAJAX()) {
+                $updated = $addressModel->find($addressId);
+                return $this->response->setJSON(['success' => true, 'message' => $msg, 'address' => $updated]);
+            }
+            session()->setFlashdata('success', $msg);
             return redirect()->back();
         }
 
@@ -718,9 +769,14 @@ class Customer extends BaseController
 
         $data['user_id']    = $userId;
         $data['is_default'] = $isDefault ? 1 : 0;
-        $addressModel->insert($data);
+        $newId = $addressModel->insert($data);
 
-        session()->setFlashdata('success', 'Address added successfully.');
+        $msg = 'New shipping address added successfully.';
+        if ($this->request->isAJAX()) {
+            $saved = $addressModel->find($newId);
+            return $this->response->setJSON(['success' => true, 'message' => $msg, 'address' => $saved]);
+        }
+        session()->setFlashdata('success', $msg);
         return redirect()->back();
     }
 
@@ -730,6 +786,9 @@ class Customer extends BaseController
         $userId  = $session->get('user_id');
 
         if (!$userId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
             return redirect()->to('/login');
         }
 
@@ -738,12 +797,19 @@ class Customer extends BaseController
         $row           = $addressModel->find($addressId);
 
         if (!$row || (int) $row['user_id'] !== (int) $userId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Address not found.']);
+            }
             session()->setFlashdata('error', 'Address not found.');
             return redirect()->back();
         }
 
         $addressModel->delete($addressId);
-        session()->setFlashdata('success', 'Address deleted successfully.');
+        $msg = 'Address deleted successfully.';
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => $msg]);
+        }
+        session()->setFlashdata('success', $msg);
         return redirect()->back();
     }
 
@@ -753,6 +819,9 @@ class Customer extends BaseController
         $userId  = $session->get('user_id');
 
         if (!$userId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+            }
             return redirect()->to('/login');
         }
 
@@ -761,6 +830,9 @@ class Customer extends BaseController
         $row          = $addressModel->find($addressId);
 
         if (!$row || (int) $row['user_id'] !== (int) $userId) {
+            if ($this->request->isAJAX()) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Address not found.']);
+            }
             session()->setFlashdata('error', 'Address not found.');
             return redirect()->back();
         }
@@ -768,8 +840,61 @@ class Customer extends BaseController
         $addressModel->where('user_id', $userId)->update(null, ['is_default' => 0]);
         $addressModel->update($addressId, ['is_default' => 1]);
 
-        session()->setFlashdata('success', 'Default address updated.');
+        $msg = 'Default delivery address updated.';
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true, 'message' => $msg]);
+        }
+        session()->setFlashdata('success', $msg);
         return redirect()->back();
+    }
+
+    /**
+     * Customer real-time notifications & order status polling endpoint.
+     * Route: GET /customer/realtime/check
+     */
+    public function realtimeCheck()
+    {
+        $session = session();
+        $userId  = (int) $session->get('user_id');
+
+        if (!$userId) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $notifModel = new \App\Models\NotificationModel();
+        $unreadCount = $notifModel->getUnreadCount($userId);
+
+        $lastNotifId = (int) $this->request->getGet('last_notif_id');
+        $notifBuilder = (new \App\Models\NotificationModel())->where('user_id', $userId);
+        if ($lastNotifId > 0) {
+            $notifBuilder->where('id >', $lastNotifId);
+        }
+        $newNotifs = $notifBuilder->orderBy('id', 'DESC')->limit(5)->findAll();
+
+        $maxNotifId = $lastNotifId;
+        foreach ($newNotifs as $n) {
+            if ((int) $n['id'] > $maxNotifId) {
+                $maxNotifId = (int) $n['id'];
+            }
+        }
+
+        // Active orders status snapshot
+        $activeOrders = (new \App\Models\OrderModel())
+            ->select('id, order_number, status, placed_at')
+            ->where('customer_id', $userId)
+            ->whereIn('status', ['pending', 'processing', 'shipped', 'in_transit', 'ready_for_pickup'])
+            ->orderBy('placed_at', 'DESC')
+            ->findAll();
+
+        return $this->response->setJSON([
+            'success'       => true,
+            'unread_count'  => $unreadCount,
+            'max_notif_id'  => $maxNotifId,
+            'new_notifs'    => $newNotifs,
+            'has_new'       => !empty($newNotifs),
+            'active_orders' => $activeOrders,
+            'timestamp'     => date('Y-m-d H:i:s'),
+        ]);
     }
 
     public function unfavoriteShop()
@@ -1251,7 +1376,13 @@ class Customer extends BaseController
             'reference_photos'     => $stagedRefPhotos,
         ];
 
-        $paymentMethod = strtolower(trim((string) $this->request->getPost('payment_method')) ?: 'gcash');
+        $rawPayMethod = strtolower(trim((string) $this->request->getPost('payment_method')) ?: 'gcash');
+        if ($rawPayMethod === 'gcash') {
+            $paymentMethod = 'gcash';
+        } else {
+            // Offline payment: 'pickup' (Pay at Counter) if Store Pick-up, 'cod' (Cash on Delivery) if Doorstep Delivery
+            $paymentMethod = ($fulfillment === 'pickup') ? 'pickup' : 'cod';
+        }
 
         // Non-GCash orders (Store Pick-up pay at counter or Cash on Delivery) insert immediately
         if ($paymentMethod !== 'gcash') {
@@ -1284,7 +1415,7 @@ class Customer extends BaseController
             $prId = $prModel->insert($insertData);
 
             if (!empty($stagedRefPhotos) && is_array($stagedRefPhotos)) {
-                $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
+                $attachmentModel = new PrintingRequestAttachmentModel();
                 foreach ($stagedRefPhotos as $attachment) {
                     $attPath = is_array($attachment) ? ($attachment['file_path'] ?? ($attachment['image_url'] ?? '')) : (string) $attachment;
                     if ($attPath !== '') {
@@ -1297,7 +1428,7 @@ class Customer extends BaseController
                 }
             }
 
-            $paymentModel = new \App\Models\PaymentModel();
+            $paymentModel = new PaymentModel();
             $paymentModel->insert([
                 'payable_type'     => 'printing_request',
                 'payable_id'       => $prId,
@@ -1311,14 +1442,14 @@ class Customer extends BaseController
             ]);
 
             if ($fulfillment === 'delivery') {
-                $delModel = new \App\Models\DeliveryModel();
+                $delModel = new DeliveryModel();
                 $delModel->insert([
                     'deliverable_type'    => 'printing_request',
                     'deliverable_id'      => $prId,
                     'tracking_id'         => $insertData['request_number'],
                     'courier_name'        => 'Store Courier',
                     'destination_address' => 'Doorstep Delivery',
-                    'status'              => 'shipped',
+                    'status'              => 'pending',
                     'created_at'          => date('Y-m-d H:i:s'),
                 ]);
             }
@@ -1343,9 +1474,9 @@ class Customer extends BaseController
                     );
                 }
 
-                $msg = $paymentMethod === 'pickup'
+                $msg = ($fulfillment === 'pickup' || $paymentMethod === 'pickup')
                     ? 'Your printing request has been submitted! You can pay down payment or balance at the shop counter upon pick-up.'
-                    : 'Your printing request has been submitted! Payment will be collected upon doorstep delivery.';
+                    : 'Your printing request has been submitted! Cash on Delivery will be collected upon doorstep delivery.';
                 return redirect()->to('/customer/printing')->with('success', $msg);
             }
 
@@ -1681,19 +1812,19 @@ class Customer extends BaseController
         ]);
 
         // Sync linked delivery if any
-        $deliveryModel = new DeliveryModel();
+        $deliveryModel = new \App\Models\DeliveryModel();
         $deliveryModel->where('deliverable_type', 'printing_request')
             ->where('deliverable_id', $requestId)
             ->set(['status' => 'cancelled'])
             ->update();
 
         // Send shop notification
-        $shop = (new ShopModel())->find($row['shop_id']);
+        $shop = (new \App\Models\ShopModel())->find($row['shop_id']);
         if ($shop && !empty($shop['owner_id'])) {
-            $customerUser = (new UserModel())->find($userId);
+            $customerUser = (new \App\Models\UserModel())->find($userId);
             $cName = $customerUser ? trim(($customerUser['first_name'] ?? '') . ' ' . ($customerUser['last_name'] ?? '')) : 'A customer';
             $reqNum = $row['request_number'] ?? ('PR-' . $requestId);
-            (new NotificationModel())->create(
+            (new \App\Models\NotificationModel())->create(
                 (int) $shop['owner_id'],
                 'printing_cancelled',
                 "Printing Request Cancelled (#{$reqNum})",

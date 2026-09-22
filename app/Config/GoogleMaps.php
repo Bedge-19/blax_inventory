@@ -19,13 +19,13 @@ class GoogleMaps extends BaseConfig
     public int $defaultZoom = 13;
 
     /**
-     * Polomolok bounding box for map restrictions and search biasing
+     * Polomolok and Tupi bounding box for map restrictions and search biasing
      */
     public array $bounds = [
         'south' => 6.10,
-        'west'  => 124.95,
-        'north' => 6.32,
-        'east'  => 125.18,
+        'west'  => 124.85,
+        'north' => 6.45,
+        'east'  => 125.20,
     ];
 
     /**

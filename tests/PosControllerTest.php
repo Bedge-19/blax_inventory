@@ -187,6 +187,6 @@ class PosControllerTest extends CIUnitTestCase
         $result->assertStatus(400);
         $json = json_decode($result->response()->getBody(), true);
         $this->assertFalse($json['success']);
-        $this->assertStringContainsString('still pending', $json['error']);
+        $this->assertStringContainsString('PENDING', $json['error']);
     }
 }

@@ -1,22 +1,26 @@
 <?= $this->extend('layouts/tenant') ?>
 
 <?php
-function pr_binding_label(?string $b): string {
-    return [
-        'none'       => 'Standard',
-        'spiral'     => 'Spiral',
-        'hardcover'  => 'Hardcover',
-        'staple'     => 'Stapled',
-    ][$b ?? 'none'] ?? 'Standard';
+if (!function_exists('pr_binding_label')) {
+    function pr_binding_label(?string $b): string {
+        return [
+            'none'       => 'Standard',
+            'spiral'     => 'Spiral',
+            'hardcover'  => 'Hardcover',
+            'staple'     => 'Stapled',
+        ][$b ?? 'none'] ?? 'Standard';
+    }
 }
 
-function pr_spec_line(array $r): string {
-    $parts = [
-        (int) $r['page_count'] . ' pages',
-        (int) $r['copies'] . ' cop' . ((int) $r['copies'] === 1 ? 'y' : 'ies'),
-        pr_binding_label($r['binding_option'] ?? 'none'),
-    ];
-    return implode(' • ', $parts);
+if (!function_exists('pr_spec_line')) {
+    function pr_spec_line(array $r): string {
+        $parts = [
+            (int) $r['page_count'] . ' pages',
+            (int) $r['copies'] . ' cop' . ((int) $r['copies'] === 1 ? 'y' : 'ies'),
+            pr_binding_label($r['binding_option'] ?? 'none'),
+        ];
+        return implode(' • ', $parts);
+    }
 }
 
 $nextStates = [
@@ -178,7 +182,7 @@ $nextStates = [
                                 <th class="px-4 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
+                        <tbody id="recentPrintingTableBody" class="divide-y divide-outline-variant/20 bg-surface-container-lowest">
                             <?php if (!empty($requests)): ?>
                                 <?php foreach ($requests as $r): ?>
                                     <?php
@@ -1382,6 +1386,80 @@ $nextStates = [
 
         document.getElementById('requestModal').classList.remove('hidden');
     }
+
+    // Real-time Printing Request Injection without refresh
+    window.addEventListener('blax:new-printing', function(e) {
+        const pr = e.detail;
+        if (!pr) return;
+
+        const tableBody = document.getElementById('recentPrintingTableBody');
+        if (tableBody) {
+            const emptyTd = tableBody.querySelector('td[colspan]');
+            if (emptyTd) emptyTd.parentElement.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-surface-container-low/40 transition-colors bg-purple-50/50 dark:bg-purple-950/20 animate-fadeIn';
+            tr.innerHTML = `
+                <td class="px-4 py-3.5 whitespace-nowrap">
+                    <span class="font-mono text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px]">tag</span>
+                        <span>#${pr.request_number}</span>
+                    </span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-ping ml-1" title="New Incoming Printing Request"></span>
+                    <div class="text-[10px] text-on-surface-variant/70 font-medium mt-1 flex items-center gap-1 whitespace-nowrap">
+                        <span class="material-symbols-outlined text-[12px]">schedule</span>
+                        <span>${pr.placed_at_fmt}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5">
+                    <div class="flex items-center gap-2.5 min-w-[130px]">
+                        <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-800 flex items-center justify-center text-xs font-bold shrink-0">
+                            <span>${pr.customer_initials}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-xs font-bold text-on-surface truncate block">${pr.customer_name}</span>
+                            <span class="text-[10px] text-on-surface-variant truncate block mt-0.5">${pr.fulfillment_method === 'pickup' ? 'Store Pick-up' : 'Doorstep Delivery'}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0 border border-outline-variant/30">
+                            <span class="material-symbols-outlined text-[18px]">description</span>
+                        </div>
+                        <span class="text-xs font-semibold text-on-surface truncate">${pr.service_name}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5">
+                    <div class="space-y-1">
+                        <div class="text-[11px] text-on-surface-variant">
+                            <span>${pr.total_pages} page(s)</span> • <span class="font-bold text-on-surface">₱${pr.total_amount_fmt}</span>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>New</span>
+                    </span>
+                </td>
+                <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                    <div class="flex items-center justify-end gap-1.5">
+                        <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="inline">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="request_id" value="${pr.id}">
+                            <input type="hidden" name="status" value="in_production">
+                            <button type="submit" class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
+                                <span class="material-symbols-outlined text-[15px]">play_circle</span>
+                                <span>Start</span>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            `;
+            tableBody.insertBefore(tr, tableBody.firstChild);
+        }
+    });
 </script>
 
 <?= $this->endSection() ?>

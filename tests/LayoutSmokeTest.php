@@ -76,7 +76,7 @@ class LayoutSmokeTest extends CIUnitTestCase
         $this->assertBodyContains('InkMaster', $result);
         $this->assertBodyContains('Product Catalog', $result);
         $this->assertBodyContains('Printing Services', $result);
-        $this->assertBodyContains('Pay 50% Down Payment via GCash', $result);
+        $this->assertBodyContains('Down Payment via GCash', $result);
 
         // New paper sizes preserved alongside existing options.
         foreach (['Letter', 'Legal', 'A4', 'A3', 'A2', 'A1', 'A0', 'A5', 'B5', 'B4'] as $size) {

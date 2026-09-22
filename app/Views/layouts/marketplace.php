@@ -211,4 +211,224 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<!-- Global Toast Container (Fixed Top Right) -->
+<div id="blax-toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0"></div>
+
+<script>
+(function() {
+    // 1. Synthesize clean melodic audio chime with Web Audio API
+    function playChime(type) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            if (ctx.state === 'suspended') ctx.resume();
+
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            if (type === 'error') {
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.25);
+            } else if (type === 'order' || type === 'delivery') {
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+            } else {
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.10); // E5
+            }
+
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.36);
+        } catch (e) {}
+    }
+
+    // 2. Universal Toast Notification Function
+    window.showToast = function(opts) {
+        if (typeof opts === 'string') opts = { message: opts, type: 'info' };
+        const type = opts.type || 'info';
+        const title = opts.title || (type === 'success' ? 'Success' : (type === 'error' ? 'Notice' : 'Notification'));
+        const message = opts.message || '';
+        const url = opts.url || '';
+        const icon = opts.icon || (
+            type === 'success' ? 'check_circle' :
+            type === 'error' ? 'error' :
+            type === 'warning' ? 'warning' :
+            type === 'order' ? 'shopping_bag' :
+            type === 'delivery' ? 'two_wheeler' :
+            type === 'printing' ? 'print' : 'notifications'
+        );
+
+        let container = document.getElementById('blax-toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'blax-toast-container';
+            container.className = 'fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none px-3 sm:px-0';
+            document.body.appendChild(container);
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'pointer-events-auto bg-surface-container-lowest/95 dark:bg-surface-container-low/95 backdrop-blur-md border border-outline-variant/40 rounded-2xl shadow-xl p-3.5 flex items-start gap-3 transform translate-y-[-10px] opacity-0 transition-all duration-300 ease-out';
+
+        const colorMap = {
+            success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+            error: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+            warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+            order: 'bg-primary/10 text-primary border-primary/20',
+            delivery: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+            printing: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+            info: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+        };
+        const badgeStyle = colorMap[type] || colorMap.info;
+
+        let actionHtml = '';
+        if (url) {
+            actionHtml = `
+                <a href="${url}" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline mt-1.5">
+                    <span>View Details</span>
+                    <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                </a>
+            `;
+        }
+
+        toast.innerHTML = `
+            <div class="w-8 h-8 rounded-xl ${badgeStyle} border flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                <span class="material-symbols-outlined text-[18px]">${icon}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-bold text-on-surface leading-tight">${title}</h4>
+                <p class="text-xs text-on-surface-variant mt-0.5 leading-snug break-words">${message}</p>
+                ${actionHtml}
+            </div>
+            <button type="button" class="text-on-surface-variant/60 hover:text-on-surface p-1 -mr-1 rounded-lg transition-colors" onclick="this.closest('div.pointer-events-auto').remove()">
+                <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+        `;
+
+        container.appendChild(toast);
+        playChime(type);
+
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        const duration = opts.duration || 6000;
+        const autoDismiss = setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-full');
+            setTimeout(() => toast.remove(), 350);
+        }, duration);
+
+        toast.addEventListener('mouseenter', () => clearTimeout(autoDismiss));
+    };
+
+    // 3. Auto-render PHP Flashdata as Toasts on Page Load
+    document.addEventListener('DOMContentLoaded', () => {
+        <?php if (session()->getFlashdata('success')): ?>
+            window.showToast({
+                type: 'success',
+                title: 'Action Successful',
+                message: <?= json_encode((string)session()->getFlashdata('success')) ?>
+            });
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('error')): ?>
+            window.showToast({
+                type: 'error',
+                title: 'Notice',
+                message: <?= json_encode((string)session()->getFlashdata('error')) ?>
+            });
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('info')): ?>
+            window.showToast({
+                type: 'info',
+                title: 'Information',
+                message: <?= json_encode((string)session()->getFlashdata('info')) ?>
+            });
+        <?php endif; ?>
+    });
+
+    // 4. Customer Real-time Notification & Delivery Status Poller (if logged in)
+    <?php if ($isLogged): ?>
+    let lastNotifId = <?= !empty($recentNotifs[0]['id']) ? (int)$recentNotifs[0]['id'] : 0 ?>;
+    let knownOrderStatuses = {};
+    let isInitialCustomerPoll = true;
+
+    function pollCustomerRealtime() {
+        let url = '<?= base_url('customer/realtime/check') ?>';
+        if (lastNotifId > 0) url += '?last_notif_id=' + lastNotifId;
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(r => r.json())
+            .then(res => {
+                if (!res || !res.success) return;
+
+                if (isInitialCustomerPoll) {
+                    lastNotifId = res.max_notif_id || lastNotifId;
+                    if (Array.isArray(res.active_orders)) {
+                        res.active_orders.forEach(o => { knownOrderStatuses[o.id] = o.status; });
+                    }
+                    isInitialCustomerPoll = false;
+                    return;
+                }
+
+                if (res.max_notif_id && res.max_notif_id > lastNotifId) {
+                    lastNotifId = res.max_notif_id;
+                }
+
+                // Show new notification toasts
+                if (res.has_new && Array.isArray(res.new_notifs)) {
+                    res.new_notifs.forEach(n => {
+                        window.showToast({
+                            type: n.type && n.type.includes('delivery') ? 'delivery' : (n.type && n.type.includes('printing') ? 'printing' : 'order'),
+                            title: n.title || 'Notification',
+                            message: n.message || '',
+                            url: n.link_url || '<?= base_url('customer/orders') ?>'
+                        });
+                    });
+                }
+
+                // Check order status transitions
+                if (Array.isArray(res.active_orders)) {
+                    res.active_orders.forEach(o => {
+                        const prev = knownOrderStatuses[o.id];
+                        if (prev && prev !== o.status) {
+                            knownOrderStatuses[o.id] = o.status;
+                            const statusNames = {
+                                'processing': 'is being prepared by the shop',
+                                'shipped': 'has been dispatched for delivery',
+                                'in_transit': 'is out for delivery to your doorstep',
+                                'ready_for_pickup': 'is ready for pick-up at the counter',
+                                'delivered': 'has been successfully delivered'
+                            };
+                            const statusText = statusNames[o.status] || `status changed to ${o.status}`;
+                            window.showToast({
+                                type: 'delivery',
+                                title: `Order #${o.order_number}`,
+                                message: `Your package ${statusText}!`,
+                                url: `<?= base_url('customer/orders/track/') ?>/${o.order_number}`
+                            });
+                        } else {
+                            knownOrderStatuses[o.id] = o.status;
+                        }
+                    });
+                }
+            })
+            .catch(() => {});
+    }
+
+    setInterval(pollCustomerRealtime, 6000);
+    <?php endif; ?>
+})();
+</script>
+
 </body></html>

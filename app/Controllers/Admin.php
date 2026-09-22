@@ -357,6 +357,94 @@ class Admin extends BaseController
         ]);
     }
 
+    /**
+     * Real-time polling endpoint for platform-wide orders and printing requests.
+     * Route: GET /admin/realtime/check
+     */
+    public function realtimeCheck()
+    {
+        $auth = $this->checkAdminAuth();
+        if ($auth !== true) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
+        }
+
+        $lastOrderId = (int) $this->request->getGet('last_order_id');
+        $lastPrintingId = (int) $this->request->getGet('last_printing_id');
+
+        $orderModel = new \App\Models\OrderModel();
+        $printingModel = new \App\Models\PrintingRequestModel();
+        $userModel = new \App\Models\UserModel();
+        $shopModel = new \App\Models\ShopModel();
+
+        $newOrders = [];
+        if ($lastOrderId > 0) {
+            $raw = $orderModel->where('id >', $lastOrderId)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($raw as $ord) {
+                $shop = $shopModel->find($ord['shop_id']);
+                $cust = $userModel->find($ord['customer_id']);
+                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                if ($custName === '') $custName = 'Customer';
+
+                $newOrders[] = [
+                    'id'                 => (int) $ord['id'],
+                    'order_number'       => $ord['order_number'] ?? ('ORD-' . $ord['id']),
+                    'shop_name'          => $shop['shop_name'] ?? 'Store Partner',
+                    'customer_name'      => $custName,
+                    'total_amount'       => (float) ($ord['total_amount'] ?? 0),
+                    'total_amount_fmt'   => number_format((float) ($ord['total_amount'] ?? 0), 2),
+                    'fulfillment_method' => strtolower($ord['fulfillment_method'] ?? 'delivery'),
+                    'status'             => $ord['status'] ?? 'pending',
+                    'created_at'         => $ord['created_at'],
+                ];
+            }
+        }
+
+        $newPrinting = [];
+        if ($lastPrintingId > 0) {
+            $rawPr = $printingModel->where('id >', $lastPrintingId)
+                ->orderBy('id', 'ASC')
+                ->findAll();
+
+            foreach ($rawPr as $pr) {
+                $shop = $shopModel->find($pr['shop_id']);
+                $cust = $userModel->find($pr['customer_id']);
+                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                if ($custName === '') $custName = 'Customer';
+
+                $newPrinting[] = [
+                    'id'                 => (int) $pr['id'],
+                    'request_number'     => $pr['request_number'] ?? ('PR-' . $pr['id']),
+                    'shop_name'          => $shop['shop_name'] ?? 'Store Partner',
+                    'customer_name'      => $custName,
+                    'total_amount'       => (float) ($pr['total_price'] ?? 0),
+                    'total_amount_fmt'   => number_format((float) ($pr['total_price'] ?? 0), 2),
+                    'fulfillment_method' => strtolower($pr['fulfillment_method'] ?? 'delivery'),
+                    'status'             => $pr['status'] ?? 'new',
+                    'created_at'         => $pr['created_at'],
+                ];
+            }
+        }
+
+        $maxOrdRow = $orderModel->selectMax('id')->first();
+        $currentMaxOrderId = (int) ($maxOrdRow['id'] ?? 0);
+
+        $maxPrRow = $printingModel->selectMax('id')->first();
+        $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
+
+        return $this->response->setJSON([
+            'success'          => true,
+            'max_order_id'     => $currentMaxOrderId,
+            'max_printing_id'  => $currentMaxPrintId,
+            'has_new_orders'   => !empty($newOrders),
+            'new_orders'       => $newOrders,
+            'has_new_printing' => !empty($newPrinting),
+            'new_printing'     => $newPrinting,
+        ]);
+    }
+
     public function auditLog()
     {
         $auth = $this->checkAdminAuth();

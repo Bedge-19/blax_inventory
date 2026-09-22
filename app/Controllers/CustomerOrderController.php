@@ -204,9 +204,14 @@ class CustomerOrderController extends BaseController
                     ]);
                 }
             } else {
-                $seed = (int) $order['id'];
-                $destLat = round(6.2300 + ((($seed * 17) % 31) - 15) * 0.0016, 6);
-                $destLng = round(125.0750 + ((($seed * 23) % 31) - 15) * 0.0016, 6);
+                $centroid = DeliveryModel::getBarangayCoordinate($shippingAddress['address_line2'] ?? '', $shippingAddress['city'] ?? '');
+                if ($centroid) {
+                    $destLat = $centroid['lat'];
+                    $destLng = $centroid['lng'];
+                } else {
+                    $destLat = DeliveryModel::POLOMOLOK_CENTER_LAT;
+                    $destLng = DeliveryModel::POLOMOLOK_CENTER_LNG;
+                }
             }
         }
         $destCoords = [$destLat, $destLng];
@@ -220,10 +225,8 @@ class CustomerOrderController extends BaseController
             if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
                 $courierCoords = [(float) $delivery['current_lat'], (float) $delivery['current_lng']];
             } else {
-                // Courier is ~70% along the path towards customer destination
-                $cLat = round($storeLat + 0.70 * ($destLat - $storeLat), 6);
-                $cLng = round($storeLng + 0.70 * ($destLng - $storeLng), 6);
-                $courierCoords = [$cLat, $cLng];
+                // Courier is actively en route from store to customer
+                $courierCoords = $storeCoords;
             }
         } else {
             // Still preparing at store
@@ -357,24 +360,39 @@ class CustomerOrderController extends BaseController
      */
     public function computeRoute()
     {
-        $json = $this->request->getJSON(true);
-        if (!$json || empty($json['origin']) || empty($json['destination'])) {
-            $origin = [
-                'lat' => (float) $this->request->getPost('origin_lat'),
-                'lng' => (float) $this->request->getPost('origin_lng'),
-            ];
-            $dest = [
-                'lat' => (float) $this->request->getPost('dest_lat'),
-                'lng' => (float) $this->request->getPost('dest_lng'),
-            ];
+        $json = [];
+        try {
+            $parsed = $this->request->getJSON(true);
+            if (is_array($parsed)) {
+                $json = $parsed;
+            }
+        } catch (\Throwable $e) {
+            $raw = $this->request->getBody();
+            if ($raw) {
+                $decoded = json_decode($raw, true);
+                if (is_array($decoded)) {
+                    $json = $decoded;
+                }
+            }
+        }
+        $orig = $json['origin'] ?? null;
+        $destin = $json['destination'] ?? null;
+
+        if (is_array($orig) && isset($orig[0], $orig[1])) {
+            $origin = ['lat' => (float) $orig[0], 'lng' => (float) $orig[1]];
         } else {
             $origin = [
-                'lat' => (float) ($json['origin']['lat'] ?? $json['origin']['latitude'] ?? 0),
-                'lng' => (float) ($json['origin']['lng'] ?? $json['origin']['longitude'] ?? 0),
+                'lat' => (float) ($orig['lat'] ?? $orig['latitude'] ?? $json['origin_lat'] ?? $this->request->getPost('origin_lat') ?? $this->request->getGet('origin_lat') ?? 0),
+                'lng' => (float) ($orig['lng'] ?? $orig['longitude'] ?? $json['origin_lng'] ?? $this->request->getPost('origin_lng') ?? $this->request->getGet('origin_lng') ?? 0),
             ];
+        }
+
+        if (is_array($destin) && isset($destin[0], $destin[1])) {
+            $dest = ['lat' => (float) $destin[0], 'lng' => (float) $destin[1]];
+        } else {
             $dest = [
-                'lat' => (float) ($json['destination']['lat'] ?? $json['destination']['latitude'] ?? 0),
-                'lng' => (float) ($json['destination']['lng'] ?? $json['destination']['longitude'] ?? 0),
+                'lat' => (float) ($destin['lat'] ?? $destin['latitude'] ?? $json['dest_lat'] ?? $this->request->getPost('dest_lat') ?? $this->request->getGet('dest_lat') ?? 0),
+                'lng' => (float) ($destin['lng'] ?? $destin['longitude'] ?? $json['dest_lng'] ?? $this->request->getPost('dest_lng') ?? $this->request->getGet('dest_lng') ?? 0),
             ];
         }
 
@@ -599,9 +617,14 @@ class CustomerOrderController extends BaseController
                 $destLat = $geoDest['lat'];
                 $destLng = $geoDest['lng'];
             } else {
-                $seed = (int) $req['id'];
-                $destLat = round(6.2300 + ((($seed * 17) % 31) - 15) * 0.0016, 6);
-                $destLng = round(125.0750 + ((($seed * 23) % 31) - 15) * 0.0016, 6);
+                $centroid = DeliveryModel::getBarangayCoordinate($shippingAddress['address_line2'] ?? '', $shippingAddress['city'] ?? '');
+                if ($centroid) {
+                    $destLat = $centroid['lat'];
+                    $destLng = $centroid['lng'];
+                } else {
+                    $destLat = DeliveryModel::POLOMOLOK_CENTER_LAT;
+                    $destLng = DeliveryModel::POLOMOLOK_CENTER_LNG;
+                }
             }
         }
         $destCoords = [$destLat, $destLng];
@@ -613,9 +636,7 @@ class CustomerOrderController extends BaseController
             if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
                 $courierCoords = [(float) $delivery['current_lat'], (float) $delivery['current_lng']];
             } else {
-                $cLat = round($storeLat + 0.70 * ($destLat - $storeLat), 6);
-                $cLng = round($storeLng + 0.70 * ($destLng - $storeLng), 6);
-                $courierCoords = [$cLat, $cLng];
+                $courierCoords = $storeCoords;
             }
         } else {
             $courierCoords = $storeCoords;
@@ -678,6 +699,49 @@ class CustomerOrderController extends BaseController
             ]
         ];
 
+        $placedTs = !empty($req['created_at']) ? strtotime($req['created_at']) : time() - 3600;
+        $inProdTs = $placedTs + (30 * 60);
+        $shippedTs = $placedTs + (60 * 60);
+        $deliveredTs = !empty($req['completed_at']) ? strtotime($req['completed_at']) : ($placedTs + (90 * 60));
+
+        $milestones = [
+            [
+                'title'       => 'Printing Request Submitted',
+                'description' => 'Document submitted and payment verified.',
+                'timestamp'   => date('M d, Y h:i A', $placedTs),
+                'icon'        => 'receipt_long',
+                'state'       => 'completed',
+            ],
+            [
+                'title'       => 'Printing & Production Completed',
+                'description' => 'Document printed, bound, and inspected for quality.',
+                'timestamp'   => in_array($status, ['ready_for_delivery', 'shipped', 'in_transit', 'delivered', 'completed'], true) ? date('M d, Y h:i A', $inProdTs) : 'In production',
+                'icon'        => 'print',
+                'state'       => in_array($status, ['ready_for_delivery', 'shipped', 'in_transit', 'delivered', 'completed'], true) ? 'completed' : ($status === 'in_production' ? 'active' : 'pending'),
+            ],
+            [
+                'title'       => 'Handed to Delivery Courier',
+                'description' => 'Dispatched from the print shop to courier rider.',
+                'timestamp'   => in_array($status, ['shipped', 'in_transit', 'delivered', 'completed'], true) ? date('M d, Y h:i A', $shippedTs) : 'Awaiting dispatch',
+                'icon'        => 'local_shipping',
+                'state'       => in_array($status, ['shipped', 'in_transit', 'delivered', 'completed'], true) ? 'completed' : 'pending',
+            ],
+            [
+                'title'       => 'Out for Delivery',
+                'description' => 'Rider is on the way to your doorstep in Polomolok.',
+                'timestamp'   => in_array($status, ['in_transit', 'delivered', 'completed'], true) ? 'Courier en route' : 'Pending route departure',
+                'icon'        => 'two_wheeler',
+                'state'       => in_array($status, ['in_transit', 'delivered', 'completed'], true) ? ($status === 'in_transit' ? 'active' : 'completed') : 'pending',
+            ],
+            [
+                'title'       => 'Delivered',
+                'description' => 'Package safely handed over to you.',
+                'timestamp'   => in_array($status, ['delivered', 'completed'], true) ? date('M d, Y h:i A', $deliveredTs) : 'Pending arrival',
+                'icon'        => 'check_circle',
+                'state'       => in_array($status, ['delivered', 'completed'], true) ? 'completed' : 'pending',
+            ],
+        ];
+
         return view('customer/orders/track', [
             'order'            => $order,
             'items'            => $items,
@@ -695,6 +759,7 @@ class CustomerOrderController extends BaseController
             'estimatedArrival' => $estimatedArrival,
             'statusBadge'      => $statusBadge,
             'badgeClass'       => $badgeClass,
+            'milestones'       => $milestones,
             'backUrl'          => base_url('customer/printing'),
             'backLabel'        => 'Back to Printing Requests',
             'pollPositionUrl'  => base_url('customer/printing/track/' . ($req['request_number'] ?? $req['id']) . '/position'),

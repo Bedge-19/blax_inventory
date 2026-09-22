@@ -59,7 +59,7 @@ class ShopModel extends Model
     public function getOwnerVerificationState(int $ownerId): array
     {
         $shops = $this->where('owner_id', $ownerId)
-            ->orderBy('updated_at', 'DESC')
+            ->orderBy('id', 'ASC')
             ->findAll();
 
         foreach ($shops as $shop) {

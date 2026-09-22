@@ -117,7 +117,7 @@
     <div class="glass-card rounded-2xl p-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md border border-outline-variant/30">
         <div>
             <h3 class="text-title-lg font-bold text-on-surface">Merchant Payouts</h3>
-            <p class="text-xs text-on-surface-variant mt-0.5">Withdraw earnings to your registered GCash account. Standard <?= number_format($deduction_percent ?? 3.00, 2) ?>% administrative fee applies to cover gateway disbursement.</p>
+            <p class="text-xs text-on-surface-variant mt-0.5">Withdraw earnings to your registered GCash account (minimum ₱20.00). Standard <?= number_format($deduction_percent ?? 3.00, 2) ?>% administrative fee applies to cover gateway disbursement.</p>
         </div>
         <?php if (!empty($is_gcash_complete)): ?>
             <button onclick="document.getElementById('withdrawModal').classList.remove('hidden')" class="px-xl py-md bg-primary text-on-primary rounded-xl font-bold text-xs hover:bg-primary/90 transition-colors shadow-md flex items-center gap-xs whitespace-nowrap active:scale-95">
@@ -567,8 +567,21 @@
                     <label class="text-label-sm font-bold text-on-surface-variant">Withdrawal Amount (₱)</label>
                     <span class="text-xs text-primary font-bold">Max: ₱<?= number_format($available_balance ?? 0, 2) ?></span>
                 </div>
-                <input type="number" step="0.01" min="50" max="<?= $available_balance ?? 0 ?>" name="amount" id="withdrawAmountInput" oninput="updateWithdrawalBreakdown(this.value)" required placeholder="e.g. 500.00" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs font-mono font-bold text-base focus:ring-2 focus:ring-primary">
+                <input type="number" step="0.01" min="20" <?= ($available_balance ?? 0) >= 20 ? 'max="' . ($available_balance ?? 0) . '"' : '' ?> name="amount" id="withdrawAmountInput" oninput="updateWithdrawalBreakdown(this.value)" required placeholder="e.g. 50.00" class="w-full p-md bg-surface-container-low border border-outline-variant rounded-xl mt-xs font-mono font-bold text-base focus:ring-2 focus:ring-primary">
+                <p class="text-[11px] text-on-surface-variant mt-1 flex items-center justify-between">
+                    <span>Minimum withdrawal: <strong class="text-on-surface font-semibold">₱20.00</strong></span>
+                    <?php if (($available_balance ?? 0) < 20): ?>
+                        <span class="text-amber-700 font-medium">Insufficient balance</span>
+                    <?php endif; ?>
+                </p>
             </div>
+
+            <?php if (($available_balance ?? 0) < 20): ?>
+                <div class="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-2 text-xs text-amber-800">
+                    <span class="material-symbols-outlined text-[18px] text-amber-600 shrink-0">info</span>
+                    <span>Your available balance of ₱<?= number_format($available_balance ?? 0, 2) ?> is below the minimum withdrawal amount of <strong>₱20.00</strong>.</span>
+                </div>
+            <?php endif; ?>
 
             <!-- Live Calculation Breakdown -->
             <div class="p-3 bg-surface-container-low border border-outline-variant/30 rounded-xl space-y-1.5 text-xs">
@@ -615,7 +628,7 @@
             <input type="hidden" name="method" value="GCash">
             <input type="hidden" name="account_details" value="<?= esc($shop['gcash_number'] ?? '') ?>">
 
-            <button type="submit" class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">Submit Request</button>
+            <button type="submit" <?= ($available_balance ?? 0) < 20 ? 'disabled class="w-full py-md bg-surface-container-high text-on-surface-variant/50 rounded-xl font-bold cursor-not-allowed shadow-none"' : 'class="w-full py-md bg-primary text-on-primary rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md active:scale-98"' ?>>Submit Request</button>
 
         </form>
 

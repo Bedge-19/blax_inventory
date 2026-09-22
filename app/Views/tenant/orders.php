@@ -510,7 +510,7 @@
                         <th class="px-4 py-3 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-outline-variant/15">
+                <tbody id="ordersTableBody" class="divide-y divide-outline-variant/15">
                     <?php if (!empty($orders)): ?>
                         <?php foreach ($orders as $o): ?>
                             <?php
@@ -1696,6 +1696,132 @@
             if (icon) icon.textContent = 'expand_more';
             if (label) label.textContent = 'Show';
             if (btn) btn.setAttribute('title', 'Show Queue');
+        }
+    });
+
+    // Real-time Order Injection without refresh
+    window.addEventListener('blax:new-order', function(e) {
+        const order = e.detail;
+        if (!order) return;
+
+        // 1. Inject into Packing Queue
+        const queueGrid = document.getElementById('processingQueueGrid');
+        if (queueGrid) {
+            const card = document.createElement('div');
+            card.className = 'processing-order-card bg-surface-container-low/40 hover:bg-surface-container-low border-2 border-emerald-400 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md transition-all animate-fadeIn';
+            card.setAttribute('data-fulfillment', order.is_pickup ? 'pickup' : 'delivery');
+            
+            card.innerHTML = `
+                <div class="space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-mono text-sm font-bold text-primary">#${order.order_number}</span>
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${order.is_pickup ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30' : 'bg-blue-500/15 text-blue-900 border border-blue-500/30'} shadow-2xs">
+                            <span class="material-symbols-outlined text-[14px]">${order.is_pickup ? 'storefront' : 'local_shipping'}</span>
+                            <span>${order.is_pickup ? 'Store Pick-up' : 'Doorstep Delivery'}</span>
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-outline">
+                        <span>Placed: ${order.placed_at_fmt}</span>
+                        <span class="font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded animate-pulse">⚡ Just In</span>
+                    </div>
+                </div>
+                <div class="p-3 bg-surface-container-lowest rounded-xl border border-outline-variant/20 space-y-2 text-xs">
+                    <div class="flex items-center justify-between gap-2.5">
+                        <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                            <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs">
+                                <span>${order.customer_initials}</span>
+                            </div>
+                            <span class="font-bold text-sm text-on-surface truncate">${order.customer_name}</span>
+                        </div>
+                        ${order.customer_phone !== 'N/A' ? `<a href="tel:${order.customer_phone}" class="text-xs font-mono font-semibold text-blue-600 hover:underline flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[15px]">call</span><span>${order.customer_phone}</span></a>` : ''}
+                    </div>
+                    <div class="flex items-center gap-1.5 text-xs text-on-surface-variant pt-2 border-t border-outline-variant/15">
+                        <span class="material-symbols-outlined text-[16px] text-outline shrink-0">${order.is_pickup ? 'storefront' : 'local_shipping'}</span>
+                        <span class="truncate leading-tight font-medium">${order.is_pickup ? 'Store Counter Pick-up' : order.delivery_address}</span>
+                    </div>
+                </div>
+                <div class="pt-2 border-t border-outline-variant/20 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-on-surface-variant">Order Total:</span>
+                        <span class="font-mono text-sm font-bold text-on-surface ml-1">₱${order.total_amount_fmt}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="inline">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="order_id" value="${order.id}">
+                            <input type="hidden" name="status" value="processing">
+                            <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-all shadow-xs">
+                                <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                                <span>Accept</span>
+                            </button>
+                        </form>
+                        <button type="button" onclick="openOrderModal(${order.id})" class="p-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[16px]">visibility</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            queueGrid.insertBefore(card, queueGrid.firstChild);
+        }
+
+        // 2. Prepend to Table
+        const tableBody = document.getElementById('ordersTableBody');
+        if (tableBody) {
+            const emptyTd = tableBody.querySelector('td[colspan]');
+            if (emptyTd) emptyTd.parentElement.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-outline-variant/10 hover:bg-surface-container-low transition-colors bg-emerald-50/40 dark:bg-emerald-950/20 animate-fadeIn';
+            tr.innerHTML = `
+                <td class="px-4 py-3.5 whitespace-nowrap">
+                    <span class="font-mono font-bold text-primary text-xs">#${order.order_number}</span>
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping ml-1" title="New Incoming Order"></span>
+                </td>
+                <td class="px-4 py-3.5">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-[10px] font-bold shrink-0">
+                            ${order.customer_initials}
+                        </div>
+                        <span class="font-semibold text-xs text-on-surface truncate">${order.customer_name}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5 text-xs text-on-surface-variant">
+                    <span>${order.items_count} item(s)</span>
+                </td>
+                <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${order.is_pickup ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'}">
+                        <span>${order.is_pickup ? 'Pick-up' : 'Delivery'}</span>
+                    </span>
+                </td>
+                <td class="px-4 py-3.5 whitespace-nowrap text-xs text-on-surface-variant">
+                    <span>${order.placed_at_fmt}</span>
+                </td>
+                <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                    <span class="font-mono text-sm font-bold text-on-surface">₱${order.total_amount_fmt}</span>
+                </td>
+                <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">
+                        New Pending
+                    </span>
+                </td>
+                <td class="px-4 py-3.5 text-right whitespace-nowrap">
+                    <div class="flex justify-end items-center gap-1.5">
+                        <form action="<?= base_url('tenant/orders/update-status') ?>" method="POST" class="inline">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="order_id" value="${order.id}">
+                            <input type="hidden" name="status" value="processing">
+                            <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold transition-all shadow-2xs">
+                                <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                                <span>Accept</span>
+                            </button>
+                        </form>
+                        <button type="button" onclick="openOrderModal(${order.id})" class="p-1.5 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-on-surface-variant">
+                            <span class="material-symbols-outlined text-[16px]">visibility</span>
+                        </button>
+                    </div>
+                </td>
+            `;
+            tableBody.insertBefore(tr, tableBody.firstChild);
         }
     });
 </script>

@@ -453,7 +453,7 @@
             });
         }
         const riderInfoWindow = new google.maps.InfoWindow({
-            content: `<div style="padding:4px;font-family:sans-serif;"><strong>Delivery Courier (You)</strong><br><span style="font-size:11px;color:#64748b;">Live GPS location broadcast</span></div>`
+            content: `<div style="padding:4px;font-family:sans-serif;min-width:140px;"><div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ <?= esc($shop['shop_name'] ?? 'Your Store') ?> Courier (You)</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Live GPS location broadcast</div></div>`
         });
         riderMarker.addListener('click', () => {
             riderInfoWindow.open(mapInstance, riderMarker);
@@ -489,30 +489,31 @@
         })
         .then(res => res.json())
         .then(data => {
-            if (data && data.success && data.route && data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
-                const decodedPath = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
-                routePathPoints = decodedPath.map(p => ({ lat: p.lat(), lng: p.lng() }));
-                if (routePolyline) routePolyline.setMap(null);
-                routePolyline = new google.maps.Polyline({
-                    path: decodedPath,
-                    geodesic: true,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.85,
-                    strokeWeight: 4,
-                    map: mapInstance
-                });
-            } else {
-                routePathPoints = [origin, destination];
-                if (routePolyline) routePolyline.setMap(null);
-                routePolyline = new google.maps.Polyline({
-                    path: [origin, destination],
-                    geodesic: true,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.85,
-                    strokeWeight: 4,
-                    map: mapInstance
-                });
+            let path = [];
+            if (data && data.success && data.route) {
+                if (data.route.points && data.route.points.length > 0) {
+                    path = data.route.points.map(p => new google.maps.LatLng(parseFloat(p.lat), parseFloat(p.lng)));
+                    routePathPoints = data.route.points;
+                } else if (data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
+                    path = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
+                    routePathPoints = path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+                }
             }
+
+            if (!path || path.length === 0) {
+                path = [origin, destination];
+                routePathPoints = [origin, destination];
+            }
+
+            if (routePolyline) routePolyline.setMap(null);
+            routePolyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: '#2563eb',
+                strokeOpacity: 0.85,
+                strokeWeight: 4,
+                map: mapInstance
+            });
         })
         .catch(err => {
             console.warn('Could not fetch route from Routes API:', err);
@@ -642,11 +643,29 @@
         });
     }
 
-    window.addEventListener('beforeunload', () => {
+    function stopBroadcastingOnExit() {
         if (watchId !== null) {
             navigator.geolocation.clearWatch(watchId);
+            watchId = null;
         }
-    });
+        if (DELIVERY_ID) {
+            const formData = new FormData();
+            formData.append('delivery_id', DELIVERY_ID);
+            const stopUrl = '<?= base_url('tenant/deliveries/stop-broadcast') ?>';
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(stopUrl, formData);
+            } else {
+                fetch(stopUrl, {
+                    method: 'POST',
+                    body: formData,
+                    keepalive: true
+                }).catch(() => {});
+            }
+        }
+    }
+
+    window.addEventListener('beforeunload', stopBroadcastingOnExit);
+    window.addEventListener('pagehide', stopBroadcastingOnExit);
 
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {

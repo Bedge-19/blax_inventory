@@ -101,20 +101,65 @@ class ProductModel extends Model
     }
 
     /**
+     * Compute current periodic rotation metadata (default: 3-hour window).
+     * Provides deterministic slot seed, seconds remaining, and formatted countdown.
+     *
+     * @return array{slot_index: int, slot_seed: int, seconds_remaining: int, formatted_time_left: string, hours_left: int, minutes_left: int, seconds_left: int, interval_hours: int}
+     */
+    public static function getRotationInfo(int $intervalHours = 3): array
+    {
+        $now = time();
+        $intervalSeconds = max(1, $intervalHours * 3600);
+        $slotOfDay = (int) floor(date('G', $now) / $intervalHours);
+        $totalSlotIndex = (int) floor($now / $intervalSeconds);
+        $slotSeed = (int) (date('Ymd', $now) . $slotOfDay);
+
+        $slotEndTimestamp = ($totalSlotIndex + 1) * $intervalSeconds;
+        $secondsRemaining = max(0, $slotEndTimestamp - $now);
+
+        $hoursLeft = (int) floor($secondsRemaining / 3600);
+        $minutesLeft = (int) floor(($secondsRemaining % 3600) / 60);
+        $secsLeft = (int) ($secondsRemaining % 60);
+
+        $formattedTimeLeft = ($hoursLeft > 0 ? "{$hoursLeft}h " : "") . "{$minutesLeft}m";
+        if ($hoursLeft === 0 && $minutesLeft === 0) {
+            $formattedTimeLeft = "{$secsLeft}s";
+        }
+
+        return [
+            'slot_index'          => $slotOfDay,
+            'total_slot_index'    => $totalSlotIndex,
+            'slot_seed'           => $slotSeed,
+            'seconds_remaining'   => $secondsRemaining,
+            'formatted_time_left' => $formattedTimeLeft,
+            'hours_left'          => $hoursLeft,
+            'minutes_left'        => $minutesLeft,
+            'seconds_left'        => $secsLeft,
+            'interval_hours'      => $intervalHours,
+        ];
+    }
+
+    /**
      * Paginated global catalog listing across all active products,
-     * preserving search + category filters across pages.
+     * supporting 3-hour periodic discovery rotation or explicit sorting,
+     * while preserving search + category filters across pages.
      *
      * @return array{products: array, pager: \CodeIgniter\Pager\Pager|null}
      */
-    public function getGlobalProductsPaginated(?int $categoryId = null, ?string $search = null, int $perPage = 20, int $page = 1)
-    {
+    public function getGlobalProductsPaginated(
+        ?int $categoryId = null,
+        ?string $search = null,
+        int $perPage = 20,
+        int $page = 1,
+        ?string $sort = null,
+        ?int $rotationSeed = null
+    ) {
         $this->builder()
             ->select('products.*, s.shop_name, s.slug as shop_slug, c.name as category_name, pi.image_url')
             ->join('shops s', 's.id = products.shop_id', 'left')
             ->join('categories c', 'c.id = products.category_id', 'left')
             ->join('product_images pi', 'pi.product_id = products.id AND pi.is_primary = 1', 'left')
-            ->where('products.deleted_at', null)
-            ->orderBy('products.id', 'ASC');
+            ->where('products.deleted_at', null);
 
         if ($categoryId) {
             $this->builder()->where('products.category_id', $categoryId);
@@ -125,6 +170,45 @@ class ProductModel extends Model
                 ->like('products.name', $search)
                 ->orLike('products.description', $search)
                 ->groupEnd();
+        }
+
+        // Apply explicit user sort or 3-hour periodic discovery rotation
+        switch ($sort) {
+            case 'price_asc':
+            case 'price_low':
+                $this->builder()->orderBy('products.price', 'ASC');
+                break;
+            case 'price_desc':
+            case 'price_high':
+                $this->builder()->orderBy('products.price', 'DESC');
+                break;
+            case 'rating':
+            case 'top_rated':
+                $this->builder()->orderBy('products.rating_average', 'DESC')->orderBy('products.id', 'DESC');
+                break;
+            case 'newest':
+                $this->builder()->orderBy('products.created_at', 'DESC')->orderBy('products.id', 'DESC');
+                break;
+            case 'name_asc':
+                $this->builder()->orderBy('products.name', 'ASC');
+                break;
+            case 'name_desc':
+                $this->builder()->orderBy('products.name', 'DESC');
+                break;
+            case 'discovery':
+            default:
+                if ($search) {
+                    $this->builder()->orderBy('products.id', 'ASC');
+                } else {
+                    $seed = $rotationSeed ?? self::getRotationInfo(3)['slot_seed'];
+                    $driver = $this->db->DBDriver ?? 'MySQLi';
+                    if (stripos($driver, 'sqlite') !== false) {
+                        $this->builder()->orderBy("ABS((" . (int) $seed . " * products.id) % 999999)", 'ASC', false);
+                    } else {
+                        $this->builder()->orderBy("RAND(" . (int) $seed . ")", '', false);
+                    }
+                }
+                break;
         }
 
         $products = $this->paginate($perPage, 'default', $page);

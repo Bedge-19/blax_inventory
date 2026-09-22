@@ -32,13 +32,26 @@ class GoogleMapsService
     public function geocodeAddress(string $addressText): ?array
     {
         $addressText = trim($addressText);
-        if ($addressText === '' || empty($this->apiKey)) {
+        if ($addressText === '') {
             return null;
         }
 
-        // Add Polomolok, South Cotabato, Philippines bias if not already present in the string
+        if (empty($this->apiKey)) {
+            $centroid = \App\Models\DeliveryModel::getBarangayCoordinate($addressText);
+            if ($centroid) {
+                return [
+                    'lat'               => $centroid['lat'],
+                    'lng'               => $centroid['lng'],
+                    'place_id'          => null,
+                    'formatted_address' => $addressText . ', South Cotabato, Philippines',
+                ];
+            }
+            return null;
+        }
+
+        // Add South Cotabato, Philippines bias if not already present
         $searchAddress = $addressText;
-        if (!preg_match('/polomolok/i', $searchAddress)) {
+        if (!preg_match('/polomolok|tupi/i', $searchAddress)) {
             $searchAddress .= ', Polomolok, South Cotabato';
         }
         if (!preg_match('/philippines/i', $searchAddress)) {
@@ -65,26 +78,36 @@ class GoogleMapsService
         try {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 8);
             $response = curl_exec($ch);
             $err = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($err) {
-                log_message('warning', '[GoogleMapsService] Geocoding cURL error: ' . $err);
-                return null;
-            }
-
-            if ($httpCode !== 200 || !$response) {
-                log_message('warning', '[GoogleMapsService] Geocoding HTTP ' . $httpCode);
+            if ($err || $httpCode !== 200 || !$response) {
+                $centroid = \App\Models\DeliveryModel::getBarangayCoordinate($addressText);
+                if ($centroid) {
+                    return [
+                        'lat'               => $centroid['lat'],
+                        'lng'               => $centroid['lng'],
+                        'place_id'          => null,
+                        'formatted_address' => $addressText,
+                    ];
+                }
                 return null;
             }
 
             $data = json_decode($response, true);
             if (!is_array($data) || ($data['status'] ?? '') !== 'OK' || empty($data['results'])) {
-                $errDetail = $data['error_message'] ?? ($data['status'] ?? 'EMPTY');
-                log_message('notice', '[GoogleMapsService] Geocoding error (' . ($data['status'] ?? 'UNKNOWN') . '): ' . $errDetail . ' for address: ' . $addressText);
+                $centroid = \App\Models\DeliveryModel::getBarangayCoordinate($addressText);
+                if ($centroid) {
+                    return [
+                        'lat'               => $centroid['lat'],
+                        'lng'               => $centroid['lng'],
+                        'place_id'          => null,
+                        'formatted_address' => $addressText,
+                    ];
+                }
                 return null;
             }
 
@@ -108,19 +131,16 @@ class GoogleMapsService
     }
 
     /**
-     * Compute a road route between origin and destination using the Google Routes API (v2).
+     * Compute a real road route between origin and destination.
+     * Tries Google Routes API first if apiKey exists, then falls back to OSRM road engine.
      *
      * @param array{lat: float, lng: float} $origin
      * @param array{lat: float, lng: float} $destination
      * @param string $travelMode "DRIVE" or "TWO_WHEELER"
-     * @return array{encodedPolyline: string, distanceMeters: int, duration: string}|null
+     * @return array{encodedPolyline: string, points: array, distanceMeters: int, duration: string, durationMinutes: int}|null
      */
     public function computeRoute(array $origin, array $destination, string $travelMode = 'DRIVE'): ?array
     {
-        if (empty($this->apiKey)) {
-            return null;
-        }
-
         $originLat = (float) ($origin['lat'] ?? $origin['latitude'] ?? 0);
         $originLng = (float) ($origin['lng'] ?? $origin['longitude'] ?? 0);
         $destLat   = (float) ($destination['lat'] ?? $destination['latitude'] ?? 0);
@@ -130,22 +150,36 @@ class GoogleMapsService
             return null;
         }
 
+        // 1. If Google Maps API Key is configured, attempt Google Routes API
+        if (!empty($this->apiKey)) {
+            $googleResult = $this->queryGoogleRoutes($originLat, $originLng, $destLat, $destLng, $travelMode);
+            if ($googleResult !== null) {
+                return $googleResult;
+            }
+        }
+
+        // 2. Query OSRM (Open Source Routing Machine) driving API for actual road network path
+        return $this->queryOsrmRoutes($originLat, $originLng, $destLat, $destLng);
+    }
+
+    private function queryGoogleRoutes(float $oLat, float $oLng, float $dLat, float $dLng, string $travelMode): ?array
+    {
         $url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
 
         $payload = [
             'origin' => [
                 'location' => [
                     'latLng' => [
-                        'latitude'  => $originLat,
-                        'longitude' => $originLng,
+                        'latitude'  => $oLat,
+                        'longitude' => $oLng,
                     ],
                 ],
             ],
             'destination' => [
                 'location' => [
                     'latLng' => [
-                        'latitude'  => $destLat,
-                        'longitude' => $destLng,
+                        'latitude'  => $dLat,
+                        'longitude' => $dLng,
                     ],
                 ],
             ],
@@ -165,39 +199,190 @@ class GoogleMapsService
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
             $response = curl_exec($ch);
-            $err = curl_error($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
 
-            if ($err) {
-                log_message('warning', '[GoogleMapsService] Routes API cURL error: ' . $err);
-                return null;
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                if (!empty($data['routes'][0])) {
+                    $firstRoute = $data['routes'][0];
+                    $poly = $firstRoute['polyline']['encodedPolyline'] ?? '';
+                    $dist = (int) ($firstRoute['distanceMeters'] ?? 0);
+                    $durStr = (string) ($firstRoute['duration'] ?? '0s');
+                    $durSec = (int) preg_replace('/[^0-9]/', '', $durStr);
+                    $distKm = round($dist / 1000, 1);
+                    $distText = ($distKm >= 1 ? $distKm . ' km' : $dist . ' m');
+                    $durMins = max(1, (int) round($durSec / 60));
+                    $durText = $durMins >= 60 ? floor($durMins / 60) . ' hr ' . ($durMins % 60) . ' mins' : $durMins . ' mins';
+
+                    return [
+                        'encodedPolyline'  => $poly,
+                        'points'           => self::decodePolyline($poly),
+                        'distanceMeters'   => $dist,
+                        'distance_meters'  => $dist,
+                        'distance_text'    => $distText,
+                        'duration'         => $durStr,
+                        'duration_seconds' => $durSec,
+                        'duration_text'    => $durText,
+                        'durationMinutes'  => $durMins,
+                        'source'           => 'google',
+                    ];
+                }
             }
-
-            if ($httpCode !== 200 || !$response) {
-                log_message('warning', '[GoogleMapsService] Routes API HTTP ' . $httpCode . ' response: ' . $response);
-                return null;
-            }
-
-            $data = json_decode($response, true);
-            if (!is_array($data) || empty($data['routes'])) {
-                log_message('notice', '[GoogleMapsService] Routes API returned no routes.');
-                return null;
-            }
-
-            $firstRoute = $data['routes'][0];
-
-            return [
-                'encodedPolyline' => $firstRoute['polyline']['encodedPolyline'] ?? '',
-                'distanceMeters'  => (int) ($firstRoute['distanceMeters'] ?? 0),
-                'duration'        => (string) ($firstRoute['duration'] ?? ''),
-            ];
         } catch (\Throwable $e) {
-            log_message('error', '[GoogleMapsService] Routes API exception: ' . $e->getMessage());
-            return null;
+            log_message('warning', '[GoogleMapsService] Google Routes API failed: ' . $e->getMessage());
         }
+
+        return null;
+    }
+
+    private function queryOsrmRoutes(float $oLat, float $oLng, float $dLat, float $dLng): ?array
+    {
+        $url = sprintf(
+            'https://router.project-osrm.org/route/v1/driving/%F,%F;%F,%F?overview=full&geometries=geojson',
+            $oLng,
+            $oLat,
+            $dLng,
+            $dLat
+        );
+
+        try {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'BlaxMarketplace/1.0');
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                if (($data['code'] ?? '') === 'Ok' && !empty($data['routes'][0])) {
+                    $route = $data['routes'][0];
+                    $coords = $route['geometry']['coordinates'] ?? [];
+                    
+                    $points = [];
+                    foreach ($coords as $c) {
+                        if (isset($c[0], $c[1])) {
+                            $points[] = [
+                                'lat' => (float) $c[1],
+                                'lng' => (float) $c[0],
+                            ];
+                        }
+                    }
+
+                    if (empty($points)) {
+                        $points = [
+                            ['lat' => $oLat, 'lng' => $oLng],
+                            ['lat' => $dLat, 'lng' => $dLng],
+                        ];
+                    }
+
+                    $dist = (int) round($route['distance'] ?? 0);
+                    $durSec = (int) round($route['duration'] ?? 0);
+                    $distKm = round($dist / 1000, 1);
+                    $distText = ($distKm >= 1 ? $distKm . ' km' : $dist . ' m');
+                    $durMins = max(1, (int) round($durSec / 60));
+                    $durText = $durMins >= 60 ? floor($durMins / 60) . ' hr ' . ($durMins % 60) . ' mins' : $durMins . ' mins';
+
+                    return [
+                        'encodedPolyline'  => self::encodePolyline($points),
+                        'points'           => $points,
+                        'distanceMeters'   => $dist,
+                        'distance_meters'  => $dist,
+                        'distance_text'    => $distText,
+                        'duration'         => $durSec . 's',
+                        'duration_seconds' => $durSec,
+                        'duration_text'    => $durText,
+                        'durationMinutes'  => $durMins,
+                        'source'           => 'osrm',
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[GoogleMapsService] OSRM Routes exception: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    /**
+     * Encode array of ['lat' => ..., 'lng' => ...] points to Google encoded polyline format.
+     */
+    public static function encodePolyline(array $points): string
+    {
+        $encoded = '';
+        $lastLat = 0;
+        $lastLng = 0;
+        foreach ($points as $p) {
+            $lat = (int) round($p['lat'] * 1e5);
+            $lng = (int) round($p['lng'] * 1e5);
+            $dLat = $lat - $lastLat;
+            $dLng = $lng - $lastLng;
+            $lastLat = $lat;
+            $lastLng = $lng;
+
+            $encoded .= self::encodePolylineValue($dLat) . self::encodePolylineValue($dLng);
+        }
+        return $encoded;
+    }
+
+    private static function encodePolylineValue(int $val): string
+    {
+        $val = $val < 0 ? ~($val << 1) : ($val << 1);
+        $chunks = '';
+        while ($val >= 0x20) {
+            $chunks .= chr((0x20 | ($val & 0x1f)) + 63);
+            $val >>= 5;
+        }
+        $chunks .= chr($val + 63);
+        return $chunks;
+    }
+
+    /**
+     * Decode Google encoded polyline string to array of ['lat' => ..., 'lng' => ...]
+     */
+    public static function decodePolyline(string $encoded): array
+    {
+        $len = strlen($encoded);
+        $index = 0;
+        $points = [];
+        $lat = 0;
+        $lng = 0;
+
+        while ($index < $len) {
+            $b = 0;
+            $shift = 0;
+            $result = 0;
+            do {
+                if ($index >= $len) break 2;
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlat = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lat += $dlat;
+
+            $shift = 0;
+            $result = 0;
+            do {
+                if ($index >= $len) break 2;
+                $b = ord($encoded[$index++]) - 63;
+                $result |= ($b & 0x1f) << $shift;
+                $shift += 5;
+            } while ($b >= 0x20);
+            $dlng = (($result & 1) ? ~($result >> 1) : ($result >> 1));
+            $lng += $dlng;
+
+            $points[] = [
+                'lat' => $lat * 1e-5,
+                'lng' => $lng * 1e-5,
+            ];
+        }
+
+        return $points;
     }
 
     /**

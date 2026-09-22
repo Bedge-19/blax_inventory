@@ -18,6 +18,10 @@ class Home extends BaseController
         $search     = trim((string) ($this->request->getGet('search') ?? $this->request->getGet('q') ?? ''));
         $categoryId = $this->request->getGet('category_id');
         $categoryId = $categoryId !== null && $categoryId !== '' ? (int) $categoryId : null;
+        $sort       = trim((string) $this->request->getGet('sort'));
+        $sort       = in_array($sort, ['discovery', 'price_asc', 'price_desc', 'rating', 'newest', 'name_asc', 'name_desc'], true) ? $sort : null;
+
+        $rotationInfo = ProductModel::getRotationInfo(3);
 
         $page     = max(1, (int) $this->request->getGet('page'));
         $perPage  = 20;
@@ -39,7 +43,7 @@ class Home extends BaseController
         if ($semantic) {
             $result = $productModel->getGlobalProductsByRelevance($semanticIds, $categoryId, $perPage, $page);
         } else {
-            $result = $productModel->getGlobalProductsPaginated($categoryId, $search !== '' ? $search : null, $perPage, $page);
+            $result = $productModel->getGlobalProductsPaginated($categoryId, $search !== '' ? $search : null, $perPage, $page, $sort, $rotationInfo['slot_seed']);
         }
 
         $pager = $result['pager'];
@@ -52,7 +56,7 @@ class Home extends BaseController
             if ($semantic) {
                 $result = $productModel->getGlobalProductsByRelevance($semanticIds, $categoryId, $perPage, $page);
             } else {
-                $result = $productModel->getGlobalProductsPaginated($categoryId, $search !== '' ? $search : null, $perPage, $page);
+                $result = $productModel->getGlobalProductsPaginated($categoryId, $search !== '' ? $search : null, $perPage, $page, $sort, $rotationInfo['slot_seed']);
             }
         }
 
@@ -84,6 +88,8 @@ class Home extends BaseController
             'search'         => $search,
             'searchQuery'    => $search,
             'categoryId'     => $categoryId,
+            'sort'           => $sort,
+            'rotationInfo'   => $rotationInfo,
             'siteContents'   => $siteContents,
             'semantic'       => $semantic,
             'semanticNotice' => $semanticNotice,

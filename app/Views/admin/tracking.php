@@ -7,7 +7,7 @@
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
             <h1 class="text-headline-md font-bold text-on-surface">Live Fleet Tracking</h1>
-            <p class="text-body-md text-on-surface-variant">Real-time bird's-eye oversight of all shop courier deliveries across Polomolok.</p>
+            <p class="text-body-md text-on-surface-variant">Real-time bird's-eye oversight of all shop courier deliveries across Polomolok & Tupi.</p>
         </div>
         <div class="flex items-center gap-2 bg-surface-container-high px-4 py-2 rounded-xl border border-outline-variant/40 shadow-xs">
             <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
@@ -68,40 +68,27 @@
     <div class="relative rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container shadow-sm" style="min-height: 540px;">
         <div id="fleet-map" class="w-full h-full" style="min-height: 540px;"></div>
 
-        <!-- Legend Overlay (Bottom Left) -->
-        <div class="absolute bottom-6 left-6 p-4 bg-surface/90 dark:bg-surface-container-high/90 backdrop-blur-md rounded-2xl border border-outline-variant/30 shadow-lg max-w-xs pointer-events-none">
-            <div class="flex items-center gap-2 mb-2">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider">Live Fleet Legend</h4>
+        <!-- Live Fleet Legend Overlay Card (Bottom Left) -->
+        <div class="absolute bottom-4 left-4 z-10 bg-surface-container-lowest/90 backdrop-blur-md p-3.5 rounded-xl border border-outline-variant/30 shadow-md flex flex-col gap-2 max-w-xs text-xs pointer-events-auto">
+            <div class="flex items-center gap-2 border-b border-outline-variant/20 pb-1.5">
+                <span class="material-symbols-outlined text-primary text-[18px]">map</span>
+                <span class="font-bold text-on-surface">Fleet Map Legend</span>
             </div>
-            <div class="space-y-1.5 text-xs text-on-surface">
-                <div class="flex items-center justify-between gap-4">
-                    <span class="flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full bg-blue-600 flex items-center justify-center text-white text-[9px] shadow-xs">🏍️</span>
-                        <span>Shipped / Dispatched</span>
-                    </span>
-                    <span class="text-[10px] font-mono text-outline font-bold">#2563eb</span>
+            <div class="flex flex-col gap-1.5 text-on-surface-variant">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-purple-600 border border-white shadow-2xs flex-shrink-0"></span>
+                    <span class="font-medium text-on-surface">In Transit (Moving Courier)</span>
                 </div>
-                <div class="flex items-center justify-between gap-4">
-                    <span class="flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-full bg-purple-600 flex items-center justify-center text-white text-[9px] shadow-xs">🏍️</span>
-                        <span>In Transit / En Route</span>
-                    </span>
-                    <span class="text-[10px] font-mono text-outline font-bold">#7c3aed</span>
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-blue-600 border border-white shadow-2xs flex-shrink-0"></span>
+                    <span class="font-medium text-on-surface">Shipped (Dispatched Order)</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping flex-shrink-0"></span>
+                    <span class="text-[11px] text-emerald-700 dark:text-emerald-400 font-semibold">Active Realtime GPS Feed</span>
                 </div>
             </div>
-            <p class="mt-3 pt-2 border-t border-outline-variant/20 text-[10px] text-on-surface-variant">
-                Polomolok, South Cotabato &bull; Auto-refreshing every 10s
-            </p>
         </div>
-
-        <?php if (ENVIRONMENT === 'development' && empty($pins)): ?>
-            <!-- Development Mode Notice (Only shown if dev and zero real deliveries) -->
-            <div id="demoPinNotice" class="absolute bottom-6 right-6 bg-surface/90 dark:bg-surface-container-high/90 backdrop-blur px-3 py-1.5 rounded-full text-xs text-on-surface-variant border border-outline-variant font-medium flex items-center gap-1.5 shadow-sm">
-                <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span>Showing Polomolok Demo Pins (Dev Only)</span>
-            </div>
-        <?php endif; ?>
     </div>
 
     <!-- Active Deliveries Grouped by Storefront -->
@@ -109,7 +96,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h2 class="text-title-lg font-bold text-on-surface">Active Deliveries by Storefront</h2>
-                <p class="text-xs text-on-surface-variant">Store owners deliver packages directly to customers within Polomolok.</p>
+                <p class="text-xs text-on-surface-variant">Store owners deliver packages directly to customers across Polomolok & Tupi.</p>
             </div>
         </div>
 
@@ -184,7 +171,7 @@
                     </div>
                     <h3 class="text-base font-bold text-on-surface">No Active Deliveries on the Road</h3>
                     <p class="text-xs text-on-surface-variant max-w-md mx-auto mt-1">
-                        There are currently no active deliveries in transit across Polomolok. Deliveries will appear here automatically when shop owners mark orders as shipped.
+                        There are currently no active deliveries in transit across Polomolok & Tupi. Deliveries will appear here automatically in real time when shop owners open "View Live Route & Map".
                     </p>
                 </div>
             <?php endif; ?>
@@ -218,28 +205,28 @@
         }
     };
 
-    const isDev = <?= json_encode(ENVIRONMENT === 'development') ?>;
-    let initialPins = <?= json_encode($pins ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?>;
-    
-    // Only use demo pins in development mode when real pins are empty
-    const demoPins = isDev ? [
-        { id: 9991, tracking_id: 'TRK-TEST-POLO1', shop_name: 'Blax Printing Hub', destination_address: 'Purok 4, Brgy. Cannery Site, Polomolok', status: 'shipped', current_lat: 6.2305, current_lng: 125.0740, is_demo: true },
-        { id: 9992, tracking_id: 'TRK-TEST-POLO2', shop_name: 'Blax Printing Hub', destination_address: 'Crossing Rubber, Brgy. Rubber, Polomolok', status: 'in_transit', current_lat: 6.1950, current_lng: 125.0920, is_demo: true },
-        { id: 9993, tracking_id: 'TRK-TEST-POLO3', shop_name: 'Apex Prints', destination_address: 'Purok Pag-asa, Brgy. Glamang, Polomolok', status: 'in_transit', current_lat: 6.1823, current_lng: 125.0456, is_demo: true }
-    ] : [];
+    let currentPins = <?= json_encode($pins ?? [], JSON_HEX_TAG|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_HEX_AMP) ?> || [];
 
-    let currentPins = (initialPins && initialPins.length > 0) ? initialPins : demoPins;
-
-    const POLO_CENTER = { lat: 6.2136, lng: 125.0661 };
+    const POLO_CENTER = { lat: 6.2735, lng: 125.0080 };
     const POLO_BOUNDS = {
-        north: 6.32,
+        north: 6.45,
         south: 6.10,
-        east: 125.18,
-        west: 124.95
+        east: 125.20,
+        west: 124.85
     };
 
     let mapInstance = null;
-    let activeMarkers = new Map(); // id -> { marker, infoWindow, pinData }
+    let activeMarkers = new Map(); // id -> { marker, markerElement, infoWindow, pinData }
+
+    function calculateBearing(lat1, lon1, lat2, lon2) {
+        const toRad = deg => (deg * Math.PI) / 180;
+        const toDeg = rad => (rad * 180) / Math.PI;
+        const φ1 = toRad(lat1), φ2 = toRad(lat2);
+        const Δλ = toRad(lon2 - lon1);
+        const y = Math.sin(Δλ) * Math.cos(φ2);
+        const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+        return (toDeg(Math.atan2(y, x)) + 360) % 360;
+    }
 
     function createMotorcycleMarkerElement(status) {
         const isTransit = status === 'in_transit';
@@ -247,6 +234,7 @@
         const shadowColor = isTransit ? 'rgba(124, 58, 237, 0.4)' : 'rgba(37, 99, 235, 0.4)';
 
         const div = document.createElement('div');
+        div.className = 'motorcycle-marker-wrap';
         div.style.position = 'relative';
         div.style.width = '36px';
         div.style.height = '36px';
@@ -257,11 +245,60 @@
 
         div.innerHTML = `
             <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${bgColor};opacity:0.25;animation:pulse 2s infinite;"></div>
-            <div style="width:32px;height:32px;border-radius:50%;background:${bgColor};border:2px solid #ffffff;box-shadow:0 3px 10px ${shadowColor};display:flex;align-items:center;justify-content:center;color:#ffffff;z-index:2;">
+            <div class="motorcycle-icon-inner" style="width:32px;height:32px;border-radius:50%;background:${bgColor};border:2px solid #ffffff;box-shadow:0 3px 10px ${shadowColor};display:flex;align-items:center;justify-content:center;color:#ffffff;z-index:2;transition:transform 0.5s ease-out;">
                 <span class="material-symbols-outlined" style="font-size:17px;line-height:1;">two_wheeler</span>
             </div>
         `;
         return div;
+    }
+
+    function animateMarkerTo(entry, targetLat, targetLng) {
+        const startLat = parseFloat(entry.pinData.current_lat);
+        const startLng = parseFloat(entry.pinData.current_lng);
+        const hasMoved = (Math.abs(startLat - targetLat) > 0.00001 || Math.abs(startLng - targetLng) > 0.00001);
+
+        if (hasMoved && entry.markerElement) {
+            const bearing = calculateBearing(startLat, startLng, targetLat, targetLng);
+            const iconDiv = entry.markerElement.querySelector('.motorcycle-icon-inner');
+            if (iconDiv) {
+                iconDiv.style.transform = `rotate(${Math.round(bearing)}deg)`;
+            }
+        }
+
+        if (!hasMoved) {
+            if (entry.marker.position && typeof entry.marker.position.lat === 'function') {
+                entry.marker.setPosition(new google.maps.LatLng(targetLat, targetLng));
+            } else {
+                entry.marker.position = { lat: targetLat, lng: targetLng };
+            }
+            return;
+        }
+
+        const duration = 1200; // ms
+        const startTime = performance.now();
+
+        function step(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            // Ease out quad
+            const ease = 1 - (1 - progress) * (1 - progress);
+
+            const curLat = startLat + (targetLat - startLat) * ease;
+            const curLng = startLng + (targetLng - startLng) * ease;
+            const curPos = { lat: curLat, lng: curLng };
+
+            if (entry.marker.position && typeof entry.marker.position.lat === 'function') {
+                entry.marker.setPosition(new google.maps.LatLng(curLat, curLng));
+            } else {
+                entry.marker.position = curPos;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        }
+
+        requestAnimationFrame(step);
     }
 
     function createInfoWindowContent(p) {
@@ -298,29 +335,23 @@
     function updatePinsOnMap(pins) {
         if (!mapInstance) return;
 
-        const bounds = new google.maps.LatLngBounds();
         const currentIds = new Set();
 
         (pins || []).forEach(p => {
             const lat = parseFloat(p.current_lat);
             const lng = parseFloat(p.current_lng);
             if (isNaN(lat) || isNaN(lng)) return;
-            if (lat < 6.10 || lat > 6.32 || lng < 124.95 || lng > 125.18) return;
+            if (lat < 6.10 || lat > 6.45 || lng < 124.85 || lng > 125.20) return;
 
             const pinId = String(p.id || p.tracking_id);
             currentIds.add(pinId);
             const pos = { lat, lng };
-            bounds.extend(pos);
 
             if (activeMarkers.has(pinId)) {
                 // Update existing marker position smoothly
                 const entry = activeMarkers.get(pinId);
+                animateMarkerTo(entry, lat, lng);
                 entry.pinData = p;
-                if (entry.marker.position && typeof entry.marker.position.lat === 'function') {
-                    entry.marker.setPosition(new google.maps.LatLng(lat, lng));
-                } else {
-                    entry.marker.position = pos;
-                }
                 entry.infoWindow.setContent(createInfoWindowContent(p));
             } else {
                 // Create new marker
@@ -349,7 +380,7 @@
                     infoWindow.open(mapInstance, marker);
                 });
 
-                activeMarkers.set(pinId, { marker, infoWindow, pinData: p });
+                activeMarkers.set(pinId, { marker, markerElement: pinElem, infoWindow, pinData: p });
             }
         });
 
@@ -385,13 +416,29 @@
 
         updatePinsOnMap(currentPins);
 
-        if (activeMarkers.size > 0) {
+        if (activeMarkers.size === 1) {
+            const firstEntry = activeMarkers.values().next().value;
+            if (firstEntry && firstEntry.pinData) {
+                const pLat = parseFloat(firstEntry.pinData.current_lat);
+                const pLng = parseFloat(firstEntry.pinData.current_lng);
+                mapInstance.panTo({ lat: pLat, lng: pLng });
+                mapInstance.setZoom(15);
+            }
+        } else if (activeMarkers.size > 1) {
             const bounds = new google.maps.LatLngBounds();
             activeMarkers.forEach(entry => {
                 const p = entry.pinData;
                 bounds.extend({ lat: parseFloat(p.current_lat), lng: parseFloat(p.current_lng) });
             });
             mapInstance.fitBounds(bounds, 50);
+            google.maps.event.addListenerOnce(mapInstance, 'idle', () => {
+                if (mapInstance.getZoom() > 16) {
+                    mapInstance.setZoom(16);
+                }
+            });
+        } else {
+            mapInstance.setCenter(POLO_CENTER);
+            mapInstance.setZoom(12);
         }
 
         // Set initial sync time
@@ -400,8 +447,8 @@
             syncLabel.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }
 
-        // Start 10-second auto-refresh polling
-        setInterval(refreshFleetPins, 10000);
+        // Start 6-second auto-refresh polling
+        setInterval(refreshFleetPins, 6000);
     };
 
     function refreshFleetPins() {
@@ -412,9 +459,14 @@
         })
         .then(res => res.json())
         .then(data => {
-            if (data && data.success && Array.isArray(data.pins)) {
-                currentPins = (data.pins.length > 0) ? data.pins : (isDev ? demoPins : []);
+            if (data && data.success) {
+                currentPins = Array.isArray(data.pins) ? data.pins : [];
                 updatePinsOnMap(currentPins);
+
+                // Dynamically update storefronts list in real time
+                if (Array.isArray(data.groupedShops)) {
+                    renderGroupedShops(data.groupedShops);
+                }
 
                 // Update KPIs
                 if (data.kpis) {
@@ -438,6 +490,103 @@
         .catch(err => {
             console.debug('Fleet auto-refresh skipped:', err);
         });
+    }
+
+    function renderGroupedShops(groupedShops) {
+        const container = document.getElementById('grouped-shops-container');
+        if (!container) return;
+
+        if (!groupedShops || groupedShops.length === 0) {
+            container.innerHTML = `
+                <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 p-12 text-center shadow-xs">
+                    <div class="w-16 h-16 rounded-full bg-surface-container-high mx-auto flex items-center justify-center text-outline mb-3">
+                        <span class="material-symbols-outlined text-3xl text-primary/70">two_wheeler</span>
+                    </div>
+                    <h3 class="text-base font-bold text-on-surface">No Active Deliveries on the Road</h3>
+                    <p class="text-xs text-on-surface-variant max-w-md mx-auto mt-1">
+                        There are currently no active deliveries in transit across Polomolok & Tupi. Deliveries will appear here automatically in real time when shop owners open "View Live Route & Map".
+                    </p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">';
+        groupedShops.forEach(shop => {
+            const shopLogo = shop.shop_logo 
+                ? `<img src="${encodeURI('<?= base_url() ?>/' + shop.shop_logo)}" alt="${escapeHtml(shop.shop_name)}" class="w-full h-full object-cover" />`
+                : `<span class="material-symbols-outlined text-primary text-xl">storefront</span>`;
+
+            let deliveriesHtml = '';
+            (shop.deliveries || []).forEach(d => {
+                const isTransit = d.status === 'in_transit';
+                const statusBadgeClass = isTransit ? 'bg-purple-50 text-purple-700 border border-purple-200' : 'bg-blue-50 text-blue-700 border border-blue-200';
+                const statusDotClass = isTransit ? 'bg-purple-600' : 'bg-blue-600';
+                const statusLabel = isTransit ? 'In Transit' : 'Shipped';
+                const custName = escapeHtml(([d.first_name, d.last_name].filter(Boolean).join(' ')) || 'Customer Recipient');
+                const destAddr = escapeHtml(d.destination_address || 'Polomolok');
+                const updatedTime = d.location_updated_at ? new Date(d.location_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently';
+
+                deliveriesHtml += `
+                    <div class="p-md space-y-2 hover:bg-surface-container-low/30 transition-colors">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-mono font-bold text-xs text-primary">#${escapeHtml(d.tracking_id || ('TRK-' + d.id))}</span>
+                            <span class="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusBadgeClass}">
+                                <span class="w-1.5 h-1.5 rounded-full ${statusDotClass}"></span>
+                                <span>${statusLabel}</span>
+                            </span>
+                        </div>
+                        <div class="text-xs text-on-surface">
+                            <p class="font-semibold text-on-surface">${custName}</p>
+                            <p class="text-[11px] text-on-surface-variant truncate max-w-full">${destAddr}</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-1 text-[11px] text-outline">
+                            <span>Updated: ${updatedTime}</span>
+                            <button type="button" 
+                                    onclick="focusDeliveryPin(${d.id})" 
+                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-surface-container border border-outline-variant/40 hover:bg-primary hover:text-white hover:border-primary transition-all">
+                                <span class="material-symbols-outlined text-[13px]">my_location</span>
+                                <span>Locate</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `
+                <div class="bg-surface-container-lowest border border-outline-variant/30 rounded-2xl shadow-xs overflow-hidden flex flex-col transition-all hover:border-primary/30">
+                    <div class="p-md border-b border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between gap-sm">
+                        <div class="flex items-center gap-sm min-w-0">
+                            <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
+                                ${shopLogo}
+                            </div>
+                            <div class="min-w-0">
+                                <h3 class="text-sm font-bold text-on-surface truncate">${escapeHtml(shop.shop_name)}</h3>
+                                <p class="text-[11px] text-on-surface-variant">Merchant Partner</p>
+                            </div>
+                        </div>
+                        <span class="shrink-0 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 text-xs font-bold rounded-full">
+                            ${shop.deliveries ? shop.deliveries.length : 0} Active
+                        </span>
+                    </div>
+                    <div class="divide-y divide-outline-variant/10 flex-1">
+                        ${deliveriesHtml}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     // Locate button clicked on shop delivery card

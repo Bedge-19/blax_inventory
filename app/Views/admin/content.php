@@ -364,17 +364,17 @@ foreach (array_keys($grouped ?? []) as $pageKey) {
                         if ($heroImg && !str_starts_with($heroImg, 'http')) $heroImg = base_url($heroImg);
                     ?>
                     <div id="pv-hero-banner" class="relative w-full rounded-xl overflow-hidden shadow-2xs bg-surface-container-lowest min-h-[140px] flex items-center group">
-                        <div id="pv-hero-bg" class="absolute inset-0 bg-cover bg-center w-full h-full" style="background-image: url('<?= esc($heroImg) ?>');"></div>
-                        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/95 via-surface-container-lowest/70 to-transparent"></div>
+                        <div id="pv-hero-bg" class="absolute inset-0 bg-cover bg-center w-full h-full scale-105 filter blur-[3px] opacity-85 transition-transform duration-500 pointer-events-none" style="background-image: url('<?= esc($heroImg) ?>');"></div>
+                        <div class="absolute inset-0 pointer-events-none" style="background: linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.90) 50%, rgba(255, 255, 255, 0.45) 80%, rgba(255, 255, 255, 0.1) 100%);"></div>
                         
                         <div class="relative z-10 p-3.5 max-w-[210px] space-y-1">
-                            <span id="pv-hero-badge" class="text-[9px] font-bold text-primary uppercase tracking-wider block truncate">
+                            <span id="pv-hero-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-[9px] font-bold text-primary uppercase tracking-wider truncate backdrop-blur-xs">
                                 <?= esc($heroBadge) ?>
                             </span>
-                            <h4 id="pv-hero-title" class="text-xs font-bold font-display text-on-surface line-clamp-2 leading-snug">
+                            <h4 id="pv-hero-title" class="text-xs font-bold font-display text-slate-900 line-clamp-2 leading-snug">
                                 <?= esc($heroTitle) ?>
                             </h4>
-                            <p id="pv-hero-subtitle" class="text-[10px] text-on-surface-variant line-clamp-2 leading-tight">
+                            <p id="pv-hero-subtitle" class="text-[10px] text-slate-700 font-medium line-clamp-2 leading-tight">
                                 <?= esc($heroSubtitle) ?>
                             </p>
                             <div class="pt-1">

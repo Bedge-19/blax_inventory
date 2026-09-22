@@ -376,4 +376,243 @@
     })();
     </script>
 
+    <!-- Real-time Order & Printing Notification Toast Container -->
+    <div id="blax-tenant-toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
+
+    <script>
+    (function() {
+        let lastOrderId = null;
+        let lastPrintingId = null;
+        let pollTimer = null;
+        let isInitial = true;
+
+        // Web Audio synthesized two-tone notification chime (zero file dependencies)
+        function playChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+
+                const now = ctx.currentTime;
+                // Note 1: F5 (698.46Hz)
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(698.46, now);
+                gain1.gain.setValueAtTime(0.18, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start(now);
+                osc1.stop(now + 0.3);
+
+                // Note 2: C6 (1046.50Hz) - higher bright ping
+                const osc2 = ctx.createOscillator();
+                const gain2 = ctx.createGain();
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1046.50, now + 0.12);
+                gain2.gain.setValueAtTime(0.22, now + 0.12);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+                osc2.connect(gain2);
+                gain2.connect(ctx.destination);
+                osc2.start(now + 0.12);
+                osc2.stop(now + 0.55);
+            } catch(e) {
+                console.debug('Chime audio error:', e);
+            }
+        }
+
+        function showRealtimeToast(type, data) {
+            const container = document.getElementById('blax-tenant-toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'pointer-events-auto bg-surface-container-lowest border border-outline-variant/40 rounded-2xl p-4 shadow-xl flex items-start gap-3 transform translate-y-[-10px] opacity-0 transition-all duration-300';
+            
+            const isOrder = type === 'order';
+            const icon = isOrder ? 'shopping_bag' : 'print';
+            const iconBg = isOrder ? 'bg-primary/10 text-primary' : 'bg-purple-500/10 text-purple-600';
+            const title = isOrder ? `New Order #${data.order_number}` : `New Print #${data.request_number}`;
+            const sub = isOrder 
+                ? `${data.customer_name} • ₱${data.total_amount_fmt} (${data.is_pickup ? 'Pick-up' : 'Delivery'})`
+                : `${data.customer_name} • ${data.service_name} (₱${data.total_amount_fmt})`;
+            const linkUrl = isOrder ? '<?= base_url('tenant/orders') ?>' : '<?= base_url('tenant/printing') ?>';
+
+            toast.innerHTML = `
+                <div class="w-10 h-10 rounded-xl ${iconBg} flex items-center justify-center shrink-0 shadow-2xs">
+                    <span class="material-symbols-outlined text-[20px]">${icon}</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-xs font-bold text-on-surface truncate">${title}</span>
+                        <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Just Now</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-0.5 truncate">${sub}</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <a href="${linkUrl}" class="text-[11px] font-bold text-primary hover:underline flex items-center gap-0.5">
+                            <span>Open in Queue</span>
+                            <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+                <button type="button" class="text-on-surface-variant/60 hover:text-on-surface p-1 -mr-1 text-xs" onclick="this.closest('div.pointer-events-auto').remove()">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => toast.remove(), 350);
+            }, 7000);
+        }
+
+        function checkRealtime() {
+            let url = '<?= base_url('tenant/realtime/check') ?>';
+            const params = [];
+            if (lastOrderId !== null) params.push('last_order_id=' + lastOrderId);
+            if (lastPrintingId !== null) params.push('last_printing_id=' + lastPrintingId);
+            if (params.length > 0) url += '?' + params.join('&');
+
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(res => {
+                    if (!res || !res.success) return;
+
+                    if (isInitial) {
+                        lastOrderId = res.max_order_id || 0;
+                        lastPrintingId = res.max_printing_id || 0;
+                        isInitial = false;
+                        return;
+                    }
+
+                    if (res.max_order_id) lastOrderId = Math.max(lastOrderId || 0, res.max_order_id);
+                    if (res.max_printing_id) lastPrintingId = Math.max(lastPrintingId || 0, res.max_printing_id);
+
+                    // 1. New orders
+                    if (res.has_new_orders && Array.isArray(res.new_orders) && res.new_orders.length > 0) {
+                        playChime();
+                        res.new_orders.forEach(ord => {
+                            showRealtimeToast('order', ord);
+                            window.dispatchEvent(new CustomEvent('blax:new-order', { detail: ord }));
+                        });
+                        if (res.summary) {
+                            window.dispatchEvent(new CustomEvent('blax:summary-update', { detail: res.summary }));
+                        }
+                    }
+
+                    // 2. New printing requests
+                    if (res.has_new_printing && Array.isArray(res.new_printing) && res.new_printing.length > 0) {
+                        playChime();
+                        res.new_printing.forEach(pr => {
+                            showRealtimeToast('printing', pr);
+                            window.dispatchEvent(new CustomEvent('blax:new-printing', { detail: pr }));
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.debug('Tenant realtime poll skipped:', err);
+                });
+        }
+
+        // Start polling loop every 4 seconds
+        checkRealtime();
+        pollTimer = setInterval(checkRealtime, 4000);
+
+        // Universal showToast helper for tenant pages
+        window.showToast = function(opts) {
+            if (typeof opts === 'string') opts = { message: opts, type: 'info' };
+            const type = opts.type || 'info';
+            const title = opts.title || (type === 'success' ? 'Success' : (type === 'error' ? 'Notice' : 'Notification'));
+            const message = opts.message || '';
+            const url = opts.url || '';
+            const icon = opts.icon || (
+                type === 'success' ? 'check_circle' :
+                type === 'error' ? 'error' :
+                type === 'warning' ? 'warning' :
+                type === 'order' ? 'shopping_bag' :
+                type === 'delivery' ? 'two_wheeler' :
+                type === 'printing' ? 'print' : 'notifications'
+            );
+
+            const container = document.getElementById('blax-tenant-toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'pointer-events-auto bg-surface-container-lowest/95 backdrop-blur-md border border-outline-variant/40 rounded-2xl p-3.5 shadow-xl flex items-start gap-3 transform translate-y-[-10px] opacity-0 transition-all duration-300';
+            
+            const colorMap = {
+                success: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+                error: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+                warning: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+                order: 'bg-primary/10 text-primary border-primary/20',
+                printing: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+                info: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+            };
+            const badgeStyle = colorMap[type] || colorMap.info;
+
+            let actionHtml = '';
+            if (url) {
+                actionHtml = `
+                    <a href="${url}" class="inline-flex items-center gap-1 text-[11px] font-bold text-primary hover:underline mt-1.5">
+                        <span>View Details</span>
+                        <span class="material-symbols-outlined text-[13px]">arrow_forward</span>
+                    </a>
+                `;
+            }
+
+            toast.innerHTML = `
+                <div class="w-8 h-8 rounded-xl ${badgeStyle} border flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                    <span class="material-symbols-outlined text-[18px]">${icon}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h4 class="text-xs font-bold text-on-surface leading-tight">${title}</h4>
+                    <p class="text-xs text-on-surface-variant mt-0.5 leading-snug break-words">${message}</p>
+                    ${actionHtml}
+                </div>
+                <button type="button" class="text-on-surface-variant/60 hover:text-on-surface p-1 -mr-1 rounded-lg transition-colors" onclick="this.closest('div.pointer-events-auto').remove()">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            `;
+
+            container.appendChild(toast);
+            playChime();
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-[-10px]', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+            });
+
+            const duration = opts.duration || 6000;
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                setTimeout(() => toast.remove(), 350);
+            }, duration);
+        };
+
+        // Flashdata auto-triggers
+        <?php if (session()->getFlashdata('success')): ?>
+            window.showToast({
+                type: 'success',
+                title: 'Action Completed',
+                message: <?= json_encode((string)session()->getFlashdata('success')) ?>
+            });
+        <?php endif; ?>
+
+        <?php if (session()->getFlashdata('error')): ?>
+            window.showToast({
+                type: 'error',
+                title: 'Notice',
+                message: <?= json_encode((string)session()->getFlashdata('error')) ?>
+            });
+        <?php endif; ?>
+    })();
+    </script>
+
 </body></html>

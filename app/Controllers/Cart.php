@@ -320,10 +320,10 @@ class Cart extends BaseController
             if (!$addr || (int) ($addr['user_id'] ?? 0) !== (int) $userId) {
                 return redirect()->back()->with('error', 'Invalid delivery address selected.');
             }
-            $cityOk = stripos($addr['city'] ?? '', 'Polomolok') !== false;
+            $cityOk = (stripos($addr['city'] ?? '', 'Polomolok') !== false) || (stripos($addr['city'] ?? '', 'Tupi') !== false);
             $provOk = stripos($addr['province'] ?? '', 'South Cotabato') !== false;
             if (!$cityOk && !$provOk) {
-                return redirect()->back()->with('error', 'Delivery is available only within Polomolok, South Cotabato.');
+                return redirect()->back()->with('error', 'Delivery is available only within Polomolok and Tupi, South Cotabato.');
             }
         }
 

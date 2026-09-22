@@ -200,7 +200,7 @@
                     </h2>
 
                     <div class="relative pl-6 space-y-6 before:absolute before:left-[11px] before:top-2.5 before:bottom-2.5 before:w-0.5 before:bg-outline-variant/40">
-                        <?php foreach ($milestones as $idx => $m): ?>
+                        <?php foreach ($milestones ?? [] as $idx => $m): ?>
                             <?php 
                                 $isDone = ($m['state'] === 'completed');
                                 $isActive = ($m['state'] === 'active');
@@ -345,6 +345,12 @@
                                 <span class="text-xs font-bold text-gray-800 dark:text-gray-100 tracking-wide uppercase">Live Route Tracking</span>
                             </div>
 
+                            <!-- Real-Time ETA & Road Distance Pill -->
+                            <div id="liveRouteStats" class="pointer-events-auto hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 text-white backdrop-blur-md shadow-md text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[15px] text-blue-400">directions_bike</span>
+                                <span id="liveEtaText">Calculating route...</span>
+                            </div>
+
                             <!-- "Center on Courier" Control Button -->
                             <button type="button" 
                                     id="btn-center-courier"
@@ -453,15 +459,98 @@
             `;
         } else if (type === 'courier') {
             div.innerHTML = `
-                <div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
-                    <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(37,99,235,0.3);animation:pulseRing 1.8s infinite;"></div>
-                    <div style="width:34px;height:34px;border-radius:50%;background:#2563eb;border:2.5px solid #ffffff;box-shadow:0 3px 10px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;color:#fff;z-index:2;">
-                        <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">two_wheeler</span>
+                <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(37,99,235,0.25);animation:pulseRing 1.8s infinite;"></div>
+                    <div id="courierIconRotate" style="width:36px;height:36px;border-radius:50%;background:#2563eb;border:2.5px solid #ffffff;box-shadow:0 3px 10px rgba(37,99,235,0.5);display:flex;align-items:center;justify-content:center;color:#fff;z-index:2;transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);">
+                        <span class="material-symbols-outlined" style="font-size:20px;line-height:1;">two_wheeler</span>
                     </div>
                 </div>
             `;
         }
         return div;
+    }
+
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+        const toRad = Math.PI / 180;
+        const toDeg = 180 / Math.PI;
+        const phi1 = lat1 * toRad;
+        const phi2 = lat2 * toRad;
+        const deltaLambda = (lng2 - lng1) * toRad;
+        const y = Math.sin(deltaLambda) * Math.cos(phi2);
+        const x = Math.cos(phi1) * Math.sin(phi2) - Math.cos(phi1) * Math.cos(deltaLambda);
+        const theta = Math.atan2(y, x);
+        return (theta * toDeg + 360) % 360;
+    }
+
+    function fetchRoutePolyline(origin, destination, courier) {
+        fetch('<?= base_url('api/route') ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                origin: origin,
+                destination: destination
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            let path = [];
+            if (data && data.success && data.route) {
+                if (data.route.points && data.route.points.length > 0) {
+                    path = data.route.points.map(p => new google.maps.LatLng(parseFloat(p.lat), parseFloat(p.lng)));
+                } else if (data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
+                    path = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
+                }
+
+                if (data.route.duration_text && data.route.distance_text) {
+                    const statsWrap = document.getElementById('liveRouteStats');
+                    const etaText = document.getElementById('liveEtaText');
+                    if (statsWrap && etaText) {
+                        etaText.textContent = `${data.route.duration_text} (${data.route.distance_text})`;
+                        statsWrap.classList.remove('hidden');
+                    }
+                }
+            }
+
+            if (!path || path.length === 0) {
+                path = [origin, destination];
+            }
+
+            if (routePolyline) routePolyline.setMap(null);
+            routePolyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: '#2563eb',
+                strokeOpacity: 0.85,
+                strokeWeight: 4,
+                map: trackMap
+            });
+
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(origin);
+            bounds.extend(destination);
+            if (courier) bounds.extend(courier);
+            trackMap.fitBounds(bounds, 70);
+        })
+        .catch(err => {
+            console.warn('Could not fetch route polyline:', err);
+            if (routePolyline) routePolyline.setMap(null);
+            routePolyline = new google.maps.Polyline({
+                path: [origin, destination],
+                geodesic: true,
+                strokeColor: '#2563eb',
+                strokeOpacity: 0.85,
+                strokeWeight: 4,
+                map: trackMap
+            });
+            const bounds = new google.maps.LatLngBounds();
+            bounds.extend(origin);
+            bounds.extend(destination);
+            if (courier) bounds.extend(courier);
+            trackMap.fitBounds(bounds, 70);
+        });
     }
 
     window.initGoogleTrackMap = function() {
@@ -504,7 +593,7 @@
                 <div style="font-family:inherit;padding:4px;">
                     <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Store Dispatch Hub</div>
                     <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${SHOP_NAME}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">Polomolok Hub</div>
+                    <div style="font-size:11px;color:#475569;margin-top:2px;">Merchant Hub</div>
                 </div>
             `
         });
@@ -542,25 +631,26 @@
 
         // 3. Courier Marker
         const courierContent = createMarkerContent('courier');
+        const courierTitle = `${SHOP_NAME} (Live Courier)`;
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             courierMarker = new google.maps.marker.AdvancedMarkerElement({
                 map: trackMap,
                 position: courierLatLng,
                 content: courierContent,
-                title: COURIER_NAME
+                title: courierTitle
             });
         } else {
             courierMarker = new google.maps.Marker({
                 map: trackMap,
                 position: courierLatLng,
-                title: COURIER_NAME
+                title: courierTitle
             });
         }
         courierInfoWindow = new google.maps.InfoWindow({
             content: `
-                <div style="font-family:inherit;padding:4px;">
-                    <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;">Live Courier Position</div>
-                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
+                <div style="font-family:inherit;padding:4px;min-width:140px;">
+                    <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div>
+                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${SHOP_NAME}</div>
                     <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route</div>
                 </div>
             `
@@ -589,6 +679,17 @@
         if (!courierMarker) return;
         const startLat = currentRiderPos.lat;
         const startLng = currentRiderPos.lng;
+
+        // Calculate heading bearing if moved
+        const dist = Math.hypot(targetLat - startLat, targetLng - startLng);
+        if (dist > 0.00002) {
+            const bearing = calculateBearing(startLat, startLng, targetLat, targetLng);
+            const iconRotate = document.getElementById('courierIconRotate');
+            if (iconRotate) {
+                iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
+            }
+        }
+
         const startTime = performance.now();
         const duration = 2000; // 2-second smooth lerp
 

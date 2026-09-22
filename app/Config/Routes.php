@@ -9,7 +9,7 @@ use CodeIgniter\Router\RouteCollection;
 // Customer / Public Routes
 $routes->get('/', 'Home::index');
 $routes->post('ai/query', 'Home::aiQuery');
-$routes->post('api/route', 'CustomerOrderController::computeRoute');
+$routes->match(['GET', 'POST'], 'api/route', 'CustomerOrderController::computeRoute');
 
 // Auth Routes
 $routes->get('login', 'Auth::login');
@@ -81,6 +81,7 @@ $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
     $routes->post('favorites/remove', 'Customer::unfavoriteShop');
     $routes->post('favorites/add', 'Customer::favoriteShop');
     $routes->post('shop/report', 'Customer::reportShop', ['filter' => 'actionThrottle']);
+    $routes->get('realtime/check', 'Customer::realtimeCheck');
 });
 
 // Rating & Review Routes
@@ -122,6 +123,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->post('deliveries/update-status', 'Tenant::updateDeliveryStatus');
     $routes->post('deliveries/bulk-in-transit', 'Tenant::bulkInTransit');
     $routes->post('deliveries/update-location', 'Tenant::updateDeliveryLocation');
+    $routes->post('deliveries/stop-broadcast', 'Tenant::stopDeliveryBroadcast');
     $routes->post('deliveries/lookup', 'Tenant::deliveryLookup');
     $routes->post('withdrawals/request', 'Tenant::requestWithdrawal');
     $routes->post('settings/save', 'Tenant::saveSettings');
@@ -153,6 +155,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
     $routes->get('pos', 'Tenant::pos');
     $routes->get('deliveries/(:num)', 'Tenant::deliveryDetail/$1');
     $routes->get('orders/detail-json/(:num)', 'Tenant::orderDetailJson/$1');
+    $routes->get('realtime/check', 'Tenant::realtimeCheck');
     $routes->post('compliance/report-customer', 'Tenant::reportCustomer');
 });
 
@@ -160,6 +163,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
 $routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
     $routes->get('/', 'Admin::dashboard');
     $routes->get('dashboard', 'Admin::dashboard');
+    $routes->get('realtime/check', 'Admin::realtimeCheck');
     $routes->get('tenants', 'Admin::tenants');
     $routes->get('customers', 'Admin::customers');
     $routes->get('payments', 'Admin::payments');

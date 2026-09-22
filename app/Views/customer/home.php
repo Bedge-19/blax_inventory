@@ -13,6 +13,8 @@
 
     <!-- Hero Section — content managed via Admin > Content Management -->
     <?php
+        $sort = $sort ?? null;
+        $rotationInfo = $rotationInfo ?? \App\Models\ProductModel::getRotationInfo(3);
         $sc = $siteContents ?? [];
         $heroBadge = $sc['hero_badge']['text_value'] ?? 'Seasonal Event';
         $heroTitle = $sc['hero_title']['text_value'] ?? 'The Ultimate Merchandise Selection';
@@ -24,39 +26,58 @@
         $catalogTitle = $sc['catalog_title']['text_value'] ?? 'Global Product Catalog';
         $catalogSubtitle = $sc['catalog_subtitle']['text_value'] ?? 'Aggregation of all products currently available across the entire RHK network.';
     ?>
-    <section class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-md bg-surface-container-lowest min-h-[260px] sm:min-h-[340px] lg:h-[420px] py-6 sm:py-10 flex items-center group">
+    <section class="relative w-full rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg bg-surface-container-lowest min-h-[280px] sm:min-h-[340px] lg:h-[420px] py-6 sm:py-10 flex items-center group">
 
-        <div class="absolute inset-0 bg-cover bg-center w-full h-full opacity-90 transition-transform duration-700 ease-in-out transform group-hover:scale-105" style="background-image: url('<?= esc($heroImage) ?>');"></div>
-        <div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/98 via-surface-container-lowest/85 to-surface-container-lowest/40 sm:to-transparent"></div>
+        <!-- Background Image with Blur Effect & Subtle Zoom on Hover -->
+        <div class="absolute inset-0 bg-cover bg-center w-full h-full scale-105 filter blur-[4px] sm:blur-[6px] opacity-85 transition-transform duration-700 ease-in-out transform group-hover:scale-110 pointer-events-none" style="background-image: url('<?= esc($heroImage) ?>');"></div>
+        
+        <!-- Fail-safe High-Contrast Gradient Backdrop -->
+        <div class="absolute inset-0 pointer-events-none bg-white/70 sm:bg-transparent" style="background: linear-gradient(90deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.92) 42%, rgba(255, 255, 255, 0.60) 75%, rgba(255, 255, 255, 0.15) 100%);"></div>
 
-        <div class="relative z-10 px-4 sm:px-8 lg:px-[80px] max-w-2xl flex flex-col gap-2.5 sm:gap-md">
+        <div class="relative z-10 px-4 sm:px-8 lg:px-[80px] max-w-2xl flex flex-col gap-3 sm:gap-md">
 
-            <span class="text-[11px] sm:text-label-sm font-label-sm text-primary uppercase tracking-wider font-extrabold flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                <?= esc($heroBadge) ?>
-            </span>
-            <h1 class="text-xl sm:text-3xl lg:text-display font-display text-on-surface font-extrabold leading-tight"><?= esc($heroTitle) ?></h1>
-            <p class="text-xs sm:text-base lg:text-body-lg font-body-lg text-on-surface-variant max-w-md line-clamp-3 sm:line-clamp-none leading-relaxed"><?= esc($heroSubtitle) ?></p>
+            <!-- Event Badge -->
+            <div class="flex items-center">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-[11px] sm:text-label-sm font-label-sm font-extrabold tracking-wide uppercase shadow-2xs backdrop-blur-xs">
+                    <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                    <?= esc($heroBadge) ?>
+                </span>
+            </div>
 
-            <div class="mt-2 sm:mt-sm flex flex-wrap items-center gap-2 sm:gap-md">
+            <!-- Headline & Subtitle with High Readability -->
+            <h1 class="text-2xl sm:text-3xl lg:text-display font-display text-slate-900 font-extrabold leading-tight tracking-tight drop-shadow-xs"><?= esc($heroTitle) ?></h1>
+            <p class="text-xs sm:text-base lg:text-body-lg font-body-lg text-slate-700 max-w-lg line-clamp-3 sm:line-clamp-none leading-relaxed font-medium"><?= esc($heroSubtitle) ?></p>
 
-                <a href="#catalog" class="bg-primary text-on-primary text-xs sm:text-button font-semibold sm:font-button px-4 py-2.5 sm:px-lg sm:py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-300">
-                    <?= esc($sc['hero_cta_text']['text_value'] ?? 'Explore Marketplace') ?>
+            <!-- Call to Actions -->
+            <div class="mt-2 sm:mt-sm flex flex-wrap items-center gap-2.5 sm:gap-md">
+
+                <a href="#catalog" class="bg-primary text-on-primary text-xs sm:text-button font-bold px-4 py-2.5 sm:px-lg sm:py-md rounded-xl hover:bg-on-primary-fixed-variant transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 duration-300 flex items-center gap-1.5">
+                    <span><?= esc($sc['hero_cta_text']['text_value'] ?? 'Explore Marketplace') ?></span>
+                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                 </a>
 
                 <?php if (!session()->get('isLoggedIn')): ?>
-                    <a href="<?= base_url('signup') ?>" class="bg-surface-container-lowest/90 backdrop-blur-xs text-primary border border-primary/30 text-xs sm:text-button font-semibold sm:font-button px-3.5 py-2.5 sm:px-lg sm:py-md rounded-lg hover:bg-primary/10 transition-all shadow-xs">
+                    <a href="<?= base_url('signup') ?>" class="bg-white/90 backdrop-blur-sm text-primary border border-primary/30 text-xs sm:text-button font-bold px-4 py-2.5 sm:px-lg sm:py-md rounded-xl hover:bg-primary/10 transition-all shadow-xs">
                         Create Account
                     </a>
                 <?php endif; ?>
 
             </div>
 
-            <!-- Mobile Trust Badges -->
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-[10px] sm:text-xs text-on-surface-variant font-medium opacity-90">
-                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-green-600">verified</span> Polomolok Verified</span>
-                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-primary">local_shipping</span> Fast Delivery</span>
-                <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[14px] text-amber-600">print</span> Rush Printing</span>
+            <!-- Mobile & Desktop Trust Badges (Frosted Micro-Pills) -->
+            <div class="flex flex-wrap items-center gap-2 pt-1 text-[11px] sm:text-xs">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-xs border border-outline-variant/30 text-slate-800 font-semibold shadow-2xs">
+                    <span class="material-symbols-outlined text-[15px] text-emerald-600">verified</span>
+                    <span>Polomolok Verified</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-xs border border-outline-variant/30 text-slate-800 font-semibold shadow-2xs">
+                    <span class="material-symbols-outlined text-[15px] text-primary">local_shipping</span>
+                    <span>Fast Delivery</span>
+                </span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/85 backdrop-blur-xs border border-outline-variant/30 text-slate-800 font-semibold shadow-2xs">
+                    <span class="material-symbols-outlined text-[15px] text-amber-600">print</span>
+                    <span>Rush Printing</span>
+                </span>
             </div>
 
         </div>
@@ -216,13 +237,22 @@
             <?php if (!empty($categories)): ?>
                 <div class="mb-4 sm:mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
                     <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-                        <a href="<?= base_url('/') ?>#catalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= empty($categoryId) ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
+                        <?php
+                            $allParams = [];
+                            if (!empty($sort) && $sort !== 'discovery') $allParams['sort'] = $sort;
+                            $allUrl = base_url(!empty($allParams) ? '?' . http_build_query($allParams) : '/') . '#catalog';
+                        ?>
+                        <a href="<?= $allUrl ?>" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= empty($categoryId) ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
                             <span class="material-symbols-outlined text-[14px]">auto_awesome</span>
                             <span>All Items</span>
                         </a>
                         <?php foreach ($categories as $cat): ?>
-                            <?php $isCatActive = ((int) ($categoryId ?? 0) === (int) $cat['id']); ?>
-                            <a href="<?= base_url('?category_id=' . $cat['id']) ?>#catalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= $isCatActive ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
+                            <?php 
+                                $isCatActive = ((int) ($categoryId ?? 0) === (int) $cat['id']);
+                                $catParams = ['category_id' => $cat['id']];
+                                if (!empty($sort) && $sort !== 'discovery') $catParams['sort'] = $sort;
+                            ?>
+                            <a href="<?= base_url('?' . http_build_query($catParams)) ?>#catalog" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all <?= $isCatActive ? 'bg-primary text-white shadow-xs' : 'bg-white text-on-surface-variant hover:bg-surface-container border border-outline-variant/30' ?>">
                                 <span><?= esc($cat['name']) ?></span>
                             </a>
                         <?php endforeach; ?>
@@ -238,7 +268,21 @@
 
                 <div>
 
-                    <h2 class="font-bold text-lg sm:text-headline-lg mb-1 sm:mb-sm"><?= esc($catalogTitle) ?></h2>
+                    <div class="flex flex-wrap items-center gap-2 mb-1 sm:mb-sm">
+                        <h2 class="font-bold text-lg sm:text-headline-lg"><?= esc($catalogTitle) ?></h2>
+                        <?php if (empty($sort) || $sort === 'discovery'): ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-primary/10 text-primary border border-primary/20 shadow-2xs" title="Featured showcase rotates every 3 hours across all shops">
+                                <span class="material-symbols-outlined text-[13px] sm:text-[14px] animate-spin-slow">autorenew</span>
+                                <span>Rotates every 3h &bull; <span id="catalog-rotation-timer" data-seconds="<?= (int) ($rotationInfo['seconds_remaining'] ?? 0) ?>"><?= esc($rotationInfo['formatted_time_left'] ?? '3h') ?> left</span></span>
+                            </span>
+                        <?php else: ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-surface-container-high text-on-surface border border-outline-variant/30 shadow-2xs">
+                                <span class="material-symbols-outlined text-[13px] text-primary">sort</span>
+                                <span>Sorted by <?= esc(ucwords(str_replace('_', ' ', $sort))) ?></span>
+                                <a href="<?= base_url(empty($categoryId) ? '/' : '?category_id=' . $categoryId) ?>#catalog" class="ml-1 text-primary font-bold hover:underline" title="Switch back to 3-hour discovery rotation">&times; Reset</a>
+                            </span>
+                        <?php endif; ?>
+                    </div>
                     <p class="text-xs sm:text-body-md text-on-surface-variant"><?= esc($catalogSubtitle) ?></p>
 
                     <?php if (($searchQuery ?? '') !== ''): ?>
@@ -270,7 +314,7 @@
 
                 </div>
 
-                <div class="flex gap-2 sm:gap-sm shrink-0">
+                <div class="flex items-center gap-2 sm:gap-sm shrink-0">
 
                     <a href="<?= base_url('categories') ?>" class="flex items-center gap-1.5 sm:gap-sm bg-white border border-outline-variant/30 rounded-lg px-3 py-1.5 sm:px-md sm:py-sm cursor-pointer hover:bg-surface-container transition-colors shadow-xs">
 
@@ -279,12 +323,59 @@
 
                     </a>
 
-                    <a href="<?= base_url('search?q=') ?>" class="flex items-center gap-1.5 sm:gap-sm bg-white border border-outline-variant/30 rounded-lg px-3 py-1.5 sm:px-md sm:py-sm cursor-pointer hover:bg-surface-container transition-colors shadow-xs">
-
-                        <span class="material-symbols-outlined text-outline text-[16px] sm:text-base">swap_vert</span>
-                        <span class="text-xs sm:text-label-sm font-medium">Sort By</span>
-
-                    </a>
+                    <!-- Interactive Sort By Dropdown -->
+                    <div class="relative" id="sort-dropdown-container">
+                        <button type="button" id="sort-menu-btn" onclick="toggleSortMenu(event)" class="flex items-center gap-1.5 sm:gap-sm bg-white border <?= (!empty($sort) && $sort !== 'discovery') ? 'border-primary text-primary font-semibold' : 'border-outline-variant/30 text-on-surface' ?> rounded-lg px-3 py-1.5 sm:px-md sm:py-sm cursor-pointer hover:bg-surface-container transition-colors shadow-xs">
+                            <span class="material-symbols-outlined text-[16px] sm:text-base">swap_vert</span>
+                            <span class="text-xs sm:text-label-sm font-medium">
+                                <?php
+                                    $sortLabels = [
+                                        'discovery'  => 'Discovery (3h)',
+                                        'rating'     => 'Top Rated',
+                                        'price_asc'  => 'Price: Low-High',
+                                        'price_desc' => 'Price: High-Low',
+                                        'newest'     => 'Newest',
+                                    ];
+                                    echo esc($sortLabels[$sort ?? 'discovery'] ?? 'Sort By');
+                                ?>
+                            </span>
+                            <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                        </button>
+                        <div id="sort-menu" class="hidden absolute right-0 mt-1 w-56 bg-white rounded-xl shadow-xl border border-outline-variant/30 py-1.5 z-40">
+                            <?php
+                                $buildSortLink = function($s) use ($categoryId, $searchQuery) {
+                                    $p = [];
+                                    if ($s !== 'discovery') $p['sort'] = $s;
+                                    if (!empty($categoryId)) $p['category_id'] = $categoryId;
+                                    if ($searchQuery !== '') $p['q'] = $searchQuery;
+                                    return base_url(!empty($p) ? '?' . http_build_query($p) : '/') . '#catalog';
+                                };
+                            ?>
+                            <a href="<?= $buildSortLink('discovery') ?>" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-container transition-colors <?= (empty($sort) || $sort === 'discovery') ? 'text-primary font-bold bg-primary/10' : 'text-on-surface' ?>">
+                                <span class="material-symbols-outlined text-[16px] text-primary">autorenew</span>
+                                <div>
+                                    <div>Discovery Rotation</div>
+                                    <div class="text-[10px] text-on-surface-variant font-normal">Rotates every 3 hours</div>
+                                </div>
+                            </a>
+                            <a href="<?= $buildSortLink('rating') ?>" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-container transition-colors <?= $sort === 'rating' ? 'text-primary font-bold bg-primary/10' : 'text-on-surface' ?>">
+                                <span class="material-symbols-outlined text-[16px] text-amber-500">star</span>
+                                <span>Top Rated First</span>
+                            </a>
+                            <a href="<?= $buildSortLink('price_asc') ?>" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-container transition-colors <?= $sort === 'price_asc' ? 'text-primary font-bold bg-primary/10' : 'text-on-surface' ?>">
+                                <span class="material-symbols-outlined text-[16px]">arrow_upward</span>
+                                <span>Price: Low to High</span>
+                            </a>
+                            <a href="<?= $buildSortLink('price_desc') ?>" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-container transition-colors <?= $sort === 'price_desc' ? 'text-primary font-bold bg-primary/10' : 'text-on-surface' ?>">
+                                <span class="material-symbols-outlined text-[16px]">arrow_downward</span>
+                                <span>Price: High to Low</span>
+                            </a>
+                            <a href="<?= $buildSortLink('newest') ?>" class="flex items-center gap-2 px-3 py-2 text-xs hover:bg-surface-container transition-colors <?= $sort === 'newest' ? 'text-primary font-bold bg-primary/10' : 'text-on-surface' ?>">
+                                <span class="material-symbols-outlined text-[16px]">new_releases</span>
+                                <span>Newest Arrivals</span>
+                            </a>
+                        </div>
+                    </div>
 
                 </div>
 
@@ -385,7 +476,8 @@
                 $currentPage  = $currentPage ?? 1;
                 $searchQuery  = $searchQuery ?? '';
                 $categoryId   = $categoryId ?? null;
-                $pageUrl = function (int $p) use ($searchQuery, $categoryId) {
+                $sortParam    = (!empty($sort) && $sort !== 'discovery') ? $sort : null;
+                $pageUrl = function (int $p) use ($searchQuery, $categoryId, $sortParam) {
                     $params = ['page' => $p];
                     if ($searchQuery !== '') {
                         $params['q'] = $searchQuery;
@@ -393,7 +485,10 @@
                     if (!empty($categoryId)) {
                         $params['category_id'] = $categoryId;
                     }
-                    return base_url('?' . http_build_query($params));
+                    if (!empty($sortParam)) {
+                        $params['sort'] = $sortParam;
+                    }
+                    return base_url('?' . http_build_query($params)) . '#catalog';
                 };
 
                 $windowPages = [];
@@ -487,5 +582,50 @@
     </section>
 
 </main>
+
+<script>
+function toggleSortMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('sort-menu');
+    if (menu) menu.classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(e) {
+    const container = document.getElementById('sort-dropdown-container');
+    const menu = document.getElementById('sort-menu');
+    if (container && menu && !container.contains(e.target)) {
+        menu.classList.add('hidden');
+    }
+});
+
+// Live 3-Hour Dynamic Rotation Countdown
+document.addEventListener('DOMContentLoaded', function() {
+    const timerEl = document.getElementById('catalog-rotation-timer');
+    if (!timerEl) return;
+
+    let seconds = parseInt(timerEl.getAttribute('data-seconds'), 10) || 0;
+
+    function formatTime(s) {
+        if (s <= 0) return '0s';
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${sec}s`;
+        return `${sec}s`;
+    }
+
+    if (seconds > 0) {
+        setInterval(function() {
+            if (seconds > 0) {
+                seconds--;
+                timerEl.textContent = formatTime(seconds) + ' left';
+            } else {
+                timerEl.textContent = 'Refreshed!';
+            }
+        }, 1000);
+    }
+});
+</script>
 
 <?= $this->endSection() ?>
