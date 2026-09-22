@@ -36,29 +36,31 @@ class CloudinaryService
     }
 
     /**
-     * Initialize Cloudinary SDK configuration.
+     * Check if Cloudinary credentials are fully configured in the environment.
+     */
+    public function isConfigured(): bool
+    {
+        return !empty($this->config->cloudName) && !empty($this->config->apiKey) && !empty($this->config->apiSecret);
+    }
+
+    /**
+     * Initialize Cloudinary SDK configuration using separate environment variables.
      */
     protected function initCloudinary(): void
     {
-        $cloudinaryUrl = $this->config->cloudinaryUrl ?: env('CLOUDINARY_URL');
+        $cldConfig = new Configuration([
+            'cloud' => [
+                'cloud_name' => $this->config->cloudName ?: 'blax',
+                'api_key'    => $this->config->apiKey,
+                'api_secret' => $this->config->apiSecret,
+            ],
+            'url' => [
+                'secure' => true,
+            ],
+        ]);
 
-        if (!empty($cloudinaryUrl)) {
-            Configuration::instance($cloudinaryUrl);
-        } else {
-            Configuration::instance([
-                'cloud' => [
-                    'cloud_name' => $this->config->cloudName ?: env('CLOUDINARY_CLOUD_NAME', 'blax'),
-                    'api_key'    => $this->config->apiKey ?: env('CLOUDINARY_API_KEY'),
-                    'api_secret' => $this->config->apiSecret ?: env('CLOUDINARY_API_SECRET'),
-                ],
-                'url' => [
-                    'secure' => true,
-                ],
-            ]);
-        }
-
-        $this->uploadApi   = new UploadApi();
-        $this->adminApi    = new AdminApi();
+        $this->uploadApi   = new UploadApi($cldConfig);
+        $this->adminApi    = new AdminApi($cldConfig);
         $this->initialized = true;
     }
 
@@ -95,6 +97,11 @@ class CloudinaryService
      */
     protected function uploadAsset($file, string $folder, string $resourceType, ?string $publicId = null, array $options = []): ?array
     {
+        if (!$this->isConfigured()) {
+            log_message('error', 'CloudinaryService::uploadAsset: Cloudinary is not configured. Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in environment.');
+            return null;
+        }
+
         $filePath = $this->resolveFilePath($file);
         if ($filePath === null || !is_file($filePath)) {
             log_message('error', 'CloudinaryService::uploadAsset: Invalid or missing file path.');

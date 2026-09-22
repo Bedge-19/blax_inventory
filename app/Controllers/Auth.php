@@ -322,17 +322,12 @@ class Auth extends BaseController
                     : $cloudinary->uploadImage($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId);
 
                 if (!$uploadRes || empty($uploadRes['secure_url'])) {
-                    // Fallback to local storage if Cloudinary upload fails or is unconfigured
-                    $uploadPath = WRITEPATH . 'uploads/business_permits';
-                    if (!is_dir($uploadPath)) {
-                        mkdir($uploadPath, 0777, true);
-                    }
-                    $fileName  = $permit->getRandomName();
-                    $permit->move($uploadPath, $fileName);
-                    $permitUrl = 'private/uploads/business_permits/' . $fileName;
-                } else {
-                    $permitUrl = $uploadRes['secure_url'];
+                    log_message('error', '[Auth::registerShop] Cloudinary upload failed for business permit');
+                    session()->setFlashdata('error', 'Failed to upload business permit to cloud storage. Please try again.');
+                    return redirect()->to('/merchant-signup');
                 }
+
+                $permitUrl = $uploadRes['secure_url'];
             }
 
             $db = \Config\Database::connect();

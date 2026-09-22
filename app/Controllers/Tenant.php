@@ -2125,6 +2125,10 @@ class Tenant extends BaseController
             return null;
         }
 
+        if (str_starts_with($rawUrl, 'http://') || str_starts_with($rawUrl, 'https://')) {
+            return null;
+        }
+
         $clean = ltrim(str_replace(['\\', '//'], '/', $rawUrl), '/');
         $baseName = basename($clean);
 
@@ -2991,35 +2995,21 @@ class Tenant extends BaseController
         $publicId   = 'logo_' . $shopId . '_' . time() . '_' . bin2hex(random_bytes(4));
         $uploadRes  = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_SHOP_LOGOS, $publicId);
 
-        if ($uploadRes && !empty($uploadRes['secure_url'])) {
-            $newLogoUrl = $uploadRes['secure_url'];
+        if (!$uploadRes || empty($uploadRes['secure_url'])) {
+            log_message('error', '[Tenant::saveShopLogo] Cloudinary upload failed for shop ' . $shopId);
+            return redirect()->back()->with('error', 'Failed to upload shop logo to cloud storage. Please try again.');
+        }
 
-            // Clean up old logo asset
-            if (!empty($shop['logo_url'])) {
-                if ($cloudinary->isCloudinaryUrl($shop['logo_url'])) {
-                    $oldPublicId = $cloudinary->extractPublicId($shop['logo_url']);
-                    if ($oldPublicId) {
-                        $cloudinary->deleteAsset($oldPublicId, 'image');
-                    }
-                } elseif (strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
-                    $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
-                    if (is_file($oldPath)) {
-                        @unlink($oldPath);
-                    }
+        $newLogoUrl = $uploadRes['secure_url'];
+
+        // Clean up old logo asset
+        if (!empty($shop['logo_url'])) {
+            if ($cloudinary->isCloudinaryUrl($shop['logo_url'])) {
+                $oldPublicId = $cloudinary->extractPublicId($shop['logo_url']);
+                if ($oldPublicId) {
+                    $cloudinary->deleteAsset($oldPublicId, 'image');
                 }
-            }
-        } else {
-            // Local fallback
-            $uploadPath = ROOTPATH . 'public/uploads/shop_logos';
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
-
-            $fileName = $publicId . '.' . $mimeMap[$mime];
-            $file->move($uploadPath, $fileName);
-            $newLogoUrl = 'uploads/shop_logos/' . $fileName;
-
-            if (!empty($shop['logo_url']) && strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
+            } elseif (strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
                 $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
                 if (is_file($oldPath)) {
                     @unlink($oldPath);
@@ -3154,17 +3144,12 @@ class Tenant extends BaseController
                 $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
                 $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
 
-                if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                    $imageUrl = $uploadRes['secure_url'];
-                } else {
-                    $uploadPath = ROOTPATH . 'public/uploads/product_images/';
-                    if (!is_dir($uploadPath)) {
-                        mkdir($uploadPath, 0755, true);
-                    }
-                    $fileName = $publicId . '.' . $mimeMap[$mime];
-                    $file->move($uploadPath, $fileName);
-                    $imageUrl = 'uploads/product_images/' . $fileName;
+                if (!$uploadRes || empty($uploadRes['secure_url'])) {
+                    log_message('error', '[Tenant::handleProductImageUpload] Cloudinary upload failed for product ' . $productId);
+                    continue;
                 }
+
+                $imageUrl = $uploadRes['secure_url'];
 
                 $isPrimary = ($existingCount === 0) ? 1 : 0;
                 $imageModel->insert([
@@ -3186,26 +3171,20 @@ class Tenant extends BaseController
                 $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
                 $uploadRes = $cloudinary->uploadImage($single, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
 
-                if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                    $imageUrl = $uploadRes['secure_url'];
+                if (!$uploadRes || empty($uploadRes['secure_url'])) {
+                    log_message('error', '[Tenant::handleProductImageUpload] Cloudinary single upload failed for product ' . $productId);
                 } else {
-                    $uploadPath = ROOTPATH . 'public/uploads/product_images/';
-                    if (!is_dir($uploadPath)) {
-                        mkdir($uploadPath, 0755, true);
-                    }
-                    $fileName = $publicId . '.' . $mimeMap[$mime];
-                    $single->move($uploadPath, $fileName);
-                    $imageUrl = 'uploads/product_images/' . $fileName;
-                }
+                    $imageUrl = $uploadRes['secure_url'];
 
-                $isPrimary = ($existingCount === 0) ? 1 : 0;
-                $imageModel->insert([
-                    'product_id' => $productId,
-                    'image_url'  => $imageUrl,
-                    'alt_text'   => '',
-                    'is_primary' => $isPrimary,
-                    'sort_order' => $maxSortOrder++,
-                ]);
+                    $isPrimary = ($existingCount === 0) ? 1 : 0;
+                    $imageModel->insert([
+                        'product_id' => $productId,
+                        'image_url'  => $imageUrl,
+                        'alt_text'   => '',
+                        'is_primary' => $isPrimary,
+                        'sort_order' => $maxSortOrder++,
+                    ]);
+                }
             }
         }
     }

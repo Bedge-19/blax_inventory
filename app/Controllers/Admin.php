@@ -937,29 +937,21 @@ class Admin extends BaseController
         $publicId = 'cms_' . time() . '_' . bin2hex(random_bytes(4));
         $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_CMS, $publicId);
 
-        if ($uploadRes && !empty($uploadRes['secure_url'])) {
-            $newImageUrl = $uploadRes['secure_url'];
-            // Cleanup old Cloudinary asset if applicable
-            if (!empty($row['image_url']) && $cloudinary->isCloudinaryUrl($row['image_url'])) {
-                $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
-                if ($oldPublicId) {
-                    $cloudinary->deleteAsset($oldPublicId, 'image');
-                }
-            } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'uploads/cms/') === 0) {
-                $old = ROOTPATH . 'public/' . $row['image_url'];
-                if (is_file($old)) @unlink($old);
+        if (!$uploadRes || empty($uploadRes['secure_url'])) {
+            log_message('error', '[Admin::uploadContentImage] Cloudinary upload failed for CMS content ID ' . $id);
+            return redirect()->back()->with('error', 'Failed to upload image to cloud storage. Please try again.');
+        }
+
+        $newImageUrl = $uploadRes['secure_url'];
+        // Cleanup old Cloudinary asset if applicable
+        if (!empty($row['image_url']) && $cloudinary->isCloudinaryUrl($row['image_url'])) {
+            $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
+            if ($oldPublicId) {
+                $cloudinary->deleteAsset($oldPublicId, 'image');
             }
-        } else {
-            // Local fallback
-            $uploadPath = ROOTPATH.'public/uploads/cms';
-            if (!is_dir($uploadPath)) mkdir($uploadPath,0777,true);
-            $fileName = 'cms_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
-            $file->move($uploadPath,$fileName);
-            if (!empty($row['image_url']) && strpos($row['image_url'],'uploads/cms/')===0) {
-                $old=ROOTPATH.'public/'.$row['image_url'];
-                if (is_file($old)) @unlink($old);
-            }
-            $newImageUrl = 'uploads/cms/'.$fileName;
+        } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'uploads/cms/') === 0) {
+            $old = ROOTPATH . 'public/' . $row['image_url'];
+            if (is_file($old)) @unlink($old);
         }
 
         $model->update($id, ['image_url'=>$newImageUrl, 'updated_by'=>(int)session()->get('user_id')]);

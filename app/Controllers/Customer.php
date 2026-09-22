@@ -1274,19 +1274,6 @@ class Customer extends BaseController
                                         'file_path' => $refUpload['secure_url'],
                                         'file_size' => $rf->getSize(),
                                     ];
-                                } else {
-                                    // Local fallback
-                                    $attachmentsUploadPath = FCPATH . 'uploads/printing_attachments/';
-                                    if (!is_dir($attachmentsUploadPath)) {
-                                        mkdir($attachmentsUploadPath, 0755, true);
-                                    }
-                                    $refName = 'ref_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $rf->getClientExtension();
-                                    $rf->move($attachmentsUploadPath, $refName);
-                                    $stagedRefPhotos[] = [
-                                        'file_name' => $rf->getClientName(),
-                                        'file_path' => 'uploads/printing_attachments/' . $refName,
-                                        'file_size' => $rf->getSize(),
-                                    ];
                                 }
                             }
                         }
@@ -1299,14 +1286,8 @@ class Customer extends BaseController
             if ($uploadRes && !empty($uploadRes['secure_url'])) {
                 $fileUrl = $uploadRes['secure_url'];
             } else {
-                // Local fallback
-                $uploadPath = WRITEPATH . 'uploads/printing';
-                if (!is_dir($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
-                }
-                $fileName = $file->getRandomName();
-                $file->move($uploadPath, $fileName);
-                $fileUrl = 'writable/uploads/printing/' . $fileName;
+                session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
+                return redirect()->back();
             }
         } else {
             // PDF Document
@@ -1332,14 +1313,8 @@ class Customer extends BaseController
             if ($uploadRes && !empty($uploadRes['secure_url'])) {
                 $fileUrl = $uploadRes['secure_url'];
             } else {
-                // Local fallback
-                $uploadPath = WRITEPATH . 'uploads/printing';
-                if (!is_dir($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
-                }
-                $fileName = $file->getRandomName();
-                $file->move($uploadPath, $fileName);
-                $fileUrl = 'writable/uploads/printing/' . $fileName;
+                session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
+                return redirect()->back();
             }
         }
 
@@ -1950,22 +1925,11 @@ class Customer extends BaseController
                         if (is_file($oldPath)) @unlink($oldPath);
                     }
                 }
+                $session->set('profile_image_url', $updates['profile_image_url']);
             } else {
-                // Local fallback
-                $uploadPath = ROOTPATH . 'public/uploads/profiles';
-                if (!is_dir($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
-                }
-                $fileName = $file->getRandomName();
-                $file->move($uploadPath, $fileName);
-                $updates['profile_image_url'] = 'uploads/profiles/' . $fileName;
-
-                if (!empty($current['profile_image_url']) && strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
-                    $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
-                    if (is_file($oldPath)) @unlink($oldPath);
-                }
+                session()->setFlashdata('error', 'Failed to upload profile picture. Please try again.');
+                return redirect()->back();
             }
-            $session->set('profile_image_url', $updates['profile_image_url']);
         } elseif ($removeImage) {
             if (!empty($current['profile_image_url'])) {
                 if ($cloudinary->isCloudinaryUrl($current['profile_image_url'])) {
