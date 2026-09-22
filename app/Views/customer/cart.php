@@ -96,7 +96,7 @@
 
                         <div class="w-24 h-24 md:w-32 md:h-32 bg-surface-container rounded-lg overflow-hidden shrink-0">
 
-                            <img alt="<?= esc($item['product_name']) ?>" class="w-full h-full object-cover" src="<?= esc(product_image_url($item['image_url'] ?? null)) ?>">
+                            <img alt="<?= esc($item['product_name']) ?>" class="w-full h-full object-cover" src="<?= esc(product_image_url($item['image_url'] ?? null, 'thumbnail')) ?>">
 
                         </div>
 

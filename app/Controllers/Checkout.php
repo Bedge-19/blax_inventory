@@ -91,6 +91,7 @@ class Checkout extends BaseController
                 $imageUrl = $img['image_url'];
             }
         }
+        $imageUrl = product_image_url($imageUrl, 'thumbnail');
 
         // Load shop and addresses
         $shop      = (new ShopModel())->find($product['shop_id']);

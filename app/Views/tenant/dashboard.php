@@ -260,7 +260,7 @@ $compactMoney = function (float $v): string {
 
                                         <?php if (!empty($p['image_url'])): ?>
 
-                                            <img src="<?= esc($p['image_url']) ?>" alt="<?= esc($p['name']) ?>" class="w-10 h-10 rounded-lg object-cover shrink-0">
+                                            <img src="<?= esc(product_image_url($p['image_url'], 'thumbnail')) ?>" alt="<?= esc($p['name']) ?>" class="w-10 h-10 rounded-lg object-cover shrink-0">
 
                                         <?php else: ?>
 

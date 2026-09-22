@@ -24,6 +24,19 @@ class CloudinaryService
     public const FOLDER_PRODUCTS         = 'blax/products';
     public const FOLDER_CMS              = 'blax/cms';
 
+    /**
+     * Standardized responsive image delivery variants.
+     * All variants automatically apply optimal WebP/AVIF format (f_auto) and compression (q_auto).
+     */
+    public const VARIANTS = [
+        'avatar'    => 'c_fill,g_face,w_100,h_100,f_auto,q_auto',
+        'thumbnail' => 'c_fill,w_160,h_160,f_auto,q_auto',
+        'card'      => 'c_limit,w_480,h_480,f_auto,q_auto',
+        'detail'    => 'c_limit,w_960,h_960,f_auto,q_auto',
+        'logo'      => 'c_limit,w_200,h_200,f_auto,q_auto',
+        'banner'    => 'c_limit,w_1440,f_auto,q_auto',
+    ];
+
     protected UploadApi $uploadApi;
     protected AdminApi $adminApi;
     protected CloudinaryConfig $config;
@@ -66,6 +79,7 @@ class CloudinaryService
 
     /**
      * Upload an image file (JPG, PNG, WEBP, GIF) to Cloudinary.
+     * Applies safe maximum dimension bounding (1920x1920) to limit storage usage.
      *
      * @param string|UploadedFile $file
      * @param string $folder
@@ -75,11 +89,20 @@ class CloudinaryService
      */
     public function uploadImage($file, string $folder, ?string $publicId = null, array $options = []): ?array
     {
-        return $this->uploadAsset($file, $folder, 'image', $publicId, $options);
+        $defaultOptions = [
+            'transformation' => [
+                'width'  => 1920,
+                'height' => 1920,
+                'crop'   => 'limit',
+            ],
+        ];
+
+        return $this->uploadAsset($file, $folder, 'image', $publicId, array_merge($defaultOptions, $options));
     }
 
     /**
      * Upload a raw/document file (PDF, DOCX, ZIP, etc.) to Cloudinary.
+     * Raw uploads are preserved untouched without transformations.
      *
      * @param string|UploadedFile $file
      * @param string $folder
@@ -90,6 +113,58 @@ class CloudinaryService
     public function uploadRawFile($file, string $folder, ?string $publicId = null, array $options = []): ?array
     {
         return $this->uploadAsset($file, $folder, 'raw', $publicId, $options);
+    }
+
+    /**
+     * Transforms a Cloudinary delivery URL with named presets (card, thumbnail, avatar, detail, logo, banner).
+     * Pure string manipulation without server-side API calls.
+     */
+    public static function transformUrl(?string $url, string $variant = 'card'): string
+    {
+        if ($url === null || trim($url) === '') {
+            return '';
+        }
+
+        $url = trim($url);
+
+        // Only transform Cloudinary URLs
+        if (!str_contains($url, 'res.cloudinary.com') && !str_contains($url, 'cloudinary.com')) {
+            return $url;
+        }
+
+        // Do not transform raw resources (PDFs, docs)
+        if (str_contains($url, '/raw/upload/')) {
+            return $url;
+        }
+
+        $transform = self::VARIANTS[$variant] ?? (self::VARIANTS['card'] ?? 'f_auto,q_auto');
+        if ($transform === '') {
+            return $url;
+        }
+
+        $prefix = '/image/upload/';
+        $pos = strpos($url, $prefix);
+        if ($pos === false) {
+            return $url;
+        }
+
+        $base = substr($url, 0, $pos + strlen($prefix));
+        $rest = substr($url, $pos + strlen($prefix));
+
+        // Check if $rest starts with an existing transformation segment
+        if (preg_match('#^([a-z0-9_:,.-]+)/(.*)$#i', $rest, $matches)) {
+            $firstSegment = $matches[1];
+            $afterFirst   = $matches[2];
+
+            $isVersion = (bool) preg_match('#^v\d+$#', $firstSegment);
+            $isFolder  = ($firstSegment === 'blax' || str_starts_with($firstSegment, 'blax_'));
+
+            if (!$isVersion && !$isFolder) {
+                return $base . $transform . '/' . $afterFirst;
+            }
+        }
+
+        return $base . $transform . '/' . $rest;
     }
 
     /**

@@ -172,7 +172,7 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                 <td class="px-lg py-md">
                                     <div class="flex items-center gap-md">
                                         <?php if (!empty($p['image_url'])): ?>
-                                            <?php $imgSrc = str_starts_with($p['image_url'], 'http') ? $p['image_url'] : base_url($p['image_url']); ?>
+                                            <?php $imgSrc = product_image_url($p['image_url'], 'thumbnail'); ?>
                                             <img src="<?= esc($imgSrc) ?>" alt="<?= esc($p['name']) ?>" class="w-12 h-12 rounded-lg object-cover bg-surface-variant">
                                         <?php else: ?>
                                             <div class="w-12 h-12 rounded-lg bg-surface-variant flex items-center justify-center text-on-surface-variant">

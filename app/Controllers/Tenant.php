@@ -3002,8 +3002,10 @@ class Tenant extends BaseController
 
         $newLogoUrl = $uploadRes['secure_url'];
 
-        // Clean up old logo asset
-        if (!empty($shop['logo_url'])) {
+        (new ShopModel())->update($shopId, ['logo_url' => $newLogoUrl]);
+
+        // Safe cleanup: only clean up old logo asset after successful DB update
+        if (!empty($shop['logo_url']) && $shop['logo_url'] !== $newLogoUrl) {
             if ($cloudinary->isCloudinaryUrl($shop['logo_url'])) {
                 $oldPublicId = $cloudinary->extractPublicId($shop['logo_url']);
                 if ($oldPublicId) {
@@ -3016,8 +3018,6 @@ class Tenant extends BaseController
                 }
             }
         }
-
-        (new ShopModel())->update($shopId, ['logo_url' => $newLogoUrl]);
 
         return redirect()->back()->with('success', 'Shop logo updated.');
     }
@@ -3129,6 +3129,8 @@ class Tenant extends BaseController
             $maxSortOrder = $latest ? ((int) $latest['sort_order'] + 1) : $existingCount;
         }
 
+        $uploadedAny = false;
+
         // 1. Multiple files via product_images[]
         $files = $this->request->getFileMultiple('product_images');
         if (!empty($files)) {
@@ -3160,11 +3162,13 @@ class Tenant extends BaseController
                     'sort_order' => $maxSortOrder++,
                 ]);
                 $existingCount++;
+                $uploadedAny = true;
             }
         }
 
-        // 2. Single file input fallback (product_image)
-        $single = $this->request->getFile('product_image');
+        // 2. Single file input fallback (product_image) - only if no multiple files were uploaded
+        if (!$uploadedAny) {
+            $single = $this->request->getFile('product_image');
         if ($single && $single->isValid() && !$single->hasMoved()) {
             $mime = $single->getMimeType();
             if (isset($mimeMap[$mime]) && $single->getSize() <= $maxBytes) {
@@ -3188,6 +3192,7 @@ class Tenant extends BaseController
             }
         }
     }
+}
 
     /**
      * Save product variants submitted via repeatable form fields.

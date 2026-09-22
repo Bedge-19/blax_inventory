@@ -943,19 +943,23 @@ class Admin extends BaseController
         }
 
         $newImageUrl = $uploadRes['secure_url'];
-        // Cleanup old Cloudinary asset if applicable
-        if (!empty($row['image_url']) && $cloudinary->isCloudinaryUrl($row['image_url'])) {
-            $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
-            if ($oldPublicId) {
-                $cloudinary->deleteAsset($oldPublicId, 'image');
-            }
-        } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'uploads/cms/') === 0) {
-            $old = ROOTPATH . 'public/' . $row['image_url'];
-            if (is_file($old)) @unlink($old);
-        }
 
         $model->update($id, ['image_url'=>$newImageUrl, 'updated_by'=>(int)session()->get('user_id')]);
         SiteContentModel::clearCache();
+
+        // Safe cleanup: only delete old asset after successful DB update
+        if (!empty($row['image_url']) && $row['image_url'] !== $newImageUrl) {
+            if ($cloudinary->isCloudinaryUrl($row['image_url'])) {
+                $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
+                if ($oldPublicId) {
+                    $cloudinary->deleteAsset($oldPublicId, 'image');
+                }
+            } elseif (strpos($row['image_url'], 'uploads/cms/') === 0) {
+                $old = ROOTPATH . 'public/' . $row['image_url'];
+                if (is_file($old)) @unlink($old);
+            }
+        }
+
         return redirect()->back()->with('success','Image updated.');
     }
 

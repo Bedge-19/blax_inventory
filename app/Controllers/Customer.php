@@ -1286,6 +1286,12 @@ class Customer extends BaseController
             if ($uploadRes && !empty($uploadRes['secure_url'])) {
                 $fileUrl = $uploadRes['secure_url'];
             } else {
+                foreach ($stagedRefPhotos as $staged) {
+                    $pid = $cloudinary->extractPublicId($staged['file_path']);
+                    if ($pid) {
+                        $cloudinary->deleteAsset($pid, 'image');
+                    }
+                }
                 session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
                 return redirect()->back();
             }
@@ -1313,6 +1319,12 @@ class Customer extends BaseController
             if ($uploadRes && !empty($uploadRes['secure_url'])) {
                 $fileUrl = $uploadRes['secure_url'];
             } else {
+                foreach ($stagedRefPhotos as $staged) {
+                    $pid = $cloudinary->extractPublicId($staged['file_path']);
+                    if ($pid) {
+                        $cloudinary->deleteAsset($pid, 'image');
+                    }
+                }
                 session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
                 return redirect()->back();
             }
@@ -1894,12 +1906,15 @@ class Customer extends BaseController
         $file        = $this->request->getFile('profile_image');
         $removeImage = $this->request->getPost('remove_profile_image') === '1';
 
-        $cloudinary = new \App\Libraries\CloudinaryService();
+        $cloudinary              = new \App\Libraries\CloudinaryService();
+        $oldProfileImageToDelete = null;
 
         if ($file && $file->isValid() && !$file->hasMoved()) {
-            $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-            if (!in_array(strtolower($file->getClientExtension()), $allowed, true)) {
-                session()->setFlashdata('error', 'Only JPG, PNG, WEBP or GIF images are allowed for your profile picture.');
+            $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            $mime    = $file->getMimeType();
+
+            if (!in_array($mime, $allowed, true)) {
+                session()->setFlashdata('error', 'Profile picture must be a JPG, PNG, WEBP, or GIF image.');
                 return redirect()->back();
             }
             if ($file->getSize() > 2097152) {
@@ -1912,41 +1927,34 @@ class Customer extends BaseController
 
             if ($uploadRes && !empty($uploadRes['secure_url'])) {
                 $updates['profile_image_url'] = $uploadRes['secure_url'];
-
-                // Cleanup previous image
-                if (!empty($current['profile_image_url'])) {
-                    if ($cloudinary->isCloudinaryUrl($current['profile_image_url'])) {
-                        $oldPublicId = $cloudinary->extractPublicId($current['profile_image_url']);
-                        if ($oldPublicId) {
-                            $cloudinary->deleteAsset($oldPublicId, 'image');
-                        }
-                    } elseif (strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
-                        $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
-                        if (is_file($oldPath)) @unlink($oldPath);
-                    }
-                }
+                $oldProfileImageToDelete      = $current['profile_image_url'] ?? null;
                 $session->set('profile_image_url', $updates['profile_image_url']);
             } else {
                 session()->setFlashdata('error', 'Failed to upload profile picture. Please try again.');
                 return redirect()->back();
             }
         } elseif ($removeImage) {
-            if (!empty($current['profile_image_url'])) {
-                if ($cloudinary->isCloudinaryUrl($current['profile_image_url'])) {
-                    $oldPublicId = $cloudinary->extractPublicId($current['profile_image_url']);
-                    if ($oldPublicId) {
-                        $cloudinary->deleteAsset($oldPublicId, 'image');
-                    }
-                } elseif (strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
-                    $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
-                    if (is_file($oldPath)) @unlink($oldPath);
-                }
-            }
+            $oldProfileImageToDelete      = $current['profile_image_url'] ?? null;
             $updates['profile_image_url'] = null;
             $session->set('profile_image_url', null);
         }
 
         $userModel->update($userId, $updates);
+
+        // Safe cleanup: only delete old asset after successful DB update
+        if (!empty($oldProfileImageToDelete) && $oldProfileImageToDelete !== ($updates['profile_image_url'] ?? null)) {
+            if ($cloudinary->isCloudinaryUrl($oldProfileImageToDelete)) {
+                $oldPublicId = $cloudinary->extractPublicId($oldProfileImageToDelete);
+                if ($oldPublicId) {
+                    $cloudinary->deleteAsset($oldPublicId, 'image');
+                }
+            } elseif (strpos($oldProfileImageToDelete, 'uploads/profiles/') === 0) {
+                $oldPath = ROOTPATH . 'public/' . $oldProfileImageToDelete;
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+        }
 
         $session->set([
             'user_name'  => $firstName . ' ' . $lastName,

@@ -26,7 +26,7 @@
 
             <div class="relative rounded-2xl overflow-hidden bg-white shadow-md aspect-square group">
 
-                <img id="main-product-image" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="<?= esc(product_image_url($displayMainImg)) ?>" alt="<?= esc($product['name']) ?>">
+                <img id="main-product-image" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" src="<?= esc(product_image_url($displayMainImg, 'detail')) ?>" alt="<?= esc($product['name']) ?>">
 
                 <?php if (!empty($product['is_bestseller'])): ?>
 
@@ -43,11 +43,12 @@
                     <?php foreach ($productImages as $idx => $img): ?>
 
                         <?php 
-                            $thumbUrl = product_image_url($img['image_url'] ?? null); 
+                            $thumbUrl = product_image_url($img['image_url'] ?? null, 'thumbnail'); 
+                            $detailUrl = product_image_url($img['image_url'] ?? null, 'detail');
                             $isMainThumb = (!empty($img['is_primary']) || ($idx === 0 && !$primaryImgUrl));
                         ?>
 
-                        <button type="button" class="gallery-thumb rounded-xl overflow-hidden h-24 cursor-pointer transition-colors p-0 <?= $isMainThumb ? 'border-2 border-primary' : 'border border-outline-variant/30 hover:border-primary' ?>" data-image="<?= esc($thumbUrl) ?>" aria-label="View product image">
+                        <button type="button" class="gallery-thumb rounded-xl overflow-hidden h-24 cursor-pointer transition-colors p-0 <?= $isMainThumb ? 'border-2 border-primary' : 'border border-outline-variant/30 hover:border-primary' ?>" data-image="<?= esc($detailUrl) ?>" aria-label="View product image">
 
                             <img class="w-full h-full object-cover" src="<?= esc($thumbUrl) ?>" alt="<?= esc($img['alt_text'] ?? $product['name']) ?>">
 

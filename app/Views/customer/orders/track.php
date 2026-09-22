@@ -113,10 +113,7 @@
 
                         <?php foreach ($items as $item): ?>
                             <?php 
-                                $itemImg = $item['image_url'] ?? '';
-                                if (!empty($itemImg) && !str_starts_with($itemImg, 'http://') && !str_starts_with($itemImg, 'https://')) {
-                                    $itemImg = base_url($itemImg);
-                                }
+                                $itemImg = product_image_url($item['image_url'] ?? '', 'thumbnail');
                                 $pName = !empty($item['product_name']) ? $item['product_name'] : 'Product Item';
                             ?>
                             <div class="flex items-center gap-3.5 p-3 rounded-xl bg-surface-container/50 dark:bg-surface-container/30 border border-outline-variant/25 transition-all hover:bg-surface-container">
@@ -278,7 +275,7 @@
                             <?php foreach ($items as $item): ?>
                                 <div class="flex items-center gap-3 p-2 rounded-xl bg-surface-container/50 border border-outline-variant/20">
                                     <?php if (!empty($item['image_url'])): ?>
-                                        <img src="<?= esc($item['image_url']) ?>" 
+                                        <img src="<?= esc(product_image_url($item['image_url'], 'thumbnail')) ?>" 
                                              alt="<?= esc($item['product_name'] ?? 'Item') ?>" 
                                              class="w-12 h-12 rounded-lg object-cover bg-white border border-outline-variant/30 shrink-0" 
                                              onerror="this.src='https://placehold.co/100x100?text=Item'" />

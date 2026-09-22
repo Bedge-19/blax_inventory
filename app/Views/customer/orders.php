@@ -166,10 +166,7 @@
                             <div class="space-y-xs mb-md bg-surface-container-low/50 p-sm rounded-xl border border-outline-variant/20">
                                 <?php foreach (array_slice($order['items'] ?? [], 0, 2) as $item): ?>
                                     <?php
-                                        $itemImg = $item['image_url'] ?? '';
-                                        if (!empty($itemImg) && !str_starts_with($itemImg, 'http://') && !str_starts_with($itemImg, 'https://')) {
-                                            $itemImg = base_url($itemImg);
-                                        }
+                                        $itemImg = product_image_url($item['image_url'] ?? '', 'thumbnail');
                                         $pName = !empty($item['product_name']) ? $item['product_name'] : 'Product Item';
                                     ?>
                                     <div class="flex items-center gap-sm">

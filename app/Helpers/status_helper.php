@@ -1,20 +1,36 @@
 <?php
 
+if (!function_exists('cloudinary_transform_url')) {
+    /**
+     * Transform a Cloudinary image URL to a named preset (card, thumbnail, avatar, detail, logo, banner).
+     * Automatically applies optimal format (WebP/AVIF) and quality compression.
+     */
+    function cloudinary_transform_url(?string $url, string $variant = 'card'): string
+    {
+        return \App\Libraries\CloudinaryService::transformUrl($url, $variant);
+    }
+}
+
 if (!function_exists('product_image_url')) {
     /**
-     * Resolve a product image to a renderable URL.
-     * Locally-uploaded images (starting with "uploads/") are prefixed with base_url();
-     * external URLs (http/https) are returned unchanged;
-     * null/empty returns the default Unsplash placeholder.
+     * Resolve a product image to a renderable URL with Cloudinary optimization.
+     * Default variant is 'card' (480x480 max with f_auto,q_auto).
+     * Pass 'thumbnail' for 160x160 or 'detail' for 960x960.
+     * Preserves backward compatibility if a fallback URL string is passed as 2nd argument.
      */
-    function product_image_url(?string $url, string $fallback = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80'): string
+    function product_image_url(?string $url, string $variant = 'card', string $fallback = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80'): string
     {
+        if (str_starts_with($variant, 'http://') || str_starts_with($variant, 'https://')) {
+            $fallback = $variant;
+            $variant  = 'card';
+        }
+
         if ($url === null || trim($url) === '') {
             return $fallback;
         }
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+            return cloudinary_transform_url($url, $variant);
         }
 
         return base_url($url);
@@ -23,19 +39,23 @@ if (!function_exists('product_image_url')) {
 
 if (!function_exists('cms_image_url')) {
     /**
-     * Resolve a CMS banner or content image to a renderable URL.
-     * Handles null, empty string, local uploads ("uploads/..."), external URLs,
-     * and applies the provided fallback if empty.
+     * Resolve a CMS banner or content image to a renderable URL with Cloudinary optimization.
+     * Default variant is 'banner' (1440 max width with f_auto,q_auto).
      */
-    function cms_image_url(?string $url, string $fallback = 'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80'): string
+    function cms_image_url(?string $url, string $variant = 'banner', string $fallback = 'https://images.unsplash.com/photo-1556742049-0a67daf64f42?auto=format&fit=crop&w=1440&q=80'): string
     {
+        if (str_starts_with($variant, 'http://') || str_starts_with($variant, 'https://')) {
+            $fallback = $variant;
+            $variant  = 'banner';
+        }
+
         $url = trim((string) $url);
         if ($url === '') {
             return $fallback;
         }
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+            return cloudinary_transform_url($url, $variant);
         }
 
         return base_url($url);
@@ -44,18 +64,17 @@ if (!function_exists('cms_image_url')) {
 
 if (!function_exists('logo_url')) {
     /**
-     * Resolve a shop logo to a renderable URL. Locally-uploaded logos are
-     * stored as relative "uploads/..." paths and must be prefixed with the
-     * base URL; external URLs are returned unchanged.
+     * Resolve a shop logo to a renderable URL with Cloudinary optimization.
+     * Default variant is 'logo' (200x200 max with f_auto,q_auto).
      */
-    function logo_url(?string $url): string
+    function logo_url(?string $url, string $variant = 'logo'): string
     {
         if ($url === null || $url === '') {
             return '';
         }
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+            return cloudinary_transform_url($url, $variant);
         }
 
         return strpos($url, 'uploads/') === 0 ? base_url($url) : base_url($url);
@@ -64,17 +83,17 @@ if (!function_exists('logo_url')) {
 
 if (!function_exists('profile_image_url')) {
     /**
-     * Resolve a user or customer profile image to a renderable URL.
-     * Supports both Cloudinary URLs (http/https) and legacy local upload paths.
+     * Resolve a user or customer profile image to a renderable URL with Cloudinary optimization.
+     * Default variant is 'avatar' (100x100 face crop with f_auto,q_auto).
      */
-    function profile_image_url(?string $url): string
+    function profile_image_url(?string $url, string $variant = 'avatar'): string
     {
         if ($url === null || trim($url) === '') {
             return '';
         }
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            return $url;
+            return cloudinary_transform_url($url, $variant);
         }
 
         return base_url($url);
