@@ -314,13 +314,25 @@ class Auth extends BaseController
                     return redirect()->to('/merchant-signup');
                 }
 
-                $uploadPath = WRITEPATH . 'uploads/business_permits';
-                if (!is_dir($uploadPath)) {
-                    mkdir($uploadPath, 0777, true);
+                $cloudinary = new \App\Libraries\CloudinaryService();
+                $isPdf = ($extension === 'pdf');
+                $publicId = 'permit_' . time() . '_' . bin2hex(random_bytes(4));
+                $uploadRes = $isPdf
+                    ? $cloudinary->uploadRawFile($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId)
+                    : $cloudinary->uploadImage($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId);
+
+                if (!$uploadRes || empty($uploadRes['secure_url'])) {
+                    // Fallback to local storage if Cloudinary upload fails or is unconfigured
+                    $uploadPath = WRITEPATH . 'uploads/business_permits';
+                    if (!is_dir($uploadPath)) {
+                        mkdir($uploadPath, 0777, true);
+                    }
+                    $fileName  = $permit->getRandomName();
+                    $permit->move($uploadPath, $fileName);
+                    $permitUrl = 'private/uploads/business_permits/' . $fileName;
+                } else {
+                    $permitUrl = $uploadRes['secure_url'];
                 }
-                $fileName  = $permit->getRandomName();
-                $permit->move($uploadPath, $fileName);
-                $permitUrl = 'private/uploads/business_permits/' . $fileName;
             }
 
             $db = \Config\Database::connect();

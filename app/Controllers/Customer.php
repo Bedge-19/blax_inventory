@@ -1239,11 +1239,8 @@ class Customer extends BaseController
         $stagedRefPhotos = [];
 
         $ext = strtolower($file->getClientExtension());
-        $uploadPath = WRITEPATH . 'uploads/printing';
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0777, true);
-        }
-        $fileName = $file->getRandomName();
+        $cloudinary = new \App\Libraries\CloudinaryService();
+        $fileUrl = null;
 
         if ($documentType === 'docx') {
             if (!in_array($ext, ['docx', 'doc'], true)) {
@@ -1261,11 +1258,6 @@ class Customer extends BaseController
                 }
 
                 // Handle reference photos upload (max 5MB each, image files only)
-                $attachmentsUploadPath = FCPATH . 'uploads/printing_attachments/';
-                if (!is_dir($attachmentsUploadPath)) {
-                    mkdir($attachmentsUploadPath, 0755, true);
-                }
-
                 $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
                 $maxBytes = 5 * 1024 * 1024; // 5MB
 
@@ -1274,21 +1266,48 @@ class Customer extends BaseController
                     foreach ($refFiles as $rf) {
                         if ($rf && $rf->isValid() && !$rf->hasMoved()) {
                             if (in_array($rf->getMimeType(), $allowedMimes, true) && $rf->getSize() <= $maxBytes) {
-                                $refName = 'ref_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $rf->getClientExtension();
-                                $rf->move($attachmentsUploadPath, $refName);
-                                $stagedRefPhotos[] = [
-                                    'file_name' => $rf->getClientName(),
-                                    'file_path' => 'uploads/printing_attachments/' . $refName,
-                                    'file_size' => $rf->getSize(),
-                                ];
+                                $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
+                                $refUpload = $cloudinary->uploadImage($rf, \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS, $refPublicId);
+                                if ($refUpload && !empty($refUpload['secure_url'])) {
+                                    $stagedRefPhotos[] = [
+                                        'file_name' => $rf->getClientName(),
+                                        'file_path' => $refUpload['secure_url'],
+                                        'file_size' => $rf->getSize(),
+                                    ];
+                                } else {
+                                    // Local fallback
+                                    $attachmentsUploadPath = FCPATH . 'uploads/printing_attachments/';
+                                    if (!is_dir($attachmentsUploadPath)) {
+                                        mkdir($attachmentsUploadPath, 0755, true);
+                                    }
+                                    $refName = 'ref_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $rf->getClientExtension();
+                                    $rf->move($attachmentsUploadPath, $refName);
+                                    $stagedRefPhotos[] = [
+                                        'file_name' => $rf->getClientName(),
+                                        'file_path' => 'uploads/printing_attachments/' . $refName,
+                                        'file_size' => $rf->getSize(),
+                                    ];
+                                }
                             }
                         }
                     }
                 }
             }
 
-            $file->move($uploadPath, $fileName);
-            $movedPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
+            $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
+            if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                $fileUrl = $uploadRes['secure_url'];
+            } else {
+                // Local fallback
+                $uploadPath = WRITEPATH . 'uploads/printing';
+                if (!is_dir($uploadPath)) {
+                    mkdir($uploadPath, 0777, true);
+                }
+                $fileName = $file->getRandomName();
+                $file->move($uploadPath, $fileName);
+                $fileUrl = 'writable/uploads/printing/' . $fileName;
+            }
         } else {
             // PDF Document
             if ($ext !== 'pdf') {
@@ -1296,24 +1315,33 @@ class Customer extends BaseController
                 return redirect()->back();
             }
 
-            $file->move($uploadPath, $fileName);
-            $movedPath = $uploadPath . DIRECTORY_SEPARATOR . $fileName;
-
-            if (!is_valid_pdf($movedPath, $file->getClientName())) {
-                @unlink($movedPath);
+            $tmpPath = $file->getRealPath() ?: $file->getTempName();
+            if (!is_valid_pdf($tmpPath, $file->getClientName())) {
                 session()->setFlashdata('error', 'The uploaded file is not a valid PDF document.');
                 return redirect()->back();
             }
 
-            $pageCount = count_pdf_pages($movedPath);
+            $pageCount = count_pdf_pages($tmpPath);
             if ($pageCount <= 0) {
-                @unlink($movedPath);
                 session()->setFlashdata('error', 'Could not determine the page count of the uploaded PDF.');
                 return redirect()->back();
             }
-        }
 
-        $fileUrl = 'writable/uploads/printing/' . $fileName;
+            $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+            $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
+            if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                $fileUrl = $uploadRes['secure_url'];
+            } else {
+                // Local fallback
+                $uploadPath = WRITEPATH . 'uploads/printing';
+                if (!is_dir($uploadPath)) {
+                    mkdir($uploadPath, 0777, true);
+                }
+                $fileName = $file->getRandomName();
+                $file->move($uploadPath, $fileName);
+                $fileUrl = 'writable/uploads/printing/' . $fileName;
+            }
+        }
 
         $allowedPaperSizes = ['letter', 'legal', 'a4', 'a3', 'a5', 'b5', 'b4', 'a2', 'a1', 'a0'];
         $paperSize = strtolower(trim((string) $this->request->getPost('paper_size')));
@@ -1891,6 +1919,8 @@ class Customer extends BaseController
         $file        = $this->request->getFile('profile_image');
         $removeImage = $this->request->getPost('remove_profile_image') === '1';
 
+        $cloudinary = new \App\Libraries\CloudinaryService();
+
         if ($file && $file->isValid() && !$file->hasMoved()) {
             $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
             if (!in_array(strtolower($file->getClientExtension()), $allowed, true)) {
@@ -1902,26 +1932,50 @@ class Customer extends BaseController
                 return redirect()->back();
             }
 
-            $uploadPath = ROOTPATH . 'public/uploads/profiles';
-            if (!is_dir($uploadPath)) {
-                mkdir($uploadPath, 0777, true);
-            }
-            $fileName = $file->getRandomName();
-            $file->move($uploadPath, $fileName);
-            $updates['profile_image_url'] = 'uploads/profiles/' . $fileName;
+            $publicId = 'usr_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4));
+            $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PROFILES, $publicId);
 
-            if (!empty($current['profile_image_url']) && strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
-                $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
-                if (is_file($oldPath)) {
-                    @unlink($oldPath);
+            if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                $updates['profile_image_url'] = $uploadRes['secure_url'];
+
+                // Cleanup previous image
+                if (!empty($current['profile_image_url'])) {
+                    if ($cloudinary->isCloudinaryUrl($current['profile_image_url'])) {
+                        $oldPublicId = $cloudinary->extractPublicId($current['profile_image_url']);
+                        if ($oldPublicId) {
+                            $cloudinary->deleteAsset($oldPublicId, 'image');
+                        }
+                    } elseif (strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
+                        $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
+                        if (is_file($oldPath)) @unlink($oldPath);
+                    }
+                }
+            } else {
+                // Local fallback
+                $uploadPath = ROOTPATH . 'public/uploads/profiles';
+                if (!is_dir($uploadPath)) {
+                    mkdir($uploadPath, 0777, true);
+                }
+                $fileName = $file->getRandomName();
+                $file->move($uploadPath, $fileName);
+                $updates['profile_image_url'] = 'uploads/profiles/' . $fileName;
+
+                if (!empty($current['profile_image_url']) && strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
+                    $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
+                    if (is_file($oldPath)) @unlink($oldPath);
                 }
             }
             $session->set('profile_image_url', $updates['profile_image_url']);
         } elseif ($removeImage) {
-            if (!empty($current['profile_image_url']) && strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
-                $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
-                if (is_file($oldPath)) {
-                    @unlink($oldPath);
+            if (!empty($current['profile_image_url'])) {
+                if ($cloudinary->isCloudinaryUrl($current['profile_image_url'])) {
+                    $oldPublicId = $cloudinary->extractPublicId($current['profile_image_url']);
+                    if ($oldPublicId) {
+                        $cloudinary->deleteAsset($oldPublicId, 'image');
+                    }
+                } elseif (strpos($current['profile_image_url'], 'uploads/profiles/') === 0) {
+                    $oldPath = ROOTPATH . 'public/' . $current['profile_image_url'];
+                    if (is_file($oldPath)) @unlink($oldPath);
                 }
             }
             $updates['profile_image_url'] = null;

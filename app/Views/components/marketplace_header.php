@@ -149,7 +149,7 @@
 
                         <?php if (!empty($profileImage)): ?>
 
-                            <img class="w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($userName) ?> avatar">
+                            <img class="w-full h-full object-cover" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($userName) ?> avatar">
 
                         <?php else: ?>
 
@@ -168,7 +168,7 @@
 
                             <?php if (!empty($profileImage)): ?>
 
-                                <img class="w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($userName) ?> avatar">
+                                <img class="w-full h-full object-cover" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($userName) ?> avatar">
 
                             <?php else: ?>
 

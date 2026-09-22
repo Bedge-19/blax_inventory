@@ -287,7 +287,7 @@
 
 </main>
 
-<button aria-label="Go Back" onclick="window.history.back()" class="fixed bottom-8 left-8 w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-lg hover:shadow-xl hover:bg-surface-container-high transition-all duration-300 flex items-center justify-center z-50 group active:scale-95 border border-outline-variant/30">
+<button aria-label="Go Back" onclick="window.history.back()" class="hidden md:flex fixed bottom-8 left-8 w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-lg hover:shadow-xl hover:bg-surface-container-high transition-all duration-300 items-center justify-center z-50 group active:scale-95 border border-outline-variant/30">
 
     <span class="material-symbols-outlined text-[32px] transition-transform group-hover:scale-110">arrow_back</span>
 

@@ -54,7 +54,30 @@ if (!function_exists('logo_url')) {
             return '';
         }
 
-        return strpos($url, 'uploads/') === 0 ? base_url($url) : $url;
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return strpos($url, 'uploads/') === 0 ? base_url($url) : base_url($url);
+    }
+}
+
+if (!function_exists('profile_image_url')) {
+    /**
+     * Resolve a user or customer profile image to a renderable URL.
+     * Supports both Cloudinary URLs (http/https) and legacy local upload paths.
+     */
+    function profile_image_url(?string $url): string
+    {
+        if ($url === null || trim($url) === '') {
+            return '';
+        }
+
+        if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
+            return $url;
+        }
+
+        return base_url($url);
     }
 }
 

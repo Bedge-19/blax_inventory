@@ -19,7 +19,7 @@
 </button>
 
 <!-- AI Assistant Modal Window -->
-<div id="ai-modal" class="fixed inset-0 z-50 pointer-events-none hidden flex-col justify-end sm:justify-end sm:items-end p-0 sm:p-0 sm:inset-auto sm:bottom-6 sm:right-6">
+<div id="ai-modal" class="fixed inset-0 z-50 pointer-events-none hidden justify-end sm:justify-end sm:items-end p-0 sm:p-0 sm:inset-auto sm:bottom-6 sm:right-6" style="display: none;">
 
     <!-- Mobile Backdrop Scrim -->
     <div id="ai-backdrop" class="fixed inset-0 bg-black/40 backdrop-blur-xs sm:hidden pointer-events-auto -z-10 transition-opacity"></div>
@@ -238,24 +238,31 @@
     }
 
     // Modal open/close handling
+    function openModal() {
+        modal.style.display = 'flex';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex', 'flex-col');
+        setTimeout(() => input && input.focus(), 100);
+    }
+
+    function closeModal() {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+        modal.classList.remove('flex', 'flex-col');
+    }
+
     toggleBtn.addEventListener('click', () => {
-        modal.classList.toggle('hidden');
-        modal.classList.toggle('flex');
-        if (!modal.classList.contains('hidden')) {
-            setTimeout(() => input && input.focus(), 100);
+        if (modal.style.display === 'none' || modal.classList.contains('hidden')) {
+            openModal();
+        } else {
+            closeModal();
         }
     });
 
-    closeBtn.addEventListener('click', () => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    });
+    closeBtn.addEventListener('click', closeModal);
 
     if (backdrop) {
-        backdrop.addEventListener('click', () => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        });
+        backdrop.addEventListener('click', closeModal);
     }
 
     // Reset conversation

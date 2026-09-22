@@ -2172,12 +2172,43 @@ class Tenant extends BaseController
             return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found.');
         }
 
+        $fileUrl = trim((string) ($row['file_url'] ?? ''));
+        $name = trim((string) ($row['file_name'] ?? ''));
+
+        if (str_starts_with($fileUrl, 'http://') || str_starts_with($fileUrl, 'https://')) {
+            $context = stream_context_create([
+                'http' => ['timeout' => 30, 'follow_location' => 1],
+                'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $content = @file_get_contents($fileUrl, false, $context);
+            if ($content !== false) {
+                if ($name === '') {
+                    $name = basename(parse_url($fileUrl, PHP_URL_PATH) ?: 'document');
+                }
+                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                $mime = match ($ext) {
+                    'pdf'         => 'application/pdf',
+                    'doc'         => 'application/msword',
+                    'docx'        => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'png'         => 'image/png',
+                    'webp'        => 'image/webp',
+                    default       => 'application/octet-stream',
+                };
+                return $this->response
+                    ->setContentType($mime)
+                    ->setHeader('Content-Disposition', 'attachment; filename="' . str_replace('"', '', $name) . '"')
+                    ->setHeader('Content-Length', (string) strlen($content))
+                    ->setBody($content);
+            }
+            return redirect()->to($fileUrl);
+        }
+
         $real = $this->resolvePrintFilePath($row);
         if (!$real) {
             return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing or not accessible on the server.');
         }
 
-        $name = trim((string) $row['file_name']);
         if ($name === '') {
             $name = basename($real);
         }
@@ -2213,12 +2244,44 @@ class Tenant extends BaseController
             return redirect()->to(base_url('tenant/printing'))->with('error', 'Printing request not found.');
         }
 
+        $fileUrl = trim((string) ($row['file_url'] ?? ''));
+        $name = trim((string) ($row['file_name'] ?? ''));
+
+        if (str_starts_with($fileUrl, 'http://') || str_starts_with($fileUrl, 'https://')) {
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if ($ext === 'docx' || $ext === 'doc') {
+                return redirect()->to($fileUrl);
+            }
+            $context = stream_context_create([
+                'http' => ['timeout' => 30, 'follow_location' => 1],
+                'ssl'  => ['verify_peer' => false, 'verify_peer_name' => false],
+            ]);
+            $content = @file_get_contents($fileUrl, false, $context);
+            if ($content !== false) {
+                if ($name === '') {
+                    $name = basename(parse_url($fileUrl, PHP_URL_PATH) ?: 'document.pdf');
+                }
+                $mime = match ($ext) {
+                    'pdf'         => 'application/pdf',
+                    'jpg', 'jpeg' => 'image/jpeg',
+                    'png'         => 'image/png',
+                    'webp'        => 'image/webp',
+                    default       => 'application/pdf',
+                };
+                return $this->response
+                    ->setContentType($mime)
+                    ->setHeader('Content-Disposition', 'inline; filename="' . str_replace('"', '', $name) . '"')
+                    ->setHeader('Content-Length', (string) strlen($content))
+                    ->setBody($content);
+            }
+            return redirect()->to($fileUrl);
+        }
+
         $real = $this->resolvePrintFilePath($row);
         if (!$real) {
             return redirect()->to(base_url('tenant/printing'))->with('error', 'The printing file is missing or not accessible on the server.');
         }
 
-        $name = trim((string) $row['file_name']);
         if ($name === '') {
             $name = basename($real);
         }
@@ -2924,22 +2987,47 @@ class Tenant extends BaseController
             return redirect()->back()->with('error', 'Shop logo must be 2 MB or smaller.');
         }
 
-        $uploadPath = ROOTPATH . 'public/uploads/shop_logos';
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0777, true);
-        }
+        $cloudinary = new \App\Libraries\CloudinaryService();
+        $publicId   = 'logo_' . $shopId . '_' . time() . '_' . bin2hex(random_bytes(4));
+        $uploadRes  = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_SHOP_LOGOS, $publicId);
 
-        $fileName = 'logo_' . $shopId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
-        $file->move($uploadPath, $fileName);
+        if ($uploadRes && !empty($uploadRes['secure_url'])) {
+            $newLogoUrl = $uploadRes['secure_url'];
 
-        if (!empty($shop['logo_url']) && strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
-            $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
-            if (is_file($oldPath)) {
-                @unlink($oldPath);
+            // Clean up old logo asset
+            if (!empty($shop['logo_url'])) {
+                if ($cloudinary->isCloudinaryUrl($shop['logo_url'])) {
+                    $oldPublicId = $cloudinary->extractPublicId($shop['logo_url']);
+                    if ($oldPublicId) {
+                        $cloudinary->deleteAsset($oldPublicId, 'image');
+                    }
+                } elseif (strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
+                    $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
+                    if (is_file($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+            }
+        } else {
+            // Local fallback
+            $uploadPath = ROOTPATH . 'public/uploads/shop_logos';
+            if (!is_dir($uploadPath)) {
+                mkdir($uploadPath, 0777, true);
+            }
+
+            $fileName = $publicId . '.' . $mimeMap[$mime];
+            $file->move($uploadPath, $fileName);
+            $newLogoUrl = 'uploads/shop_logos/' . $fileName;
+
+            if (!empty($shop['logo_url']) && strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
+                $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
+                if (is_file($oldPath)) {
+                    @unlink($oldPath);
+                }
             }
         }
 
-        (new ShopModel())->update($shopId, ['logo_url' => 'uploads/shop_logos/' . $fileName]);
+        (new ShopModel())->update($shopId, ['logo_url' => $newLogoUrl]);
 
         return redirect()->back()->with('success', 'Shop logo updated.');
     }
@@ -3034,10 +3122,7 @@ class Tenant extends BaseController
     private function handleProductImageUpload(int $productId): void
     {
         $imageModel   = new ProductImageModel();
-        $uploadPath   = ROOTPATH . 'public/uploads/product_images/';
-        if (!is_dir($uploadPath)) {
-            mkdir($uploadPath, 0755, true);
-        }
+        $cloudinary   = new \App\Libraries\CloudinaryService();
 
         $mimeMap = [
             'image/jpeg' => 'jpg',
@@ -3066,13 +3151,25 @@ class Tenant extends BaseController
                     continue;
                 }
 
-                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
-                $file->move($uploadPath, $fileName);
+                $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
+                $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
+
+                if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                    $imageUrl = $uploadRes['secure_url'];
+                } else {
+                    $uploadPath = ROOTPATH . 'public/uploads/product_images/';
+                    if (!is_dir($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $fileName = $publicId . '.' . $mimeMap[$mime];
+                    $file->move($uploadPath, $fileName);
+                    $imageUrl = 'uploads/product_images/' . $fileName;
+                }
 
                 $isPrimary = ($existingCount === 0) ? 1 : 0;
                 $imageModel->insert([
                     'product_id' => $productId,
-                    'image_url'  => 'uploads/product_images/' . $fileName,
+                    'image_url'  => $imageUrl,
                     'alt_text'   => '',
                     'is_primary' => $isPrimary,
                     'sort_order' => $maxSortOrder++,
@@ -3086,13 +3183,25 @@ class Tenant extends BaseController
         if ($single && $single->isValid() && !$single->hasMoved()) {
             $mime = $single->getMimeType();
             if (isset($mimeMap[$mime]) && $single->getSize() <= $maxBytes) {
-                $fileName = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
-                $single->move($uploadPath, $fileName);
+                $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
+                $uploadRes = $cloudinary->uploadImage($single, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
+
+                if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                    $imageUrl = $uploadRes['secure_url'];
+                } else {
+                    $uploadPath = ROOTPATH . 'public/uploads/product_images/';
+                    if (!is_dir($uploadPath)) {
+                        mkdir($uploadPath, 0755, true);
+                    }
+                    $fileName = $publicId . '.' . $mimeMap[$mime];
+                    $single->move($uploadPath, $fileName);
+                    $imageUrl = 'uploads/product_images/' . $fileName;
+                }
 
                 $isPrimary = ($existingCount === 0) ? 1 : 0;
                 $imageModel->insert([
                     'product_id' => $productId,
-                    'image_url'  => 'uploads/product_images/' . $fileName,
+                    'image_url'  => $imageUrl,
                     'alt_text'   => '',
                     'is_primary' => $isPrimary,
                     'sort_order' => $maxSortOrder++,
@@ -3216,10 +3325,18 @@ class Tenant extends BaseController
         $productId  = (int) $image['product_id'];
         $wasPrimary = (int) $image['is_primary'] === 1;
 
-        // Delete local physical file
-        $filePath = ROOTPATH . 'public/' . $image['image_url'];
-        if (str_starts_with($image['image_url'], 'uploads/') && file_exists($filePath)) {
-            @unlink($filePath);
+        // Delete asset from Cloudinary or local physical file
+        $cloudinary = new \App\Libraries\CloudinaryService();
+        if ($cloudinary->isCloudinaryUrl($image['image_url'])) {
+            $publicId = $cloudinary->extractPublicId($image['image_url']);
+            if ($publicId) {
+                $cloudinary->deleteAsset($publicId, 'image');
+            }
+        } elseif (str_starts_with($image['image_url'], 'uploads/')) {
+            $filePath = ROOTPATH . 'public/' . $image['image_url'];
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
         }
 
         // Delete database record

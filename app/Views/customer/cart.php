@@ -367,7 +367,7 @@
 </main>
 
 <!-- Floating Go Back -->
-<button type="button" onclick="window.history.back()" aria-label="Go Back" class="fixed bottom-8 left-8 w-16 h-16 bg-surface-container-lowest text-primary rounded-full shadow-lg flex items-center justify-center z-50 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
+<button type="button" onclick="window.history.back()" aria-label="Go Back" class="hidden md:flex fixed bottom-8 left-8 w-16 h-16 bg-surface-container-lowest text-primary rounded-full shadow-lg items-center justify-center z-50 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
 
     <span class="material-symbols-outlined text-[32px]">arrow_back</span>
 

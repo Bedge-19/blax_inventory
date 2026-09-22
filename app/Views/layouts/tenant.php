@@ -123,7 +123,7 @@
                 <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-3 p-2 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-high border border-outline-variant/30 transition-all group shadow-2xs">
                     <div class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-primary/20">
                         <?php if (!empty($shop['logo_url'])): ?>
-                            <img src="<?= base_url($shop['logo_url']) ?>" alt="<?= esc($shopName) ?>" class="w-full h-full object-cover">
+                            <img src="<?= esc(logo_url($shop['logo_url'])) ?>" alt="<?= esc($shopName) ?>" class="w-full h-full object-cover">
                         <?php else: ?>
                             <span><?= esc(strtoupper(substr($shopName, 0, 2))) ?></span>
                         <?php endif; ?>

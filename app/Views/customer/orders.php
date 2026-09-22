@@ -354,7 +354,7 @@
 
 </div>
 
-<button aria-label="Go Back" onclick="window.history.back()" class="fixed bottom-lg left-lg w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-xl flex items-center justify-center z-50 hover:scale-105 transition-transform duration-200 border border-outline-variant">
+<button aria-label="Go Back" onclick="window.history.back()" class="hidden md:flex fixed bottom-lg left-lg w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-xl items-center justify-center z-50 hover:scale-105 transition-transform duration-200 border border-outline-variant">
 
     <span class="material-symbols-outlined text-[32px]">arrow_back</span>
 

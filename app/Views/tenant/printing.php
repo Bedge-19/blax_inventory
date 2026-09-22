@@ -231,7 +231,7 @@ $nextStates = [
                                                 <div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-xs font-bold shrink-0 <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?> ring-2 ring-surface">
                                                     <span><?= esc($initials) ?></span>
                                                     <?php if ($profileImage !== ''): ?>
-                                                        <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                                        <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="min-w-0">
@@ -538,7 +538,7 @@ $nextStates = [
                                                 <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-xs font-bold shrink-0 <?= $profileImage !== '' ? 'relative overflow-hidden' : '' ?> ring-2 ring-surface">
                                                     <span><?= esc($initials) ?></span>
                                                     <?php if ($profileImage !== ''): ?>
-                                                        <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                                        <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="min-w-0">

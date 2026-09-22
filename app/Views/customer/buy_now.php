@@ -286,7 +286,7 @@
 </div>
 
 <!-- Floating Go Back Button -->
-<a href="<?= base_url('product/' . $product['id']) ?>" aria-label="Go Back" class="fixed bottom-8 left-8 w-14 h-14 bg-surface-container-lowest text-primary rounded-full shadow-lg flex items-center justify-center z-40 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
+<a href="<?= base_url('product/' . $product['id']) ?>" aria-label="Go Back" class="hidden md:flex fixed bottom-8 left-8 w-14 h-14 bg-surface-container-lowest text-primary rounded-full shadow-lg items-center justify-center z-40 transition-transform border border-outline-variant duration-300 hover:scale-105 hover:shadow-xl">
     <span class="material-symbols-outlined text-[28px]">arrow_back</span>
 </a>
 

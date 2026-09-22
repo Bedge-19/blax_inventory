@@ -217,7 +217,7 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
                         <div class="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-sm font-bold shrink-0 shadow-2xs <?= $customerProfileImg !== '' ? 'relative overflow-hidden' : '' ?>">
                             <span><?= esc($customerInitials) ?></span>
                             <?php if ($customerProfileImg !== ''): ?>
-                                <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(base_url($customerProfileImg)) ?>" alt="<?= esc($customerFullName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                <img class="absolute inset-0 w-full h-full object-cover" src="<?= esc(profile_image_url($customerProfileImg)) ?>" alt="<?= esc($customerFullName) ?> avatar" loading="lazy" onerror="this.remove();">
                             <?php endif; ?>
                         </div>
                         <div class="min-w-0 flex-1">

@@ -545,7 +545,7 @@
                                         <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 relative overflow-hidden shadow-2xs">
                                             <span><?= esc($initials) ?></span>
                                             <?php if ($profileImage !== ''): ?>
-                                                <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                                <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
                                             <?php endif; ?>
                                         </div>
                                         <div class="min-w-0">
@@ -795,7 +795,7 @@
                                 <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0 relative overflow-hidden">
                                     <span><?= esc($initials) ?></span>
                                     <?php if ($profileImage !== ''): ?>
-                                        <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(base_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                        <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($fullName) ?> avatar" loading="lazy" onerror="this.remove();">
                                     <?php endif; ?>
                                 </div>
                                 <div class="min-w-0">

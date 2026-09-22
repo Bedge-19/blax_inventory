@@ -211,7 +211,7 @@
                                         <?php if ($type === 'inventory'): ?>
                                             <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 flex items-center justify-center shrink-0 overflow-hidden">
                                                 <?php if (!empty($details['image_url'])): ?>
-                                                    <img src="<?= esc(base_url($details['image_url'])) ?>" alt="product" class="w-full h-full object-cover" onerror="this.remove()">
+                                                    <img src="<?= esc(product_image_url($details['image_url'])) ?>" alt="product" class="w-full h-full object-cover" onerror="this.remove()">
                                                 <?php else: ?>
                                                     <span class="material-symbols-outlined text-outline text-[20px]">package_2</span>
                                                 <?php endif; ?>

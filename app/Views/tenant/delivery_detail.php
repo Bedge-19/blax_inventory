@@ -199,7 +199,7 @@
 
                 <div class="flex items-center gap-sm pt-xs">
                     <?php if (!empty($customer['profile_image_url'])): ?>
-                        <img src="<?= base_url($customer['profile_image_url']) ?>" class="w-12 h-12 rounded-full object-cover border border-outline-variant/40" alt="Customer">
+                        <img src="<?= esc(profile_image_url($customer['profile_image_url'])) ?>" class="w-12 h-12 rounded-full object-cover border border-outline-variant/40" alt="Customer">
                     <?php else: ?>
                         <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-body-lg">
                             <?= strtoupper(substr($customer['first_name'] ?? 'C', 0, 1)) ?>

@@ -235,7 +235,7 @@
 
 </main>
 
-<button aria-label="Go Back" onclick="window.history.back()" class="fixed bottom-lg left-margin w-16 h-16 bg-surface-container-lowest text-on-surface rounded-full shadow-sm border border-outline-variant flex items-center justify-center hover:bg-surface-container-high active:scale-90 transition-all duration-200 hover:scale-110 hover:shadow-xl z-50">
+<button aria-label="Go Back" onclick="window.history.back()" class="hidden md:flex fixed bottom-lg left-lg w-16 h-16 bg-surface-container-lowest text-on-surface rounded-full shadow-sm border border-outline-variant items-center justify-center hover:bg-surface-container-high active:scale-90 transition-all duration-200 hover:scale-110 hover:shadow-xl z-50">
 
     <span class="material-symbols-outlined !text-[32px]">arrow_back</span>
 

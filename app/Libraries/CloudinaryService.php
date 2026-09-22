@@ -1,0 +1,218 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Libraries;
+
+use Cloudinary\Configuration\Configuration;
+use Cloudinary\Api\Upload\UploadApi;
+use Cloudinary\Api\Admin\AdminApi;
+use CodeIgniter\HTTP\Files\UploadedFile;
+use Config\Cloudinary as CloudinaryConfig;
+
+/**
+ * Centralized Cloudinary Storage Service for Blax Marketplace.
+ * Provides resilient server-side asset uploading, deletion, and URL resolution.
+ */
+class CloudinaryService
+{
+    public const FOLDER_BUSINESS_PERMITS = 'blax/business_permits';
+    public const FOLDER_PRINTING_DOCS    = 'blax/printing/documents';
+    public const FOLDER_PRINTING_REFS    = 'blax/printing/references';
+    public const FOLDER_PROFILES         = 'blax/profiles';
+    public const FOLDER_SHOP_LOGOS       = 'blax/shop_logos';
+    public const FOLDER_PRODUCTS         = 'blax/products';
+    public const FOLDER_CMS              = 'blax/cms';
+
+    protected UploadApi $uploadApi;
+    protected AdminApi $adminApi;
+    protected CloudinaryConfig $config;
+    protected bool $initialized = false;
+
+    public function __construct(?CloudinaryConfig $config = null)
+    {
+        $this->config = $config ?? config(CloudinaryConfig::class);
+        $this->initCloudinary();
+    }
+
+    /**
+     * Initialize Cloudinary SDK configuration.
+     */
+    protected function initCloudinary(): void
+    {
+        $cloudinaryUrl = $this->config->cloudinaryUrl ?: env('CLOUDINARY_URL');
+
+        if (!empty($cloudinaryUrl)) {
+            Configuration::instance($cloudinaryUrl);
+        } else {
+            Configuration::instance([
+                'cloud' => [
+                    'cloud_name' => $this->config->cloudName ?: env('CLOUDINARY_CLOUD_NAME', 'blax'),
+                    'api_key'    => $this->config->apiKey ?: env('CLOUDINARY_API_KEY'),
+                    'api_secret' => $this->config->apiSecret ?: env('CLOUDINARY_API_SECRET'),
+                ],
+                'url' => [
+                    'secure' => true,
+                ],
+            ]);
+        }
+
+        $this->uploadApi   = new UploadApi();
+        $this->adminApi    = new AdminApi();
+        $this->initialized = true;
+    }
+
+    /**
+     * Upload an image file (JPG, PNG, WEBP, GIF) to Cloudinary.
+     *
+     * @param string|UploadedFile $file
+     * @param string $folder
+     * @param string|null $publicId
+     * @param array $options
+     * @return array|null Returns ['secure_url' => ..., 'public_id' => ..., 'format' => ..., 'bytes' => ...] or null on failure
+     */
+    public function uploadImage($file, string $folder, ?string $publicId = null, array $options = []): ?array
+    {
+        return $this->uploadAsset($file, $folder, 'image', $publicId, $options);
+    }
+
+    /**
+     * Upload a raw/document file (PDF, DOCX, ZIP, etc.) to Cloudinary.
+     *
+     * @param string|UploadedFile $file
+     * @param string $folder
+     * @param string|null $publicId
+     * @param array $options
+     * @return array|null Returns ['secure_url' => ..., 'public_id' => ..., 'format' => ..., 'bytes' => ...] or null on failure
+     */
+    public function uploadRawFile($file, string $folder, ?string $publicId = null, array $options = []): ?array
+    {
+        return $this->uploadAsset($file, $folder, 'raw', $publicId, $options);
+    }
+
+    /**
+     * Core asset upload implementation.
+     */
+    protected function uploadAsset($file, string $folder, string $resourceType, ?string $publicId = null, array $options = []): ?array
+    {
+        $filePath = $this->resolveFilePath($file);
+        if ($filePath === null || !is_file($filePath)) {
+            log_message('error', 'CloudinaryService::uploadAsset: Invalid or missing file path.');
+            return null;
+        }
+
+        $params = array_merge([
+            'folder'        => $folder,
+            'resource_type' => $resourceType,
+            'overwrite'     => true,
+            'invalidate'    => true,
+        ], $options);
+
+        if ($publicId !== null && trim($publicId) !== '') {
+            $params['public_id'] = $publicId;
+        }
+
+        try {
+            $response = $this->uploadApi->upload($filePath, $params);
+
+            return [
+                'secure_url'    => (string) ($response['secure_url'] ?? $response['url'] ?? ''),
+                'public_id'     => (string) ($response['public_id'] ?? ''),
+                'resource_type' => (string) ($response['resource_type'] ?? $resourceType),
+                'format'        => (string) ($response['format'] ?? ''),
+                'bytes'         => (int) ($response['bytes'] ?? 0),
+                'created_at'    => (string) ($response['created_at'] ?? date('Y-m-d H:i:s')),
+            ];
+        } catch (\Throwable $e) {
+            log_message('error', "Cloudinary upload failed ({$resourceType} in {$folder}): " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Delete an asset from Cloudinary using its public_id.
+     *
+     * @param string $publicId
+     * @param string $resourceType 'image' or 'raw'
+     * @return bool
+     */
+    public function deleteAsset(string $publicId, string $resourceType = 'image'): bool
+    {
+        $publicId = trim($publicId);
+        if ($publicId === '') {
+            return false;
+        }
+
+        try {
+            $result = $this->uploadApi->destroy($publicId, [
+                'resource_type' => $resourceType,
+                'invalidate'    => true,
+            ]);
+
+            return isset($result['result']) && in_array($result['result'], ['ok', 'not found'], true);
+        } catch (\Throwable $e) {
+            log_message('error', "Cloudinary destroy failed for [{$publicId}]: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Check if a given URL points to Cloudinary storage.
+     */
+    public function isCloudinaryUrl(?string $url): bool
+    {
+        if ($url === null || trim($url) === '') {
+            return false;
+        }
+
+        return str_contains($url, 'res.cloudinary.com') || str_contains($url, 'cloudinary.com');
+    }
+
+    /**
+     * Extract public_id from a Cloudinary URL.
+     */
+    public function extractPublicId(?string $url): ?string
+    {
+        if (!$this->isCloudinaryUrl($url)) {
+            return null;
+        }
+
+        $parsed = parse_url((string) $url, PHP_URL_PATH);
+        if (!$parsed) {
+            return null;
+        }
+
+        $isRaw = str_contains($parsed, '/raw/upload/');
+
+        if ($isRaw) {
+            if (preg_match('#/upload/(?:v\d+/)?(.+)$#', $parsed, $matches)) {
+                return $matches[1];
+            }
+        } else {
+            if (preg_match('#/upload/(?:v\d+/)?(.+?)(?:\.[a-zA-Z0-9]+)?$#', $parsed, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolves the real filesystem path of a file parameter.
+     */
+    protected function resolveFilePath($file): ?string
+    {
+        if ($file instanceof UploadedFile) {
+            if (!$file->isValid()) {
+                return null;
+            }
+            return $file->getRealPath() ?: $file->getTempName();
+        }
+
+        if (is_string($file) && is_file($file)) {
+            return $file;
+        }
+
+        return null;
+    }
+}

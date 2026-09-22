@@ -933,16 +933,36 @@ class Admin extends BaseController
         if ($file->getSize() > 3*1024*1024) {
             return redirect()->back()->with('error','Image must be 3MB or smaller.');
         }
-        $uploadPath = ROOTPATH.'public/uploads/cms';
-        if (!is_dir($uploadPath)) mkdir($uploadPath,0777,true);
-        $fileName = 'cms_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
-        $file->move($uploadPath,$fileName);
-        // Remove old image if local
-        if (!empty($row['image_url']) && strpos($row['image_url'],'uploads/cms/')===0) {
-            $old=ROOTPATH.'public/'.$row['image_url'];
-            if (is_file($old)) @unlink($old);
+        $cloudinary = new \App\Libraries\CloudinaryService();
+        $publicId = 'cms_' . time() . '_' . bin2hex(random_bytes(4));
+        $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_CMS, $publicId);
+
+        if ($uploadRes && !empty($uploadRes['secure_url'])) {
+            $newImageUrl = $uploadRes['secure_url'];
+            // Cleanup old Cloudinary asset if applicable
+            if (!empty($row['image_url']) && $cloudinary->isCloudinaryUrl($row['image_url'])) {
+                $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
+                if ($oldPublicId) {
+                    $cloudinary->deleteAsset($oldPublicId, 'image');
+                }
+            } elseif (!empty($row['image_url']) && strpos($row['image_url'], 'uploads/cms/') === 0) {
+                $old = ROOTPATH . 'public/' . $row['image_url'];
+                if (is_file($old)) @unlink($old);
+            }
+        } else {
+            // Local fallback
+            $uploadPath = ROOTPATH.'public/uploads/cms';
+            if (!is_dir($uploadPath)) mkdir($uploadPath,0777,true);
+            $fileName = 'cms_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $mimeMap[$mime];
+            $file->move($uploadPath,$fileName);
+            if (!empty($row['image_url']) && strpos($row['image_url'],'uploads/cms/')===0) {
+                $old=ROOTPATH.'public/'.$row['image_url'];
+                if (is_file($old)) @unlink($old);
+            }
+            $newImageUrl = 'uploads/cms/'.$fileName;
         }
-        $model->update($id, ['image_url'=>'uploads/cms/'.$fileName, 'updated_by'=>(int)session()->get('user_id')]);
+
+        $model->update($id, ['image_url'=>$newImageUrl, 'updated_by'=>(int)session()->get('user_id')]);
         SiteContentModel::clearCache();
         return redirect()->back()->with('success','Image updated.');
     }
@@ -1120,7 +1140,12 @@ class Admin extends BaseController
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Business permit not found.');
         }
 
-        $storedPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string) $shop['business_permit_url']);
+        $permitUrl = (string) $shop['business_permit_url'];
+        if (str_starts_with($permitUrl, 'http://') || str_starts_with($permitUrl, 'https://')) {
+            return redirect()->to($permitUrl);
+        }
+
+        $storedPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $permitUrl);
         $fileName = basename($storedPath);
         if ($fileName === '' || $fileName === '.' || $fileName === '..') {
             throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound('Business permit not found.');

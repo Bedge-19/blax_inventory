@@ -418,7 +418,7 @@
 </div>
 
 <!-- Back Button -->
-<button type="button" class="fixed bottom-8 left-8 w-14 h-14 bg-surface-container-highest text-on-surface rounded-full shadow-lg border border-outline-variant/30 flex items-center justify-center hover:scale-110 transition-transform active:scale-95 z-40 group" aria-label="Go Back" onclick="window.history.back()">
+<button type="button" class="hidden md:flex fixed bottom-8 left-8 w-14 h-14 bg-surface-container-highest text-on-surface rounded-full shadow-lg border border-outline-variant/30 items-center justify-center hover:scale-110 transition-transform active:scale-95 z-40 group" aria-label="Go Back" onclick="window.history.back()">
     <span class="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
 </button>
 

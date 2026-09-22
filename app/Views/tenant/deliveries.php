@@ -287,7 +287,7 @@
                             <!-- Customer Row -->
                             <div class="flex items-center gap-sm">
                                 <?php if ($profileImage !== ''): ?>
-                                    <img src="<?= base_url($profileImage) ?>" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0" alt="Customer">
+                                    <img src="<?= esc(profile_image_url($profileImage)) ?>" class="w-8 h-8 rounded-full object-cover border border-outline-variant/30 shrink-0" alt="Customer">
                                 <?php else: ?>
                                     <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
                                         <?= esc($initials) ?>
