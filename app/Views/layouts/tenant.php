@@ -273,7 +273,7 @@
                             <?php endif; ?>
                         </button>
 
-                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 py-2 z-50">
+                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 p-1.5 z-50">
 
                             <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-on-surface hover:bg-surface-container-low rounded-lg <?= $activeNav === 'settings' ? 'bg-primary-container/10 text-primary font-bold' : '' ?>">
 
@@ -294,6 +294,14 @@
                             <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-on-surface hover:bg-surface-container-low rounded-lg">
 
                                 <span class="material-symbols-outlined text-[18px]">person</span>Profile
+
+                            </a>
+
+                            <div class="my-1 border-t border-outline-variant/10"></div>
+
+                            <a href="<?= base_url('logout') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-error hover:bg-error-container/20 rounded-lg transition-colors font-medium">
+
+                                <span class="material-symbols-outlined text-[18px] text-error">logout</span>Log Out
 
                             </a>
 
