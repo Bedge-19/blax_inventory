@@ -97,38 +97,21 @@ class Tenant extends BaseController
         $productModel = new ProductModel();
         $notifModel = new NotificationModel();
 
-        // ---- KPI values (tenant-scoped, no invented formulas) ----
-        $totalRevenue  = $orderModel->getRevenueForShop($shopId);
-        $totalSales    = $orderModel->getOrderCountForShop($shopId);
-        $pendingOrders = $orderModel->getOrderCountForShop($shopId, ['pending', 'processing']);
-        $printingCount = $prModel->countByShop($shopId);
-
         // ---- Period deltas: last 30 days vs the previous 30 days ----
-        // Boundaries are anchored to the DB server's local calendar date
-        // so windows always align with the stored placed_at timestamps.
         $today       = $orderModel->getLocalToday();
         $windowStart = date('Y-m-d 00:00:00', strtotime($today . ' -30 days'));
         $prevStart   = date('Y-m-d 00:00:00', strtotime($today . ' -60 days'));
 
-        $revCurrent   = $orderModel->getRevenueForShop($shopId, $windowStart);
-        $revPrevious  = $orderModel->getRevenueForShop($shopId, $prevStart, $windowStart);
-
-        $salesCurrent   = $orderModel->getOrderCountForShop($shopId, [], $windowStart);
-        $salesPrevious  = $orderModel->getOrderCountForShop($shopId, [], $prevStart, $windowStart);
-
-        $pendingCurrent   = $orderModel->getOrderCountForShop($shopId, ['pending', 'processing'], $windowStart);
-        $pendingPrevious  = $orderModel->getOrderCountForShop($shopId, ['pending', 'processing'], $prevStart, $windowStart);
-
-        $printCurrent  = $prModel->countByShop($shopId, $windowStart);
-        $printPrevious = $prModel->countByShop($shopId, $prevStart, $windowStart);
+        // Consolidated KPI and delta metrics (2 queries instead of 12)
+        $kpis = $orderModel->getShopDashboardKpis($shopId, $windowStart, $prevStart);
 
         // ---- Chart data (default: last 7 days) ----
         $chart = $orderModel->getSalesChartData($shopId, '7');
         $chartMax = max($chart['values']);
 
-        // ---- Lists ----
-        $recentOrders   = array_slice($orderModel->getOrdersByShop($shopId), 0, 8);
-        $recentRequests = array_slice($prModel->getRequestsByShop($shopId), 0, 8);
+        // ---- Lists (Directly limited to 8 in SQL) ----
+        $recentOrders   = $orderModel->getOrdersByShop($shopId, 8);
+        $recentRequests = $prModel->getRequestsByShop($shopId, 8);
         $lowStockItems  = $productModel->getLowStockProducts($shopId);
         $lowStockCount  = $productModel->countLowStockProducts($shopId);
 
@@ -148,19 +131,16 @@ class Tenant extends BaseController
         return view('tenant/dashboard', [
             'shop'           => $shop,
             'active_warning' => $activeWarning,
-            'products'       => $productModel->where('shop_id', $shopId)->where('deleted_at', null)->findAll(),
-            'orders'         => $orderModel->getOrdersByShop($shopId),
-            'printReqs'      => $prModel->getRequestsByShop($shopId),
             // KPI values
-            'total_revenue'  => $totalRevenue,
-            'total_sales'    => $totalSales,
-            'pending_orders' => $pendingOrders,
-            'printing_count' => $printingCount,
+            'total_revenue'  => $kpis['total_revenue'],
+            'total_sales'    => $kpis['total_sales'],
+            'pending_orders' => $kpis['pending_orders'],
+            'printing_count' => $kpis['printing_count'],
             // KPI deltas (neutral when there is no prior-period data)
-            'revenue_delta'  => $this->deltaPercent($revCurrent, $revPrevious),
-            'sales_delta'    => $this->deltaPercent($salesCurrent, $salesPrevious),
-            'pending_delta'  => $this->deltaPercent($pendingCurrent, $pendingPrevious),
-            'printing_delta' => $this->deltaPercent($printCurrent, $printPrevious),
+            'revenue_delta'  => $this->deltaPercent($kpis['rev_current'], $kpis['rev_previous']),
+            'sales_delta'    => $this->deltaPercent($kpis['sales_current'], $kpis['sales_previous']),
+            'pending_delta'  => $this->deltaPercent($kpis['pending_current'], $kpis['pending_previous']),
+            'printing_delta' => $this->deltaPercent($kpis['print_current'], $kpis['print_previous']),
             // Sales Overview chart
             'chart_labels'   => $chart['labels'],
             'chart_values'   => $chart['values'],
@@ -386,7 +366,7 @@ class Tenant extends BaseController
             'pager'           => $result['pager'],
             'summary'         => $productModel->getInventorySummary($shopId),
             'categories'      => $productModel->getShopCategories($shopId),
-            'all_categories'  => (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll(),
+            'all_categories'  => (new CategoryModel())->getAllCached(),
             'filters'         => [
                 'q'          => $search,
                 'sku'        => $sku,
@@ -1384,6 +1364,50 @@ class Tenant extends BaseController
         $settledRecords   = [];
         $escrowRecords    = [];
 
+        // Batch pre-fetch all verified GCash payments in 1 query to avoid N+1 queries
+        $orderIds = array_map('intval', array_column($orders, 'id'));
+        $prIds    = array_map('intval', array_column($printingRequests, 'id'));
+        $orderPaymentsMap = [];
+        $prPaymentsMap    = [];
+
+        if (!empty($orderIds) || !empty($prIds)) {
+            $pBuilder = $db->table('payments')
+                ->select('payable_type, payable_id, SUM(amount) as total_amount')
+                ->where('status', 'verified')
+                ->where('LOWER(method)', 'gcash')
+                ->groupStart();
+
+            if (!empty($orderIds)) {
+                $pBuilder->groupStart()
+                    ->where('payable_type', 'order')
+                    ->whereIn('payable_id', $orderIds)
+                    ->groupEnd();
+            }
+            if (!empty($prIds)) {
+                if (!empty($orderIds)) {
+                    $pBuilder->orGroupStart()
+                        ->where('payable_type', 'printing_request')
+                        ->whereIn('payable_id', $prIds)
+                        ->groupEnd();
+                } else {
+                    $pBuilder->groupStart()
+                        ->where('payable_type', 'printing_request')
+                        ->whereIn('payable_id', $prIds)
+                        ->groupEnd();
+                }
+            }
+            $pBuilder->groupEnd();
+
+            $pRows = $pBuilder->groupBy('payable_type, payable_id')->get()->getResultArray();
+            foreach ($pRows as $pRow) {
+                if ($pRow['payable_type'] === 'order') {
+                    $orderPaymentsMap[(int) $pRow['payable_id']] = (float) $pRow['total_amount'];
+                } elseif ($pRow['payable_type'] === 'printing_request') {
+                    $prPaymentsMap[(int) $pRow['payable_id']] = (float) $pRow['total_amount'];
+                }
+            }
+        }
+
         // 1. Process Product Orders
         foreach ($orders as $o) {
             $status = strtolower(trim((string) ($o['status'] ?? '')));
@@ -1391,14 +1415,8 @@ class Tenant extends BaseController
                 continue;
             }
 
-            // Check verified GCash records in payments table
-            $verifiedOrderGcash = (float) ($db->table('payments')
-                ->where('payable_type', 'order')
-                ->where('payable_id', (int) $o['id'])
-                ->where('status', 'verified')
-                ->where('LOWER(method)', 'gcash')
-                ->selectSum('amount')
-                ->get()->getRowArray()['amount'] ?? 0.0);
+            // Check verified GCash records from pre-fetched payments map
+            $verifiedOrderGcash = (float) ($orderPaymentsMap[(int) $o['id']] ?? 0.0);
 
             $orderPayMethod = strtolower(trim((string) ($o['payment_method'] ?? '')));
             $isOnlineGcash  = in_array($orderPayMethod, ['gcash', 'paymongo', 'online_gcash'], true) 
@@ -1475,14 +1493,8 @@ class Tenant extends BaseController
                 continue;
             }
 
-            // Check verified GCash records in payments table
-            $verifiedPrGcash = (float) ($db->table('payments')
-                ->where('payable_type', 'printing_request')
-                ->where('payable_id', (int) $pr['id'])
-                ->where('status', 'verified')
-                ->where('LOWER(method)', 'gcash')
-                ->selectSum('amount')
-                ->get()->getRowArray()['amount'] ?? 0.0);
+            // Check verified GCash records from pre-fetched payments map
+            $verifiedPrGcash = (float) ($prPaymentsMap[(int) $pr['id']] ?? 0.0);
 
             $prGcashAmount = 0.0;
             if ($verifiedPrGcash > 0) {
@@ -5418,7 +5430,7 @@ class Tenant extends BaseController
             ->orderBy('printing_requests.created_at', 'DESC')
             ->findAll();
 
-        $categories = (new CategoryModel())->orderBy('sort_order', 'ASC')->findAll();
+        $categories = (new CategoryModel())->getAllCached();
 
         // Cross-reference customers who have both ready-for-pickup orders and printing requests
         $customerHasPrintingMap = [];

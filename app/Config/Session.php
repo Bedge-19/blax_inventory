@@ -4,7 +4,7 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\Session\Handlers\BaseHandler;
-use CodeIgniter\Session\Handlers\DatabaseHandler;
+use App\Session\Handlers\OptimizedDatabaseHandler;
 
 class Session extends BaseConfig
 {
@@ -16,12 +16,13 @@ class Session extends BaseConfig
      * The session storage driver to use:
      * - `CodeIgniter\Session\Handlers\FileHandler`
      * - `CodeIgniter\Session\Handlers\DatabaseHandler`
+     * - `App\Session\Handlers\OptimizedDatabaseHandler`
      * - `CodeIgniter\Session\Handlers\MemcachedHandler`
      * - `CodeIgniter\Session\Handlers\RedisHandler`
      *
      * @var class-string<BaseHandler>
      */
-    public string $driver = DatabaseHandler::class;
+    public string $driver = OptimizedDatabaseHandler::class;
 
     /**
      * --------------------------------------------------------------------------

@@ -353,12 +353,20 @@ class Customer extends BaseController
         $orderItemModel    = new OrderItemModel();
         $productImageModel = new ProductImageModel();
 
+        $orderIds = array_column($orders, 'id');
+        $itemsByOrder = [];
         $productIds = [];
-        foreach ($orders as &$order) {
-            $order['items'] = $orderItemModel->where('order_id', $order['id'])->findAll();
-            foreach ($order['items'] as $item) {
+
+        if (!empty($orderIds)) {
+            $allItems = $orderItemModel->whereIn('order_id', $orderIds)->findAll();
+            foreach ($allItems as $item) {
+                $itemsByOrder[(int) $item['order_id']][] = $item;
                 $productIds[(int) $item['product_id']] = true;
             }
+        }
+
+        foreach ($orders as &$order) {
+            $order['items'] = $itemsByOrder[(int) $order['id']] ?? [];
         }
         unset($order);
 

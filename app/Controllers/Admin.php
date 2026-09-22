@@ -36,53 +36,55 @@ class Admin extends BaseController
         $payoutModel = new PayoutModel();
         $db = \Config\Database::connect();
 
-        $shops = $db->table('shops s')
-            ->select('s.*, u.first_name, u.last_name, u.email')
-            ->join('users u', 'u.id = s.owner_id', 'left')
-            ->orderBy('s.created_at', 'DESC')
-            ->get()->getResultArray();
+        // 1. Single aggregate query for shop counts
+        $shopStats = $db->query("SELECT
+            COUNT(*) AS total_shops,
+            COUNT(CASE WHEN status = 'active' THEN 1 END) AS active_shops,
+            COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending_shops
+            FROM shops")->getRowArray();
+        $totalShops   = (int) ($shopStats['total_shops'] ?? 0);
+        $activeShops  = (int) ($shopStats['active_shops'] ?? 0);
+        $pendingShops = (int) ($shopStats['pending_shops'] ?? 0);
 
-        $customers = $userModel->where('role', 'customer')->findAll();
+        // 2. Customer and payout counts via direct SQL count
+        $totalCustomers  = $userModel->where('role', 'customer')->countAllResults();
         $pendingPayments = $db->table('payout_requests')->where('status','pending')->where('destination_method','gcash')->countAllResults();
 
-        // Admin revenue only: 3% of completed GCash withdrawals
-        $adminRevenue = $payoutModel->getAdminRevenueTotal('completed');
+        // 3. Admin revenue: 3% of completed GCash withdrawals
+        $adminRevenue   = $payoutModel->getAdminRevenueTotal('completed');
         $adminRevenue30 = $payoutModel->getAdminRevenueChartData('30','completed');
 
-        // Recent shops pagination with selectable per_page (5, 10, 20)
+        // 4. Recent shops pagination with direct SQL LIMIT & OFFSET
         $perPage = (int) ($this->request->getGet('per_page') ?: 5);
         if (!in_array($perPage, [5, 10, 20], true)) {
             $perPage = 5;
         }
-        $page = max(1, (int) ($this->request->getGet('page_recent') ?: $this->request->getGet('page')));
-        $totalShops = count($shops);
+        $page   = max(1, (int) ($this->request->getGet('page_recent') ?: $this->request->getGet('page')));
         $offset = ($page - 1) * $perPage;
-        $recentShops = array_slice($shops, $offset, $perPage);
+
+        $recentShops = $db->table('shops s')
+            ->select('s.*, u.first_name, u.last_name, u.email')
+            ->join('users u', 'u.id = s.owner_id', 'left')
+            ->orderBy('s.created_at', 'DESC')
+            ->limit($perPage, $offset)
+            ->get()->getResultArray();
 
         $pager = service('pager');
         $pager->store('recent', $page, $perPage, $totalShops);
 
-        // Active shops count
-        $activeShops = 0;
-        $pendingShops = 0;
-        foreach ($shops as $s) {
-            if (($s['status'] ?? '') === 'active') $activeShops++;
-            if (($s['status'] ?? '') === 'pending') $pendingShops++;
-        }
-
         return view('admin/dashboard', [
-            'admin_revenue'        => $adminRevenue,
+            'admin_revenue'              => $adminRevenue,
             'admin_revenue_chart_labels' => $adminRevenue30['labels'],
             'admin_revenue_chart_values' => $adminRevenue30['values'],
-            'total_shops'          => count($shops),
-            'active_shops'         => $activeShops,
-            'pending_shops'        => $pendingShops,
-            'total_customers'      => count($customers),
-            'pending_payments'     => $pendingPayments,
-            'recent_shops'         => $recentShops,
-            'shops'                => $shops,
-            'pager'                => $pager,
-            'per_page'             => $perPage,
+            'total_shops'                => $totalShops,
+            'active_shops'               => $activeShops,
+            'pending_shops'              => $pendingShops,
+            'total_customers'            => $totalCustomers,
+            'pending_payments'           => $pendingPayments,
+            'recent_shops'               => $recentShops,
+            'shops'                      => $recentShops,
+            'pager'                      => $pager,
+            'per_page'                   => $perPage,
         ]);
     }
 
@@ -886,6 +888,7 @@ class Admin extends BaseController
             if ($label !== '') $data['label'] = $label;
             $data['updated_by'] = (int)session()->get('user_id');
             $model->update($id, $data);
+            SiteContentModel::clearCache();
         } else {
             if ($page === '' || $key === '') return redirect()->back()->with('error','Page and key required.');
             $contentType = $this->request->getPost('content_type') === 'image' ? 'image' : ($this->request->getPost('content_type') === 'textarea' ? 'textarea' : 'text');
@@ -898,6 +901,7 @@ class Admin extends BaseController
                 'sort_order'=> (int)$this->request->getPost('sort_order'),
                 'updated_by'=> (int)session()->get('user_id'),
             ]);
+            SiteContentModel::clearCache();
         }
         return redirect()->back()->with('success','Content updated.');
     }
@@ -939,6 +943,7 @@ class Admin extends BaseController
             if (is_file($old)) @unlink($old);
         }
         $model->update($id, ['image_url'=>'uploads/cms/'.$fileName, 'updated_by'=>(int)session()->get('user_id')]);
+        SiteContentModel::clearCache();
         return redirect()->back()->with('success','Image updated.');
     }
 

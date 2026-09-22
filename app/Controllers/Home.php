@@ -61,7 +61,7 @@ class Home extends BaseController
         }
 
         $shops      = $shopModel->getMostRatedShops(5);
-        $categories = $categoryModel->orderBy('sort_order', 'ASC')->findAll();
+        $categories = $categoryModel->getAllCached();
 
         $shopResults = [];
         if ($search !== '') {

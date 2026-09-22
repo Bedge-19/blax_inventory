@@ -51,14 +51,49 @@ class SiteContentModel extends Model
     }
 
     /**
+     * Request-level memoized cache.
+     * @var array<string, array>
+     */
+    private static array $requestCache = [];
+
+    /**
+     * Clear site content caches (both in-memory and local disk cache).
+     */
+    public static function clearCache(): void
+    {
+        self::$requestCache = [];
+        try {
+            cache()->delete('blax_site_contents_home_map');
+            cache()->delete('blax_site_contents_all_key_map');
+            cache()->delete('blax_platform_deduction_percent');
+        } catch (\Throwable $e) {
+            // Ignore cache engine failure
+        }
+    }
+
+    /**
      * Fetch homepage content map cleanly combining home_banners,
      * announcement_bar, and footer_info, ensuring home_banners entries
      * take precedence and avoid collisions with other pages (e.g. printing_services, categories).
+     *
+     * Cached in local /tmp cache for 600s + request memoization.
      *
      * @return array<string, array>
      */
     public function getHomeContentMap(): array
     {
+        if (isset(self::$requestCache['home_map'])) {
+            return self::$requestCache['home_map'];
+        }
+
+        try {
+            $cached = cache('blax_site_contents_home_map');
+            if (is_array($cached)) {
+                self::$requestCache['home_map'] = $cached;
+                return $cached;
+            }
+        } catch (\Throwable $e) {}
+
         // First load global components (announcement_bar, footer_info)
         $globalRows = $this->whereIn('page', ['announcement_bar', 'footer_info'])
                            ->orderBy('sort_order', 'ASC')
@@ -76,6 +111,11 @@ class SiteContentModel extends Model
             $map[$r['content_key']] = $r;
         }
 
+        try {
+            cache()->save('blax_site_contents_home_map', $map, 600);
+        } catch (\Throwable $e) {}
+
+        self::$requestCache['home_map'] = $map;
         return $map;
     }
 
@@ -83,10 +123,24 @@ class SiteContentModel extends Model
      * Fetch all site content entries indexed by content_key.
      * home_banners takes precedence over generic/other page keys.
      *
+     * Cached in local /tmp cache for 600s + request memoization.
+     *
      * @return array<string, array>
      */
     public function getAllKeyMap(): array
     {
+        if (isset(self::$requestCache['all_key_map'])) {
+            return self::$requestCache['all_key_map'];
+        }
+
+        try {
+            $cached = cache('blax_site_contents_all_key_map');
+            if (is_array($cached)) {
+                self::$requestCache['all_key_map'] = $cached;
+                return $cached;
+            }
+        } catch (\Throwable $e) {}
+
         $rows = $this->orderBy('sort_order', 'ASC')->findAll();
         $map = [];
         foreach ($rows as $r) {
@@ -99,20 +153,47 @@ class SiteContentModel extends Model
                 $map[$r['content_key']] = $r;
             }
         }
+
+        try {
+            cache()->save('blax_site_contents_all_key_map', $map, 600);
+        } catch (\Throwable $e) {}
+
+        self::$requestCache['all_key_map'] = $map;
         return $map;
     }
 
     public function getPlatformDeductionPercent(): float
     {
-        $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();
-        if ($row && is_numeric($row['text_value'])) {
-            return (float) $row['text_value'];
+        if (isset(self::$requestCache['deduction_percent'])) {
+            return self::$requestCache['deduction_percent'];
         }
-        return 3.00;
+
+        try {
+            $cached = cache('blax_platform_deduction_percent');
+            if (is_numeric($cached)) {
+                $val = (float) $cached;
+                self::$requestCache['deduction_percent'] = $val;
+                return $val;
+            }
+        } catch (\Throwable $e) {}
+
+        $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();
+        $rate = 3.00;
+        if ($row && is_numeric($row['text_value'])) {
+            $rate = (float) $row['text_value'];
+        }
+
+        try {
+            cache()->save('blax_platform_deduction_percent', $rate, 600);
+        } catch (\Throwable $e) {}
+
+        self::$requestCache['deduction_percent'] = $rate;
+        return $rate;
     }
 
     public function setPlatformDeductionPercent(float $percent): bool
     {
+        self::clearCache();
         $percent = round(max(0, min(50, $percent)), 2);
         $row = $this->where('page', 'platform')->where('content_key', 'withdrawal_deduction_percent')->first();
         if ($row) {

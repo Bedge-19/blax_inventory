@@ -12,24 +12,18 @@
     $isLogged = (bool) session()->get('isLoggedIn');
     $cartCount = 0;
     $unreadCount = 0;
+    $activeOrdersCount = 0;
     $recentNotifs = [];
     if ($isLogged) {
-        $userId = session()->get('user_id');
-        $cartModel = new \App\Models\CartModel();
-        $cartItemModel = new \App\Models\CartItemModel();
-        $cart = $cartModel->getOrCreateCart($userId);
-        $cartCount = $cartItemModel->where('cart_id', $cart['id'])->countAllResults();
-
-        $orderModel = new \App\Models\OrderModel();
-        $activeOrdersCount = $orderModel->where('customer_id', $userId)
-            ->whereIn('status', ['pending', 'processing', 'shipped', 'ready_for_pickup'])
-            ->countAllResults();
+        $userId = (int) session()->get('user_id');
+        $userModel = new \App\Models\UserModel();
+        $stats = $userModel->getCustomerHeaderStats($userId);
+        $cartCount = $stats['cart_count'];
+        $activeOrdersCount = $stats['active_orders_count'];
+        $unreadCount = $stats['unread_count'];
 
         $notifModel = new \App\Models\NotificationModel();
-        $unreadCount = $notifModel->getUnreadCount($userId);
         $recentNotifs = $notifModel->getRecent($userId, 6);
-    } else {
-        $activeOrdersCount = 0;
     }
 
     // Global CMS contents for announcement bar and footer across all customer pages

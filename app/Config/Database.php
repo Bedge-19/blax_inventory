@@ -217,5 +217,9 @@ class Database extends Config
         $envPort = env('database.default.port')
             ?: (getenv('DB_PORT') ?: (getenv('DATABASE_PORT') ?: getenv('database_default_port')));
         $this->default['port'] = $envPort ? (int) $envPort : $defaultPort;
+
+        if (str_contains((string) $this->default['hostname'], 'tidbcloud.com') || getenv('VERCEL') === '1') {
+            $this->default['compress'] = true;
+        }
     }
 }

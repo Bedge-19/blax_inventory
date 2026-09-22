@@ -46,14 +46,19 @@ class PrintingRequestModel extends Model
             ->get()->getResultArray();
     }
 
-    public function getRequestsByShop(int $shopId)
+    public function getRequestsByShop(int $shopId, ?int $limit = null)
     {
-        return $this->db->table('printing_requests pr')
+        $builder = $this->db->table('printing_requests pr')
             ->select('pr.*, u.first_name, u.last_name')
             ->join('users u', 'u.id = pr.customer_id', 'left')
             ->where('pr.shop_id', $shopId)
-            ->orderBy('pr.created_at', 'DESC')
-            ->get()->getResultArray();
+            ->orderBy('pr.created_at', 'DESC');
+
+        if ($limit !== null && $limit > 0) {
+            $builder->limit($limit);
+        }
+
+        return $builder->get()->getResultArray();
     }
 
     /**

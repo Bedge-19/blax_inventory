@@ -43,14 +43,14 @@ class OrderModel extends Model
             ->get()->getResultArray();
     }
 
-    public function getOrdersByShop(int $shopId)
+    public function getOrdersByShop(int $shopId, ?int $limit = null)
     {
         $archived = $this->db->table('archived_items')
             ->select('item_id')
             ->where('shop_id', $shopId)
             ->where('item_type', 'order');
 
-        return $this->db->table('orders o')
+        $builder = $this->db->table('orders o')
             ->select('o.*, u.first_name, u.last_name, u.email')
             ->join('users u', 'u.id = o.customer_id', 'left')
             ->where('o.shop_id', $shopId)
@@ -64,8 +64,13 @@ class OrderModel extends Model
                 WHEN LOWER(o.status) = 'completed' THEN 6 
                 ELSE 7 
             END", 'ASC', false)
-            ->orderBy('o.placed_at', 'DESC')
-            ->get()->getResultArray();
+            ->orderBy('o.placed_at', 'DESC');
+
+        if ($limit !== null && $limit > 0) {
+            $builder->limit($limit);
+        }
+
+        return $builder->get()->getResultArray();
     }
 
     /**
@@ -510,6 +515,61 @@ class OrderModel extends Model
     public function getLocalToday(): string
     {
         return date('Y-m-d');
+    }
+
+    /**
+     * Consolidated retrieval of all Tenant Dashboard KPIs and 30-day delta windows
+     * in 2 queries (1 for orders, 1 for printing requests) instead of 12 sequential queries.
+     *
+     * @return array<string, int|float>
+     */
+    public function getShopDashboardKpis(int $shopId, string $windowStart, string $prevStart): array
+    {
+        // 1. Single query for order KPIs and deltas
+        $orderRow = $this->db->query("SELECT
+            COALESCE(SUM(CASE WHEN (LOWER(status) IN ('completed', 'paid', 'delivered') OR LOWER(payment_status) = 'paid' OR LOWER(pos_payment_status) = 'paid') AND LOWER(status) != 'cancelled' THEN total_amount ELSE 0 END), 0) AS order_total_rev,
+            COALESCE(SUM(CASE WHEN (LOWER(status) IN ('completed', 'paid', 'delivered') OR LOWER(payment_status) = 'paid' OR LOWER(pos_payment_status) = 'paid') AND LOWER(status) != 'cancelled' AND COALESCE(completed_at, placed_at) >= ? THEN total_amount ELSE 0 END), 0) AS order_rev_current,
+            COALESCE(SUM(CASE WHEN (LOWER(status) IN ('completed', 'paid', 'delivered') OR LOWER(payment_status) = 'paid' OR LOWER(pos_payment_status) = 'paid') AND LOWER(status) != 'cancelled' AND COALESCE(completed_at, placed_at) >= ? AND COALESCE(completed_at, placed_at) < ? THEN total_amount ELSE 0 END), 0) AS order_rev_previous,
+            COUNT(CASE WHEN LOWER(status) != 'cancelled' THEN 1 END) AS total_sales,
+            COUNT(CASE WHEN LOWER(status) != 'cancelled' AND placed_at >= ? THEN 1 END) AS sales_current,
+            COUNT(CASE WHEN LOWER(status) != 'cancelled' AND placed_at >= ? AND placed_at < ? THEN 1 END) AS sales_previous,
+            COUNT(CASE WHEN LOWER(status) IN ('pending', 'processing') THEN 1 END) AS pending_orders,
+            COUNT(CASE WHEN LOWER(status) IN ('pending', 'processing') AND placed_at >= ? THEN 1 END) AS pending_current,
+            COUNT(CASE WHEN LOWER(status) IN ('pending', 'processing') AND placed_at >= ? AND placed_at < ? THEN 1 END) AS pending_previous
+            FROM orders WHERE shop_id = ?",
+            [$windowStart, $prevStart, $windowStart, $windowStart, $prevStart, $windowStart, $windowStart, $prevStart, $windowStart, $shopId]
+        )->getRowArray();
+
+        // 2. Single query for printing KPIs and deltas
+        $prRow = $this->db->query("SELECT
+            COALESCE(SUM(CASE WHEN LOWER(status) IN ('completed', 'paid', 'released') AND LOWER(status) != 'cancelled' THEN total_price ELSE 0 END), 0) AS pr_total_rev,
+            COALESCE(SUM(CASE WHEN LOWER(status) IN ('completed', 'paid', 'released') AND LOWER(status) != 'cancelled' AND COALESCE(completed_at, created_at) >= ? THEN total_price ELSE 0 END), 0) AS pr_rev_current,
+            COALESCE(SUM(CASE WHEN LOWER(status) IN ('completed', 'paid', 'released') AND LOWER(status) != 'cancelled' AND COALESCE(completed_at, created_at) >= ? AND COALESCE(completed_at, created_at) < ? THEN total_price ELSE 0 END), 0) AS pr_rev_previous,
+            COUNT(*) AS printing_count,
+            COUNT(CASE WHEN created_at >= ? THEN 1 END) AS print_current,
+            COUNT(CASE WHEN created_at >= ? AND created_at < ? THEN 1 END) AS print_previous
+            FROM printing_requests WHERE shop_id = ?",
+            [$windowStart, $prevStart, $windowStart, $windowStart, $prevStart, $windowStart, $shopId]
+        )->getRowArray();
+
+        $totalRevenue = (float) (($orderRow['order_total_rev'] ?? 0) + ($prRow['pr_total_rev'] ?? 0));
+        $revCurrent   = (float) (($orderRow['order_rev_current'] ?? 0) + ($prRow['pr_rev_current'] ?? 0));
+        $revPrevious  = (float) (($orderRow['order_rev_previous'] ?? 0) + ($prRow['pr_rev_previous'] ?? 0));
+
+        return [
+            'total_revenue'    => $totalRevenue,
+            'total_sales'      => (int) ($orderRow['total_sales'] ?? 0),
+            'pending_orders'   => (int) ($orderRow['pending_orders'] ?? 0),
+            'printing_count'   => (int) ($prRow['printing_count'] ?? 0),
+            'rev_current'      => $revCurrent,
+            'rev_previous'     => $revPrevious,
+            'sales_current'    => (int) ($orderRow['sales_current'] ?? 0),
+            'sales_previous'   => (int) ($orderRow['sales_previous'] ?? 0),
+            'pending_current'  => (int) ($orderRow['pending_current'] ?? 0),
+            'pending_previous' => (int) ($orderRow['pending_previous'] ?? 0),
+            'print_current'    => (int) ($prRow['print_current'] ?? 0),
+            'print_previous'   => (int) ($prRow['print_previous'] ?? 0),
+        ];
     }
 
     /**

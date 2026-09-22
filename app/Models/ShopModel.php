@@ -81,16 +81,30 @@ class ShopModel extends Model
 
     /**
      * Highest-rated active shops, sorted by rating (then review count),
-     * capped at $limit.
+     * capped at $limit. Cached for 300s.
      *
      * @return array<int, array<string, mixed>>
      */
     public function getMostRatedShops(int $limit = 5)
     {
-        return $this->where('status', 'active')
+        $cacheKey = 'blax_most_rated_shops_' . $limit;
+        try {
+            $cached = cache($cacheKey);
+            if (is_array($cached)) {
+                return $cached;
+            }
+        } catch (\Throwable $e) {}
+
+        $shops = $this->where('status', 'active')
             ->orderBy('rating_average', 'DESC')
             ->orderBy('rating_count', 'DESC')
             ->findAll($limit);
+
+        try {
+            cache()->save($cacheKey, $shops, 300);
+        } catch (\Throwable $e) {}
+
+        return $shops;
     }
 
     /**

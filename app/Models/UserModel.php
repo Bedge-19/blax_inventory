@@ -72,4 +72,33 @@ class UserModel extends Model
             'pager'     => $this->pager,
         ];
     }
+
+    /**
+     * Fetch customer cart item count, active orders count, and unread notifications count
+     * in a single consolidated SQL query to avoid multiple WAN round trips.
+     *
+     * @return array{cart_count: int, active_orders_count: int, unread_count: int}
+     */
+    public function getCustomerHeaderStats(int $userId): array
+    {
+        if ($userId <= 0) {
+            return ['cart_count' => 0, 'active_orders_count' => 0, 'unread_count' => 0];
+        }
+
+        $sql = "SELECT 
+            (SELECT COUNT(*) FROM cart_items ci INNER JOIN carts c ON c.id = ci.cart_id WHERE c.user_id = ?) AS cart_count,
+            (SELECT COUNT(*) FROM orders o WHERE o.customer_id = ? AND o.status IN ('pending', 'processing', 'shipped', 'ready_for_pickup')) AS active_orders_count,
+            (SELECT COUNT(*) FROM notifications n WHERE n.user_id = ? AND n.is_read = 0) AS unread_count";
+
+        try {
+            $row = $this->db->query($sql, [$userId, $userId, $userId])->getRowArray();
+            return [
+                'cart_count'          => (int) ($row['cart_count'] ?? 0),
+                'active_orders_count' => (int) ($row['active_orders_count'] ?? 0),
+                'unread_count'        => (int) ($row['unread_count'] ?? 0),
+            ];
+        } catch (\Throwable $e) {
+            return ['cart_count' => 0, 'active_orders_count' => 0, 'unread_count' => 0];
+        }
+    }
 }
