@@ -22,15 +22,19 @@ class CustomerAuth implements FilterInterface
             return redirect()->to('/login');
         }
 
-        $userRole = $session->get('user_role');
-        if ($userRole !== 'customer' && $userRole !== 'admin') {
+        $userRole = (string) ($session->get('user_role') ?? '');
+        if ($userRole !== 'customer') {
+            $dest = '/';
             if ($request->isAJAX()) {
                 return service('response')->setStatusCode(403)->setJSON([
-                    'success' => false,
-                    'error'   => 'Access forbidden.',
+                    'success'  => false,
+                    'error'    => 'Access forbidden. Customer account required.',
+                    'redirect' => $dest,
                 ]);
             }
-            return redirect()->to('/');
+
+            session()->setFlashdata('error', 'Access denied. Customer account required.');
+            return redirect()->to($dest);
         }
     }
 

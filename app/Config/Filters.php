@@ -37,6 +37,7 @@ class Filters extends BaseFilters
         'adminAuth'      => \App\Filters\AdminAuth::class,
         'tenantAuth'     => \App\Filters\TenantAuth::class,
         'customerAuth'   => \App\Filters\CustomerAuth::class,
+        'roleAccess'     => \App\Filters\RoleAccessFilter::class,
         'authThrottle'   => \App\Filters\AuthRateLimiter::class,
         'actionThrottle' => \App\Filters\ActionRateLimiter::class,
     ];
@@ -109,8 +110,8 @@ class Filters extends BaseFilters
      * @var array<string, array<string, list<string>>>
      */
     public array $filters = [
-        'adminAuth'    => ['before' => ['admin/*']],
-        'tenantAuth'   => ['before' => ['tenant/*']],
-        'customerAuth' => ['before' => ['customer/*']],
+        'roleAccess:admin'    => ['before' => ['admin', 'admin/*']],
+        'roleAccess:tenant'   => ['before' => ['tenant', 'tenant/*']],
+        'roleAccess:customer' => ['before' => ['customer', 'customer/*']],
     ];
 }

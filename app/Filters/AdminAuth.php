@@ -22,14 +22,19 @@ class AdminAuth implements FilterInterface
             return redirect()->to('/login');
         }
 
-        if ($session->get('user_role') !== 'admin') {
+        $userRole = (string) ($session->get('user_role') ?? '');
+        if ($userRole !== 'admin') {
+            $dest = '/';
             if ($request->isAJAX()) {
                 return service('response')->setStatusCode(403)->setJSON([
-                    'success' => false,
-                    'error'   => 'Access forbidden. Admin privileges required.',
+                    'success'  => false,
+                    'error'    => 'Access forbidden. Admin privileges required.',
+                    'redirect' => $dest,
                 ]);
             }
-            return redirect()->to('/');
+
+            session()->setFlashdata('error', 'Access denied. Admin privileges required.');
+            return redirect()->to($dest);
         }
     }
 

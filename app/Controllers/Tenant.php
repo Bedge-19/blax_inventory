@@ -46,9 +46,9 @@ class Tenant extends BaseController
             return redirect()->to('/login');
         }
 
-        $userRole = $session->get('user_role');
-        if ($userRole !== 'shop_owner' && $userRole !== 'admin') {
-            return redirect()->to('/');
+        $userRole = (string) ($session->get('user_role') ?? '');
+        if ($userRole !== 'shop_owner' && $userRole !== 'tenant') {
+            return redirect()->to($userRole === 'admin' ? '/admin/dashboard' : '/');
         }
 
         $shopModel = new ShopModel();

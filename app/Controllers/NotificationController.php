@@ -19,10 +19,9 @@ class NotificationController extends BaseController
         $userId = (int) $session->get('user_id');
         $userRole = (string) $session->get('user_role');
         $notifModel = new NotificationModel();
-
         $notification = $notifModel->find($id);
         if (!$notification) {
-            return redirect()->to($userRole === 'admin' ? '/admin/dashboard' : ($userRole === 'shop_owner' ? '/tenant/dashboard' : '/'));
+            return redirect()->to($userRole === 'admin' ? '/admin/dashboard' : (($userRole === 'shop_owner' || $userRole === 'tenant') ? '/tenant/dashboard' : '/'));
         }
 
         // Allow owner or admin to view/mark notification as read
@@ -88,38 +87,72 @@ class NotificationController extends BaseController
     }
 
     /**
-     * Strictly validate or map target URL to prevent open redirects.
+     * Strictly validate or map target URL to prevent open redirects and enforce role isolation.
+     * Guarantees:
+     * - Tenant / shop_owner always lands on /tenant/*
+     * - Admin always lands on /admin/*
+     * - Customer always lands on /customer/* or public marketplace routes (never /tenant/* or /admin/*)
      */
     private function resolveSafeRedirectUrl(array $notification, string $userRole): string
     {
         $actionUrl = $notification['action_url'] ?? '';
-
-        // 1. If relative action_url is provided and strictly formatted
+        $cleanUrl = '';
         if (is_string($actionUrl) && $actionUrl !== '') {
             $trimmed = trim($actionUrl);
             if (str_starts_with($trimmed, '/') && !str_starts_with($trimmed, '//') && !str_contains($trimmed, ':')) {
-                return $trimmed;
+                $cleanUrl = $trimmed;
             }
         }
 
-        // 2. Fallback to server-controlled type mapping
         $type = (string) ($notification['type'] ?? '');
-        $title = (string) ($notification['title'] ?? '');
 
-        if ($userRole === 'admin' && $type === 'customer_registration') {
-            return '/admin/customers';
+        // 1. Tenant / Shop Owner: Must strictly stay within /tenant/*
+        if ($userRole === 'shop_owner' || $userRole === 'tenant') {
+            if ($cleanUrl !== '' && str_starts_with($cleanUrl, '/tenant/')) {
+                return $cleanUrl;
+            }
+            if ($cleanUrl !== '' && str_starts_with($cleanUrl, '/customer/orders')) {
+                return '/tenant/orders';
+            }
+            if ($cleanUrl !== '' && str_starts_with($cleanUrl, '/customer/printing')) {
+                return '/tenant/printing';
+            }
+
+            return match ($type) {
+                'order', 'order_status', 'delivery', 'new_order', 'order_cancelled' => '/tenant/orders',
+                'printing', 'new_printing_request'                                 => '/tenant/printing',
+                'low_stock'                                                        => '/tenant/inventory',
+                'payout', 'withdrawal'                                             => '/tenant/withdrawals',
+                default                                                            => '/tenant/dashboard',
+            };
+        }
+
+        // 2. Admin: Must strictly stay within /admin/*
+        if ($userRole === 'admin') {
+            if ($cleanUrl !== '' && str_starts_with($cleanUrl, '/admin/')) {
+                return $cleanUrl;
+            }
+
+            return match ($type) {
+                'customer_registration'                   => '/admin/customers',
+                'merchant_verification', 'shop_status'   => '/admin/tenants',
+                'compliance'                              => '/admin/compliance',
+                'payout', 'withdrawal', 'payment'         => '/admin/payments',
+                default                                   => '/admin/dashboard',
+            };
+        }
+
+        // 3. Customer: Must strictly stay within /customer/* or public pages (/cart, /)
+        if ($cleanUrl !== '' && (str_starts_with($cleanUrl, '/customer/') || $cleanUrl === '/cart' || $cleanUrl === '/')) {
+            return $cleanUrl;
         }
 
         return match ($type) {
-            'order', 'order_status', 'delivery' => $userRole === 'shop_owner' ? '/tenant/orders' : '/customer/orders',
-            'new_order'                         => '/tenant/orders',
-            'printing', 'new_printing_request'  => $userRole === 'shop_owner' ? '/tenant/printing' : '/customer/printing',
-            'low_stock'                         => '/tenant/inventory',
-            'cart_reminder'                     => '/cart',
-            'merchant_verification'             => '/admin/tenants',
-            'customer_registration'             => $userRole === 'admin' ? '/admin/customers' : ($userRole === 'shop_owner' ? '/tenant/dashboard' : '/'),
-            'compliance'                        => '/admin/compliance',
-            default                             => $userRole === 'shop_owner' ? '/tenant/dashboard' : ($userRole === 'admin' ? '/admin/dashboard' : '/'),
+            'order', 'order_status', 'delivery', 'review_prompt' => '/customer/orders',
+            'printing', 'new_printing_request'                   => '/customer/printing',
+            'cart_reminder'                                      => '/cart',
+            'account_status'                                     => '/customer/profile',
+            default                                              => '/',
         };
     }
 }

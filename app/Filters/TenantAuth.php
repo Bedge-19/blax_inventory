@@ -22,15 +22,18 @@ class TenantAuth implements FilterInterface
             return redirect()->to('/login');
         }
 
-        $userRole = $session->get('user_role');
-        if ($userRole !== 'shop_owner' && $userRole !== 'admin') {
+        $userRole = (string) ($session->get('user_role') ?? '');
+        if ($userRole !== 'shop_owner' && $userRole !== 'tenant') {
             if ($request->isAJAX()) {
                 return service('response')->setStatusCode(403)->setJSON([
-                    'success' => false,
-                    'error'   => 'Access forbidden. Tenant access required.',
+                    'success'  => false,
+                    'error'    => 'Access forbidden. Tenant access required.',
+                    'redirect' => $userRole === 'admin' ? '/admin/dashboard' : '/',
                 ]);
             }
-            return redirect()->to('/');
+
+            session()->setFlashdata('error', 'Access denied. Tenant access required.');
+            return redirect()->to($userRole === 'admin' ? '/admin/dashboard' : '/');
         }
     }
 

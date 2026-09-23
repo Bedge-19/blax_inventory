@@ -81,10 +81,10 @@ class NotificationRedirectTest extends CIUnitTestCase
     }
 
     /**
-     * Notification with an explicit action_url should always use that URL,
-     * regardless of type or title content.
+     * Notification with an explicit action_url must be restricted to the recipient's role.
+     * Non-matching role URLs must be sanitized into the recipient's own role area.
      */
-    public function testExplicitActionUrlAlwaysTakesPrecedence()
+    public function testExplicitActionUrlAlwaysTakesPrecedenceWithinRole()
     {
         $notification = [
             'action_url' => '/customer/orders',
@@ -92,11 +92,16 @@ class NotificationRedirectTest extends CIUnitTestCase
             'title'      => 'Some Customer Notification',
         ];
 
-        // Even though type is customer_registration, explicit URL wins
+        // Admin must never be sent to /customer/orders; routes safely within admin
         $url = $this->resolveUrl($notification, 'admin');
-        $this->assertEquals('/customer/orders', $url);
+        $this->assertStringStartsWith('/admin/', $url, 'Admin should never be redirected to customer pages');
 
+        // Tenant must never be sent to /customer/orders; routes safely within tenant
         $url = $this->resolveUrl($notification, 'shop_owner');
+        $this->assertStringStartsWith('/tenant/', $url, 'Tenant should never be redirected to customer pages');
+
+        // Customer with /customer/orders properly uses it
+        $url = $this->resolveUrl($notification, 'customer');
         $this->assertEquals('/customer/orders', $url);
     }
 
@@ -123,5 +128,47 @@ class NotificationRedirectTest extends CIUnitTestCase
         $this->assertEquals('/tenant/dashboard', $this->resolveUrl($notification, 'shop_owner'));
         $this->assertEquals('/admin/dashboard', $this->resolveUrl($notification, 'admin'));
         $this->assertEquals('/', $this->resolveUrl($notification, 'customer'));
+    }
+
+    /**
+     * Cross-role explicit action URLs must be strictly mapped into the current user's role area.
+     */
+    public function testCrossRoleActionUrlsAreSanitizedToOwnRole()
+    {
+        // 1. Customer notification containing a tenant URL
+        $notifWithTenantUrl = [
+            'action_url' => '/tenant/orders',
+            'type'       => 'order',
+            'title'      => 'Order Notification',
+        ];
+        $url1 = $this->resolveUrl($notifWithTenantUrl, 'customer');
+        $this->assertEquals('/customer/orders', $url1, 'Customer should be safely redirected to /customer/orders');
+
+        // 2. Customer notification containing an admin URL
+        $notifWithAdminUrl = [
+            'action_url' => '/admin/settings',
+            'type'       => 'general',
+            'title'      => 'System Update',
+        ];
+        $url2 = $this->resolveUrl($notifWithAdminUrl, 'customer');
+        $this->assertEquals('/', $url2, 'Customer should not access admin URL; fallback to /');
+
+        // 3. Tenant notification containing customer printing URL
+        $notifWithCustPrinting = [
+            'action_url' => '/customer/printing',
+            'type'       => 'printing',
+            'title'      => 'Printing Request Update',
+        ];
+        $url3 = $this->resolveUrl($notifWithCustPrinting, 'shop_owner');
+        $this->assertEquals('/tenant/printing', $url3, 'Tenant should be mapped to /tenant/printing');
+
+        // 4. Admin notification containing tenant orders URL
+        $notifAdminTenant = [
+            'action_url' => '/tenant/orders',
+            'type'       => 'order',
+            'title'      => 'Tenant Order Activity',
+        ];
+        $url4 = $this->resolveUrl($notifAdminTenant, 'admin');
+        $this->assertEquals('/admin/dashboard', $url4, 'Admin should be mapped to admin area');
     }
 }

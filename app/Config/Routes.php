@@ -60,7 +60,7 @@ $routes->post('buy-now/place', 'Checkout::placeOrder', ['filter' => 'actionThrot
 $routes->get('search', 'Customer::search');
 
 // Customer Dashboard / Account
-$routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
+$routes->group('customer', ['filter' => 'roleAccess:customer'], function ($routes) {
     $routes->get('orders', 'Customer::orders');
     $routes->get('orders/track/(:any)/position', 'Customer::getDeliveryPosition/$1');
     $routes->get('orders/track/(:any)', 'Customer::trackOrder/$1');
@@ -85,18 +85,18 @@ $routes->group('customer', ['filter' => 'customerAuth'], function ($routes) {
 });
 
 // Rating & Review Routes
-$routes->group('reviews', ['filter' => 'customerAuth'], function ($routes) {
+$routes->group('reviews', ['filter' => 'roleAccess:customer'], function ($routes) {
     $routes->post('product/save', 'Customer::saveProductReview');
     $routes->post('shop/save', 'Customer::saveShopReview');
 });
-$routes->post('customer/reviews/shop', 'Customer::saveShopReview', ['filter' => 'customerAuth']);
-$routes->post('customer/reviews/product', 'Customer::saveProductReview', ['filter' => 'customerAuth']);
+$routes->post('customer/reviews/shop', 'Customer::saveShopReview', ['filter' => 'roleAccess:customer']);
+$routes->post('customer/reviews/product', 'Customer::saveProductReview', ['filter' => 'roleAccess:customer']);
 
 // AI Assistant AJAX Endpoint
 $routes->post('ai-assistant/chat', 'AiAssistant::chat', ['filter' => 'actionThrottle']);
 
 // Tenant Routes
-$routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
+$routes->group('tenant', ['filter' => 'roleAccess:tenant'], function ($routes) {
     $routes->get('/', 'Tenant::dashboard');
     $routes->get('dashboard', 'Tenant::dashboard');
     $routes->get('inventory', 'Tenant::inventory');
@@ -160,7 +160,7 @@ $routes->group('tenant', ['filter' => 'tenantAuth'], function ($routes) {
 });
 
 // Admin Routes
-$routes->group('admin', ['filter' => 'adminAuth'], function ($routes) {
+$routes->group('admin', ['filter' => 'roleAccess:admin'], function ($routes) {
     $routes->get('/', 'Admin::dashboard');
     $routes->get('dashboard', 'Admin::dashboard');
     $routes->get('realtime/check', 'Admin::realtimeCheck');

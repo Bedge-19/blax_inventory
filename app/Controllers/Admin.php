@@ -21,8 +21,9 @@ class Admin extends BaseController
         if (!$session->get('isLoggedIn')) {
             return redirect()->to('/login');
         }
-        if ($session->get('user_role') !== 'admin') {
-            return redirect()->to('/');
+        $userRole = (string) ($session->get('user_role') ?? '');
+        if ($userRole !== 'admin') {
+            return redirect()->to(($userRole === 'shop_owner' || $userRole === 'tenant') ? '/tenant/dashboard' : '/');
         }
         return true;
     }
