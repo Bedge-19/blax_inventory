@@ -78,7 +78,7 @@
         <div class="flex items-center gap-sm">
 
             <div class="relative block">
-                <button id="notif-dropdown-toggle" type="button" onclick="document.getElementById('notif-dropdown').classList.toggle('hidden')" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center" aria-label="Notifications">
+                <button id="notif-dropdown-toggle" type="button" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
                     <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
                     <?php if (!empty($unreadCount) && $unreadCount > 0): ?>
                         <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface-container-lowest animate-pulse"></span>

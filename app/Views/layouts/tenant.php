@@ -170,7 +170,7 @@
 
                     <div class="relative">
 
-                        <button id="notif-toggle" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications">
+                        <button id="notif-toggle" type="button" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
 
                             <span class="material-symbols-outlined">notifications</span>
 
@@ -351,21 +351,6 @@
         if (sb) sb.addEventListener('click', openSidebar);
         if (closeSb) closeSb.addEventListener('click', closeSidebar);
         if (overlay) overlay.addEventListener('click', closeSidebar);
-
-        var nt = document.getElementById('notif-toggle');
-        var np = document.getElementById('notif-panel');
-        if (nt && np) {
-            nt.addEventListener('click', function (e) {
-                e.stopPropagation();
-                np.classList.toggle('hidden');
-            });
-            np.addEventListener('click', function (e) {
-                e.stopPropagation();
-            });
-            document.addEventListener('click', function () {
-                np.classList.add('hidden');
-            });
-        }
 
         // Tenant profile dropdown toggle
         var tdd = document.getElementById('tenant-profile-dropdown');

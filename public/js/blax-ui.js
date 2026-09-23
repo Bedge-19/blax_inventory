@@ -278,39 +278,64 @@
             }
         } catch (e) {}
 
-        // C. Notification Dropdowns
+        // C. Notification Dropdowns (Customer, Tenant, Admin)
         try {
-            // Customer notification dropdown
-            const notifToggle = document.getElementById('notif-dropdown-toggle') || document.getElementById('notif-toggle');
-            const notifDropdown = document.getElementById('notif-dropdown') || document.getElementById('notif-panel');
-            if (notifToggle && notifDropdown) {
-                notifToggle.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    notifDropdown.classList.toggle('hidden');
-                });
-                notifDropdown.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                });
-                document.addEventListener('click', function () {
-                    notifDropdown.classList.add('hidden');
-                });
-            }
+            const dropdownPairs = [
+                { toggleId: 'notif-dropdown-toggle', panelId: 'notif-dropdown' }, // Customer
+                { toggleId: 'notif-toggle', panelId: 'notif-panel' },           // Tenant
+                { toggleId: 'admin-notif-toggle', panelId: 'admin-notif-panel' } // Admin
+            ];
 
-            // Admin notification panel
-            const adminNotifToggle = document.getElementById('admin-notif-toggle');
-            const adminNotifPanel = document.getElementById('admin-notif-panel');
-            if (adminNotifToggle && adminNotifPanel) {
-                adminNotifToggle.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    adminNotifPanel.classList.toggle('hidden');
+            const closeAllNotifPanels = function () {
+                dropdownPairs.forEach(function (pair) {
+                    const p = document.getElementById(pair.panelId);
+                    const t = document.getElementById(pair.toggleId);
+                    if (p && !p.classList.contains('hidden')) {
+                        p.classList.add('hidden');
+                        if (t) t.setAttribute('aria-expanded', 'false');
+                    }
                 });
-                adminNotifPanel.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                });
-                document.addEventListener('click', function () {
-                    adminNotifPanel.classList.add('hidden');
-                });
-            }
+            };
+
+            dropdownPairs.forEach(function (pair) {
+                const toggle = document.getElementById(pair.toggleId);
+                const panel = document.getElementById(pair.panelId);
+
+                if (toggle && panel) {
+                    if (toggle.dataset.notifBound === 'true') return;
+                    toggle.dataset.notifBound = 'true';
+
+                    toggle.setAttribute('aria-haspopup', 'true');
+                    if (!toggle.hasAttribute('aria-expanded')) {
+                        toggle.setAttribute('aria-expanded', 'false');
+                    }
+
+                    toggle.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+
+                        const willOpen = panel.classList.contains('hidden');
+                        closeAllNotifPanels();
+
+                        if (willOpen) {
+                            panel.classList.remove('hidden');
+                            toggle.setAttribute('aria-expanded', 'true');
+                        } else {
+                            panel.classList.add('hidden');
+                            toggle.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+
+                    panel.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                    });
+                }
+            });
+
+            document.addEventListener('click', closeAllNotifPanels);
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') closeAllNotifPanels();
+            });
         } catch (e) {}
 
         // D. Profile Dropdowns (Customer & Tenant)

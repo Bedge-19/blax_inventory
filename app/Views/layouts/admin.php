@@ -182,7 +182,7 @@
                 <div class="flex items-center gap-md">
 
                     <div class="relative">
-                        <button id="admin-notif-toggle" type="button" onclick="document.getElementById('admin-notif-panel').classList.toggle('hidden')" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications">
+                        <button id="admin-notif-toggle" type="button" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
                             <span class="material-symbols-outlined">notifications</span>
                             <?php if ($adminUnreadCount > 0): ?>
                                 <span class="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center"><?= (int) $adminUnreadCount ?></span>
