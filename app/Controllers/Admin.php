@@ -1108,7 +1108,8 @@ class Admin extends BaseController
                 (int) $owner['id'],
                 'application',
                 'Tenant Application Rejected',
-                'Your application for "' . ($shop['shop_name'] ?? 'Shop') . '" was not approved: ' . $reason
+                'Your application for "' . ($shop['shop_name'] ?? 'Shop') . '" was not approved: ' . $reason,
+                '/tenant/dashboard'
             );
 
             try {

@@ -22,14 +22,18 @@ class Database extends Config
     /**
      * The default database connection.
      *
+     * No credentials are hardcoded here. All values are populated at runtime
+     * from environment variables in __construct() — either via CI's dotted-key
+     * .env loading (local dev) or explicit getenv() (Vercel dashboard).
+     *
      * @var array<string, mixed>
      */
     public array $default = [
         'DSN'          => '',
-        'hostname'     => 'gateway01.ap-southeast-1.prod.aws.tidbcloud.com',
-        'username'     => '2xsV5M53UudMfnZ.root',
-        'password'     => 'y3b0jACs14yRTEy7',
-        'database'     => 'blax_marketplace',
+        'hostname'     => 'localhost',
+        'username'     => '',
+        'password'     => '',
+        'database'     => '',
         'DBDriver'     => 'MySQLi',
         'DBPrefix'     => '',
         'pConnect'     => false,
@@ -50,112 +54,6 @@ class Database extends Config
             'time'     => 'H:i:s',
         ],
     ];
-
-    //    /**
-    //     * Sample database connection for SQLite3.
-    //     *
-    //     * @var array<string, mixed>
-    //     */
-    //    public array $default = [
-    //        'database'    => 'database.db',
-    //        'DBDriver'    => 'SQLite3',
-    //        'DBPrefix'    => '',
-    //        'DBDebug'     => true,
-    //        'swapPre'     => '',
-    //        'failover'    => [],
-    //        'foreignKeys' => true,
-    //        'busyTimeout' => 1000,
-    //        'synchronous' => null,
-    //        'dateFormat'  => [
-    //            'date'     => 'Y-m-d',
-    //            'datetime' => 'Y-m-d H:i:s',
-    //            'time'     => 'H:i:s',
-    //        ],
-    //    ];
-
-    //    /**
-    //     * Sample database connection for Postgre.
-    //     *
-    //     * @var array<string, mixed>
-    //     */
-    //    public array $default = [
-    //        'DSN'        => '',
-    //        'hostname'   => 'localhost',
-    //        'username'   => 'root',
-    //        'password'   => 'root',
-    //        'database'   => 'ci4',
-    //        'schema'     => 'public',
-    //        'DBDriver'   => 'Postgre',
-    //        'DBPrefix'   => '',
-    //        'pConnect'   => false,
-    //        'DBDebug'    => true,
-    //        'charset'    => 'utf8',
-    //        'swapPre'    => '',
-    //        'failover'   => [],
-    //        'port'       => 5432,
-    //        'dateFormat' => [
-    //            'date'     => 'Y-m-d',
-    //            'datetime' => 'Y-m-d H:i:s',
-    //            'time'     => 'H:i:s',
-    //        ],
-    //    ];
-
-    //    /**
-    //     * Sample database connection for SQLSRV.
-    //     *
-    //     * @var array<string, mixed>
-    //     */
-    //    public array $default = [
-    //        'DSN'        => '',
-    //        'hostname'   => 'localhost',
-    //        'username'   => 'root',
-    //        'password'   => 'root',
-    //        'database'   => 'ci4',
-    //        'schema'     => 'dbo',
-    //        'DBDriver'   => 'SQLSRV',
-    //        'DBPrefix'   => '',
-    //        'pConnect'   => false,
-    //        'DBDebug'    => true,
-    //        'charset'    => 'utf8',
-    //        'swapPre'    => '',
-    //        'encrypt'    => false,
-    //        'failover'   => [],
-    //        'port'       => 1433,
-    //        'dateFormat' => [
-    //            'date'     => 'Y-m-d',
-    //            'datetime' => 'Y-m-d H:i:s',
-    //            'time'     => 'H:i:s',
-    //        ],
-    //    ];
-
-    //    /**
-    //     * Sample database connection for OCI8.
-    //     *
-    //     * You may need the following environment variables:
-    //     *   NLS_LANG                = 'AMERICAN_AMERICA.UTF8'
-    //     *   NLS_DATE_FORMAT         = 'YYYY-MM-DD HH24:MI:SS'
-    //     *   NLS_TIMESTAMP_FORMAT    = 'YYYY-MM-DD HH24:MI:SS'
-    //     *   NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD HH24:MI:SS'
-    //     *
-    //     * @var array<string, mixed>
-    //     */
-    //    public array $default = [
-    //        'DSN'        => 'localhost:1521/XEPDB1',
-    //        'username'   => 'root',
-    //        'password'   => 'root',
-    //        'DBDriver'   => 'OCI8',
-    //        'DBPrefix'   => '',
-    //        'pConnect'   => false,
-    //        'DBDebug'    => true,
-    //        'charset'    => 'AL32UTF8',
-    //        'swapPre'    => '',
-    //        'failover'   => [],
-    //        'dateFormat' => [
-    //            'date'     => 'Y-m-d',
-    //            'datetime' => 'Y-m-d H:i:s',
-    //            'time'     => 'H:i:s',
-    //        ],
-    //    ];
 
     /**
      * This database connection is used when running PHPUnit database tests.
@@ -191,6 +89,7 @@ class Database extends Config
 
     public function __construct()
     {
+        // Let CI's parent load dotted-key values from .env (local dev).
         parent::__construct();
 
         // Ensure that we always set the database group to 'tests' if
@@ -200,26 +99,94 @@ class Database extends Config
             $this->defaultGroup = 'tests';
         }
 
-        // Populate database connection from environment variables (e.g. Vercel dashboard or .env)
-        $this->default['hostname'] = env('database.default.hostname')
-            ?: (getenv('DB_HOST') ?: (getenv('DATABASE_HOSTNAME') ?: (getenv('database_default_hostname') ?: ($this->default['hostname'] ?: 'localhost'))));
+        // -----------------------------------------------------------
+        // Explicit env-var overrides for Vercel (underscore/caps names)
+        // -----------------------------------------------------------
+        // Vercel does not allow dots in env var names, so CI's auto-
+        // mapping of "database.default.hostname" never fires. We read
+        // the Vercel-style names directly and fall back to whatever
+        // CI already loaded (which covers the local .env case).
+        // -----------------------------------------------------------
 
-        $this->default['username'] = env('database.default.username')
-            ?: (getenv('DB_USER') ?: (getenv('DB_USERNAME') ?: (getenv('DATABASE_USERNAME') ?: (getenv('database_default_username') ?: ($this->default['username'] ?: 'root')))));
+        $this->default['hostname'] = $this->firstEnv(
+            ['DATABASE_DEFAULT_HOSTNAME', 'DB_HOST', 'DB_HOSTNAME'],
+            $this->default['hostname'] ?: 'localhost'
+        );
 
-        $this->default['password'] = env('database.default.password')
-            ?: (getenv('DB_PASS') ?: (getenv('DB_PASSWORD') ?: (getenv('DATABASE_PASSWORD') ?: (getenv('database_default_password') ?: ($this->default['password'] ?: '')))));
+        $this->default['username'] = $this->firstEnv(
+            ['DATABASE_DEFAULT_USERNAME', 'DB_USER', 'DB_USERNAME'],
+            $this->default['username'] ?: ''
+        );
 
-        $this->default['database'] = env('database.default.database')
-            ?: (getenv('DB_DATABASE') ?: (getenv('DB_NAME') ?: (getenv('DATABASE_NAME') ?: (getenv('database_default_database') ?: ($this->default['database'] ?: 'blax_marketplace')))));
+        $this->default['password'] = $this->firstEnv(
+            ['DATABASE_DEFAULT_PASSWORD', 'DB_PASS', 'DB_PASSWORD'],
+            $this->default['password'] ?: ''
+        );
 
-        $defaultPort = (str_contains((string) $this->default['hostname'], 'tidbcloud.com')) ? 4000 : 3306;
-        $envPort = env('database.default.port')
-            ?: (getenv('DB_PORT') ?: (getenv('DATABASE_PORT') ?: getenv('database_default_port')));
-        $this->default['port'] = $envPort ? (int) $envPort : $defaultPort;
+        $this->default['database'] = $this->firstEnv(
+            ['DATABASE_DEFAULT_DATABASE', 'DB_DATABASE', 'DB_NAME'],
+            $this->default['database'] ?: 'blax_marketplace'
+        );
 
+        $driver = $this->firstEnv(['DATABASE_DEFAULT_DBDRIVER', 'DB_DRIVER'], '');
+        if ($driver !== '') {
+            $this->default['DBDriver'] = $driver;
+        }
+
+        $prefix = $this->firstEnv(['DATABASE_DEFAULT_DBPREFIX', 'DB_PREFIX'], null);
+        if ($prefix !== null) {
+            $this->default['DBPrefix'] = $prefix;
+        }
+
+        $charset = $this->firstEnv(['DATABASE_DEFAULT_CHARSET', 'DB_CHARSET'], '');
+        if ($charset !== '') {
+            $this->default['charset'] = $charset;
+        }
+
+        $collat = $this->firstEnv(['DATABASE_DEFAULT_DBCOLLAT', 'DB_COLLATION'], '');
+        if ($collat !== '') {
+            $this->default['DBCollat'] = $collat;
+        }
+
+        // Port: auto-detect TiDB Cloud (port 4000) vs standard MySQL (3306)
+        $envPort = $this->firstEnv(['DATABASE_DEFAULT_PORT', 'DB_PORT'], '');
+        if ($envPort !== '') {
+            $this->default['port'] = (int) $envPort;
+        } elseif (str_contains((string) $this->default['hostname'], 'tidbcloud.com')) {
+            $this->default['port'] = 4000;
+        }
+
+        // Enable compression for TiDB Cloud or any Vercel deployment
         if (str_contains((string) $this->default['hostname'], 'tidbcloud.com') || getenv('VERCEL') === '1') {
             $this->default['compress'] = true;
         }
+
+        // -----------------------------------------------------------
+        // Production safety: disable DBDebug so DB errors become
+        // logged/handled failures instead of raw exceptions dumped
+        // to visitors. pConnect remains false (correct for serverless).
+        // NOTE: Connection pooling (e.g. ProxySQL) should be evaluated
+        // if TiDB Cloud max-connections becomes a bottleneck.
+        // -----------------------------------------------------------
+        $ciEnv = getenv('CI_ENVIRONMENT') ?: ENVIRONMENT;
+        if ($ciEnv === 'production') {
+            $this->default['DBDebug'] = false;
+        }
+    }
+
+    /**
+     * Return the first non-empty getenv() value from the list of keys,
+     * or $fallback if none are set.
+     */
+    private function firstEnv(array $keys, ?string $fallback): string
+    {
+        foreach ($keys as $key) {
+            $val = getenv($key);
+            if ($val !== false && $val !== '') {
+                return $val;
+            }
+        }
+
+        return $fallback ?? '';
     }
 }

@@ -1130,14 +1130,16 @@ class Tenant extends BaseController
                     $customerId,
                     'delivery',
                     'Order Delivered / Picked Up',
-                    'Your order/request #' . $reqRef . ' has been successfully marked as delivered / picked up!'
+                    'Your order/request #' . $reqRef . ' has been successfully marked as delivered / picked up!',
+                    '/customer/orders'
                 );
             } elseif ($newStatus === 'returned') {
                 (new NotificationModel())->create(
                     $customerId,
                     'delivery',
                     'Order Status Returned',
-                    'Your order/request #' . $reqRef . ' status has been updated to returned.'
+                    'Your order/request #' . $reqRef . ' status has been updated to returned.',
+                    '/customer/orders'
                 );
             }
         }
@@ -3580,7 +3582,7 @@ class Tenant extends BaseController
             $message = $productName . ' is at ' . $newStock . ' unit(s), at or below the threshold of ' . $threshold . '.';
         }
 
-        (new NotificationModel())->create((int) $shop['owner_id'], 'low_stock', $title, $message);
+        (new NotificationModel())->create((int) $shop['owner_id'], 'low_stock', $title, $message, '/tenant/inventory');
     }
 
     public function deleteProduct($productId)

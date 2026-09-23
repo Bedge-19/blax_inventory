@@ -150,16 +150,40 @@ class GoogleMapsService
             return null;
         }
 
+        // Check route cache first (key rounded to 3 decimal places ≈ ~111m precision)
+        $cacheKey = sprintf(
+            'route_%s_%.3f_%.3f_%.3f_%.3f',
+            strtolower($travelMode),
+            $originLat,
+            $originLng,
+            $destLat,
+            $destLng
+        );
+
+        $cached = cache($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
         // 1. If Google Maps API Key is configured, attempt Google Routes API
         if (!empty($this->apiKey)) {
             $googleResult = $this->queryGoogleRoutes($originLat, $originLng, $destLat, $destLng, $travelMode);
             if ($googleResult !== null) {
+                cache()->save($cacheKey, $googleResult, 86400); // Cache for 24 hours
                 return $googleResult;
             }
         }
 
-        // 2. Query OSRM (Open Source Routing Machine) driving API for actual road network path
-        return $this->queryOsrmRoutes($originLat, $originLng, $destLat, $destLng);
+        // 2. Fallback to OSRM (public demo server — not for heavy production use)
+        log_message('warning', '[GoogleMapsService] Falling back to OSRM public demo server for route computation. Set GOOGLE_MAPS_API_KEY for production use.');
+
+        $osrmResult = $this->queryOsrmRoutes($originLat, $originLng, $destLat, $destLng);
+        if ($osrmResult !== null) {
+            cache()->save($cacheKey, $osrmResult, 86400); // Cache for 24 hours
+            return $osrmResult;
+        }
+
+        return null;
     }
 
     private function queryGoogleRoutes(float $oLat, float $oLng, float $dLat, float $dLng, string $travelMode): ?array
@@ -199,7 +223,7 @@ class GoogleMapsService
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 4);
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             curl_close($ch);
@@ -251,7 +275,7 @@ class GoogleMapsService
         try {
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 6);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
             curl_setopt($ch, CURLOPT_USERAGENT, 'BlaxMarketplace/1.0');
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);

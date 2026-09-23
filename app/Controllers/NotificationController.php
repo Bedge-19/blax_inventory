@@ -106,7 +106,7 @@ class NotificationController extends BaseController
         $type = (string) ($notification['type'] ?? '');
         $title = (string) ($notification['title'] ?? '');
 
-        if ($type === 'customer_registration' || stripos($title, 'Customer') !== false) {
+        if ($userRole === 'admin' && $type === 'customer_registration') {
             return '/admin/customers';
         }
 
@@ -117,7 +117,7 @@ class NotificationController extends BaseController
             'low_stock'                         => '/tenant/inventory',
             'cart_reminder'                     => '/cart',
             'merchant_verification'             => '/admin/tenants',
-            'customer_registration'             => '/admin/customers',
+            'customer_registration'             => $userRole === 'admin' ? '/admin/customers' : ($userRole === 'shop_owner' ? '/tenant/dashboard' : '/'),
             'compliance'                        => '/admin/compliance',
             default                             => $userRole === 'shop_owner' ? '/tenant/dashboard' : ($userRole === 'admin' ? '/admin/dashboard' : '/'),
         };

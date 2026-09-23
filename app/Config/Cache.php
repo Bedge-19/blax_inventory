@@ -2,6 +2,7 @@
 
 namespace Config;
 
+use App\Libraries\Cache\DatabaseCacheHandler;
 use CodeIgniter\Cache\CacheInterface;
 use CodeIgniter\Cache\Handlers\DummyHandler;
 use CodeIgniter\Cache\Handlers\FileHandler;
@@ -134,6 +135,7 @@ class Cache extends BaseConfig
     public array $validHandlers = [
         'dummy'     => DummyHandler::class,
         'file'      => FileHandler::class,
+        'database'  => DatabaseCacheHandler::class,
         'memcached' => MemcachedHandler::class,
         'predis'    => PredisHandler::class,
         'redis'     => RedisHandler::class,
@@ -158,4 +160,19 @@ class Cache extends BaseConfig
      * @var bool|list<string>
      */
     public $cacheQueryString = false;
+
+    public function __construct()
+    {
+        parent::__construct();
+
+        // On Vercel (serverless), use the database cache handler so that
+        // payment-flow keys (pending_cart_*, pending_printing_*) survive
+        // across concurrent function instances. File cache is ephemeral.
+        $envHandler = getenv('CACHE_HANDLER');
+        if ($envHandler !== false && $envHandler !== '') {
+            $this->handler = $envHandler;
+        } elseif (getenv('VERCEL') === '1') {
+            $this->handler = 'database';
+        }
+    }
 }

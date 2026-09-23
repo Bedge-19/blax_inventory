@@ -118,4 +118,58 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct()
+    {
+        // Let CI's parent load dotted-key values from .env (local dev).
+        parent::__construct();
+
+        // -----------------------------------------------------------
+        // Explicit env-var overrides for Vercel (underscore/caps names)
+        // -----------------------------------------------------------
+        // Vercel does not allow dots in env var names, so CI's auto-
+        // mapping of "email.SMTPHost" never fires. We read the Vercel-
+        // style names directly and fall back to whatever CI already set.
+        // -----------------------------------------------------------
+
+        $fromName = getenv('EMAIL_FROMNAME') ?: getenv('EMAIL_FROM_NAME');
+        if ($fromName !== false && $fromName !== '') {
+            $this->fromName = $fromName;
+        }
+
+        $fromEmail = getenv('EMAIL_FROMEMAIL') ?: getenv('EMAIL_FROM_EMAIL');
+        if ($fromEmail !== false && $fromEmail !== '') {
+            $this->fromEmail = $fromEmail;
+        }
+
+        $protocol = getenv('EMAIL_PROTOCOL');
+        if ($protocol !== false && $protocol !== '') {
+            $this->protocol = $protocol;
+        }
+
+        $smtpHost = getenv('EMAIL_SMTPHOST') ?: getenv('EMAIL_SMTP_HOST');
+        if ($smtpHost !== false && $smtpHost !== '') {
+            $this->SMTPHost = $smtpHost;
+        }
+
+        $smtpUser = getenv('EMAIL_SMTPUSER') ?: getenv('EMAIL_SMTP_USER');
+        if ($smtpUser !== false && $smtpUser !== '') {
+            $this->SMTPUser = $smtpUser;
+        }
+
+        $smtpPass = getenv('EMAIL_SMTPPASS') ?: getenv('EMAIL_SMTP_PASS');
+        if ($smtpPass !== false && $smtpPass !== '') {
+            $this->SMTPPass = $smtpPass;
+        }
+
+        $smtpPort = getenv('EMAIL_SMTPPORT') ?: getenv('EMAIL_SMTP_PORT');
+        if ($smtpPort !== false && $smtpPort !== '') {
+            $this->SMTPPort = (int) $smtpPort;
+        }
+
+        $smtpCrypto = getenv('EMAIL_SMTPCRYPTO') ?: getenv('EMAIL_SMTP_CRYPTO');
+        if ($smtpCrypto !== false && $smtpCrypto !== '') {
+            $this->SMTPCrypto = $smtpCrypto;
+        }
+    }
 }
