@@ -512,6 +512,8 @@
             }
         }
 
+        if (!checkoutSidebar) return;
+
         if (anySelected) {
             checkoutSidebar.classList.add('visible');
             if (emptyMsg) emptyMsg.style.display = 'none';
@@ -524,8 +526,10 @@
             var selectedPayment = Array.prototype.find.call(paymentRadios, function (r) { return r.checked && !r.disabled; });
             var currentShipping = (selectedPayment && selectedPayment.value === 'pickup') ? 0 : shipping;
 
-            document.getElementById('subtotal-val').innerText = money(subtotal);
-            document.getElementById('total-val').innerText = money(subtotal + currentShipping);
+            var subtotalEl = document.getElementById('subtotal-val');
+            var totalEl = document.getElementById('total-val');
+            if (subtotalEl) subtotalEl.innerText = money(subtotal);
+            if (totalEl) totalEl.innerText = money(subtotal + currentShipping);
         } else {
             checkoutSidebar.classList.remove('visible');
             if (emptyMsg) emptyMsg.style.display = 'block';
@@ -539,6 +543,7 @@
     }
 
     function validateCheckout() {
+        if (!placeOrderBtn) return;
         var hasPayment = Array.prototype.some.call(paymentRadios, function (r) { return r.checked && !r.disabled; });
         var hasItems   = Array.prototype.some.call(itemCheckboxes, function (cb) { return cb.checked; });
         placeOrderBtn.disabled = !(hasPayment && hasItems);
@@ -778,7 +783,9 @@
         });
     });
 
-    updateUI();
+    if (checkoutSidebar) {
+        updateUI();
+    }
 })();
 </script>
 

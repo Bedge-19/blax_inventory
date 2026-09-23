@@ -362,7 +362,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lastNotifId > 0) url += '?last_notif_id=' + lastNotifId;
 
         fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) return null;
+                return r.json();
+            })
             .then(res => {
                 if (!res || !res.success) return;
 

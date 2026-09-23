@@ -111,6 +111,22 @@ class DatabaseConfigTest extends CIUnitTestCase
     }
 
     /**
+     * Verify DBDebug is false when VERCEL=1.
+     */
+    public function testDbDebugDisabledOnVercel()
+    {
+        putenv('VERCEL=1');
+
+        try {
+            $config = new \Config\Database();
+            $this->assertFalse($config->default['DBDebug'],
+                'DBDebug must be false on Vercel to prevent raw exception dumps');
+        } finally {
+            putenv('VERCEL');
+        }
+    }
+
+    /**
      * Verify DBDebug remains true in development.
      */
     public function testDbDebugEnabledInDevelopment()

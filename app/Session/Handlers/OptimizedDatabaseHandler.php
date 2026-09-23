@@ -26,6 +26,11 @@ class OptimizedDatabaseHandler extends DatabaseHandler
     protected int $lastTimestamp = 0;
 
     /**
+     * Tracks whether the session was authenticated when read, to detect state changes.
+     */
+    protected bool $wasAuthenticated = false;
+
+    /**
      * Disable blocking user-level locks to save 2 network roundtrips per HTTP request.
      */
     protected function lockSession(string $sessionID): bool
@@ -67,23 +72,26 @@ class OptimizedDatabaseHandler extends DatabaseHandler
         $result = $builder->get()->getRow();
 
         if ($result === null) {
-            $this->rowExists     = false;
-            $this->fingerprint   = md5('');
-            $this->lastTimestamp = time();
+            $this->rowExists        = false;
+            $this->fingerprint      = md5('');
+            $this->lastTimestamp    = time();
+            $this->wasAuthenticated = false;
             return '';
         }
 
         $this->lastTimestamp = isset($result->ts) ? (int) $result->ts : time();
         $data = is_bool($result->data) ? '' : $this->decodeData($result->data);
 
-        $this->fingerprint = md5($data);
-        $this->rowExists   = true;
+        $this->fingerprint      = md5($data);
+        $this->rowExists        = true;
+        $this->wasAuthenticated = ($data !== '' && (str_contains($data, 'isLoggedIn') || str_contains($data, 'user_id')));
 
         return $data;
     }
 
     /**
      * Writes session data to storage with intelligent dirty-checking.
+     * Session writes on auth state changes (login, signup, logout) are unconditional.
      *
      * @param string $id
      * @param string $data
@@ -91,21 +99,29 @@ class OptimizedDatabaseHandler extends DatabaseHandler
     public function write($id, $data): bool
     {
         if ($this->sessionID !== $id) {
-            $this->rowExists = false;
-            $this->sessionID = $id;
+            $this->rowExists        = false;
+            $this->sessionID        = $id;
+            $this->fingerprint      = md5('');
+            $this->wasAuthenticated = false;
         }
 
         $isUnchanged = ($this->fingerprint === md5($data));
         $now = time();
 
+        $isAuthenticated   = ($data !== '' && (str_contains($data, 'isLoggedIn') || str_contains($data, 'user_id')));
+        $isAuthStateChange = ($isAuthenticated !== $this->wasAuthenticated);
+
         // Optimization: Do NOT write empty sessions to DB for anonymous visitors
-        if (! $this->rowExists && empty($data)) {
+        // Never skip if session is authenticated
+        if (! $this->rowExists && empty($data) && ! $isAuthenticated) {
             return true;
         }
 
         // Optimization: Skip database write on read-only requests if data is unchanged
-        // and timestamp was refreshed recently (within 5 minutes)
-        if ($this->rowExists && $isUnchanged && ($now - $this->lastTimestamp) < 300) {
+        // and timestamp was refreshed recently (within 5 minutes).
+        // NEVER skip write on login/signup authentication state changes or when an
+        // authenticated session lacks a confirmed row in DB.
+        if (! $isAuthStateChange && $this->rowExists && $isUnchanged && ($now - $this->lastTimestamp) < 300) {
             return true;
         }
 
@@ -120,9 +136,10 @@ class OptimizedDatabaseHandler extends DatabaseHandler
 
             $this->db->query($sql, [$fullId, $this->ipAddress, $preparedData]);
 
-            $this->fingerprint   = md5($data);
-            $this->rowExists     = true;
-            $this->lastTimestamp = $now;
+            $this->fingerprint      = md5($data);
+            $this->rowExists        = true;
+            $this->lastTimestamp    = $now;
+            $this->wasAuthenticated = $isAuthenticated;
 
             return true;
         } catch (\Throwable $e) {
@@ -155,8 +172,9 @@ class OptimizedDatabaseHandler extends DatabaseHandler
             return $this->fail();
         }
 
-        $this->rowExists   = false;
-        $this->fingerprint = md5('');
+        $this->rowExists        = false;
+        $this->fingerprint      = md5('');
+        $this->wasAuthenticated = false;
 
         return true;
     }

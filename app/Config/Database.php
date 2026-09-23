@@ -169,7 +169,7 @@ class Database extends Config
         // if TiDB Cloud max-connections becomes a bottleneck.
         // -----------------------------------------------------------
         $ciEnv = getenv('CI_ENVIRONMENT') ?: ENVIRONMENT;
-        if ($ciEnv === 'production') {
+        if ($ciEnv === 'production' || getenv('VERCEL') === '1') {
             $this->default['DBDebug'] = false;
         }
     }

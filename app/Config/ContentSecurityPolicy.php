@@ -52,7 +52,6 @@ class ContentSecurityPolicy extends BaseConfig
     public $scriptSrc = [
         'self',
         'blob:',
-        'https://cdn.tailwindcss.com',
         'https://unpkg.com',
         'https://cdnjs.cloudflare.com',
         'https://cdn.jsdelivr.net',

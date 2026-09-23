@@ -125,6 +125,7 @@ class Auth extends BaseController
                 'status'        => 'active',
             ]);
 
+            $session->regenerate();
             $session->set([
                 'user_id'    => $userId,
                 'user_name'  => $firstName . ' ' . $lastName,
@@ -373,7 +374,8 @@ class Auth extends BaseController
                 );
             }
 
-            session()->setFlashdata('success', 'Registration submitted. Your business permit is under review. You will receive an email once your account is verified.');
+            $session->regenerate();
+            $session->setFlashdata('success', 'Registration submitted. Your business permit is under review. You will receive an email once your account is verified.');
 
             return redirect()->to('/login');
         }

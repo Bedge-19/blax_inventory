@@ -371,7 +371,10 @@
             if (params.length > 0) url += '?' + params.join('&');
 
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
+                .then(r => {
+                    if (!r.ok) return null;
+                    return r.json();
+                })
                 .then(res => {
                     if (!res || !res.success) return;
 

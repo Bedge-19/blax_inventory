@@ -1,0 +1,15 @@
+{
+  "name": "blax-inventory",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CodeIgniter 4 Marketplace & Inventory System",
+  "scripts": {
+    "build:css": "tailwindcss -i input.css -o public/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i input.css -o public/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.10",
+    "tailwindcss": "^3.4.17"
+  }
+}

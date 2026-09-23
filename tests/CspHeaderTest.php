@@ -23,7 +23,7 @@ class CspHeaderTest extends CIUnitTestCase
 
         $this->assertTrue($response->hasHeader('Content-Security-Policy'));
         $header = $response->getHeaderLine('Content-Security-Policy');
-        $this->assertStringContainsString('cdn.tailwindcss.com', $header);
+        $this->assertStringNotContainsString('cdn.tailwindcss.com', $header);
         $this->assertStringContainsString('fonts.googleapis.com', $header);
         $this->assertStringContainsString('fonts.gstatic.com', $header);
         $this->assertStringContainsString('maps.googleapis.com', $header);

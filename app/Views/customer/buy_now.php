@@ -368,12 +368,15 @@
 
         // Address section visibility and requirement
         if (addressSection) {
+            var textAddressInput = addressSection.querySelector('input[name="shipping_address"]');
             if (isPickup) {
                 addressSection.classList.add('opacity-40', 'pointer-events-none');
                 if (addressSelect) addressSelect.removeAttribute('required');
+                if (textAddressInput) textAddressInput.removeAttribute('required');
             } else {
                 addressSection.classList.remove('opacity-40', 'pointer-events-none');
                 if (addressSelect) addressSelect.setAttribute('required', 'required');
+                if (textAddressInput) textAddressInput.setAttribute('required', 'required');
             }
         }
     }
@@ -417,6 +420,8 @@
             gcashFulfillmentChosen = true;
             if (fulfillmentInput) fulfillmentInput.value = 'pickup';
             if (addressSelect) addressSelect.removeAttribute('required');
+            var textInput = addressSection ? addressSection.querySelector('input[name="shipping_address"]') : null;
+            if (textInput) textInput.removeAttribute('required');
             if (gcashModal) gcashModal.classList.add('hidden');
             form.submit();
         });
