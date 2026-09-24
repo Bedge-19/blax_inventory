@@ -2055,10 +2055,34 @@ class Customer extends BaseController
             }
 
             $publicId = 'usr_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4));
-            $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PROFILES, $publicId);
+            $newAvatarUrl = null;
 
-            if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                $updates['profile_image_url'] = $uploadRes['secure_url'];
+            if ($cloudinary->isConfigured()) {
+                try {
+                    $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PROFILES, $publicId);
+                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                        $newAvatarUrl = $uploadRes['secure_url'];
+                    }
+                } catch (\Throwable $e) {
+                    log_message('error', '[Customer::updateProfile] Cloudinary avatar upload error: ' . $e->getMessage());
+                }
+            }
+
+            // Resilient local storage fallback
+            if (!$newAvatarUrl) {
+                $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'profiles';
+                if (!is_dir($uploadDir)) {
+                    @mkdir($uploadDir, 0775, true);
+                }
+                $fileName = $file->getRandomName();
+                if ($file->isValid() && !$file->hasMoved()) {
+                    $file->move($uploadDir, $fileName);
+                    $newAvatarUrl = 'uploads/profiles/' . $fileName;
+                }
+            }
+
+            if ($newAvatarUrl) {
+                $updates['profile_image_url'] = $newAvatarUrl;
                 $oldProfileImageToDelete      = $current['profile_image_url'] ?? null;
                 $session->set('profile_image_url', $updates['profile_image_url']);
             } else {

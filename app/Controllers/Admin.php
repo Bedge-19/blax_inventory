@@ -936,14 +936,35 @@ class Admin extends BaseController
         }
         $cloudinary = new \App\Libraries\CloudinaryService();
         $publicId = 'cms_' . time() . '_' . bin2hex(random_bytes(4));
-        $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_CMS, $publicId);
+        $newImageUrl = null;
 
-        if (!$uploadRes || empty($uploadRes['secure_url'])) {
-            log_message('error', '[Admin::uploadContentImage] Cloudinary upload failed for CMS content ID ' . $id);
-            return redirect()->back()->with('error', 'Failed to upload image to cloud storage. Please try again.');
+        if ($cloudinary->isConfigured()) {
+            try {
+                $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_CMS, $publicId);
+                if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                    $newImageUrl = $uploadRes['secure_url'];
+                }
+            } catch (\Throwable $e) {
+                log_message('error', '[Admin::uploadContentImage] Cloudinary upload error: ' . $e->getMessage());
+            }
         }
 
-        $newImageUrl = $uploadRes['secure_url'];
+        // Resilient local storage fallback
+        if (!$newImageUrl) {
+            $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'cms';
+            if (!is_dir($uploadDir)) {
+                @mkdir($uploadDir, 0775, true);
+            }
+            $fileName = $file->getRandomName();
+            if ($file->isValid() && !$file->hasMoved()) {
+                $file->move($uploadDir, $fileName);
+                $newImageUrl = 'uploads/cms/' . $fileName;
+            }
+        }
+
+        if (!$newImageUrl) {
+            return redirect()->back()->with('error', 'Failed to save image. Please try again.');
+        }
 
         $model->update($id, ['image_url'=>$newImageUrl, 'updated_by'=>(int)session()->get('user_id')]);
         SiteContentModel::clearCache();

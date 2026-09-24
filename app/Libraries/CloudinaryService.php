@@ -54,26 +54,29 @@ class CloudinaryService
     public function isConfigured(): bool
     {
         return !empty($this->config->cloudName)
-            && strtolower(trim($this->config->cloudName)) !== 'blax'
             && !empty($this->config->apiKey)
             && !empty($this->config->apiSecret);
     }
 
     /**
-     * Initialize Cloudinary SDK configuration using separate environment variables.
+     * Initialize Cloudinary SDK configuration using URL or separate environment variables.
      */
     protected function initCloudinary(): void
     {
-        $cldConfig = new Configuration([
-            'cloud' => [
-                'cloud_name' => $this->config->cloudName ?: '',
-                'api_key'    => $this->config->apiKey,
-                'api_secret' => $this->config->apiSecret,
-            ],
-            'url' => [
-                'secure' => true,
-            ],
-        ]);
+        if (!empty($this->config->cloudinaryUrl)) {
+            $cldConfig = Configuration::instance($this->config->cloudinaryUrl);
+        } else {
+            $cldConfig = new Configuration([
+                'cloud' => [
+                    'cloud_name' => $this->config->cloudName ?: '',
+                    'api_key'    => $this->config->apiKey ?: '',
+                    'api_secret' => $this->config->apiSecret ?: '',
+                ],
+                'url' => [
+                    'secure' => true,
+                ],
+            ]);
+        }
 
         $this->uploadApi   = new UploadApi($cldConfig);
         $this->adminApi    = new AdminApi($cldConfig);
