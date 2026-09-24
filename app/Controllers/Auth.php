@@ -316,19 +316,38 @@ class Auth extends BaseController
                 }
 
                 $cloudinary = new \App\Libraries\CloudinaryService();
-                $isPdf = ($extension === 'pdf');
-                $publicId = 'permit_' . time() . '_' . bin2hex(random_bytes(4));
-                $uploadRes = $isPdf
-                    ? $cloudinary->uploadRawFile($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId)
-                    : $cloudinary->uploadImage($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId);
+                $isPdf      = ($extension === 'pdf');
+                $publicId   = 'permit_' . time() . '_' . bin2hex(random_bytes(4));
+                $uploadRes  = null;
 
-                if (!$uploadRes || empty($uploadRes['secure_url'])) {
-                    log_message('error', '[Auth::registerShop] Cloudinary upload failed for business permit');
-                    session()->setFlashdata('error', 'Failed to upload business permit to cloud storage. Please try again.');
-                    return redirect()->to('/merchant-signup');
+                if ($cloudinary->isConfigured()) {
+                    try {
+                        $uploadRes = $isPdf
+                            ? $cloudinary->uploadRawFile($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId)
+                            : $cloudinary->uploadImage($permit, \App\Libraries\CloudinaryService::FOLDER_BUSINESS_PERMITS, $publicId);
+                    } catch (\Throwable $cldEx) {
+                        log_message('error', '[Auth::registerShop] Cloudinary upload exception: ' . $cldEx->getMessage());
+                    }
                 }
 
-                $permitUrl = $uploadRes['secure_url'];
+                if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                    $permitUrl = $uploadRes['secure_url'];
+                } else {
+                    // Fallback to secure local storage if Cloudinary upload fails or is not configured
+                    $uploadPath = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'business_permits';
+                    try {
+                        if (!is_dir($uploadPath)) {
+                            @mkdir($uploadPath, 0775, true);
+                        }
+                        $fileName  = $permit->getRandomName();
+                        $permit->move($uploadPath, $fileName);
+                        $permitUrl = 'private/uploads/business_permits/' . $fileName;
+                    } catch (\Throwable $moveEx) {
+                        log_message('error', '[Auth::registerShop] Business permit upload fallback failed: ' . $moveEx->getMessage());
+                        session()->setFlashdata('error', 'Failed to upload business permit. Please ensure the file is valid and try again.');
+                        return redirect()->to('/merchant-signup');
+                    }
+                }
             }
 
             $db = \Config\Database::connect();

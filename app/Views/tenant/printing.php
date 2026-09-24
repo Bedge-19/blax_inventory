@@ -247,7 +247,7 @@ $nextStates = [
                                                 </div>
                                                 <div class="min-w-0 max-w-[150px] sm:max-w-[170px]">
                                                     <span class="text-xs font-semibold text-on-surface truncate block" title="<?= esc($fileName) ?>"><?= esc($fileName) ?></span>
-                                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                         <span class="px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider uppercase <?= ($docType === 'DOCX') ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800' ?>">
                                                             <?= esc($docType) ?>
                                                         </span>
@@ -255,6 +255,15 @@ $nextStates = [
                                                             <span class="text-[10px] font-medium <?= (($r['doc_change_type'] ?? '') === 'has_changes') ? 'text-amber-700 font-semibold' : 'text-on-surface-variant' ?>">
                                                                 <?= (($r['doc_change_type'] ?? '') === 'has_changes') ? 'Changes' : 'As-Is' ?>
                                                             </span>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($r['attachments'])): ?>
+                                                            <button type="button" 
+                                                                    onclick="openRequestDetails(this.closest('tr').querySelector('button[data-request]'))"
+                                                                    class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 transition-colors cursor-pointer"
+                                                                    title="Click to view <?= count($r['attachments']) ?> reference photos">
+                                                                <span class="material-symbols-outlined text-[12px]">photo_library</span>
+                                                                <span><?= count($r['attachments']) ?> Photos</span>
+                                                            </button>
                                                         <?php endif; ?>
                                                     </div>
                                                 </div>
@@ -554,10 +563,19 @@ $nextStates = [
                                                 </div>
                                                 <div class="min-w-0 max-w-[150px] sm:max-w-[170px]">
                                                     <span class="text-xs font-semibold text-on-surface truncate block" title="<?= esc($fileName) ?>"><?= esc($fileName) ?></span>
-                                                    <div class="flex items-center gap-1.5 mt-0.5">
+                                                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                                         <span class="px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider uppercase <?= ($docType === 'DOCX') ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800' ?>">
                                                             <?= esc($docType) ?>
                                                         </span>
+                                                        <?php if (!empty($r['attachments'])): ?>
+                                                            <button type="button" 
+                                                                    onclick="openRequestDetails(this.closest('tr').querySelector('button[data-request]'))"
+                                                                    class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-800 hover:bg-purple-200 border border-purple-300 transition-colors cursor-pointer"
+                                                                    title="Click to view <?= count($r['attachments']) ?> reference photos">
+                                                                <span class="material-symbols-outlined text-[12px]">photo_library</span>
+                                                                <span><?= count($r['attachments']) ?> Photos</span>
+                                                            </button>
+                                                        <?php endif; ?>
                                                     </div>
                                                 </div>
                                             </div>
@@ -747,6 +765,18 @@ $nextStates = [
                                         </span>
                                     <?php endif; ?>
                                 </div>
+
+                                <?php if (!empty($q['attachments'])): ?>
+                                    <div class="pt-1">
+                                        <button type="button"
+                                                onclick="openRequestDetails(this.closest('.p-4').querySelector('button[data-request]'))"
+                                                class="w-full py-1.5 px-2.5 rounded-xl bg-purple-100 hover:bg-purple-200 text-purple-900 border border-purple-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                                                title="View <?= count($q['attachments']) ?> customer reference photos">
+                                            <span class="material-symbols-outlined text-[16px] text-purple-700">photo_library</span>
+                                            <span>View Reference Photos (<?= count($q['attachments']) ?>)</span>
+                                        </button>
+                                    </div>
+                                <?php endif; ?>
 
                                 <!-- PRIMARY FULFILLMENT ACTION BUTTON -->
                                 <div class="pt-1">

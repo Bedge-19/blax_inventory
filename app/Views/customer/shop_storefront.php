@@ -275,7 +275,7 @@
                             <span>Estimated Page Count <span class="text-error">*</span></span>
                             <span class="text-[10px] text-outline font-normal">Enter total pages</span>
                         </label>
-                        <input type="number" id="docxEstimatedPages" min="1" step="1" placeholder="e.g. 5" class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary" oninput="handleManualPageCount(this.value)">
+                        <input type="number" name="estimated_page_count" id="docxEstimatedPages" min="1" step="1" value="1" placeholder="e.g. 5" class="w-full py-2 px-3 bg-surface-container border border-outline-variant/40 rounded-xl text-xs font-bold text-on-surface focus:ring-1 focus:ring-primary focus:border-primary" oninput="handleManualPageCount(this.value)" onchange="handleManualPageCount(this.value)">
                         <p class="text-[11px] text-on-surface-variant">Word files require estimated page count for pricing calculations.</p>
                     </div>
 
@@ -307,6 +307,9 @@
                             </label>
                             <input type="file" name="reference_photos[]" id="referencePhotosInput" multiple accept="image/*" class="w-full py-1.5 px-2 bg-surface-container border border-outline-variant/40 rounded-xl text-xs text-on-surface file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer">
                             <p class="text-[11px] text-on-surface-variant">Attach photos or screenshots showing edits requested.</p>
+
+                            <!-- Live Photo Preview Gallery -->
+                            <div id="refPhotosPreviewGrid" class="hidden grid grid-cols-3 sm:grid-cols-4 gap-2 pt-2 border-t border-outline-variant/20"></div>
                         </div>
                     </div>
 
@@ -602,7 +605,7 @@
                                         <span class="text-sm font-bold text-on-surface" id="printing-total-price">₱0.00</span>
                                     </div>
 
-                                    <div class="flex justify-between items-center text-sm font-bold border-t border-outline-variant/20 pt-xs">
+                                    <div class="flex justify-between items-center text-sm font-bold border-t border-outline-variant/20 pt-xs" id="prDownPaymentRow">
                                         <span class="text-on-surface flex items-center gap-1">
                                             <span class="material-symbols-outlined text-[17px] text-[#007DFE]">account_balance_wallet</span>
                                             <span id="dpPercentLabel"><?= round($dpPercent) ?>%</span> Down Payment:
@@ -1098,16 +1101,22 @@ function toggleDocType(type) {
         if (docxPageCountContainer) docxPageCountContainer.classList.remove('hidden');
         if (docxChangesContainer) docxChangesContainer.classList.remove('hidden');
 
-        const estPages = parseInt(document.getElementById('docxEstimatedPages')?.value || '0', 10);
+        const estInput = document.getElementById('docxEstimatedPages');
+        let estPages = parseInt(estInput?.value || '0', 10);
+        if (estPages <= 0) {
+            estPages = 1;
+            if (estInput) estInput.value = '1';
+        }
         if (hiddenPageCount) hiddenPageCount.value = estPages;
         if (badge) {
             badge.className = 'px-sm py-0.5 rounded-full text-label-sm font-medium bg-surface-container-high text-on-surface-variant flex items-center gap-xs';
             const icon = badge.querySelector('.material-symbols-outlined');
-            if (icon) icon.textContent = 'info';
-            badge.lastChild.textContent = ' No Word doc selected';
+            if (icon) icon.textContent = 'description';
+            badge.lastChild.textContent = ' Word Document selected';
         }
         if (pageCount) {
-            pageCount.textContent = estPages > 0 ? (estPages + ' estimated pages') : 'No file selected';
+            pageCount.className = 'text-label-sm font-medium text-primary';
+            pageCount.textContent = estPages + ' estimated page' + (estPages === 1 ? '' : 's');
         }
     } else {
         if (fileInput) fileInput.setAttribute('accept', '.pdf');
@@ -1148,12 +1157,13 @@ function toggleDocxChanges(mode) {
 }
 
 function handleManualPageCount(val) {
-    const pages = Math.max(0, parseInt(val, 10) || 0);
+    const pages = Math.max(1, parseInt(val, 10) || 1);
     const hiddenPageCount = document.getElementById('pdf-page-count');
     const pageCount = document.getElementById('page-count');
     if (hiddenPageCount) hiddenPageCount.value = pages;
     if (pageCount) {
-        pageCount.textContent = pages > 0 ? (pages + ' estimated page' + (pages === 1 ? '' : 's')) : 'Enter estimated pages';
+        pageCount.className = 'text-label-sm font-medium text-primary';
+        pageCount.textContent = pages + ' estimated page' + (pages === 1 ? '' : 's');
     }
     updatePrintingPrice();
 }
@@ -1280,19 +1290,45 @@ if (dropzone && fileInput) {
                 if (icon) icon.textContent = 'check_circle';
                 badge.lastChild.textContent = ' Word Document Attached';
             }
-            const estInput = document.getElementById('docxEstimatedPages');
-            const estVal = parseInt(estInput?.value || '0', 10);
-            if (estVal <= 0) {
-                estInput?.focus();
-                pageCount.className = 'text-label-sm font-medium text-amber-600';
-                pageCount.textContent = 'Enter estimated pages below';
-            } else {
-                pageCount.className = 'text-label-sm font-medium text-primary';
-                pageCount.textContent = estVal + ' estimated page' + (estVal === 1 ? '' : 's');
+
+            const formData = new FormData();
+            formData.append('document', file, file.name);
+
+            fetch('<?= base_url('printing/count-pages') ?>', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                const estInput = document.getElementById('docxEstimatedPages');
+                let count = 1;
+                if (data && data.success && data.page_count > 0) {
+                    count = data.page_count;
+                } else if (estInput && parseInt(estInput.value, 10) > 0) {
+                    count = parseInt(estInput.value, 10);
+                }
+                if (estInput) estInput.value = count;
+                if (hiddenPageCount) hiddenPageCount.value = count;
+                if (pageCount) {
+                    pageCount.className = 'text-label-sm font-medium text-primary';
+                    pageCount.textContent = count + ' page' + (count === 1 ? '' : 's') + ' detected';
+                }
+                updatePrintingPrice();
+                showPdfModal('success', 'Word Document Uploaded', 'Your document was verified and page count was calculated.', file.name, count);
+            })
+            .catch(() => {
+                const estInput = document.getElementById('docxEstimatedPages');
+                let estVal = parseInt(estInput?.value || '1', 10);
+                if (estVal <= 0) estVal = 1;
+                if (estInput) estInput.value = estVal;
                 if (hiddenPageCount) hiddenPageCount.value = estVal;
-            }
-            updatePrintingPrice();
-            showPdfModal('success', 'Word Document Uploaded', 'Document attached. Please verify your estimated page count below.', file.name, estVal > 0 ? estVal : null);
+                if (pageCount) {
+                    pageCount.className = 'text-label-sm font-medium text-primary';
+                    pageCount.textContent = estVal + ' estimated page' + (estVal === 1 ? '' : 's');
+                }
+                updatePrintingPrice();
+                showPdfModal('success', 'Word Document Uploaded', 'Document attached. Please verify your estimated page count below.', file.name, estVal);
+            });
             return;
         }
 
@@ -1337,7 +1373,15 @@ if (dropzone && fileInput) {
         const globalPriceColor = <?= (float) ($printingSettings['price_color_per_page'] ?? 5.00) ?>;
         const globalPriceBw    = <?= (float) ($printingSettings['price_bw_per_page'] ?? 2.00) ?>;
 
-        const pages = parseInt(hiddenPageCount ? hiddenPageCount.value : 0, 10) || 0;
+        const isDocx = document.getElementById('docTypeDocx')?.checked;
+        let pages = parseInt(hiddenPageCount ? hiddenPageCount.value : 0, 10) || 0;
+        if (isDocx && pages <= 0) {
+            const estInput = document.getElementById('docxEstimatedPages');
+            pages = parseInt(estInput?.value || '1', 10);
+            if (pages <= 0) pages = 1;
+            if (hiddenPageCount) hiddenPageCount.value = pages;
+        }
+
         const colorRadio = document.querySelector('input[name="color_mode"]:checked');
         const isColored = colorRadio ? (colorRadio.value === 'colored') : true;
 
@@ -1409,17 +1453,21 @@ if (dropzone && fileInput) {
         const btn = document.getElementById('btnSubmitPrinting');
         const btnText = document.getElementById('submitBtnText');
         const subtext = document.getElementById('prTrustSubtext');
+        const dpRow = document.getElementById('prDownPaymentRow');
         const dpPercent = <?= (float) ($printingSettings['down_payment_percent'] ?? 50.00) ?>;
 
         if (payMethodVal === 'gcash') {
+            if (dpRow) dpRow.classList.remove('hidden');
             if (btn) btn.className = 'w-full py-3 bg-[#007DFE] hover:bg-[#006bd6] text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
             if (btnText) btnText.textContent = 'Pay ' + Math.round(dpPercent) + '% Down Payment via GCash';
             if (subtext) subtext.textContent = 'Pay ' + Math.round(dpPercent) + '% now via GCash / PayMongo. Remaining balance paid on pickup or delivery.';
         } else if (payMethodVal === 'pickup') {
+            if (dpRow) dpRow.classList.add('hidden');
             if (btn) btn.className = 'w-full py-3 bg-primary hover:bg-primary/90 text-on-primary rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
             if (btnText) btnText.textContent = 'Submit Printing Request (Pay at Counter)';
-            if (subtext) subtext.textContent = 'No online payment required now. Pay down payment or total upon picking up at the store.';
+            if (subtext) subtext.textContent = 'No online payment required now. Pay total upon picking up at the store.';
         } else {
+            if (dpRow) dpRow.classList.add('hidden');
             if (btn) btn.className = 'w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-button text-sm shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2';
             if (btnText) btnText.textContent = 'Submit Printing Request (Cash on Delivery)';
             if (subtext) subtext.textContent = 'No online payment required now. Payment will be collected upon doorstep delivery.';
@@ -1474,6 +1522,45 @@ if (dropzone && fileInput) {
     document.querySelectorAll('input[name="color_mode"], select[name="paper_size"], input[name="copies"], input[name="binding"]').forEach(el => {
         el.addEventListener('change', updatePrintingPrice);
     });
+
+    const docxPagesInput = document.getElementById('docxEstimatedPages');
+    if (docxPagesInput) {
+        docxPagesInput.addEventListener('input', function() {
+            handleManualPageCount(this.value);
+        });
+        docxPagesInput.addEventListener('change', function() {
+            handleManualPageCount(this.value);
+        });
+    }
+
+    // Reference Photos Thumbnail Preview
+    const refPhotosInput = document.getElementById('referencePhotosInput');
+    if (refPhotosInput) {
+        refPhotosInput.addEventListener('change', function() {
+            const previewContainer = document.getElementById('refPhotosPreviewGrid');
+            if (!previewContainer) return;
+            previewContainer.innerHTML = '';
+            if (this.files && this.files.length > 0) {
+                Array.from(this.files).forEach((f, idx) => {
+                    if (!f.type.startsWith('image/')) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const thumb = document.createElement('div');
+                        thumb.className = 'relative group aspect-square rounded-xl overflow-hidden border border-outline-variant/40 bg-surface-container shadow-2xs';
+                        thumb.innerHTML = `
+                            <img src="${e.target.result}" alt="${f.name}" class="w-full h-full object-cover">
+                            <span class="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[9px] px-1 py-0.5 truncate text-center">${f.name}</span>
+                        `;
+                        previewContainer.appendChild(thumb);
+                    };
+                    reader.readAsDataURL(f);
+                });
+                previewContainer.classList.remove('hidden');
+            } else {
+                previewContainer.classList.add('hidden');
+            }
+        });
+    }
 
     // Report Shop Modal Handlers
     const reportModal = document.getElementById('report-shop-modal');

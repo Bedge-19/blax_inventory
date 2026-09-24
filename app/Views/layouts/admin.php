@@ -46,114 +46,133 @@
 
         <div id="admin-sidebar-overlay" class="sidebar-overlay"></div>
 
-        <!-- SideNavBar -->
-        <aside id="admin-sidebar" class="bg-surface-container-lowest hidden md:flex flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen transition-transform duration-300">
+        <!-- SideNavBar (Polaris / Linear Design System) -->
+        <aside id="admin-sidebar" class="bg-surface-container-lowest hidden md:flex flex-col h-full py-4 px-3 z-40 border-r border-outline-variant/30 shadow-xs w-64 fixed left-0 h-screen transition-transform duration-300">
 
-            <div class="px-sm mb-xl flex justify-between items-start">
-                <div>
-                    <h1 class="text-headline-md font-bold text-primary">Blax Console</h1>
-                    <p class="text-label-sm text-on-surface-variant/60">Platform Master Console</p>
+            <!-- Brand Identity & Console Card -->
+            <div class="px-2 mb-4 flex items-center justify-between">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-900 via-indigo-950 to-primary text-white flex items-center justify-center font-black shadow-md shadow-slate-900/20 shrink-0 border border-slate-700/50">
+                        <span class="material-symbols-outlined text-[22px]">admin_panel_settings</span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-base font-bold text-on-surface tracking-tight">Blax</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border border-slate-700/30">Console</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/70 truncate">Master Platform Ops</p>
+                    </div>
                 </div>
-                <button id="admin-sidebar-close" type="button" class="md:hidden text-on-surface-variant p-1 -mr-2">
-                    <span class="material-symbols-outlined">close</span>
+                <button id="admin-sidebar-close" type="button" class="md:hidden text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors" aria-label="Close navigation">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
 
-            <nav class="flex-1 space-y-1">
+            <!-- Grouped Semantic Navigation -->
+            <nav class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'dashboard' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/dashboard') ?>">
+                <!-- 1. CORE PLATFORM -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Core Platform</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'dashboard' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/dashboard') ?>">
+                            <?php if ($activeNav === 'dashboard'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'dashboard' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">dashboard</span>
+                            <span class="truncate">Overview</span>
+                        </a>
 
-                    <span class="material-symbols-outlined">dashboard</span>
-                    <span class="text-label-sm">Dashboard</span>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'tenants' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/tenants') ?>">
+                            <?php if ($activeNav === 'tenants'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'tenants' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">storefront</span>
+                            <span class="truncate">Tenants &amp; Merchants</span>
+                        </a>
 
-                </a>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'customers' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/customers') ?>">
+                            <?php if ($activeNav === 'customers'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'customers' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">group</span>
+                            <span class="truncate">Customers</span>
+                        </a>
+                    </div>
+                </div>
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'tenants' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/tenants') ?>">
+                <!-- 2. FINANCE & RISK -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Finance &amp; Risk</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'payments' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/payments') ?>">
+                            <?php if ($activeNav === 'payments'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'payments' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">payments</span>
+                                <span class="truncate">Payment Requests</span>
+                            </div>
+                        </a>
 
-                    <span class="material-symbols-outlined">storefront</span>
-                    <span class="text-label-sm">Tenants</span>
+                        <a class="group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'compliance' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/compliance') ?>">
+                            <?php if ($activeNav === 'compliance'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'compliance' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">policy</span>
+                                <span class="truncate">Compliance &amp; Reports</span>
+                            </div>
+                        </a>
 
-                </a>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'audit' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/audit-log') ?>">
+                            <?php if ($activeNav === 'audit'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'audit' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">history_toggle_off</span>
+                            <span class="truncate">Audit Log</span>
+                        </a>
+                    </div>
+                </div>
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'customers' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/customers') ?>">
+                <!-- 3. INTELLIGENCE & OPERATIONS -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Intelligence &amp; Ops</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'analytics' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/analytics') ?>">
+                            <?php if ($activeNav === 'analytics'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'analytics' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">insights</span>
+                            <span class="truncate">Platform Analytics</span>
+                        </a>
 
-                    <span class="material-symbols-outlined">person</span>
-                    <span class="text-label-sm">Customers</span>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'tracking' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/tracking') ?>">
+                            <?php if ($activeNav === 'tracking'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'tracking' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">route</span>
+                            <span class="truncate">Live Dispatch &amp; Tracking</span>
+                        </a>
 
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'analytics' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/analytics') ?>">
-
-                    <span class="material-symbols-outlined">analytics</span>
-                    <span class="text-label-sm">Analytics</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'payments' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/payments') ?>">
-
-                    <span class="material-symbols-outlined">payments</span>
-                    <span class="text-label-sm">Payment requests</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'compliance' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/compliance') ?>">
-
-                    <span class="material-symbols-outlined">assignment_turned_in</span>
-                    <span class="text-label-sm">Compliance</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'tracking' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/tracking') ?>">
-
-                    <span class="material-symbols-outlined">distance</span>
-                    <span class="text-label-sm">Live Tracking</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'audit' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/audit-log') ?>">
-
-                    <span class="material-symbols-outlined">history</span>
-                    <span class="text-label-sm">Audit log</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'content' ? 'bg-secondary-container text-on-secondary-container font-semibold translate-x-1 transition-transform' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('admin/content') ?>">
-
-                    <span class="material-symbols-outlined">article</span>
-                    <span class="text-label-sm">Content Management</span>
-
-                </a>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'content' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('admin/content') ?>">
+                            <?php if ($activeNav === 'content'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'content' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">web</span>
+                            <span class="truncate">Content Management</span>
+                        </a>
+                    </div>
+                </div>
 
             </nav>
 
-            <div class="mt-auto pt-xl space-y-1 border-t border-outline-variant/10">
-
-                <div class="flex items-center gap-md px-md py-md mb-md">
-
-                    <div class="w-10 h-10 rounded-full overflow-hidden bg-primary-container flex items-center justify-center text-white font-bold">
-
+            <!-- Bottom Super Admin Profile Card -->
+            <div class="mt-auto pt-3 border-t border-outline-variant/20 space-y-2">
+                <div class="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low border border-outline-variant/30 shadow-2xs">
+                    <div class="w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
                         <?= esc($adminInitials) ?>
-
                     </div>
-
-                    <div>
-
-                        <p class="text-label-sm text-on-surface font-bold"><?= esc($adminName) ?></p>
-                        <p class="text-[10px] text-on-surface-variant"><?= esc($adminEmail) ?></p>
-
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-on-surface truncate"><?= esc($adminName) ?></p>
+                        <p class="text-[10px] text-on-surface-variant/70 truncate flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Super Administrator
+                        </p>
                     </div>
-
                 </div>
 
-
-
-                <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
-
-                    <span class="material-symbols-outlined">logout</span>
-                    <span class="text-label-sm">Sign Out</span>
-
-                </a>
-
+                <div class="flex items-center justify-between px-1">
+                    <a href="<?= base_url('/') ?>" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1">
+                        <span>Public Marketplace</span>
+                        <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                    </a>
+                    <a class="flex items-center gap-1 text-[11px] font-medium text-error hover:underline transition-all" href="<?= base_url('logout') ?>">
+                        <span class="material-symbols-outlined text-[14px]">logout</span>
+                        <span>Sign Out</span>
+                    </a>
+                </div>
             </div>
 
         </aside>
@@ -161,39 +180,48 @@
         <!-- Main Content Area -->
         <main id="main-content" class="flex-1 ml-0 md:ml-64 overflow-y-auto bg-surface relative">
 
-            <header class="sticky top-0 z-30 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/30 px-4 md:px-8 lg:px-10 py-md flex justify-between items-center">
+            <!-- Top Header (Shopify Polaris / Linear Style) -->
+            <header class="sticky top-0 z-30 bg-surface/85 backdrop-blur-xl border-b border-outline-variant/30 px-4 md:px-8 lg:px-10 py-3 flex justify-between items-center transition-all">
 
-                <div class="flex items-center gap-md">
-                    <button id="admin-sidebar-toggle" type="button" class="md:hidden text-on-surface-variant p-1 -ml-2 rounded-full hover:bg-surface-container">
-                        <span class="material-symbols-outlined">menu</span>
+                <!-- Left: Mobile Trigger + Breadcrumb & Title -->
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="admin-sidebar-toggle" type="button" class="md:hidden text-on-surface-variant p-2 rounded-xl hover:bg-surface-container border border-outline-variant/30 transition-colors" aria-label="Open navigation">
+                        <span class="material-symbols-outlined text-[20px]">menu</span>
                     </button>
-                    <div>
-                        <h2 class="text-title-lg font-title-lg text-on-surface"><?= esc($pageTitle) ?></h2>
-
-                    <?php if (!empty($pageSubtitle)): ?>
-
-                        <p class="text-label-sm font-label-sm text-on-surface-variant"><?= esc($pageSubtitle) ?></p>
-
-                    <?php endif; ?>
-
+                    
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5 text-[11px] text-on-surface-variant/70 font-medium">
+                            <span class="hover:text-on-surface cursor-default">Console</span>
+                            <span class="material-symbols-outlined text-[12px]">chevron_right</span>
+                            <span class="text-on-surface font-semibold truncate"><?= esc($pageTitle) ?></span>
+                        </div>
+                        <h2 class="text-lg md:text-xl font-bold text-on-surface tracking-tight truncate leading-tight"><?= esc($pageTitle) ?></h2>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-md">
+                <!-- Right: Platform Status, Notifications & Profile -->
+                <div class="flex items-center gap-2 md:gap-3 shrink-0">
 
+                    <!-- Live Telemetry Status Pill -->
+                    <div class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-[11px]">System Nominal</span>
+                    </div>
+
+                    <!-- Notification Bell Dropdown -->
                     <div class="relative">
-                        <button id="admin-notif-toggle" type="button" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-                            <span class="material-symbols-outlined">notifications</span>
+                        <button id="admin-notif-toggle" type="button" class="w-9 h-9 rounded-xl border border-outline-variant/30 hover:bg-surface-container flex items-center justify-center text-on-surface-variant relative transition-colors" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                            <span class="material-symbols-outlined text-[20px]">notifications</span>
                             <?php if ($adminUnreadCount > 0): ?>
-                                <span class="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center"><?= (int) $adminUnreadCount ?></span>
+                                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-bounce"><?= (int) $adminUnreadCount ?></span>
                             <?php endif; ?>
                         </button>
 
-                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/30 z-50 overflow-hidden">
-                            <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between">
-                                <div class="flex items-center gap-xs">
-                                    <span class="text-label-sm font-semibold text-on-surface">Admin Alerts</span>
-                                    <span class="text-[10px] text-primary font-semibold"><?= (int) $adminUnreadCount ?> unread</span>
+                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/40 z-50 overflow-hidden">
+                            <div class="px-4 py-3 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/50">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold text-on-surface">Platform Alerts</span>
+                                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary"><?= (int) $adminUnreadCount ?> new</span>
                                 </div>
                                 <?php if ($adminUnreadCount > 0): ?>
                                     <form method="post" action="<?= base_url('notifications/mark-all-read') ?>" class="inline">
@@ -205,7 +233,7 @@
                             <div class="max-h-80 overflow-y-auto divide-y divide-outline-variant/10 text-xs">
                                 <?php if (!empty($adminNotifications)): ?>
                                     <?php foreach ($adminNotifications as $n): ?>
-                                        <a href="<?= base_url('notifications/click/' . (int)$n['id']) ?>" class="flex items-start gap-sm p-md hover:bg-surface-container-low transition-colors block <?= empty($n['is_read']) ? 'bg-primary/5' : 'opacity-70 hover:opacity-100' ?>">
+                                        <a href="<?= base_url('notifications/click/' . (int)$n['id']) ?>" class="flex items-start gap-3 p-3.5 hover:bg-surface-container-low transition-colors block <?= empty($n['is_read']) ? 'bg-primary/5' : 'opacity-70 hover:opacity-100' ?>">
                                             <span class="material-symbols-outlined text-[18px] text-primary mt-0.5 shrink-0">
                                                 <?= match($n['type'] ?? '') {
                                                     'merchant_verification' => 'storefront',
@@ -215,7 +243,7 @@
                                                 } ?>
                                             </span>
                                             <div class="min-w-0 flex-1">
-                                                <div class="flex items-center justify-between gap-xs">
+                                                <div class="flex items-center justify-between gap-1">
                                                     <p class="font-semibold text-on-surface truncate"><?= esc($n['title']) ?></p>
                                                     <span class="text-[9px] text-outline font-normal shrink-0"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
                                                 </div>
@@ -224,9 +252,37 @@
                                         </a>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <p class="px-md py-lg text-center text-label-sm text-on-surface-variant">No alerts yet.</p>
+                                    <div class="p-6 text-center">
+                                        <span class="material-symbols-outlined text-outline text-3xl mb-1">notifications_off</span>
+                                        <p class="text-xs text-on-surface-variant">No alerts at the moment.</p>
+                                    </div>
                                 <?php endif; ?>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Admin Dropdown -->
+                    <div class="relative">
+                        <button type="button" class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-surface-container border border-outline-variant/30 transition-colors" onclick="document.getElementById('admin-profile-quickmenu').classList.toggle('hidden')">
+                            <div class="w-7 h-7 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center font-bold text-xs shrink-0">
+                                <?= esc($adminInitials) ?>
+                            </div>
+                            <span class="hidden md:inline text-xs font-semibold text-on-surface truncate max-w-[100px]"><?= esc($adminName) ?></span>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
+                        </button>
+                        <div id="admin-profile-quickmenu" class="hidden absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/40 py-1.5 z-50 text-xs">
+                            <div class="px-3 py-2 border-b border-outline-variant/20 mb-1">
+                                <p class="font-bold text-on-surface truncate"><?= esc($adminName) ?></p>
+                                <p class="text-[10px] text-on-surface-variant truncate"><?= esc($adminEmail) ?></p>
+                            </div>
+                            <a href="<?= base_url('admin/audit-log') ?>" class="flex items-center gap-2 px-3 py-2 hover:bg-surface-container text-on-surface">
+                                <span class="material-symbols-outlined text-[16px]">security</span>
+                                <span>Security Logs</span>
+                            </a>
+                            <a href="<?= base_url('logout') ?>" class="flex items-center gap-2 px-3 py-2 hover:bg-error-container/20 text-error">
+                                <span class="material-symbols-outlined text-[16px]">logout</span>
+                                <span>Sign Out</span>
+                            </a>
                         </div>
                     </div>
 

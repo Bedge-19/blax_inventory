@@ -606,6 +606,20 @@ class Customer extends BaseController
             return true;
         }));
 
+        // Load reference attachments for each request
+        $reqIds = array_column($requests, 'id');
+        $attachmentsByReq = [];
+        if (!empty($reqIds)) {
+            $rawAtts = (new \App\Models\PrintingRequestAttachmentModel())->whereIn('printing_request_id', $reqIds)->findAll();
+            foreach ($rawAtts as $att) {
+                $attachmentsByReq[$att['printing_request_id']][] = $att;
+            }
+        }
+        foreach ($requests as &$req) {
+            $req['attachments'] = $attachmentsByReq[$req['id']] ?? [];
+        }
+        unset($req);
+
         return view('customer/printing_requests', [
             'requests' => $requests,
         ]);
@@ -1248,7 +1262,23 @@ class Customer extends BaseController
                 return redirect()->back();
             }
 
-            $pageCount = max(1, (int) $this->request->getPost('estimated_page_count'));
+            $pageCount = max(1, (int) ($this->request->getPost('estimated_page_count') ?: $this->request->getPost('page_count')));
+            if ($ext === 'docx' && class_exists('ZipArchive')) {
+                $tmpPath = $file->getRealPath() ?: $file->getTempName();
+                if ($tmpPath && is_file($tmpPath)) {
+                    $zip = new \ZipArchive();
+                    if ($zip->open($tmpPath) === true) {
+                        $appXml = $zip->getFromName('docProps/app.xml');
+                        if ($appXml !== false && preg_match('/<Pages>(\d+)<\/Pages>/i', $appXml, $matches)) {
+                            $docPages = (int) $matches[1];
+                            if ($docPages > 0) {
+                                $pageCount = $docPages;
+                            }
+                        }
+                        $zip->close();
+                    }
+                }
+            }
             $docChangeType = strtolower(trim((string) $this->request->getPost('doc_change_type'))) === 'has_changes' ? 'has_changes' : 'as_is';
 
             if ($docChangeType === 'has_changes') {
@@ -1266,14 +1296,41 @@ class Customer extends BaseController
                     foreach ($refFiles as $rf) {
                         if ($rf && $rf->isValid() && !$rf->hasMoved()) {
                             if (in_array($rf->getMimeType(), $allowedMimes, true) && $rf->getSize() <= $maxBytes) {
-                                $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
-                                $refUpload = $cloudinary->uploadImage($rf, \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS, $refPublicId);
-                                if ($refUpload && !empty($refUpload['secure_url'])) {
-                                    $stagedRefPhotos[] = [
-                                        'file_name' => $rf->getClientName(),
-                                        'file_path' => $refUpload['secure_url'],
-                                        'file_size' => $rf->getSize(),
-                                    ];
+                                $uploadedRef = false;
+                                if ($cloudinary->isConfigured()) {
+                                    try {
+                                        $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
+                                        $refUpload = $cloudinary->uploadImage($rf, \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS, $refPublicId);
+                                        if ($refUpload && !empty($refUpload['secure_url'])) {
+                                            $stagedRefPhotos[] = [
+                                                'file_name' => $rf->getClientName(),
+                                                'file_path' => $refUpload['secure_url'],
+                                                'file_size' => $rf->getSize(),
+                                            ];
+                                            $uploadedRef = true;
+                                        }
+                                    } catch (\Throwable $e) {
+                                        log_message('error', 'Cloudinary ref upload error: ' . $e->getMessage());
+                                    }
+                                }
+
+                                if (!$uploadedRef) {
+                                    // Resilient local fallback for reference photo
+                                    $localRefDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing' . DIRECTORY_SEPARATOR . 'references';
+                                    if (!is_dir($localRefDir)) {
+                                        @mkdir($localRefDir, 0775, true);
+                                    }
+                                    $refRandName = $rf->getRandomName();
+                                    try {
+                                        $rf->move($localRefDir, $refRandName);
+                                        $stagedRefPhotos[] = [
+                                            'file_name' => $rf->getClientName(),
+                                            'file_path' => 'uploads/printing/references/' . $refRandName,
+                                            'file_size' => $rf->getSize(),
+                                        ];
+                                    } catch (\Throwable $moveRefEx) {
+                                        log_message('error', 'Local ref photo move error: ' . $moveRefEx->getMessage());
+                                    }
                                 }
                             }
                         }
@@ -1282,18 +1339,39 @@ class Customer extends BaseController
             }
 
             $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
-            if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                $fileUrl = $uploadRes['secure_url'];
-            } else {
-                foreach ($stagedRefPhotos as $staged) {
-                    $pid = $cloudinary->extractPublicId($staged['file_path']);
-                    if ($pid) {
-                        $cloudinary->deleteAsset($pid, 'image');
+            if ($cloudinary->isConfigured()) {
+                try {
+                    $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
+                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                        $fileUrl = $uploadRes['secure_url'];
                     }
+                } catch (\Throwable $e) {
+                    log_message('error', 'Cloudinary DOCX upload error: ' . $e->getMessage());
                 }
-                session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
-                return redirect()->back();
+            }
+
+            if (!$fileUrl) {
+                // Local fallback for Word documents
+                $localDocDir = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
+                $publicDocDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
+                if (!is_dir($localDocDir)) {
+                    @mkdir($localDocDir, 0775, true);
+                }
+                if (!is_dir($publicDocDir)) {
+                    @mkdir($publicDocDir, 0775, true);
+                }
+
+                $docName = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                try {
+                    $file->move($localDocDir, $docName);
+                    // Also mirror to public dir if possible
+                    @copy($localDocDir . DIRECTORY_SEPARATOR . $docName, $publicDocDir . DIRECTORY_SEPARATOR . $docName);
+                    $fileUrl = 'uploads/printing/' . $docName;
+                } catch (\Throwable $moveEx) {
+                    log_message('error', 'Failed to move DOCX to local storage: ' . $moveEx->getMessage());
+                    session()->setFlashdata('error', 'Failed to save document. Please try again.');
+                    return redirect()->back();
+                }
             }
         } else {
             // PDF Document
@@ -1315,18 +1393,39 @@ class Customer extends BaseController
             }
 
             $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
-            $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
-            if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                $fileUrl = $uploadRes['secure_url'];
-            } else {
-                foreach ($stagedRefPhotos as $staged) {
-                    $pid = $cloudinary->extractPublicId($staged['file_path']);
-                    if ($pid) {
-                        $cloudinary->deleteAsset($pid, 'image');
+            if ($cloudinary->isConfigured()) {
+                try {
+                    $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
+                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                        $fileUrl = $uploadRes['secure_url'];
                     }
+                } catch (\Throwable $e) {
+                    log_message('error', 'Cloudinary PDF upload error: ' . $e->getMessage());
                 }
-                session()->setFlashdata('error', 'Failed to upload document to secure storage. Please try again.');
-                return redirect()->back();
+            }
+
+            if (!$fileUrl) {
+                // Local fallback for PDF documents
+                $localDocDir = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
+                $publicDocDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
+                if (!is_dir($localDocDir)) {
+                    @mkdir($localDocDir, 0775, true);
+                }
+                if (!is_dir($publicDocDir)) {
+                    @mkdir($publicDocDir, 0775, true);
+                }
+
+                $docName = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+                try {
+                    $file->move($localDocDir, $docName);
+                    // Also mirror to public dir if possible
+                    @copy($localDocDir . DIRECTORY_SEPARATOR . $docName, $publicDocDir . DIRECTORY_SEPARATOR . $docName);
+                    $fileUrl = 'uploads/printing/' . $docName;
+                } catch (\Throwable $moveEx) {
+                    log_message('error', 'Failed to move PDF to local storage: ' . $moveEx->getMessage());
+                    session()->setFlashdata('error', 'Failed to save PDF document. Please try again.');
+                    return redirect()->back();
+                }
             }
         }
 
@@ -1754,18 +1853,50 @@ class Customer extends BaseController
         if (!$file || !$file->isValid() || $file->hasMoved()) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
-                'error'   => 'No PDF file received.',
+                'error'   => 'No document file received.',
             ]);
         }
 
-        if (strtolower($file->getClientExtension()) !== 'pdf') {
+        $ext = strtolower($file->getClientExtension());
+        if (!in_array($ext, ['pdf', 'docx', 'doc'], true)) {
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
-                'error'   => 'Only PDF documents are accepted.',
+                'error'   => 'Only PDF and Word documents (.doc, .docx) are accepted.',
             ]);
         }
 
         $tmpPath = $file->getTempName();
+
+        if ($ext === 'docx') {
+            $pageCount = 1;
+            if (class_exists('ZipArchive')) {
+                $zip = new \ZipArchive();
+                if ($zip->open($tmpPath) === true) {
+                    $appXml = $zip->getFromName('docProps/app.xml');
+                    if ($appXml !== false && preg_match('/<[a-zA-Z0-9:]*Pages[^>]*>(\d+)<\/[a-zA-Z0-9:]*Pages>/i', $appXml, $matches)) {
+                        $pageCount = max(1, (int) $matches[1]);
+                    }
+                    $zip->close();
+                }
+            }
+            return $this->response->setJSON([
+                'success'    => true,
+                'page_count' => $pageCount,
+                'file_name'  => $file->getClientName(),
+                'doc_type'   => 'docx',
+            ]);
+        }
+
+        if ($ext === 'doc') {
+            return $this->response->setJSON([
+                'success'    => true,
+                'page_count' => 1,
+                'file_name'  => $file->getClientName(),
+                'doc_type'   => 'doc',
+            ]);
+        }
+
+        // PDF validation & page counting
         if (!is_valid_pdf($tmpPath, $file->getClientName())) {
             return $this->response->setStatusCode(422)->setJSON([
                 'success' => false,
@@ -1782,9 +1913,10 @@ class Customer extends BaseController
         }
 
         return $this->response->setJSON([
-            'success'   => true,
-            'page_count'=> $pageCount,
-            'file_name' => $file->getClientName(),
+            'success'    => true,
+            'page_count' => $pageCount,
+            'file_name'  => $file->getClientName(),
+            'doc_type'   => 'pdf',
         ]);
     }
 

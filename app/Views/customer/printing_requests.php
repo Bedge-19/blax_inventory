@@ -79,6 +79,13 @@
                             </div>
 
                             <div class="flex items-center gap-2 flex-wrap">
+                                <?php if (($req['doc_change_type'] ?? '') === 'has_changes'): ?>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30 shadow-2xs">
+                                        <span class="material-symbols-outlined text-[13px] text-amber-700">edit_note</span>
+                                        <span>With Changes</span>
+                                    </span>
+                                <?php endif; ?>
+
                                 <!-- Fulfillment Method Badge -->
                                 <?php if ($isPickup): ?>
                                     <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-900 border border-amber-500/30 shadow-2xs">
@@ -111,6 +118,52 @@
                             </div>
 
                         </div>
+
+                        <!-- Reference Photos & Change Instructions Preview Banner -->
+                        <?php if (!empty($req['attachments']) || !empty($req['special_instructions'])): ?>
+                            <div class="p-3 bg-purple-50/60 dark:bg-purple-950/20 rounded-xl border border-purple-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 flex items-center justify-center shrink-0">
+                                        <span class="material-symbols-outlined text-[17px]">photo_library</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-bold text-on-surface truncate">
+                                            <?= !empty($req['attachments']) ? (count($req['attachments']) . ' Reference Photo' . (count($req['attachments']) > 1 ? 's' : '') . ' Uploaded') : 'Document Change Request' ?>
+                                        </p>
+                                        <?php if (!empty($req['special_instructions'])): ?>
+                                            <p class="text-[11px] text-on-surface-variant truncate italic">&ldquo;<?= esc($req['special_instructions']) ?>&rdquo;</p>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <?php if (!empty($req['attachments'])): ?>
+                                        <div class="flex items-center -space-x-2 overflow-hidden py-0.5">
+                                            <?php foreach (array_slice($req['attachments'], 0, 3) as $attThumb):
+                                                $tUrl = $attThumb['image_url'] ?? '';
+                                                if ($tUrl !== '' && !str_starts_with($tUrl, 'http')) {
+                                                    $tUrl = base_url(ltrim($tUrl, '/'));
+                                                }
+                                            ?>
+                                                <img class="inline-block h-7 w-7 rounded-lg ring-2 ring-surface object-cover shadow-2xs" src="<?= esc($tUrl) ?>" alt="Reference preview" loading="lazy">
+                                            <?php endforeach; ?>
+                                            <?php if (count($req['attachments']) > 3): ?>
+                                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-container-high ring-2 ring-surface text-[10px] font-bold text-on-surface-variant">+<?= count($req['attachments']) - 3 ?></span>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                    <button type="button"
+                                            class="view-ref-photos-btn px-2.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-2xs"
+                                            data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>"
+                                            data-name="<?= esc($req['file_name'] ?? 'Document.pdf') ?>"
+                                            data-instructions="<?= esc($req['special_instructions'] ?? '') ?>"
+                                            data-attachments="<?= esc(json_encode($req['attachments'] ?? []), 'attr') ?>"
+                                            data-changetype="<?= esc(($req['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>">
+                                        <span class="material-symbols-outlined text-[15px]">visibility</span>
+                                        <span>View Photos</span>
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endif; ?>
 
                         <!-- Fulfillment Progress Stepper -->
                         <?php if ($reqStatus !== 'cancelled'): ?>
@@ -250,6 +303,20 @@
                                             data-completed="<?= esc($reqDone) ?>">
                                         <span class="material-symbols-outlined text-[16px] text-primary">monitoring</span>
                                         <span>Status</span>
+                                    </button>
+                                <?php endif; ?>
+
+                                <!-- Reference Photos Action Button -->
+                                <?php if (!empty($req['attachments']) || !empty($req['special_instructions'])): ?>
+                                    <button type="button" 
+                                            class="view-ref-photos-btn flex items-center gap-1 px-3 py-2 border border-purple-300 bg-purple-50 hover:bg-purple-100 text-purple-900 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                                            data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>"
+                                            data-name="<?= esc($req['file_name'] ?? 'Document.pdf') ?>"
+                                            data-instructions="<?= esc($req['special_instructions'] ?? '') ?>"
+                                            data-attachments="<?= esc(json_encode($req['attachments'] ?? []), 'attr') ?>"
+                                            data-changetype="<?= esc(($req['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is') ?>">
+                                        <span class="material-symbols-outlined text-[16px] text-purple-700">photo_library</span>
+                                        <span>Photos <?= !empty($req['attachments']) ? ('(' . count($req['attachments']) . ')') : '' ?></span>
                                     </button>
                                 <?php endif; ?>
 
@@ -482,6 +549,75 @@
                 </button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Customer Reference Photos & Instructions Modal -->
+<div id="ref-photos-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="ref-photos-overlay"></div>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-sm">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">photo_library</span>
+                </div>
+                <div>
+                    <h3 class="text-title-md font-bold text-on-surface">Reference Photos & Changes</h3>
+                    <span id="ref-modal-number" class="text-xs font-mono text-primary font-bold"></span>
+                </div>
+            </div>
+            <button type="button" id="ref-modal-close" class="p-1.5 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div class="space-y-md">
+            <!-- Special Instructions Box -->
+            <div id="ref-modal-instructions-box" class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-1.5">
+                <span class="text-[11px] font-bold text-amber-950 dark:text-amber-300 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-amber-800 dark:text-amber-400">edit_note</span>
+                    <span>Your Change Instructions:</span>
+                </span>
+                <p id="ref-modal-instructions" class="text-xs text-on-surface bg-surface-container-lowest p-2.5 rounded-xl border border-amber-200/80 whitespace-pre-wrap font-medium leading-relaxed shadow-2xs"></p>
+            </div>
+
+            <!-- Photos Grid -->
+            <div id="ref-modal-photos-box" class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[17px] text-purple-600">image</span>
+                        <span>Attached Photos (<span id="ref-modal-count">0</span>)</span>
+                    </span>
+                    <span class="text-[10px] text-outline">Click photo to zoom</span>
+                </div>
+                <div id="ref-modal-photos-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+            </div>
+        </div>
+
+        <div class="pt-sm border-t border-outline-variant/20 flex justify-end">
+            <button type="button" id="ref-modal-done" class="px-xl py-2 bg-primary text-on-primary rounded-xl font-button text-xs font-semibold hover:bg-primary/90 transition-all cursor-pointer">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Lightbox Zoom Modal -->
+<div id="ref-lightbox-modal" class="hidden fixed inset-0 bg-black/85 backdrop-blur-sm z-[80] flex items-center justify-center p-md">
+    <div class="relative max-w-3xl w-full bg-surface-container-lowest rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="px-md py-sm bg-surface-container-low border-b border-outline-variant/30 flex justify-between items-center">
+            <span id="ref-lightbox-title" class="text-xs font-bold text-on-surface truncate max-w-md">Reference Photo Preview</span>
+            <div class="flex items-center gap-2">
+                <a id="ref-lightbox-dl" href="#" target="_blank" download class="py-1 px-2.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors flex items-center gap-1 text-xs font-bold" title="Download Image">
+                    <span class="material-symbols-outlined text-[16px]">download</span>
+                    <span>Download</span>
+                </a>
+                <button type="button" id="ref-lightbox-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            </div>
+        </div>
+        <div class="p-3 flex-1 flex items-center justify-center overflow-auto bg-black/40 min-h-[300px]">
+            <img id="ref-lightbox-img" src="" alt="Reference Photo Zoom" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-lg">
+        </div>
     </div>
 </div>
 
@@ -869,6 +1005,142 @@
             });
         });
     }
+
+    // 6. Reference Photos & Instructions Modal Logic
+    var refModal     = document.getElementById('ref-photos-modal');
+    var refOverlay   = document.getElementById('ref-photos-overlay');
+    var refClose     = document.getElementById('ref-modal-close');
+    var refDone      = document.getElementById('ref-modal-done');
+    var refNumber    = document.getElementById('ref-modal-number');
+    var refInstBox   = document.getElementById('ref-modal-instructions-box');
+    var refInst      = document.getElementById('ref-modal-instructions');
+    var refPhotosBox = document.getElementById('ref-modal-photos-box');
+    var refCount     = document.getElementById('ref-modal-count');
+    var refGrid      = document.getElementById('ref-modal-photos-grid');
+
+    var refLightbox      = document.getElementById('ref-lightbox-modal');
+    var refLightboxImg   = document.getElementById('ref-lightbox-img');
+    var refLightboxTitle = document.getElementById('ref-lightbox-title');
+    var refLightboxDl    = document.getElementById('ref-lightbox-dl');
+    var refLightboxClose = document.getElementById('ref-lightbox-close');
+
+    function openRefLightbox(url, title) {
+        if (!refLightbox) return;
+        refLightboxImg.src = url;
+        refLightboxTitle.textContent = title || 'Reference Photo Preview';
+        refLightboxDl.href = url;
+        refLightbox.classList.remove('hidden');
+    }
+
+    function closeRefLightbox() {
+        if (!refLightbox) return;
+        refLightbox.classList.add('hidden');
+        refLightboxImg.src = '';
+    }
+
+    if (refLightboxClose) refLightboxClose.addEventListener('click', closeRefLightbox);
+    if (refLightbox) {
+        refLightbox.addEventListener('click', function(e) {
+            if (e.target === refLightbox) closeRefLightbox();
+        });
+    }
+
+    function openRefPhotos(btn) {
+        if (!refModal) return;
+        var reqNum = btn.dataset.number || '';
+        var inst = (btn.dataset.instructions || '').trim();
+        var attachments = [];
+
+        try {
+            attachments = JSON.parse(btn.dataset.attachments || '[]');
+        } catch (e) {
+            attachments = [];
+        }
+
+        refNumber.textContent = '#' + reqNum;
+
+        // Instructions
+        if (inst !== '') {
+            refInstBox.classList.remove('hidden');
+            refInst.textContent = inst;
+        } else {
+            refInstBox.classList.add('hidden');
+        }
+
+        // Photos Grid
+        refGrid.innerHTML = '';
+        if (attachments && attachments.length > 0) {
+            refPhotosBox.classList.remove('hidden');
+            refCount.textContent = attachments.length;
+            attachments.forEach(function (att, idx) {
+                var imgPath = att.image_url || att.file_path || '';
+                if (!imgPath) return;
+                var fullUrl = imgPath.startsWith('http') ? imgPath : ('<?= base_url() ?>/' + imgPath.replace(/^\/+/, ''));
+                var safeName = att.file_name || imgPath.split('/').pop() || ('Reference Photo ' + (idx + 1));
+
+                var card = document.createElement('div');
+                card.className = 'group relative rounded-xl overflow-hidden border border-outline-variant/30 bg-surface-container-low shadow-2xs hover:shadow-md transition-all flex flex-col';
+                card.innerHTML = `
+                    <div class="aspect-square w-full overflow-hidden bg-surface-container relative cursor-pointer flex items-center justify-center">
+                        <img src="${fullUrl}" alt="${safeName}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 pointer-events-none">
+                            <span class="p-1.5 rounded-full bg-white/90 text-primary shadow">
+                                <span class="material-symbols-outlined text-[16px] block">zoom_in</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-1.5 flex items-center justify-between gap-1 text-[11px] bg-surface-container-lowest border-t border-outline-variant/20">
+                        <span class="truncate font-semibold text-on-surface flex-1" title="${safeName}">${safeName}</span>
+                        <a href="${fullUrl}" download="${safeName}" target="_blank" class="p-1 hover:text-primary transition-colors shrink-0" title="Download">
+                            <span class="material-symbols-outlined text-[14px]">download</span>
+                        </a>
+                    </div>
+                `;
+
+                var imgArea = card.querySelector('.aspect-square');
+                if (imgArea) {
+                    imgArea.onclick = function() {
+                        openRefLightbox(fullUrl, safeName);
+                    };
+                }
+
+                refGrid.appendChild(card);
+            });
+        } else {
+            refPhotosBox.classList.add('hidden');
+            refCount.textContent = '0';
+        }
+
+        refModal.classList.remove('hidden');
+    }
+
+    function closeRefPhotos() {
+        if (refModal) refModal.classList.add('hidden');
+    }
+
+    document.querySelectorAll('.view-ref-photos-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            openRefPhotos(btn);
+        });
+    });
+
+    if (refOverlay) refOverlay.addEventListener('click', closeRefPhotos);
+    if (refClose) refClose.addEventListener('click', closeRefPhotos);
+    if (refDone) refDone.addEventListener('click', closeRefPhotos);
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (refLightbox && !refLightbox.classList.contains('hidden')) {
+                closeRefLightbox();
+                return;
+            }
+            if (refModal && !refModal.classList.contains('hidden')) {
+                closeRefPhotos();
+                return;
+            }
+        }
+    });
 
 })();
 </script>

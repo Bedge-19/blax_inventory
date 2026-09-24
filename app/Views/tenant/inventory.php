@@ -27,187 +27,288 @@ function inv_stock_pill(int $stock, int $threshold): array {
         </div>
     <?php endif; ?>
 
-    <!-- Header & Action Row -->
-    <div class="flex flex-wrap justify-between items-center gap-md">
-        <div>
-            <h2 class="text-headline-lg font-headline-lg text-on-surface">Inventory Management</h2>
-            <p class="text-body-md font-body-md text-on-surface-variant">Track and manage your product stock levels across all categories.</p>
+    <!-- Header & Action Row (Shopify Polaris Style) -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 shadow-xs">
+        <div class="space-y-1">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-widest">Active Stock Catalog</span>
+            </div>
+            <h1 class="text-2xl font-black text-on-surface tracking-tight">Inventory Management</h1>
+            <p class="text-xs text-on-surface-variant max-w-xl">
+                Oversee stock availability, variants, SKU health, and product pricing across your entire storefront catalog.
+            </p>
         </div>
-        <button onclick="openProductModal(null)" class="bg-primary text-on-primary px-lg py-sm rounded-lg flex items-center gap-sm font-button text-button hover:bg-primary/90 transition-colors shadow-sm active:scale-95">
-            <span class="material-symbols-outlined">add</span>
-            New Product
-        </button>
+        <div class="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
+            <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="px-3.5 py-2 rounded-xl border border-outline-variant/40 bg-surface-container hover:bg-surface-container-high text-xs font-semibold text-on-surface transition-all flex items-center gap-1.5 shadow-2xs">
+                <span class="material-symbols-outlined text-[17px] text-amber-500">warning</span>
+                <span>Restock Alerts</span>
+            </a>
+            <button onclick="openProductModal(null)" class="flex-1 sm:flex-initial bg-primary hover:bg-primary/90 text-on-primary px-4 py-2 rounded-xl flex items-center justify-center gap-2 font-bold text-xs shadow-md shadow-primary/20 active:scale-95 transition-all">
+                <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                <span>New Product</span>
+            </button>
+        </div>
     </div>
 
-    <!-- Inventory Overview Cards (Bento Style) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
-        <div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+    <!-- Inventory Overview Cards (Linear & Stripe Bento Grid with Clickable Quick Filters) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1: Total SKUs -->
+        <a href="<?= base_url('tenant/inventory') ?>" class="group bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 hover:border-primary/50 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
             <div class="flex justify-between items-start">
-                <span class="text-label-sm font-label-sm text-on-surface-variant">Total SKU Count</span>
-                <span class="material-symbols-outlined text-primary bg-primary-fixed p-xs rounded">inventory</span>
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Total SKUs</span>
+                <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">inventory_2</span>
+                </div>
             </div>
-            <div class="text-headline-md font-headline-md"><?= number_format((int) $summary['total_sku']) ?></div>
-        </div>
-        <div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+            <div class="mt-4">
+                <div class="text-2xl font-black text-on-surface tracking-tight"><?= number_format((int) $summary['total_sku']) ?></div>
+                <div class="flex items-center gap-1 text-[11px] font-medium text-on-surface-variant/70 mt-1">
+                    <span>Active in catalog</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Card 2: Low Stock Warning -->
+        <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="group bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 hover:border-amber-500/50 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
             <div class="flex justify-between items-start">
-                <span class="text-label-sm font-label-sm text-on-surface-variant">Low Stock Items</span>
-                <span class="material-symbols-outlined text-secondary bg-secondary-container p-xs rounded">warning</span>
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Low Stock</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">warning</span>
+                </div>
             </div>
-            <div class="text-headline-md font-headline-md text-secondary"><?= number_format((int) $summary['low_stock']) ?></div>
-        </div>
-        <div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+            <div class="mt-4">
+                <div class="text-2xl font-black text-amber-600 tracking-tight"><?= number_format((int) $summary['low_stock']) ?></div>
+                <div class="flex items-center gap-1 text-[11px] font-semibold text-amber-600/90 mt-1">
+                    <span>Below threshold</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Card 3: Out of Stock -->
+        <a href="<?= base_url('tenant/inventory?stock=out') ?>" class="group bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 hover:border-rose-500/50 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
             <div class="flex justify-between items-start">
-                <span class="text-label-sm font-label-sm text-on-surface-variant">Out of Stock</span>
-                <span class="material-symbols-outlined text-error bg-error-container p-xs rounded">block</span>
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Out of Stock</span>
+                <div class="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-[20px]">block</span>
+                </div>
             </div>
-            <div class="text-headline-md font-headline-md text-error"><?= number_format((int) $summary['out_of_stock']) ?></div>
-        </div>
-        <div class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32">
+            <div class="mt-4">
+                <div class="text-2xl font-black text-rose-600 tracking-tight"><?= number_format((int) $summary['out_of_stock']) ?></div>
+                <div class="flex items-center gap-1 text-[11px] font-semibold text-rose-600/90 mt-1">
+                    <span>Requires immediate restock</span>
+                    <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </div>
+            </div>
+        </a>
+
+        <!-- Card 4: Inventory Valuation -->
+        <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-xs flex flex-col justify-between">
             <div class="flex justify-between items-start">
-                <span class="text-label-sm font-label-sm text-on-surface-variant">Total Inventory Value</span>
-                <span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-xs rounded">payments</span>
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Inventory Value</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
+                </div>
             </div>
-            <div class="text-headline-md font-headline-md">₱<?= number_format((float) $summary['inventory_value'], 2) ?></div>
+            <div class="mt-4">
+                <div class="text-2xl font-black text-on-surface tracking-tight">₱<?= number_format((float) $summary['inventory_value'], 2) ?></div>
+                <div class="text-[11px] font-medium text-emerald-600/90 mt-1">
+                    Gross estimated value
+                </div>
+            </div>
         </div>
     </div>
 
     <?php if ((int)($summary['low_stock'] ?? 0) > 0 || (int)($summary['out_of_stock'] ?? 0) > 0): ?>
-        <!-- Low Stock / Out of Stock Alert Banner -->
-        <div class="rounded-2xl p-md lg:p-lg bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-md shadow-sm">
-            <div class="flex items-center gap-md">
-                <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
-                    <span class="material-symbols-outlined text-2xl">notification_important</span>
-                </span>
+        <!-- Low Stock / Out of Stock Alert Banner (Shopify Polaris Callout) -->
+        <div class="rounded-2xl p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-surface-container-lowest border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[22px]">notification_important</span>
+                </div>
                 <div>
-                    <h4 class="font-bold text-on-surface text-body-md">Low Stock &amp; Out of Stock Warning</h4>
-                    <p class="text-xs text-on-surface-variant">
-                        <span class="font-semibold text-amber-800"><?= (int)($summary['low_stock'] ?? 0) ?> items</span> are at or below threshold and 
-                        <span class="font-semibold text-red-700"><?= (int)($summary['out_of_stock'] ?? 0) ?> items</span> are completely out of stock.
+                    <h4 class="font-bold text-on-surface text-sm">Inventory Attention Required</h4>
+                    <p class="text-xs text-on-surface-variant mt-0.5">
+                        <span class="font-bold text-amber-700"><?= (int)($summary['low_stock'] ?? 0) ?> items</span> are reaching depletion and 
+                        <span class="font-bold text-rose-600"><?= (int)($summary['out_of_stock'] ?? 0) ?> items</span> are completely out of stock.
                     </p>
                 </div>
             </div>
-            <div class="flex items-center gap-sm flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
                 <?php if ((int)($summary['low_stock'] ?? 0) > 0): ?>
-                    <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="px-md py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm">
-                        Filter Low Stock
+                    <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="px-3 py-1.5 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-xs">
+                        View Low Stock
                     </a>
                 <?php endif; ?>
                 <?php if ((int)($summary['out_of_stock'] ?? 0) > 0): ?>
-                    <a href="<?= base_url('tenant/inventory?stock=out') ?>" class="px-md py-1.5 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-colors shadow-sm">
-                        Filter Out of Stock
+                    <a href="<?= base_url('tenant/inventory?stock=out') ?>" class="px-3 py-1.5 bg-rose-600 text-white rounded-xl text-xs font-bold hover:bg-rose-700 transition-colors shadow-xs">
+                        View Out of Stock
                     </a>
                 <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
 
-    <!-- Search and Filter Bar -->
-    <form method="get" action="<?= base_url('tenant/inventory') ?>" class="glass-card p-md rounded-xl flex flex-wrap items-center gap-md">
-        <div class="relative flex-1 min-w-0 sm:min-w-[240px]">
-            <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline">search</span>
-            <input name="q" value="<?= esc($filters['q']) ?>" class="w-full pl-xl pr-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Search products or SKUs..." type="text">
+    <!-- Shopify Polaris Segmented Control & Search Bar -->
+    <div class="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/30 shadow-xs space-y-3">
+        <!-- Segmented Stock Tabs -->
+        <div class="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-xl border border-outline-variant/20 overflow-x-auto">
+            <a href="<?= base_url('tenant/inventory') ?>" class="px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= empty($filters['stock']) ? 'bg-surface-container-lowest text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>">
+                All Products (<?= (int)$summary['total_sku'] ?>)
+            </a>
+            <a href="<?= base_url('tenant/inventory?stock=in') ?>" class="px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['stock'] ?? '') === 'in' ? 'bg-surface-container-lowest text-emerald-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>">
+                In Stock
+            </a>
+            <a href="<?= base_url('tenant/inventory?stock=low') ?>" class="px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['stock'] ?? '') === 'low' ? 'bg-surface-container-lowest text-amber-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>">
+                Low Stock (<?= (int)$summary['low_stock'] ?>)
+            </a>
+            <a href="<?= base_url('tenant/inventory?stock=out') ?>" class="px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['stock'] ?? '') === 'out' ? 'bg-surface-container-lowest text-rose-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>">
+                Out of Stock (<?= (int)$summary['out_of_stock'] ?>)
+            </a>
         </div>
-        <div class="flex flex-wrap items-center gap-sm">
-            <select name="category" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">All Categories</option>
-                <?php foreach ($categories as $c): ?>
-                    <option value="<?= (int) $c['id'] ?>" <?= (int) $filters['category'] === (int) $c['id'] ? 'selected' : '' ?>><?= esc($c['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <select name="stock" class="bg-surface-container-low border border-outline-variant rounded-lg px-md py-sm text-label-sm font-label-sm text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary">
-                <option value="">Status: All</option>
-                <option value="in" <?= $filters['stock'] === 'in' ? 'selected' : '' ?>>In Stock</option>
-                <option value="low" <?= $filters['stock'] === 'low' ? 'selected' : '' ?>>Low Stock</option>
-                <option value="out" <?= $filters['stock'] === 'out' ? 'selected' : '' ?>>Out of Stock</option>
-            </select>
-            <button type="button" onclick="document.getElementById('advancedFilters').classList.toggle('hidden')" class="bg-surface-container-high text-on-surface px-md py-sm rounded-lg flex items-center gap-xs font-label-sm hover:bg-surface-variant transition-colors">
-                <span class="material-symbols-outlined text-[18px]">filter_list</span>
-                Advanced Filters
-            </button>
-        </div>
-        <div id="advancedFilters" class="hidden w-full flex flex-wrap items-end gap-md border-t border-outline-variant/20 pt-md mt-xs">
-            <div class="flex-1 min-w-0 sm:min-w-[200px]">
-                <label class="text-label-sm font-label-sm text-on-surface-variant block mb-xs">SKU</label>
-                <input name="sku" value="<?= esc($filters['sku']) ?>" class="w-full px-md py-sm bg-surface-container-low border border-outline-variant rounded-lg text-body-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Filter by SKU...">
-            </div>
-            <label class="flex items-center gap-sm text-label-sm font-label-sm text-on-surface-variant pb-sm">
-                <input type="checkbox" name="bestseller" value="1" <?= $filters['bestseller'] ? 'checked' : '' ?> class="rounded border-outline-variant text-primary">
-                Bestsellers only
-            </label>
-            <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-label-sm font-semibold hover:bg-primary/90 transition-colors">Apply</button>
-            <a href="<?= base_url('tenant/inventory') ?>" class="px-md py-sm text-on-surface-variant hover:text-on-surface text-label-sm font-semibold">Reset</a>
-        </div>
-    </form>
 
-    <!-- Product Table Container -->
-    <div class="glass-card rounded-xl overflow-hidden shadow-sm">
+        <!-- Search & Filter Controls -->
+        <form method="get" action="<?= base_url('tenant/inventory') ?>" class="flex flex-wrap items-center gap-3">
+            <input type="hidden" name="stock" value="<?= esc($filters['stock'] ?? '') ?>">
+            
+            <div class="relative flex-1 min-w-[240px]">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+                <input name="q" value="<?= esc($filters['q']) ?>" class="w-full pl-9 pr-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/50" placeholder="Filter by title, description or SKU..." type="text">
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <select name="category" class="bg-surface-container-low border border-outline-variant/40 rounded-xl px-3 py-2 text-xs font-medium text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
+                    <option value="">All Categories</option>
+                    <?php foreach ($categories as $c): ?>
+                        <option value="<?= (int) $c['id'] ?>" <?= (int) $filters['category'] === (int) $c['id'] ? 'selected' : '' ?>><?= esc($c['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <button type="button" onclick="document.getElementById('advancedFilters').classList.toggle('hidden')" class="bg-surface-container hover:bg-surface-container-high border border-outline-variant/40 text-on-surface px-3 py-2 rounded-xl flex items-center gap-1.5 text-xs font-semibold transition-colors">
+                    <span class="material-symbols-outlined text-[17px] text-outline">tune</span>
+                    <span>More Filters</span>
+                </button>
+
+                <button type="submit" class="bg-primary text-on-primary px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-colors shadow-2xs">
+                    Filter
+                </button>
+
+                <?php if (!empty($filters['q']) || !empty($filters['category']) || !empty($filters['sku']) || !empty($filters['bestseller']) || !empty($filters['stock'])): ?>
+                    <a href="<?= base_url('tenant/inventory') ?>" class="px-2.5 py-2 text-on-surface-variant hover:text-on-surface text-xs font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[15px]">clear</span>
+                        <span>Clear</span>
+                    </a>
+                <?php endif; ?>
+            </div>
+
+            <div id="advancedFilters" class="hidden w-full flex flex-wrap items-end gap-3 border-t border-outline-variant/20 pt-3 mt-1">
+                <div class="flex-1 min-w-[180px]">
+                    <label class="text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider block mb-1">SKU Exact Match</label>
+                    <input name="sku" value="<?= esc($filters['sku']) ?>" class="w-full px-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-primary" placeholder="e.g. PRD-001">
+                </div>
+                <label class="flex items-center gap-2 text-xs font-semibold text-on-surface pb-2.5 cursor-pointer">
+                    <input type="checkbox" name="bestseller" value="1" <?= $filters['bestseller'] ? 'checked' : '' ?> class="rounded border-outline-variant text-primary focus:ring-primary">
+                    <span>Show Bestsellers Only</span>
+                </label>
+            </div>
+        </form>
+    </div>
+
+    <!-- Product Table Container (Shopify Polaris IndexTable Aesthetic) -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 overflow-hidden shadow-xs">
         <div class="responsive-table">
             <table class="w-full text-left border-collapse">
-                <thead class="bg-surface-container-low border-b border-outline-variant/30">
+                <thead class="bg-surface-container-low/70 border-b border-outline-variant/30">
                     <tr>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider w-12">
-                            <input type="checkbox" id="selectAll" class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4">
+                        <th class="py-3 px-4 w-10">
+                            <input type="checkbox" id="selectAll" class="rounded border-outline-variant/60 text-primary focus:ring-primary h-4 w-4">
                         </th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Product</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">SKU</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider">Category</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Description</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-center">Stock Level</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Unit Price</th>
-                        <th class="px-lg py-md text-label-sm font-label-sm text-on-surface-variant opacity-70 uppercase tracking-wider text-right">Actions</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider">Product Info</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider">SKU</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider">Category</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider text-center">Details</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider text-center">Stock Health</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider text-right">Price</th>
+                        <th class="py-3 px-4 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-outline-variant/20">
+                <tbody class="divide-y divide-outline-variant/20 text-xs">
                     <?php if (!empty($products)): ?>
                         <?php foreach ($products as $p): ?>
                             <?php
                             $stock = (int) $p['stock_quantity'];
                             $thr   = (int) ($p['low_stock_threshold'] ?? 5);
                             [$pill, $icon] = inv_stock_pill($stock, $thr);
+                            $hasVariants = !empty($productVariants[$p['id']]);
                             ?>
-                            <tr class="hover:bg-surface-container-low/50 transition-colors" id="row-<?= (int) $p['id'] ?>">
-                                <td class="px-lg py-md">
-                                    <input type="checkbox" name="selected_products[]" value="<?= esc($p['id']) ?>" class="product-checkbox rounded border-outline-variant text-primary focus:ring-primary h-4 w-4">
+                            <tr class="hover:bg-surface-container-low/40 transition-colors group" id="row-<?= (int) $p['id'] ?>">
+                                <td class="py-3 px-4">
+                                    <input type="checkbox" name="selected_products[]" value="<?= esc($p['id']) ?>" class="product-checkbox rounded border-outline-variant/60 text-primary focus:ring-primary h-4 w-4">
                                 </td>
-                                <td class="px-lg py-md">
-                                    <div class="flex items-center gap-md">
-                                        <?php if (!empty($p['image_url'])): ?>
-                                            <?php $imgSrc = product_image_url($p['image_url'], 'thumbnail'); ?>
-                                            <img src="<?= esc($imgSrc) ?>" alt="<?= esc($p['name']) ?>" class="w-12 h-12 rounded-lg object-cover bg-surface-variant">
-                                        <?php else: ?>
-                                            <div class="w-12 h-12 rounded-lg bg-surface-variant flex items-center justify-center text-on-surface-variant">
-                                                <span class="material-symbols-outlined">inventory_2</span>
-                                            </div>
-                                        <?php endif; ?>
-                                        <span class="text-body-md font-semibold text-on-surface"><?= esc($p['name']) ?></span>
+                                <td class="py-3 px-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-12 h-12 rounded-xl bg-surface-container border border-outline-variant/30 overflow-hidden flex items-center justify-center shrink-0">
+                                            <?php if (!empty($p['image_url'])): ?>
+                                                <?php $imgSrc = product_image_url($p['image_url'], 'thumbnail'); ?>
+                                                <img src="<?= esc($imgSrc) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-cover">
+                                            <?php else: ?>
+                                                <span class="material-symbols-outlined text-[20px] text-outline">inventory_2</span>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <span class="font-bold text-on-surface group-hover:text-primary transition-colors block truncate max-w-xs md:max-w-sm"><?= esc($p['name']) ?></span>
+                                            <?php if ($hasVariants): ?>
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-primary/80 mt-0.5">
+                                                    <span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                                    <?= count($productVariants[$p['id']]) ?> Variants
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['sku']) ?></td>
-                                <td class="px-lg py-md text-body-md text-on-surface-variant"><?= esc($p['category_name'] ?? 'General') ?></td>
-                                <td class="px-lg py-md text-center">
+                                <td class="py-3 px-4">
+                                    <span class="font-mono text-[11px] font-semibold text-on-surface-variant bg-surface-container-low px-2 py-0.5 rounded-md border border-outline-variant/30">
+                                        <?= esc($p['sku'] ?: '—') ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4">
+                                    <span class="px-2 py-0.5 rounded-md bg-surface-container text-on-surface text-[11px] font-medium border border-outline-variant/20">
+                                        <?= esc($p['category_name'] ?? 'General') ?>
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-center">
                                     <button type="button"
                                             onclick="openDescriptionModal(this)"
-                                            class="inline-flex items-center gap-xs px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-variant text-on-surface text-label-sm font-medium transition-colors border border-outline-variant/30 hover:border-primary/40 group"
+                                            class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container text-on-surface text-[11px] font-semibold transition-colors border border-outline-variant/30 hover:border-primary/40"
                                             title="View Description"
                                             data-name="<?= esc($p['name']) ?>"
                                             data-description="<?= esc($p['description'] ?? '') ?>">
-                                        <span class="material-symbols-outlined text-[16px] text-primary group-hover:scale-110 transition-transform">visibility</span>
+                                        <span class="material-symbols-outlined text-[15px] text-primary">visibility</span>
                                         <span>View</span>
                                     </button>
                                 </td>
-                                <td class="px-lg py-md text-center">
-                                    <span id="stock-pill-<?= (int) $p['id'] ?>" class="px-md py-1 rounded-full <?= $pill ?> text-label-sm font-semibold inline-flex items-center gap-xs">
-                                        <span class="material-symbols-outlined text-[14px]"><?= $icon ?></span>
-                                        <?= number_format($stock) ?>
-                                    </span>
-                                    <span class="block text-[10px] text-on-surface-variant opacity-70 mt-0.5">Min: <?= $thr ?></span>
+                                <td class="py-3 px-4 text-center">
+                                    <div class="inline-flex flex-col items-center">
+                                        <span id="stock-pill-<?= (int) $p['id'] ?>" class="px-2.5 py-0.5 rounded-full <?= $pill ?> text-[11px] font-bold inline-flex items-center gap-1 border border-current/20">
+                                            <span class="material-symbols-outlined text-[13px]"><?= $icon ?></span>
+                                            <?= number_format($stock) ?>
+                                        </span>
+                                        <span class="text-[10px] text-on-surface-variant/60 font-medium mt-0.5">Threshold: <?= $thr ?></span>
+                                    </div>
                                 </td>
-                                <td class="px-lg py-md text-body-md text-on-surface text-right">₱<?= number_format((float) $p['price'], 2) ?></td>
-                                <td class="px-lg py-md text-right">
-                                    <div class="flex items-center justify-end gap-sm">
+                                <td class="py-3 px-4 text-right">
+                                    <div class="font-bold text-on-surface text-sm">₱<?= number_format((float) $p['price'], 2) ?></div>
+                                    <?php if (!empty($p['compare_at_price']) && (float)$p['compare_at_price'] > (float)$p['price']): ?>
+                                        <div class="text-[10px] text-on-surface-variant/60 line-through">₱<?= number_format((float) $p['compare_at_price'], 2) ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 px-4 text-right">
+                                    <div class="flex items-center justify-end gap-1.5">
                                         <button type="button"
                                                 onclick="openProductModal(this)"
-                                                class="p-xs hover:bg-surface-container-high rounded text-on-surface-variant"
+                                                class="w-7 h-7 rounded-lg hover:bg-surface-container text-on-surface-variant hover:text-on-surface flex items-center justify-center border border-transparent hover:border-outline-variant/30 transition-colors"
                                                 title="Edit Product"
                                                 data-id="<?= (int) $p['id'] ?>"
                                                 data-name="<?= esc($p['name']) ?>"
@@ -222,18 +323,18 @@ function inv_stock_pill(int $stock, int $threshold): array {
                                                 data-image="<?= esc(!empty($p['image_url']) ? (str_starts_with($p['image_url'], 'http') ? $p['image_url'] : base_url($p['image_url'])) : '') ?>"
                                                 data-images="<?= esc(json_encode($productImages[$p['id']] ?? []), 'attr') ?>"
                                                 data-variants="<?= esc(json_encode($productVariants[$p['id']] ?? []), 'attr') ?>">
-                                            <span class="material-symbols-outlined">edit</span>
+                                            <span class="material-symbols-outlined text-[17px]">edit</span>
                                         </button>
                                         <button type="button"
                                                 onclick="openStockModal(<?= (int) $p['id'] ?>, <?= (int) $p['stock_quantity'] ?>, '<?= esc($p['name'], 'js') ?>')"
-                                                class="p-xs hover:bg-surface-container-high rounded text-primary"
+                                                class="w-7 h-7 rounded-lg hover:bg-primary/10 text-primary flex items-center justify-center border border-transparent hover:border-primary/20 transition-colors"
                                                 title="Adjust / Restock">
-                                            <span class="material-symbols-outlined">autorenew</span>
+                                            <span class="material-symbols-outlined text-[17px]">autorenew</span>
                                         </button>
                                         <form action="<?= base_url('tenant/products/archive/' . (int) $p['id']) ?>" method="POST" onsubmit="return confirm('Archive this product? It will be hidden from your storefront and can be restored from the Archive page.')">
                                             <?= csrf_field() ?>
-                                            <button type="submit" class="p-xs hover:bg-error-container/20 rounded text-error" title="Archive">
-                                                <span class="material-symbols-outlined">archive</span>
+                                            <button type="submit" class="w-7 h-7 rounded-lg hover:bg-rose-500/10 text-rose-600 flex items-center justify-center border border-transparent hover:border-rose-500/20 transition-colors" title="Archive">
+                                                <span class="material-symbols-outlined text-[17px]">archive</span>
                                             </button>
                                         </form>
                                     </div>
@@ -242,7 +343,13 @@ function inv_stock_pill(int $stock, int $threshold): array {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="8" class="py-lg text-center text-on-surface-variant">No products match your filters.</td>
+                            <td colspan="8" class="py-12 text-center">
+                                <div class="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-2 text-outline">
+                                    <span class="material-symbols-outlined text-2xl">search_off</span>
+                                </div>
+                                <p class="text-sm font-bold text-on-surface">No products found</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">Try modifying your search or clearing active filters.</p>
+                            </td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -258,12 +365,12 @@ function inv_stock_pill(int $stock, int $threshold): array {
         $start = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
         $end   = min($cur * $perPage, $total);
         ?>
-        <div class="px-lg py-md bg-surface-container-low flex justify-between items-center border-t border-outline-variant/30 flex-wrap gap-sm">
-            <p class="text-label-sm font-label-sm text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> items</p>
+        <div class="px-6 py-3 bg-surface-container-low/70 flex justify-between items-center border-t border-outline-variant/30 flex-wrap gap-2 text-xs">
+            <p class="font-medium text-on-surface-variant">Showing <span class="font-bold text-on-surface"><?= number_format($start) ?></span> to <span class="font-bold text-on-surface"><?= number_format($end) ?></span> of <span class="font-bold text-on-surface"><?= number_format($total) ?></span> items</p>
             <?php if ($pages > 1): ?>
-                <div class="flex items-center gap-xs">
-                    <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('inventory') ?>">
-                        <span class="material-symbols-outlined">chevron_left</span>
+                <div class="flex items-center gap-1">
+                    <a class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container border border-outline-variant/30 <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('inventory') ?>">
+                        <span class="material-symbols-outlined text-[16px]">chevron_left</span>
                     </a>
                     <?php
                     $window = [];
@@ -275,9 +382,9 @@ function inv_stock_pill(int $stock, int $threshold): array {
                     $prev = 0;
                     foreach ($window as $num):
                         if ($num - $prev > 1): ?>
-                            <span class="px-xs text-outline">...</span>
+                            <span class="px-1 text-outline">...</span>
                         <?php endif; ?>
-                        <a class="w-8 h-8 rounded flex items-center justify-center text-label-sm <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high' ?>" href="<?= $pager->getPageURI($num, 'inventory') ?>"><?= $num ?></a>
+                        <a class="w-8 h-8 rounded-lg flex items-center justify-center font-bold <?= $cur === $num ? 'bg-primary text-on-primary shadow-xs' : 'hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant' ?>" href="<?= $pager->getPageURI($num, 'inventory') ?>"><?= $num ?></a>
                     <?php $prev = $num; endforeach; ?>
                     <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('inventory') ?>">
                         <span class="material-symbols-outlined">chevron_right</span>

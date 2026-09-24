@@ -53,7 +53,10 @@ class CloudinaryService
      */
     public function isConfigured(): bool
     {
-        return !empty($this->config->cloudName) && !empty($this->config->apiKey) && !empty($this->config->apiSecret);
+        return !empty($this->config->cloudName)
+            && strtolower(trim($this->config->cloudName)) !== 'blax'
+            && !empty($this->config->apiKey)
+            && !empty($this->config->apiSecret);
     }
 
     /**
@@ -63,7 +66,7 @@ class CloudinaryService
     {
         $cldConfig = new Configuration([
             'cloud' => [
-                'cloud_name' => $this->config->cloudName ?: 'blax',
+                'cloud_name' => $this->config->cloudName ?: '',
                 'api_key'    => $this->config->apiKey,
                 'api_secret' => $this->config->apiSecret,
             ],

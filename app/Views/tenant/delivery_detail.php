@@ -72,10 +72,10 @@
                     </div>
                 </div>
 
-                <!-- Honest Live GPS Broadcasting Indicator Bar -->
-                <div id="liveTrackingBar" class="p-2.5 px-4 bg-surface-container-low/70 border-b border-outline-variant/20 flex items-center justify-between gap-sm text-xs flex-wrap">
+                <!-- Live GPS Broadcasting & Telemetry Bar -->
+                <div id="liveTrackingBar" class="p-2.5 px-4 bg-surface-container-low/80 border-b border-outline-variant/20 flex items-center justify-between gap-sm text-xs flex-wrap">
                     <div class="flex items-center gap-2">
-                        <span id="gpsIndicatorDot" class="w-2 h-2 rounded-full <?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'bg-emerald-500 animate-ping' : 'bg-gray-400' ?>"></span>
+                        <span id="gpsIndicatorDot" class="w-2.5 h-2.5 rounded-full <?= in_array($delivery['status'], ['shipped', 'in_transit']) ? 'bg-emerald-500 animate-ping' : 'bg-gray-400' ?>"></span>
                         <span class="font-bold text-on-surface">GPS Status:</span>
                         <span id="gpsStatusText" class="text-on-surface-variant font-medium">
                             <?php if (in_array($delivery['status'], ['shipped', 'in_transit'])): ?>
@@ -89,27 +89,149 @@
                             <?php endif; ?>
                         </span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <span id="gpsLastUpdated" class="font-mono text-outline text-[11px]"></span>
+                        <!-- Auto-Follow Camera Button -->
+                        <button type="button" 
+                                id="btn-tenant-autofollow"
+                                onclick="toggleTenantAutoFollow()"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-primary hover:text-white text-xs font-bold transition-all">
+                            <span id="tenantAutoFollowDot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="tenantAutoFollowText">Auto-Follow: ON</span>
+                        </button>
+                        <!-- Center Map on Rider Button -->
+                        <button type="button" 
+                                onclick="centerOnTenantRider()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary text-white text-xs font-bold shadow-xs hover:bg-primary/90 transition-all">
+                            <span class="material-symbols-outlined text-[14px]">my_location</span>
+                            <span>Center</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- GPS Telemetry HUD Bar (Speed, Heading, Accuracy, Remaining Distance, ETA) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 bg-surface-container-high/40 border-b border-outline-variant/20 text-xs">
+                    <!-- Live Speedometer -->
+                    <div class="flex items-center gap-2 p-2 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-2xs">
+                        <div class="p-1.5 bg-blue-500/10 text-blue-600 rounded-lg shrink-0">
+                            <span class="material-symbols-outlined text-[18px]">speed</span>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[10px] uppercase font-bold text-outline block">Speed</span>
+                            <span id="hudSpeed" class="font-bold text-on-surface font-mono text-xs truncate">0 km/h</span>
+                        </div>
+                    </div>
+
+                    <!-- Compass Heading -->
+                    <div class="flex items-center gap-2 p-2 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-2xs">
+                        <div class="p-1.5 bg-purple-500/10 text-purple-600 rounded-lg shrink-0">
+                            <span id="hudCompassIcon" class="material-symbols-outlined text-[18px] inline-block transition-transform duration-300">explore</span>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[10px] uppercase font-bold text-outline block">Heading</span>
+                            <span id="hudHeading" class="font-bold text-on-surface font-mono text-xs truncate">0° N</span>
+                        </div>
+                    </div>
+
+                    <!-- GPS Accuracy -->
+                    <div class="flex items-center gap-2 p-2 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-2xs">
+                        <div class="p-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg shrink-0">
+                            <span class="material-symbols-outlined text-[18px]">satellite_alt</span>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[10px] uppercase font-bold text-outline block">Accuracy</span>
+                            <span id="hudAccuracy" class="font-bold text-emerald-700 dark:text-emerald-400 font-mono text-xs truncate">±5m (High)</span>
+                        </div>
+                    </div>
+
+                    <!-- Remaining Route & ETA -->
+                    <div class="flex items-center gap-2 p-2 bg-surface-container-lowest/80 rounded-xl border border-outline-variant/20 shadow-2xs">
+                        <div class="p-1.5 bg-amber-500/10 text-amber-600 rounded-lg shrink-0">
+                            <span class="material-symbols-outlined text-[18px]">timer</span>
+                        </div>
+                        <div class="min-w-0">
+                            <span class="text-[10px] uppercase font-bold text-outline block">Route & ETA</span>
+                            <span id="hudEta" class="font-bold text-amber-800 dark:text-amber-300 font-mono text-xs truncate">Calculating...</span>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Google Maps Canvas -->
-                <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0" style="min-height:480px;"></div>
+                <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0 relative" style="min-height:480px;"></div>
 
-                <!-- Map Legend Banner -->
-                <div class="p-sm bg-surface-container-low/60 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant flex-wrap gap-sm">
-                    <div class="flex items-center gap-md">
+                <!-- Map Legend & Driver GPS Action Tools Banner -->
+                <div class="p-3 bg-surface-container-low/70 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant flex-wrap gap-2">
+                    <div class="flex items-center gap-3">
                         <span class="flex items-center gap-1">
-                            <span class="w-3 h-3 rounded-full bg-primary inline-block"></span>
-                            <strong class="text-on-surface">Shop Origin</strong> (<?= esc($shop['shop_name'] ?? 'Your Store') ?>)
+                            <span class="w-3 h-3 rounded-full bg-orange-600 inline-block"></span>
+                            <strong class="text-on-surface">Live Courier (You)</strong>
                         </span>
                         <span class="flex items-center gap-1">
                             <span class="w-3 h-3 rounded-full bg-emerald-600 inline-block"></span>
-                            <strong class="text-on-surface">Destination</strong> (Customer)
+                            <strong class="text-on-surface">Destination (Customer)</strong>
                         </span>
                     </div>
-                    <span class="text-[11px] text-outline">Google Maps &bull; Realtime Bounds</span>
+
+                    <!-- GPS Tools Button Group -->
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <!-- Route Simulator (Test Drive) Tool Button -->
+                        <button type="button" 
+                                id="btnToggleSimModal"
+                                onclick="toggleGpsSimulator()" 
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs transition-all active:scale-95">
+                            <span class="material-symbols-outlined text-[15px]">play_circle</span>
+                            <span id="simBtnLabel">GPS Simulator</span>
+                        </button>
+
+                        <!-- Click-to-Pin Manual GPS Tool -->
+                        <button type="button" 
+                                id="btnToggleClickPin"
+                                onclick="toggleClickToPinMode()" 
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all">
+                            <span class="material-symbols-outlined text-[15px] text-primary">pin_drop</span>
+                            <span id="clickPinLabel">Click-to-Pin</span>
+                        </button>
+
+                        <!-- Recalculate Route Button -->
+                        <button type="button" 
+                                onclick="forceRecalculateRoute()" 
+                                title="Recalculate Route with Routes API"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all">
+                            <span class="material-symbols-outlined text-[15px] text-blue-600">route</span>
+                            <span>Re-route</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GPS Route Simulator Floating Deck (when active) -->
+            <div id="simulatorControlsDeck" class="hidden bg-surface-container-lowest rounded-2xl p-md border-2 border-purple-400 shadow-md space-y-sm transition-all">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="p-1.5 bg-purple-100 text-purple-800 rounded-lg material-symbols-outlined text-[18px]">sports_motorsports</span>
+                        <div>
+                            <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider">Live Route Simulation Tool</h4>
+                            <p class="text-[11px] text-on-surface-variant">Simulates rider movement along the road polyline and broadcasts live coordinates.</p>
+                        </div>
+                    </div>
+                    <span id="simProgressLabel" class="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">0% Progress</span>
+                </div>
+
+                <div class="flex items-center gap-2 pt-1 flex-wrap">
+                    <button type="button" id="btnSimPlayPause" onclick="toggleSimPlayPause()" class="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs">
+                        <span id="simPlayPauseIcon" class="material-symbols-outlined text-[16px]">play_arrow</span>
+                        <span id="simPlayPauseText">Start Simulation</span>
+                    </button>
+                    <button type="button" onclick="resetSimRoute()" class="px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant text-xs font-bold hover:bg-surface-container-high inline-flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                        <span>Reset</span>
+                    </button>
+                    <div class="flex items-center gap-1 ml-auto text-xs">
+                        <span class="text-outline font-semibold">Speed:</span>
+                        <button type="button" onclick="setSimSpeed(1)" id="btnSimSpeed1" class="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-600 text-white">1x</button>
+                        <button type="button" onclick="setSimSpeed(2)" id="btnSimSpeed2" class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface">2x</button>
+                        <button type="button" onclick="setSimSpeed(5)" id="btnSimSpeed5" class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface">5x</button>
+                    </div>
                 </div>
             </div>
 
@@ -320,13 +442,14 @@
         }
     };
 
-    const shopLatLng = { lat: parseFloat(<?= json_encode($shopLat) ?>), lng: parseFloat(<?= json_encode($shopLng) ?>) };
     const destLatLng = { lat: parseFloat(<?= json_encode($destLat) ?>), lng: parseFloat(<?= json_encode($destLng) ?>) };
-    const initialRiderLat = parseFloat(<?= json_encode($delivery['current_lat'] ?? null) ?>) || shopLatLng.lat;
-    const initialRiderLng = parseFloat(<?= json_encode($delivery['current_lng'] ?? null) ?>) || shopLatLng.lng;
+    const initialRiderLat = parseFloat(<?= json_encode($delivery['current_lat'] ?? null) ?>) || destLatLng.lat;
+    const initialRiderLng = parseFloat(<?= json_encode($delivery['current_lng'] ?? null) ?>) || destLatLng.lng;
     let currentRiderLatLng = { lat: initialRiderLat, lng: initialRiderLng };
     const DELIVERY_ID = <?= (int) $delivery['id'] ?>;
     const IS_ACTIVE_DELIVERY = <?= json_encode(in_array($delivery['status'], ['shipped', 'in_transit'])) ?>;
+    let isTenantAutoFollow = true;
+    let lastTenantRouteOrigin = null;
 
     const POLOMOLOK_BOUNDS = {
         north: 6.32,
@@ -337,13 +460,7 @@
 
     function createDetailMarkerElement(type) {
         const div = document.createElement('div');
-        if (type === 'shop') {
-            div.innerHTML = `
-                <div style="background-color:#2563eb;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;cursor:pointer;">
-                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">storefront</span>
-                </div>
-            `;
-        } else if (type === 'dest') {
+        if (type === 'dest') {
             div.innerHTML = `
                 <div style="background-color:#16a34a;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,0.3);border:2.5px solid white;cursor:pointer;">
                     <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">home</span>
@@ -351,12 +468,63 @@
             `;
         } else if (type === 'rider') {
             div.innerHTML = `
-                <div style="background-color:#ea580c;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(234,88,12,0.5);border:2.5px solid white;cursor:pointer;">
-                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">two_wheeler</span>
+                <div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                    <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:rgba(234,88,12,0.25);animation:pulse 1.8s infinite;"></div>
+                    <div id="tenantRiderIconRotate" style="background-color:#ea580c;color:white;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(234,88,12,0.5);border:2.5px solid white;z-index:2;transition:transform 0.4s ease-out;">
+                        <span class="material-symbols-outlined" style="font-size:20px;line-height:1;">two_wheeler</span>
+                    </div>
                 </div>
             `;
         }
         return div;
+    }
+
+    function calculateBearing(lat1, lng1, lat2, lng2) {
+        const toRad = Math.PI / 180;
+        const toDeg = 180 / Math.PI;
+        const phi1 = lat1 * toRad;
+        const phi2 = lat2 * toRad;
+        const deltaLambda = (lng2 - lng1) * toRad;
+        const y = Math.sin(deltaLambda) * Math.cos(phi2);
+        const x = Math.cos(phi1) * Math.sin(phi2) - Math.cos(phi1) * Math.cos(deltaLambda);
+        const theta = Math.atan2(y, x);
+        return (theta * toDeg + 360) % 360;
+    }
+
+    function updateTenantAutoFollowUI() {
+        const dot = document.getElementById('tenantAutoFollowDot');
+        const text = document.getElementById('tenantAutoFollowText');
+        const btn = document.getElementById('btn-tenant-autofollow');
+        if (!dot || !text || !btn) return;
+
+        if (isTenantAutoFollow) {
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+            text.textContent = 'Auto-Follow: ON';
+            btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-high border border-primary/40 text-primary text-xs font-bold transition-all';
+        } else {
+            dot.className = 'w-2 h-2 rounded-full bg-gray-400';
+            text.textContent = 'Auto-Follow: OFF';
+            btn.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 text-outline text-xs font-bold transition-all';
+        }
+    }
+
+    function toggleTenantAutoFollow() {
+        isTenantAutoFollow = !isTenantAutoFollow;
+        updateTenantAutoFollowUI();
+        if (isTenantAutoFollow && mapInstance) {
+            mapInstance.panTo(currentRiderLatLng);
+        }
+    }
+
+    function centerOnTenantRider() {
+        if (!mapInstance) return;
+        isTenantAutoFollow = true;
+        updateTenantAutoFollowUI();
+        mapInstance.panTo(currentRiderLatLng);
+        mapInstance.setZoom(16);
+        if (riderInfoWindow && riderMarker) {
+            riderInfoWindow.open(mapInstance, riderMarker);
+        }
     }
 
     window.initDeliveryDetailMap = function() {
@@ -364,8 +532,8 @@
         if (!container || typeof google === 'undefined' || !google.maps) return;
 
         mapInstance = new google.maps.Map(container, {
-            center: shopLatLng,
-            zoom: 14,
+            center: currentRiderLatLng,
+            zoom: 15,
             minZoom: 11,
             restriction: {
                 latLngBounds: POLOMOLOK_BOUNDS,
@@ -379,35 +547,15 @@
             fullscreenControl: true
         });
 
-        // 1. Shop Marker
-        const shopElem = createDetailMarkerElement('shop');
-        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
-            shopMarker = new google.maps.marker.AdvancedMarkerElement({
-                map: mapInstance,
-                position: shopLatLng,
-                content: shopElem,
-                title: <?= json_encode($shop['shop_name'] ?? 'Your Store') ?>
-            });
-        } else {
-            shopMarker = new google.maps.Marker({
-                map: mapInstance,
-                position: shopLatLng,
-                title: <?= json_encode($shop['shop_name'] ?? 'Your Store') ?>
-            });
-        }
-        const shopInfoWindow = new google.maps.InfoWindow({
-            content: `
-                <div style="padding:4px;font-family:sans-serif;">
-                    <strong style="color:#2563eb;font-size:13px;"><?= esc($shop['shop_name'] ?? 'Your Store') ?></strong>
-                    <p style="font-size:11px;color:#64748b;margin:2px 0 0 0;">Shop Origin Dispatch Point</p>
-                </div>
-            `
-        });
-        shopMarker.addListener('click', () => {
-            shopInfoWindow.open(mapInstance, shopMarker);
+        // Suspend auto-follow on user manual map dragging
+        mapInstance.addListener('dragstart', () => {
+            if (isTenantAutoFollow) {
+                isTenantAutoFollow = false;
+                updateTenantAutoFollowUI();
+            }
         });
 
-        // 2. Destination Marker
+        // 1. Destination Marker (Customer)
         const destElem = createDetailMarkerElement('dest');
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             destMarker = new google.maps.marker.AdvancedMarkerElement({
@@ -434,48 +582,269 @@
         destMarker.addListener('click', () => {
             destInfoWindow.open(mapInstance, destMarker);
         });
-        setTimeout(() => destInfoWindow.open(mapInstance, destMarker), 500);
 
-        // 3. Rider Marker (positioned at current coordinates)
+        // 2. Rider Marker (Positioned at live GPS coordinates)
         const riderElem = createDetailMarkerElement('rider');
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             riderMarker = new google.maps.marker.AdvancedMarkerElement({
                 map: mapInstance,
                 position: currentRiderLatLng,
                 content: riderElem,
-                title: 'Live Courier Position'
+                title: 'Live Courier Position (You)'
             });
         } else {
             riderMarker = new google.maps.Marker({
                 map: mapInstance,
                 position: currentRiderLatLng,
-                title: 'Live Courier Position'
+                title: 'Live Courier Position (You)'
             });
         }
-        const riderInfoWindow = new google.maps.InfoWindow({
-            content: `<div style="padding:4px;font-family:sans-serif;min-width:140px;"><div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ <?= esc($shop['shop_name'] ?? 'Your Store') ?> Courier (You)</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Live GPS location broadcast</div></div>`
+        riderInfoWindow = new google.maps.InfoWindow({
+            content: `<div style="padding:4px;font-family:sans-serif;min-width:140px;"><div style="font-size:11px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ <?= esc($shop['shop_name'] ?? 'Your Store') ?> Courier (You)</div><div style="font-size:11px;color:#64748b;margin-top:2px;">Live GPS coordinates broadcasting</div></div>`
         });
         riderMarker.addListener('click', () => {
             riderInfoWindow.open(mapInstance, riderMarker);
         });
 
-        // 4. Fetch Route Polyline
-        fetchDeliveryRoute(shopLatLng, destLatLng);
+        // 3. Direct Route Polyline from Live Rider to Customer Destination
+        fetchDeliveryRoute(currentRiderLatLng, destLatLng);
 
         // Fit map bounds once on load
         const bounds = new google.maps.LatLngBounds();
-        bounds.extend(shopLatLng);
         bounds.extend(destLatLng);
         bounds.extend(currentRiderLatLng);
         mapInstance.fitBounds(bounds, 60);
 
-        // 5. Start real GPS tracking if delivery is active
+        // 4. Start real GPS tracking & broadcasting if delivery is active
         if (IS_ACTIVE_DELIVERY) {
             startGpsBroadcasting();
         }
     };
 
+    // GPS Telemetry & Tools State
+    let isClickPinActive = false;
+    let isSimulating = false;
+    let simIntervalId = null;
+    let simWaypointIdx = 0;
+    let simSpeedMultiplier = 1;
+    let lastPositionTimestamp = 0;
+
+    function updateTelemetryHUD(lat, lng, accuracy, speedMps, bearingDeg) {
+        // 1. Speedometer
+        const speedEl = document.getElementById('hudSpeed');
+        if (speedEl) {
+            let kmh = 0;
+            if (typeof speedMps === 'number' && !isNaN(speedMps) && speedMps >= 0) {
+                kmh = Math.round(speedMps * 3.6);
+            }
+            speedEl.textContent = `${kmh} km/h`;
+        }
+
+        // 2. Compass Heading
+        const headingEl = document.getElementById('hudHeading');
+        const compassIcon = document.getElementById('hudCompassIcon');
+        if (headingEl && typeof bearingDeg === 'number' && !isNaN(bearingDeg)) {
+            const cardinalDirections = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
+            const cardinal = cardinalDirections[Math.round((bearingDeg % 360) / 45)];
+            headingEl.textContent = `${Math.round(bearingDeg)}° ${cardinal}`;
+            if (compassIcon) {
+                compassIcon.style.transform = `rotate(${Math.round(bearingDeg)}deg)`;
+            }
+        }
+
+        // 3. Accuracy
+        const accEl = document.getElementById('hudAccuracy');
+        if (accEl) {
+            const accVal = Math.round(accuracy || 5);
+            let rating = accVal <= 10 ? 'High' : (accVal <= 25 ? 'Good' : 'Weak');
+            accEl.textContent = `±${accVal}m (${rating})`;
+            accEl.className = accVal <= 10 ? 'font-bold text-emerald-700 dark:text-emerald-400 font-mono text-xs truncate' : 'font-bold text-amber-600 font-mono text-xs truncate';
+        }
+    }
+
+    function updateRouteEtaHUD(durationText, distanceText) {
+        const etaEl = document.getElementById('hudEta');
+        if (etaEl && durationText && distanceText) {
+            etaEl.textContent = `${durationText} • ${distanceText}`;
+        }
+    }
+
+    // Toggle Click-to-Pin Tool
+    function toggleClickToPinMode() {
+        isClickPinActive = !isClickPinActive;
+        const btn = document.getElementById('btnToggleClickPin');
+        const label = document.getElementById('clickPinLabel');
+        const mapEl = document.getElementById('singleDeliveryMap');
+
+        if (isClickPinActive) {
+            if (label) label.textContent = 'Pin Active (Click Map)';
+            if (btn) btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-sm transition-all';
+            if (mapEl) mapEl.style.cursor = 'crosshair';
+        } else {
+            if (label) label.textContent = 'Click-to-Pin';
+            if (btn) btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all';
+            if (mapEl) mapEl.style.cursor = '';
+        }
+    }
+
+    // Toggle GPS Route Simulator Deck
+    function toggleGpsSimulator() {
+        const deck = document.getElementById('simulatorControlsDeck');
+        const simBtn = document.getElementById('btnToggleSimModal');
+        const simLabel = document.getElementById('simBtnLabel');
+        if (!deck) return;
+
+        if (deck.classList.contains('hidden')) {
+            deck.classList.remove('hidden');
+            if (simLabel) simLabel.textContent = 'Close Simulator';
+            if (simBtn) simBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-900 text-white font-bold text-xs shadow-sm transition-all';
+        } else {
+            deck.classList.add('hidden');
+            if (simLabel) simLabel.textContent = 'GPS Simulator';
+            if (simBtn) simBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs transition-all';
+            if (isSimulating) {
+                toggleSimPlayPause();
+            }
+        }
+    }
+
+    function setSimSpeed(speed) {
+        simSpeedMultiplier = speed;
+        [1, 2, 5].forEach(s => {
+            const b = document.getElementById(`btnSimSpeed${s}`);
+            if (b) {
+                b.className = s === speed ? 'px-2 py-0.5 rounded text-[11px] font-bold bg-purple-600 text-white' : 'px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface';
+            }
+        });
+        if (isSimulating) {
+            clearInterval(simIntervalId);
+            startSimLoop();
+        }
+    }
+
+    function toggleSimPlayPause() {
+        isSimulating = !isSimulating;
+        const icon = document.getElementById('simPlayPauseIcon');
+        const txt = document.getElementById('simPlayPauseText');
+        const btn = document.getElementById('btnSimPlayPause');
+
+        if (isSimulating) {
+            if (icon) icon.textContent = 'pause';
+            if (txt) txt.textContent = 'Pause';
+            if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 inline-flex items-center gap-1 shadow-2xs';
+            startSimLoop();
+        } else {
+            if (icon) icon.textContent = 'play_arrow';
+            if (txt) txt.textContent = 'Resume';
+            if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs';
+            if (simIntervalId) clearInterval(simIntervalId);
+        }
+    }
+
+    function startSimLoop() {
+        if (!routePathPoints || routePathPoints.length < 2) {
+            routePathPoints = [currentRiderLatLng, destLatLng];
+        }
+
+        const intervalMs = Math.max(500, Math.round(2000 / simSpeedMultiplier));
+        if (simIntervalId) clearInterval(simIntervalId);
+
+        simIntervalId = setInterval(() => {
+            if (simWaypointIdx >= routePathPoints.length) {
+                // Completed simulation
+                isSimulating = false;
+                clearInterval(simIntervalId);
+                const icon = document.getElementById('simPlayPauseIcon');
+                const txt = document.getElementById('simPlayPauseText');
+                if (icon) icon.textContent = 'check';
+                if (txt) txt.textContent = 'Arrived at Destination';
+                const progressEl = document.getElementById('simProgressLabel');
+                if (progressEl) progressEl.textContent = '100% (Arrived)';
+                return;
+            }
+
+            const targetPt = routePathPoints[simWaypointIdx];
+            const lat = typeof targetPt.lat === 'function' ? targetPt.lat() : parseFloat(targetPt.lat);
+            const lng = typeof targetPt.lng === 'function' ? targetPt.lng() : parseFloat(targetPt.lng);
+
+            let bearing = 0;
+            if (lastSentCoords) {
+                bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+                const iconRotate = document.getElementById('tenantRiderIconRotate');
+                if (iconRotate && Math.hypot(lat - lastSentCoords.lat, lng - lastSentCoords.lng) > 0.00001) {
+                    iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
+                }
+            }
+
+            currentRiderLatLng = { lat, lng };
+
+            if (riderMarker) {
+                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
+                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
+                } else {
+                    riderMarker.position = { lat, lng };
+                }
+            }
+
+            if (isTenantAutoFollow && mapInstance) {
+                mapInstance.panTo(currentRiderLatLng);
+            }
+
+            // Simulated speed calculation
+            const simSpeedMps = 10 * simSpeedMultiplier; // ~36-72 km/h
+            updateTelemetryHUD(lat, lng, 3, simSpeedMps, bearing);
+
+            // Update Progress in UI
+            const pct = Math.round((simWaypointIdx / (routePathPoints.length - 1)) * 100);
+            const progressEl = document.getElementById('simProgressLabel');
+            if (progressEl) progressEl.textContent = `${pct}% Progress`;
+
+            // Broadcast GPS coordinate to backend
+            sendLocationUpdate(lat, lng, 3);
+
+            simWaypointIdx++;
+        }, intervalMs);
+    }
+
+    function resetSimRoute() {
+        if (simIntervalId) clearInterval(simIntervalId);
+        simWaypointIdx = 0;
+        isSimulating = false;
+        const icon = document.getElementById('simPlayPauseIcon');
+        const txt = document.getElementById('simPlayPauseText');
+        const btn = document.getElementById('btnSimPlayPause');
+        if (icon) icon.textContent = 'play_arrow';
+        if (txt) txt.textContent = 'Start Simulation';
+        if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs';
+        const progressEl = document.getElementById('simProgressLabel');
+        if (progressEl) progressEl.textContent = '0% Progress';
+
+        if (routePathPoints && routePathPoints.length > 0) {
+            const startPt = routePathPoints[0];
+            const lat = typeof startPt.lat === 'function' ? startPt.lat() : parseFloat(startPt.lat);
+            const lng = typeof startPt.lng === 'function' ? startPt.lng() : parseFloat(startPt.lng);
+            currentRiderLatLng = { lat, lng };
+            if (riderMarker) {
+                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
+                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
+                } else {
+                    riderMarker.position = { lat, lng };
+                }
+            }
+            if (mapInstance) mapInstance.panTo(currentRiderLatLng);
+            sendLocationUpdate(lat, lng, 3);
+        }
+    }
+
+    function forceRecalculateRoute() {
+        const etaEl = document.getElementById('hudEta');
+        if (etaEl) etaEl.textContent = 'Recalculating...';
+        fetchDeliveryRoute(currentRiderLatLng, destLatLng);
+    }
+
     function fetchDeliveryRoute(origin, destination) {
+        lastTenantRouteOrigin = { lat: origin.lat, lng: origin.lng };
+
         fetch('<?= base_url('api/route') ?>', {
             method: 'POST',
             headers: {
@@ -497,6 +866,10 @@
                 } else if (data.route.encodedPolyline && google.maps.geometry && google.maps.geometry.encoding) {
                     path = google.maps.geometry.encoding.decodePath(data.route.encodedPolyline);
                     routePathPoints = path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+                }
+
+                if (data.route.duration_text && data.route.distance_text) {
+                    updateRouteEtaHUD(data.route.duration_text, data.route.distance_text);
                 }
             }
 
@@ -555,8 +928,34 @@
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 const accuracy = Math.round(pos.coords.accuracy || 0);
+                const now = Date.now();
 
+                let bearing = 0;
+                let speedMps = pos.coords.speed || 0;
+
+                // Rotate rider icon to heading if available or bearing
+                if (lastSentCoords) {
+                    bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+                    const iconRotate = document.getElementById('tenantRiderIconRotate');
+                    if (iconRotate && Math.hypot(lat - lastSentCoords.lat, lng - lastSentCoords.lng) > 0.00002) {
+                        iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
+                    }
+
+                    // Estimate speed if device speed is null
+                    if (!pos.coords.speed && lastPositionTimestamp > 0) {
+                        const dist = distanceMeters(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+                        const timeSec = (now - lastPositionTimestamp) / 1000;
+                        if (timeSec > 0) {
+                            speedMps = dist / timeSec;
+                        }
+                    }
+                }
+
+                lastPositionTimestamp = now;
                 currentRiderLatLng = { lat, lng };
+
+                // Update Telemetry HUD
+                updateTelemetryHUD(lat, lng, accuracy, speedMps, bearing);
 
                 // Update marker position on map
                 if (riderMarker) {
@@ -567,7 +966,11 @@
                     }
                 }
 
-                const now = Date.now();
+                // Camera auto-follow tracking
+                if (isTenantAutoFollow && mapInstance) {
+                    mapInstance.panTo(currentRiderLatLng);
+                }
+
                 let shouldSend = false;
                 if (now - lastSentTime >= 6000) {
                     shouldSend = true;
@@ -579,6 +982,11 @@
 
                 if (shouldSend) {
                     sendLocationUpdate(lat, lng, accuracy);
+
+                    // If rider moved > 40 meters since last route calculation, refresh road polyline to destination
+                    if (!lastTenantRouteOrigin || Math.hypot(lat - lastTenantRouteOrigin.lat, lng - lastTenantRouteOrigin.lng) > 0.0004) {
+                        fetchDeliveryRoute({ lat, lng }, destLatLng);
+                    }
                 }
             },
             (err) => {
@@ -667,11 +1075,55 @@
     window.addEventListener('beforeunload', stopBroadcastingOnExit);
     window.addEventListener('pagehide', stopBroadcastingOnExit);
 
+    // Handle map click for Click-to-Pin Tool
+    function setupMapClickListener() {
+        if (!mapInstance) return;
+        mapInstance.addListener('click', (e) => {
+            if (!isClickPinActive || !e.latLng) return;
+            const lat = e.latLng.lat();
+            const lng = e.latLng.lng();
+
+            let bearing = 0;
+            if (lastSentCoords) {
+                bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+                const iconRotate = document.getElementById('tenantRiderIconRotate');
+                if (iconRotate) {
+                    iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
+                }
+            }
+
+            currentRiderLatLng = { lat, lng };
+
+            if (riderMarker) {
+                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
+                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
+                } else {
+                    riderMarker.position = { lat, lng };
+                }
+            }
+
+            if (isTenantAutoFollow) {
+                mapInstance.panTo(currentRiderLatLng);
+            }
+
+            updateTelemetryHUD(lat, lng, 3, 0, bearing);
+            sendLocationUpdate(lat, lng, 3);
+            fetchDeliveryRoute(currentRiderLatLng, destLatLng);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {
             window.initDeliveryDetailMap();
+            setupMapClickListener();
         }
     });
+
+    const origInitMap = window.initDeliveryDetailMap;
+    window.initDeliveryDetailMap = function() {
+        origInitMap();
+        setupMapClickListener();
+    };
 </script>
 
 <!-- Google Maps Platform JS API -->

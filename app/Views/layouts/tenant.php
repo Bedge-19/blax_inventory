@@ -36,92 +36,124 @@
         <div id="tenant-sidebar-overlay" class="sidebar-overlay"></div>
 
         <!-- SideNavBar -->
-        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex-col h-full py-md px-base z-40 border-r border-outline-variant/20 shadow-md w-64 fixed left-0 h-screen <?= $fullscreenLayout ? 'hidden' : 'hidden md:flex' ?> transition-transform duration-300">
+        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex flex-col h-full py-md px-3 z-40 border-r border-outline-variant/30 shadow-sm w-64 fixed left-0 h-screen <?= $fullscreenLayout ? 'hidden' : 'hidden md:flex' ?> transition-transform duration-300">
 
-            <div class="px-sm mb-xl flex justify-between items-start">
-                <div>
-                    <h1 class="text-headline-md font-bold text-primary">Blax</h1>
-                    <p class="text-label-sm text-on-surface-variant/60">Manage Storefront</p>
+            <!-- Brand Identity & Store Card -->
+            <div class="px-2 mb-md flex items-center justify-between">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-blue-600 to-indigo-500 text-white flex items-center justify-center font-black shadow-md shadow-primary/20 shrink-0">
+                        <span class="material-symbols-outlined text-[22px]">storefront</span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-base font-bold text-on-surface tracking-tight">Blax</span>
+                            <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Merchant</span>
+                        </div>
+                        <p class="text-[11px] text-on-surface-variant/70 truncate" title="<?= esc($shopName) ?>"><?= esc($shopName) ?></p>
+                    </div>
                 </div>
-                <button id="tenant-sidebar-close" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> text-on-surface-variant p-1 -mr-2">
-                    <span class="material-symbols-outlined">close</span>
+                <button id="tenant-sidebar-close" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors" aria-label="Close navigation">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
             </div>
 
-            <nav class="flex-1 space-y-1">
+            <!-- Grouped Navigation (Polaris / Linear Style) -->
+            <nav class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'dashboard' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/dashboard') ?>">
+                <!-- 1. OPERATIONS -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Operations</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'dashboard' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/dashboard') ?>">
+                            <?php if ($activeNav === 'dashboard'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'dashboard' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">dashboard</span>
+                            <span class="truncate">Dashboard</span>
+                        </a>
 
-                    <span class="material-symbols-outlined <?= $activeNav === 'dashboard' ? 'fill-icon' : '' ?>">dashboard</span>
-                    <span class="text-label-sm">Dashboard</span>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'pos' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/pos') ?>">
+                            <?php if ($activeNav === 'pos'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'pos' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">point_of_sale</span>
+                            <span class="truncate">Point of Sale (POS)</span>
+                        </a>
 
-                </a>
+                        <a class="group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'orders' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/orders') ?>">
+                            <?php if ($activeNav === 'orders'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'orders' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">shopping_bag</span>
+                                <span class="truncate">Orders</span>
+                            </div>
+                        </a>
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'inventory' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/inventory') ?>">
+                        <a class="group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'printing' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/printing') ?>">
+                            <?php if ($activeNav === 'printing'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <div class="flex items-center gap-3 min-w-0">
+                                <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'printing' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">print</span>
+                                <span class="truncate">Printing Requests</span>
+                            </div>
+                        </a>
 
-                    <span class="material-symbols-outlined <?= $activeNav === 'inventory' ? 'fill-icon' : '' ?>">inventory_2</span>
-                    <span class="text-label-sm">Inventory</span>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'delivery' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/deliveries') ?>">
+                            <?php if ($activeNav === 'delivery'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'delivery' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">local_shipping</span>
+                            <span class="truncate">Delivery</span>
+                        </a>
+                    </div>
+                </div>
 
-                </a>
+                <!-- 2. CATALOG & STOCK -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Catalog &amp; Stock</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'inventory' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/inventory') ?>">
+                            <?php if ($activeNav === 'inventory'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'inventory' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">inventory_2</span>
+                            <span class="truncate">Inventory</span>
+                        </a>
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'printing' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/printing') ?>">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'archive' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/archive') ?>">
+                            <?php if ($activeNav === 'archive'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'archive' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">archive</span>
+                            <span class="truncate">Archive</span>
+                        </a>
+                    </div>
+                </div>
 
-                    <span class="material-symbols-outlined <?= $activeNav === 'printing' ? 'fill-icon' : '' ?>">print</span>
-                    <span class="text-label-sm">Printing Requests</span>
+                <!-- 3. FINANCE & INSIGHTS -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Finance &amp; Insights</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'analytics' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/analytics') ?>">
+                            <?php if ($activeNav === 'analytics'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'analytics' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">leaderboard</span>
+                            <span class="truncate">Analytics</span>
+                        </a>
 
-                </a>
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'withdrawals' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/withdrawals') ?>">
+                            <?php if ($activeNav === 'withdrawals'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'withdrawals' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">payments</span>
+                            <span class="truncate">Transfer &amp; Payouts</span>
+                        </a>
+                    </div>
+                </div>
 
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'orders' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/orders') ?>">
-
-                    <span class="material-symbols-outlined <?= $activeNav === 'orders' ? 'fill-icon' : '' ?>">shopping_bag</span>
-                    <span class="text-label-sm">Orders</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'pos' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/pos') ?>">
-
-                    <span class="material-symbols-outlined <?= $activeNav === 'pos' ? 'fill-icon' : '' ?>">point_of_sale</span>
-                    <span class="text-label-sm">Point of Sale (POS)</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'analytics' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/analytics') ?>">
-
-                    <span class="material-symbols-outlined <?= $activeNav === 'analytics' ? 'fill-icon' : '' ?>">leaderboard</span>
-                    <span class="text-label-sm">Analytics</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'delivery' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/deliveries') ?>">
-
-                    <span class="material-symbols-outlined <?= $activeNav === 'delivery' ? 'fill-icon' : '' ?>">local_shipping</span>
-                    <span class="text-label-sm">Delivery</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'archive' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/archive') ?>">
-
-                    <span class="material-symbols-outlined <?= $activeNav === 'archive' ? 'fill-icon' : '' ?>">archive</span>
-                    <span class="text-label-sm">Archive</span>
-
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'withdrawals' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/withdrawals') ?>">
-                    <span class="material-symbols-outlined <?= $activeNav === 'withdrawals' ? 'fill-icon' : '' ?>">payments</span>
-                    <span class="text-label-sm">Transfer & Withdrawal</span>
-                </a>
-
-                <a class="flex items-center gap-md px-md py-sm rounded-lg <?= $activeNav === 'settings' ? 'bg-outline-variant/20 text-primary font-semibold' : 'text-on-surface-variant hover:bg-surface-container-high transition-all' ?>" href="<?= base_url('tenant/settings') ?>">
-                    <span class="material-symbols-outlined <?= $activeNav === 'settings' ? 'fill-icon' : '' ?>">settings</span>
-                    <span class="text-label-sm">Settings</span>
-                </a>
+                <!-- 4. PREFERENCES -->
+                <div>
+                    <p class="text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest px-3 mb-1.5">Preferences</p>
+                    <div class="space-y-0.5">
+                        <a class="group relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-all <?= $activeNav === 'settings' ? 'bg-primary/10 text-primary font-bold shadow-2xs' : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high/60 font-medium' ?>" href="<?= base_url('tenant/settings') ?>">
+                            <?php if ($activeNav === 'settings'): ?><span class="absolute left-0 top-2 bottom-2 w-1 rounded-r-full bg-primary"></span><?php endif; ?>
+                            <span class="material-symbols-outlined text-[19px] shrink-0 <?= $activeNav === 'settings' ? 'fill-icon text-primary' : 'text-on-surface-variant group-hover:text-primary transition-colors' ?>">settings</span>
+                            <span class="truncate">Store Settings</span>
+                        </a>
+                    </div>
+                </div>
 
             </nav>
 
-            <div class="mt-auto pt-md space-y-2 border-t border-outline-variant/10">
-                <!-- Merchant Profile Widget -->
-                <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-3 p-2 rounded-xl bg-surface-container-low/50 hover:bg-surface-container-high border border-outline-variant/30 transition-all group shadow-2xs">
-                    <div class="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-primary/20">
+            <!-- Bottom Merchant Profile Card -->
+            <div class="mt-auto pt-3 border-t border-outline-variant/20 space-y-2">
+                <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-2.5 p-2 rounded-xl bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 transition-all group shadow-2xs">
+                    <div class="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden shrink-0 border border-primary/20">
                         <?php if (!empty($shop['logo_url'])): ?>
                             <img src="<?= esc(logo_url($shop['logo_url'])) ?>" alt="<?= esc($shopName) ?>" class="w-full h-full object-cover">
                         <?php else: ?>
@@ -130,17 +162,28 @@
                     </div>
                     <div class="min-w-0 flex-1">
                         <p class="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors"><?= esc($shopName) ?></p>
-                        <p class="text-[10px] text-on-surface-variant/80 truncate flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active Merchant
+                        <p class="text-[10px] text-on-surface-variant/70 truncate flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Verified Merchant
                         </p>
                     </div>
                     <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-primary transition-transform group-hover:translate-x-0.5">chevron_right</span>
                 </a>
 
-                <a class="flex items-center gap-md px-md py-sm text-error hover:bg-error-container/10 rounded-lg transition-all" href="<?= base_url('logout') ?>">
-                    <span class="material-symbols-outlined text-[18px]">logout</span>
-                    <span class="text-label-sm font-semibold">Sign Out</span>
-                </a>
+                <div class="flex items-center justify-between px-1">
+                    <?php $storeSlug = $shop['slug'] ?? ''; ?>
+                    <?php if (!empty($storeSlug)): ?>
+                        <a href="<?= base_url('shop/' . esc($storeSlug)) ?>" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1">
+                            <span>Live Store</span>
+                            <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                        </a>
+                    <?php else: ?>
+                        <span></span>
+                    <?php endif; ?>
+                    <a class="flex items-center gap-1 text-[11px] font-semibold text-error hover:underline transition-colors" href="<?= base_url('logout') ?>">
+                        <span class="material-symbols-outlined text-[15px]">logout</span>
+                        <span>Sign Out</span>
+                    </a>
+                </div>
             </div>
 
         </aside>
@@ -148,64 +191,64 @@
         <!-- Main Content -->
         <main class="flex-1 <?= $fullscreenLayout ? 'ml-0' : 'ml-0 md:ml-64' ?> overflow-y-auto bg-surface relative">
 
-            <header class="sticky top-0 z-30 bg-surface-container-lowest backdrop-blur-xl border-b border-outline-variant/30 px-4 md:px-8 lg:px-10 py-md flex justify-between items-center">
+            <header class="sticky top-0 z-30 bg-surface-container-lowest/80 backdrop-blur-xl border-b border-outline-variant/30 px-4 md:px-8 py-2.5 flex justify-between items-center transition-all">
 
-                <div class="flex items-center gap-md">
-
-                    <button id="sidebar-toggle" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> p-2 text-on-surface-variant hover:bg-surface-container rounded-full" aria-label="Toggle sidebar">
-
-                        <span class="material-symbols-outlined">menu</span>
-
+                <!-- Left: Mobile Toggle & Breadcrumbs -->
+                <div class="flex items-center gap-3">
+                    <button id="sidebar-toggle" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> p-2 text-on-surface-variant hover:bg-surface-container rounded-xl transition-colors" aria-label="Toggle sidebar">
+                        <span class="material-symbols-outlined text-[20px]">menu</span>
                     </button>
 
-                    <div>
-
-                        <h2 class="text-title-lg font-title-lg text-on-surface"><?= esc($pageTitle) ?></h2>
-
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center gap-1.5 text-xs text-on-surface-variant/70">
+                            <span class="font-medium hidden sm:inline">Store</span>
+                            <span class="text-[10px] text-outline-variant hidden sm:inline">/</span>
+                            <span class="font-bold text-on-surface text-sm sm:text-base tracking-tight"><?= esc($pageTitle) ?></span>
+                        </div>
+                        <span class="hidden lg:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 ml-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Live
+                        </span>
                     </div>
-
                 </div>
 
-                <div class="flex items-center gap-md">
+                <!-- Right: Quick Preview, Notification Bell & Profile -->
+                <div class="flex items-center gap-2.5 sm:gap-3.5">
+                    <?php $storeSlug = $shop['slug'] ?? ''; ?>
+                    <?php if (!empty($storeSlug)): ?>
+                        <a href="<?= base_url('shop/' . esc($storeSlug)) ?>" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest hover:bg-surface-container text-xs font-semibold text-on-surface transition-all shadow-2xs group" title="Preview public storefront in new tab">
+                            <span class="material-symbols-outlined text-[15px] text-primary group-hover:scale-110 transition-transform">open_in_new</span>
+                            <span>View Store</span>
+                        </a>
+                    <?php endif; ?>
 
+                    <!-- Notification Bell -->
                     <div class="relative">
-
-                        <button id="notif-toggle" type="button" class="text-on-surface-variant p-2 hover:bg-surface-container rounded-full relative" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-
-                            <span class="material-symbols-outlined">notifications</span>
-
+                        <button id="notif-toggle" type="button" class="text-on-surface-variant hover:text-on-surface p-2 hover:bg-surface-container rounded-xl relative transition-colors" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                            <span class="material-symbols-outlined text-[22px]">notifications</span>
                             <?php if (($unread_count ?? 0) > 0): ?>
-
-                                <span class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center"><?= (int) $unread_count ?></span>
-
+                                <span class="absolute top-1.5 right-1.5 min-w-[17px] h-[17px] px-1 bg-error text-on-error text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-surface-container-lowest animate-pulse"><?= (int) $unread_count ?></span>
                             <?php endif; ?>
-
                         </button>
 
-                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 z-50 overflow-hidden">
-
-                            <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between">
-
-                                <p class="text-label-sm font-semibold text-on-surface">Notifications</p>
-
+                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                            <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
+                                <div class="flex items-center gap-1.5">
+                                    <p class="text-xs font-bold text-on-surface">Notifications</p>
+                                    <?php if (($unread_count ?? 0) > 0): ?>
+                                        <span class="text-[10px] font-semibold text-primary px-1.5 py-0.5 rounded-md bg-primary/10"><?= (int) $unread_count ?> unread</span>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if (!empty($notifications)): ?>
-
-                                    <form method="post" action="<?= base_url('tenant/notifications/mark-read') ?>">
-
+                                    <form method="post" action="<?= base_url('tenant/notifications/mark-read') ?>" class="inline">
                                         <?= csrf_field() ?>
-
-                                        <button type="submit" class="text-[11px] font-semibold text-primary hover:underline">Mark all as read</button>
-
+                                        <button type="submit" class="text-[11px] font-semibold text-primary hover:underline">Mark all read</button>
                                     </form>
-
                                 <?php endif; ?>
-
                             </div>
 
-                            <div class="max-h-80 overflow-y-auto custom-scrollbar">
-
+                            <div class="max-h-80 overflow-y-auto custom-scrollbar divide-y divide-outline-variant/10 text-xs">
                                 <?php if (!empty($notifications)): ?>
-
                                     <?php
                                         $notifIcons = [
                                             'new_order'             => 'shopping_bag',
@@ -216,46 +259,32 @@
                                             'payout'                => 'payments',
                                         ];
                                     ?>
-
-                                    <?php foreach (array_slice($notifications, 0, 5) as $n): ?>
-
-                                        <a href="<?= base_url('notifications/click/' . (int)$n['id']) ?>" class="flex items-start gap-sm px-md py-sm hover:bg-surface-container-low transition-colors block <?= empty($n['is_read']) ? 'bg-primary/5' : 'opacity-60 hover:opacity-100' ?>">
-
-                                            <span class="material-symbols-outlined text-[18px] text-primary mt-0.5 shrink-0"><?= esc($notifIcons[$n['type']] ?? 'notifications') ?></span>
-
-                                            <div class="min-w-0 flex-1">
-
-                                                <div class="flex items-center justify-between gap-xs">
-                                                    <p class="text-label-sm font-semibold text-on-surface truncate"><?= esc($n['title']) ?></p>
-                                                    <?php if (empty($n['is_read'])): ?>
-                                                        <span class="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></span>
-                                                    <?php endif; ?>
-                                                </div>
-
-                                                <p class="text-[11px] text-on-surface-variant line-clamp-2"><?= esc($n['message']) ?></p>
-
-                                                <p class="text-[10px] text-on-surface-variant/70 mt-0.5"><?= date('M d, H:i', strtotime($n['created_at'])) ?></p>
-
+                                    <?php foreach (array_slice($notifications, 0, 6) as $n): ?>
+                                        <a href="<?= base_url('notifications/click/' . (int)$n['id']) ?>" class="flex items-start gap-2.5 px-3 py-2.5 hover:bg-surface-container-low transition-colors block <?= empty($n['is_read']) ? 'bg-primary/5' : 'opacity-65 hover:opacity-100' ?>">
+                                            <div class="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                                                <span class="material-symbols-outlined text-[16px]"><?= esc($notifIcons[$n['type']] ?? 'notifications') ?></span>
                                             </div>
-
+                                            <div class="min-w-0 flex-1">
+                                                <div class="flex items-center justify-between gap-1">
+                                                    <p class="font-bold text-on-surface truncate text-xs"><?= esc($n['title']) ?></p>
+                                                    <span class="text-[9px] text-on-surface-variant/60 shrink-0 font-normal"><?= date('M d, H:i', strtotime($n['created_at'])) ?></span>
+                                                </div>
+                                                <p class="text-[11px] text-on-surface-variant line-clamp-2 mt-0.5 leading-snug"><?= esc($n['message']) ?></p>
+                                            </div>
                                         </a>
-
                                     <?php endforeach; ?>
-
                                 <?php else: ?>
-
-                                    <p class="px-md py-lg text-center text-label-sm text-on-surface-variant">No notifications.</p>
-
+                                    <div class="px-md py-lg text-center text-xs text-on-surface-variant/70">
+                                        <span class="material-symbols-outlined text-2xl text-outline mb-1 block">notifications_off</span>
+                                        No new notifications.
+                                    </div>
                                 <?php endif; ?>
-
                             </div>
-
                         </div>
-
                     </div>
 
+                    <!-- Profile Dropdown -->
                     <div class="flex items-center gap-sm relative">
-
                         <?php
                             $tenantAvatarUrl = '';
                             if (!empty($shop['logo_url'])) {
@@ -264,51 +293,43 @@
                                 $tenantAvatarUrl = logo_url(session()->get('profile_image_url'));
                             }
                         ?>
-
-                        <button id="tenant-profile-toggle" type="button" class="profile-dropdown-toggle w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary focus:ring-2 focus:ring-primary transition-all overflow-hidden" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
-                            <?php if ($tenantAvatarUrl !== ''): ?>
-                                <img src="<?= esc($tenantAvatarUrl) ?>" class="w-8 h-8 rounded-full object-cover" alt="<?= esc($shopName) ?> profile">
-                            <?php else: ?>
-                                <img src="https://api.dicebear.com/7.x/initials/svg?seed=<?= urlencode(substr($shopName, 0, 2)) ?>&backgroundColor=2563eb" class="w-8 h-8 rounded-full object-cover" alt="Profile">
-                            <?php endif; ?>
+                        <button id="tenant-profile-toggle" type="button" class="profile-dropdown-toggle flex items-center gap-2 p-1 rounded-xl hover:bg-surface-container transition-all group" aria-haspopup="true" aria-expanded="false" aria-label="Account menu">
+                            <div class="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-bold text-xs overflow-hidden shrink-0 group-hover:ring-2 group-hover:ring-primary/30 transition-all">
+                                <?php if ($tenantAvatarUrl !== ''): ?>
+                                    <img src="<?= esc($tenantAvatarUrl) ?>" class="w-full h-full object-cover" alt="<?= esc($shopName) ?>">
+                                <?php else: ?>
+                                    <span><?= esc(strtoupper(substr($shopName, 0, 2))) ?></span>
+                                <?php endif; ?>
+                            </div>
+                            <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-on-surface transition-transform group-hover:translate-y-0.5 hidden sm:inline">expand_more</span>
                         </button>
 
-                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-48 bg-surface-container-lowest rounded-xl shadow-lg border border-outline-variant/30 p-1.5 z-50">
-
-                            <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-on-surface hover:bg-surface-container-low rounded-lg <?= $activeNav === 'settings' ? 'bg-primary-container/10 text-primary font-bold' : '' ?>">
-
-                                <span class="material-symbols-outlined text-[18px]">settings</span>Settings
-
+                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-56 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 p-2 z-50">
+                            <div class="px-3 py-2 border-b border-outline-variant/15 mb-1.5">
+                                <p class="text-xs font-bold text-on-surface truncate"><?= esc($shopName) ?></p>
+                                <p class="text-[10px] text-on-surface-variant truncate"><?= esc(session()->get('user_email') ?? 'Merchant') ?></p>
+                            </div>
+                            <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-container-low rounded-xl transition-colors <?= $activeNav === 'settings' ? 'bg-primary/10 text-primary font-bold' : '' ?>">
+                                <span class="material-symbols-outlined text-[17px] text-primary">settings</span>
+                                <span>Store Settings</span>
                             </a>
-
-                            <div class="my-1 border-t border-outline-variant/10"></div>
-
-                            <a href="<?= base_url('tenant/withdrawals') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-on-surface hover:bg-surface-container-low rounded-lg <?= $activeNav === 'withdrawals' ? 'bg-primary-container/10 text-primary font-bold' : '' ?>">
-
-                                <span class="material-symbols-outlined text-[18px]">payments</span>Transfer
-
+                            <a href="<?= base_url('tenant/withdrawals') ?>" class="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-container-low rounded-xl transition-colors <?= $activeNav === 'withdrawals' ? 'bg-primary/10 text-primary font-bold' : '' ?>">
+                                <span class="material-symbols-outlined text-[17px] text-emerald-600">payments</span>
+                                <span>Transfer &amp; Payouts</span>
                             </a>
-
-                            <div class="my-1 border-t border-outline-variant/10"></div>
-
-                            <a href="<?= base_url('tenant/settings') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-on-surface hover:bg-surface-container-low rounded-lg">
-
-                                <span class="material-symbols-outlined text-[18px]">person</span>Profile
-
+                            <?php if (!empty($storeSlug)): ?>
+                                <a href="<?= base_url('shop/' . esc($storeSlug)) ?>" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2.5 px-3 py-2 text-xs text-on-surface hover:bg-surface-container-low rounded-xl transition-colors">
+                                    <span class="material-symbols-outlined text-[17px] text-blue-500">storefront</span>
+                                    <span>Public Storefront ↗</span>
+                                </a>
+                            <?php endif; ?>
+                            <div class="my-1.5 border-t border-outline-variant/15"></div>
+                            <a href="<?= base_url('logout') ?>" class="flex items-center gap-2.5 px-3 py-2 text-xs text-error hover:bg-error-container/20 rounded-xl transition-colors font-medium">
+                                <span class="material-symbols-outlined text-[17px] text-error">logout</span>
+                                <span>Log Out</span>
                             </a>
-
-                            <div class="my-1 border-t border-outline-variant/10"></div>
-
-                            <a href="<?= base_url('logout') ?>" class="flex items-center gap-md px-md py-sm text-label-sm text-error hover:bg-error-container/20 rounded-lg transition-colors font-medium">
-
-                                <span class="material-symbols-outlined text-[18px] text-error">logout</span>Log Out
-
-                            </a>
-
                         </div>
-
                     </div>
-
                 </div>
 
             </header>

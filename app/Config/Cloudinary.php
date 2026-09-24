@@ -16,7 +16,7 @@ class Cloudinary extends BaseConfig
      * Individual credentials read strictly from environment variables.
      * Defaults to safe values; real credentials are never committed to source code.
      */
-    public string $cloudName = 'blax';
+    public string $cloudName = '';
     public string $apiKey    = '';
     public string $apiSecret = '';
 
@@ -37,5 +37,18 @@ class Cloudinary extends BaseConfig
             ?: (getenv('CLOUDINARY_API_KEY') ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? $this->apiKey))));
         $this->apiSecret     = (string) (env('CLOUDINARY_API_SECRET')
             ?: (getenv('CLOUDINARY_API_SECRET') ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? $this->apiSecret))));
+
+        // Parse credentials from CLOUDINARY_URL if provided
+        if (!empty($this->cloudinaryUrl) && preg_match('#^cloudinary://([^:]+):([^@]+)@([a-zA-Z0-9_-]+)$#', trim($this->cloudinaryUrl), $matches)) {
+            if (empty($this->apiKey)) {
+                $this->apiKey = $matches[1];
+            }
+            if (empty($this->apiSecret)) {
+                $this->apiSecret = $matches[2];
+            }
+            if (empty($this->cloudName)) {
+                $this->cloudName = $matches[3];
+            }
+        }
     }
 }

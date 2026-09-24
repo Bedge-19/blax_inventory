@@ -331,7 +331,7 @@
                         <div id="trackMap" class="w-full h-full flex-grow z-[1]" style="min-height:400px;"></div>
 
                         <!-- Floating Header Controls -->
-                        <div class="absolute top-4 left-4 right-4 z-[400] flex items-center justify-between pointer-events-none">
+                        <div class="absolute top-4 left-4 right-4 z-[400] flex items-center justify-between pointer-events-none flex-wrap gap-2">
                             
                             <!-- Pulsating "Live" Badge -->
                             <div class="pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-gray-900/90 backdrop-blur-md shadow-md border border-outline-variant/30">
@@ -348,47 +348,65 @@
                                 <span id="liveEtaText">Calculating route...</span>
                             </div>
 
-                            <!-- "Center on Courier" Control Button -->
-                            <button type="button" 
-                                    id="btn-center-courier"
-                                    onclick="centerOnCourier()"
-                                    title="Center Map on Courier"
-                                    class="pointer-events-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all hover:scale-105 active:scale-95">
-                                <span class="material-symbols-outlined text-[16px]">my_location</span>
-                                <span>Center on Courier</span>
-                            </button>
+                            <!-- Controls Group (Auto-Follow Toggle + Center on Courier) -->
+                            <div class="pointer-events-auto flex items-center gap-2">
+                                <!-- Auto-Follow Camera Toggle -->
+                                <button type="button" 
+                                        id="btn-auto-follow"
+                                        onclick="toggleAutoFollow()"
+                                        title="Toggle Camera Auto-Follow"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold shadow-md backdrop-blur-md transition-all active:scale-95">
+                                    <span id="autoFollowDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                    <span id="autoFollowText">Auto-Follow: ON</span>
+                                </button>
+
+                                <!-- "Center on Courier" Control Button -->
+                                <button type="button" 
+                                        id="btn-center-courier"
+                                        onclick="centerOnCourier()"
+                                        title="Center Map on Courier"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all hover:scale-105 active:scale-95">
+                                    <span class="material-symbols-outlined text-[16px]">my_location</span>
+                                    <span>Center Courier</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Customer Live GPS Telemetry Mini HUD (Top overlay below header) -->
+                        <div class="absolute top-16 left-4 right-4 z-[390] pointer-events-none flex items-center justify-between gap-2 flex-wrap">
+                            <div class="pointer-events-auto flex items-center gap-3 px-3 py-1.5 rounded-xl bg-white/95 dark:bg-gray-900/90 backdrop-blur-md shadow-sm border border-outline-variant/30 text-xs font-mono">
+                                <div class="flex items-center gap-1.5 text-blue-600 dark:text-blue-400">
+                                    <span class="material-symbols-outlined text-[15px]">speed</span>
+                                    <span id="custHudSpeed" class="font-bold">Active</span>
+                                </div>
+                                <span class="text-outline text-xs">&bull;</span>
+                                <div class="flex items-center gap-1 text-purple-600 dark:text-purple-400">
+                                    <span id="custHudCompassIcon" class="material-symbols-outlined text-[15px] inline-block transition-transform duration-300">explore</span>
+                                    <span id="custHudHeading" class="font-bold">Tracking</span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Floating Footer Map Legend & Route Details -->
                         <div class="absolute bottom-4 left-4 right-4 z-[400] bg-white/95 dark:bg-gray-900/90 backdrop-blur-md p-3 rounded-xl border border-outline-variant/30 shadow-md">
-                            <div class="grid grid-cols-3 gap-2 text-center divide-x divide-outline-variant/30">
-                                <div class="flex flex-col items-center">
-                                    <div class="flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-                                        <span class="w-2.5 h-2.5 rounded-full bg-slate-900 dark:bg-slate-300 inline-block"></span>
-                                        <span>Store Hub</span>
-                                    </div>
-                                    <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
-                                        <?= esc($shop['shop_name'] ?? 'Merchant') ?>
-                                    </span>
-                                </div>
-
+                            <div class="grid grid-cols-2 gap-4 text-center divide-x divide-outline-variant/30">
                                 <div class="flex flex-col items-center">
                                     <div class="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
                                         <span class="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span>
-                                        <span>Courier</span>
+                                        <span>Courier / Rider</span>
                                     </div>
                                     <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
-                                        <?= esc($courierName) ?>
+                                        <?= esc($courierName) ?> (Live En Route)
                                     </span>
                                 </div>
 
                                 <div class="flex flex-col items-center">
                                     <div class="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
                                         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-                                        <span>Destination</span>
+                                        <span>Delivery Destination</span>
                                     </div>
                                     <span class="text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-full font-medium">
-                                        Customer Address
+                                        <?= esc($destAddressText) ?>
                                     </span>
                                 </div>
                             </div>
@@ -405,20 +423,19 @@
 
 <script>
     // Map Coordinates Data passed from Controller
-    const STORE_COORDS   = <?= json_encode($storeCoords) ?>;
     const DEST_COORDS    = <?= json_encode($destCoords) ?>;
     const COURIER_COORDS = <?= json_encode($courierCoords) ?>;
-    const SHOP_NAME      = <?= json_encode($shop['shop_name'] ?? 'Store Hub') ?>;
     const DEST_ADDRESS   = <?= json_encode($destAddressText) ?>;
     const COURIER_NAME   = <?= json_encode($courierName) ?>;
     const ORDER_STATUS   = <?= json_encode($order['status'] ?? 'pending') ?>;
 
     let trackMap          = null;
     let courierMarker     = null;
-    let storeMarker       = null;
     let destMarker        = null;
     let courierInfoWindow = null;
     let routePolyline     = null;
+    let isAutoFollow      = true;
+    let lastRouteOrigin   = null;
 
     // Handle Google Maps API authentication / activation failure
     window.gm_authFailure = function() {
@@ -442,13 +459,7 @@
 
     function createMarkerContent(type) {
         const div = document.createElement('div');
-        if (type === 'store') {
-            div.innerHTML = `
-                <div style="width:36px;height:36px;border-radius:50%;background:#0f172a;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
-                    <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">storefront</span>
-                </div>
-            `;
-        } else if (type === 'dest') {
+        if (type === 'dest') {
             div.innerHTML = `
                 <div style="width:36px;height:36px;border-radius:50%;background:#10b981;border:2.5px solid #ffffff;box-shadow:0 3px 8px rgba(16,185,129,0.35);display:flex;align-items:center;justify-content:center;color:#fff;cursor:pointer;">
                     <span class="material-symbols-outlined" style="font-size:18px;line-height:1;">home</span>
@@ -479,7 +490,40 @@
         return (theta * toDeg + 360) % 360;
     }
 
-    function fetchRoutePolyline(origin, destination, courier) {
+    function distanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371e3;
+        const p1 = lat1 * Math.PI / 180;
+        const p2 = lat2 * Math.PI / 180;
+        const dp = (lat2 - lat1) * Math.PI / 180;
+        const dl = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dp / 2) * Math.sin(dp / 2) +
+                  Math.cos(p1) * Math.cos(p2) *
+                  Math.sin(dl / 2) * Math.sin(dl / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
+    function updateCustTelemetryHUD(speedKmh, bearingDeg) {
+        const speedEl = document.getElementById('custHudSpeed');
+        const headingEl = document.getElementById('custHudHeading');
+        const compassIcon = document.getElementById('custHudCompassIcon');
+
+        if (speedEl) {
+            speedEl.textContent = `${Math.round(speedKmh)} km/h`;
+        }
+        if (headingEl && typeof bearingDeg === 'number' && !isNaN(bearingDeg)) {
+            const cardinalDirections = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
+            const cardinal = cardinalDirections[Math.round((bearingDeg % 360) / 45)] || 'N';
+            headingEl.textContent = `${Math.round(bearingDeg)}° ${cardinal}`;
+            if (compassIcon) {
+                compassIcon.style.transform = `rotate(${Math.round(bearingDeg)}deg)`;
+            }
+        }
+    }
+
+    function fetchRoutePolyline(origin, destination) {
+        lastRouteOrigin = { lat: origin.lat, lng: origin.lng };
+
         fetch('<?= base_url('api/route') ?>', {
             method: 'POST',
             headers: {
@@ -524,12 +568,6 @@
                 strokeWeight: 4,
                 map: trackMap
             });
-
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend(origin);
-            bounds.extend(destination);
-            if (courier) bounds.extend(courier);
-            trackMap.fitBounds(bounds, 70);
         })
         .catch(err => {
             console.warn('Could not fetch route polyline:', err);
@@ -542,11 +580,6 @@
                 strokeWeight: 4,
                 map: trackMap
             });
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend(origin);
-            bounds.extend(destination);
-            if (courier) bounds.extend(courier);
-            trackMap.fitBounds(bounds, 70);
         });
     }
 
@@ -554,13 +587,12 @@
         const container = document.getElementById('trackMap');
         if (!container || typeof google === 'undefined' || !google.maps) return;
 
-        const storeLatLng   = { lat: parseFloat(STORE_COORDS[0]), lng: parseFloat(STORE_COORDS[1]) };
         const destLatLng    = { lat: parseFloat(DEST_COORDS[0]), lng: parseFloat(DEST_COORDS[1]) };
         const courierLatLng = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
 
         trackMap = new google.maps.Map(container, {
             center: courierLatLng,
-            zoom: 14,
+            zoom: 15,
             mapId: 'DEMO_MAP_ID',
             disableDefaultUI: false,
             zoomControl: true,
@@ -569,36 +601,15 @@
             fullscreenControl: true
         });
 
-        // 1. Store Marker
-        const storeContent = createMarkerContent('store');
-        if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
-            storeMarker = new google.maps.marker.AdvancedMarkerElement({
-                map: trackMap,
-                position: storeLatLng,
-                content: storeContent,
-                title: SHOP_NAME
-            });
-        } else {
-            storeMarker = new google.maps.Marker({
-                map: trackMap,
-                position: storeLatLng,
-                title: SHOP_NAME
-            });
-        }
-        const storeInfoWindow = new google.maps.InfoWindow({
-            content: `
-                <div style="font-family:inherit;padding:4px;">
-                    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;">Store Dispatch Hub</div>
-                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">${SHOP_NAME}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">Merchant Hub</div>
-                </div>
-            `
-        });
-        storeMarker.addListener('click', () => {
-            storeInfoWindow.open(trackMap, storeMarker);
+        // Detect user manual pan/drag to suspend auto-follow until re-enabled
+        trackMap.addListener('dragstart', () => {
+            if (isAutoFollow) {
+                isAutoFollow = false;
+                updateAutoFollowUI();
+            }
         });
 
-        // 2. Customer Destination Marker
+        // 1. Customer Destination Marker
         const destContent = createMarkerContent('dest');
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             destMarker = new google.maps.marker.AdvancedMarkerElement({
@@ -626,9 +637,9 @@
             destInfoWindow.open(trackMap, destMarker);
         });
 
-        // 3. Courier Marker
+        // 2. Courier Marker (Live Rider)
         const courierContent = createMarkerContent('courier');
-        const courierTitle = `${SHOP_NAME} (Live Courier)`;
+        const courierTitle = `${COURIER_NAME} (Live Courier)`;
         if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
             courierMarker = new google.maps.marker.AdvancedMarkerElement({
                 map: trackMap,
@@ -647,8 +658,8 @@
             content: `
                 <div style="font-family:inherit;padding:4px;min-width:140px;">
                     <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div>
-                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${SHOP_NAME}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route</div>
+                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
+                    <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route to Delivery</div>
                 </div>
             `
         });
@@ -656,13 +667,19 @@
             courierInfoWindow.open(trackMap, courierMarker);
         });
 
-        // Open courier info window by default
+        // Open courier info window briefly on load
         setTimeout(() => {
             courierInfoWindow.open(trackMap, courierMarker);
         }, 500);
 
-        // 4. Fetch Route Polyline from backend proxy (/api/route)
-        fetchRoutePolyline(storeLatLng, destLatLng, courierLatLng);
+        // 3. Direct Route Polyline from Live Courier to Customer Destination
+        fetchRoutePolyline(courierLatLng, destLatLng);
+
+        // Initial map bounds fitting
+        const bounds = new google.maps.LatLngBounds();
+        bounds.extend(courierLatLng);
+        bounds.extend(destLatLng);
+        trackMap.fitBounds(bounds, 70);
 
         // Start live position polling (every 6 seconds)
         startPositionPolling();
@@ -672,19 +689,52 @@
     let animationFrameId = null;
     let pollInterval = null;
 
+    function updateAutoFollowUI() {
+        const dot = document.getElementById('autoFollowDot');
+        const text = document.getElementById('autoFollowText');
+        const btn = document.getElementById('btn-auto-follow');
+        if (!dot || !text || !btn) return;
+
+        if (isAutoFollow) {
+            dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+            text.textContent = 'Auto-Follow: ON';
+            btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold shadow-md backdrop-blur-md transition-all active:scale-95';
+        } else {
+            dot.className = 'w-2 h-2 rounded-full bg-gray-400';
+            text.textContent = 'Auto-Follow: OFF';
+            btn.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-600/90 hover:bg-gray-700 text-gray-200 text-xs font-bold shadow-md backdrop-blur-md transition-all active:scale-95';
+        }
+    }
+
+    function toggleAutoFollow() {
+        isAutoFollow = !isAutoFollow;
+        updateAutoFollowUI();
+        if (isAutoFollow && trackMap) {
+            trackMap.panTo(currentRiderPos);
+        }
+    }
+
     function animateMarkerTo(targetLat, targetLng) {
         if (!courierMarker) return;
         const startLat = currentRiderPos.lat;
         const startLng = currentRiderPos.lng;
 
-        // Calculate heading bearing if moved
+        // Calculate heading bearing and speed if moved
         const dist = Math.hypot(targetLat - startLat, targetLng - startLng);
+        let bearing = 0;
+        let speedKmh = 0;
         if (dist > 0.00002) {
-            const bearing = calculateBearing(startLat, startLng, targetLat, targetLng);
+            bearing = calculateBearing(startLat, startLng, targetLat, targetLng);
+            const meters = distanceMeters(startLat, startLng, targetLat, targetLng);
+            // Polling interval is 6s
+            speedKmh = Math.min(90, Math.round((meters / 6) * 3.6));
             const iconRotate = document.getElementById('courierIconRotate');
             if (iconRotate) {
                 iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
             }
+            updateCustTelemetryHUD(speedKmh, bearing);
+        } else {
+            updateCustTelemetryHUD(0, bearing);
         }
 
         const startTime = performance.now();
@@ -708,6 +758,11 @@
                 courierMarker.setPosition(new google.maps.LatLng(curLat, curLng));
             } else {
                 courierMarker.position = { lat: curLat, lng: curLng };
+            }
+
+            // Camera auto-follow tracking
+            if (isAutoFollow && trackMap) {
+                trackMap.panTo(currentRiderPos);
             }
 
             if (progress < 1) {
@@ -735,6 +790,12 @@
                     // If coordinates moved significantly (> 1 meter), smoothly interpolate
                     if (Math.abs(newLat - currentRiderPos.lat) > 0.00001 || Math.abs(newLng - currentRiderPos.lng) > 0.00001) {
                         animateMarkerTo(newLat, newLng);
+
+                        // If rider moved > 40 meters since last route calculation, refresh road polyline to customer destination
+                        if (!lastRouteOrigin || Math.hypot(newLat - lastRouteOrigin.lat, newLng - lastRouteOrigin.lng) > 0.0004) {
+                            const destLatLng = { lat: parseFloat(DEST_COORDS[0]), lng: parseFloat(DEST_COORDS[1]) };
+                            fetchRoutePolyline({ lat: newLat, lng: newLng }, destLatLng);
+                        }
                     }
 
                     if (data.status === 'delivered' || data.status === 'completed' || data.status === 'cancelled') {
@@ -751,6 +812,8 @@
 
     function centerOnCourier() {
         if (!trackMap) return;
+        isAutoFollow = true;
+        updateAutoFollowUI();
         trackMap.panTo(currentRiderPos);
         trackMap.setZoom(16);
         if (courierInfoWindow && courierMarker) {

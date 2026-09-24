@@ -576,8 +576,6 @@ class DeliveryModel extends Model
      */
     public function getAllDeliveryPins(?string $search = null, ?string $shopFilter = null): array
     {
-        $activeCutoff = date('Y-m-d H:i:s', strtotime('-2 minutes'));
-
         $builder = $this->db->table('deliveries d')
             ->select("d.id, d.tracking_id, d.status, d.destination_address, d.current_lat, d.current_lng, d.location_updated_at, COALESCE(o.order_number, pr.request_number) AS ref_number, u.first_name, u.last_name, s.shop_name, s.id as shop_id, s.logo_url as shop_logo, s.latitude as shop_lat, s.longitude as shop_lng")
             ->join('orders o', "o.id = d.deliverable_id AND d.deliverable_type = 'order'", 'left')
@@ -586,8 +584,8 @@ class DeliveryModel extends Model
             ->join('shops s', 's.id = COALESCE(o.shop_id, pr.shop_id)', 'left')
             ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
             ->whereIn('d.status', ['shipped', 'in_transit'])
-            ->where('d.location_updated_at IS NOT NULL')
-            ->where('d.location_updated_at >=', $activeCutoff);
+            ->where('d.current_lat IS NOT NULL')
+            ->where('d.current_lng IS NOT NULL');
 
         if ($search !== null && $search !== '') {
             $builder->groupStart()->like('d.tracking_id', $search)->orLike('d.destination_address', $search)->orLike('s.shop_name', $search)->groupEnd();

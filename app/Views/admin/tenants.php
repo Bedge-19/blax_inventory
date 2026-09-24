@@ -1,147 +1,317 @@
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('content') ?>
 
-<div class="space-y-xl">
+<div class="space-y-6">
 
     <?php if (session()->getFlashdata('success')): ?>
-        <div class="p-md rounded-xl bg-green-100 text-green-800 text-sm"><?= session()->getFlashdata('success') ?></div>
+        <div class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 text-xs font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            <span><?= session()->getFlashdata('success') ?></span>
+        </div>
     <?php endif; ?>
     <?php if (session()->getFlashdata('error')): ?>
-        <div class="p-md rounded-xl bg-error-container text-on-error-container text-sm"><?= session()->getFlashdata('error') ?></div>
+        <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-800 dark:text-rose-300 text-xs font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">error</span>
+            <span><?= session()->getFlashdata('error') ?></span>
+        </div>
     <?php endif; ?>
     <?php if (session()->getFlashdata('warning')): ?>
-        <div class="p-md rounded-xl bg-amber-100 text-amber-800 text-sm"><?= esc(session()->getFlashdata('warning')) ?></div>
+        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px]">warning</span>
+            <span><?= esc(session()->getFlashdata('warning')) ?></span>
+        </div>
     <?php endif; ?>
 
-    <!-- Bento Stats — prototype: Total Active, Pending Approvals — no revenue -->
-    <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
-        <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow">
-            <div class="flex justify-between items-start mb-2"><p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Total Tenants</p><span class="material-symbols-outlined text-primary">storefront</span></div>
-            <h3 class="text-headline-lg font-bold text-on-surface"><?= esc($total_count ?? count($tenants ?? [])) ?></h3>
-            <p class="text-xs text-emerald-600 flex items-center gap-xs mt-xs"><span class="material-symbols-outlined text-sm">trending_up</span> All registered shops</p>
+    <!-- Bento Stats Overview -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Card 1: Total Tenants -->
+        <div class="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Total Merchants</span>
+                <div class="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">storefront</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h3 class="text-2xl lg:text-3xl font-black text-on-surface tracking-tight"><?= esc($total_count ?? count($tenants ?? [])) ?></h3>
+                <p class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 mt-1">
+                    <span class="material-symbols-outlined text-[14px]">check</span>
+                    <span>All onboarded shops</span>
+                </p>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow">
-            <div class="flex justify-between items-start mb-2"><p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Active Tenants</p><span class="material-symbols-outlined text-tertiary">verified</span></div>
-            <h3 class="text-headline-lg font-bold text-on-surface"><?= esc($active_count ?? 0) ?></h3>
-            <p class="text-xs text-on-surface-variant mt-xs">Verified & operating</p>
+
+        <!-- Card 2: Active Tenants -->
+        <div class="bg-surface-container-lowest rounded-2xl p-5 border border-outline-variant/30 shadow-xs flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+                <span class="text-xs font-bold text-on-surface-variant/70 uppercase tracking-wider">Active &amp; Operating</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">verified</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h3 class="text-2xl lg:text-3xl font-black text-emerald-600 tracking-tight"><?= esc($active_count ?? 0) ?></h3>
+                <p class="text-[11px] text-on-surface-variant/70 font-medium mt-1">Verified storefronts selling online</p>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/30 soft-shadow">
-            <div class="flex justify-between items-start mb-2"><p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Pending Approvals</p><span class="material-symbols-outlined text-error">pending_actions</span></div>
-            <h3 class="text-headline-lg font-bold text-on-surface"><?= esc($pending_count ?? 0) ?></h3>
-            <p class="text-xs text-error mt-xs">Needs review in next 48h</p>
+
+        <!-- Card 3: Pending Approvals -->
+        <div class="bg-surface-container-lowest rounded-2xl p-5 border <?= !empty($pending_count) ? 'border-amber-500/40 bg-amber-500/5' : 'border-outline-variant/30' ?> shadow-xs flex flex-col justify-between">
+            <div class="flex justify-between items-start">
+                <span class="text-xs font-bold uppercase tracking-wider <?= !empty($pending_count) ? 'text-amber-800 dark:text-amber-300' : 'text-on-surface-variant/70' ?>">Pending Verification</span>
+                <div class="w-9 h-9 rounded-xl <?= !empty($pending_count) ? 'bg-amber-500/20 text-amber-700' : 'bg-surface-container text-on-surface-variant' ?> flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[20px]">pending_actions</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <h3 class="text-2xl lg:text-3xl font-black <?= !empty($pending_count) ? 'text-amber-700' : 'text-on-surface' ?> tracking-tight"><?= esc($pending_count ?? 0) ?></h3>
+                <p class="text-[11px] <?= !empty($pending_count) ? 'text-amber-800 font-bold' : 'text-on-surface-variant/70 font-medium' ?> mt-1">
+                    <?= !empty($pending_count) ? 'Action required in next 48h' : 'No applications pending' ?>
+                </p>
+            </div>
         </div>
     </section>
 
-    <!-- Data Table — prototype toolbar -->
-    <section class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 soft-shadow overflow-hidden">
-        <div class="p-6 border-b border-outline-variant/20 flex flex-wrap items-start justify-between gap-md">
-            <h3 class="text-title-lg font-bold text-on-surface">Tenants Data Table</h3>
-            <p class="text-xs text-on-surface-variant">Monitor and manage all active shops — no financial data displayed.</p>
-            <?php if (!empty($pending_count)): ?>
-                <span class="inline-flex items-center gap-xs px-md py-sm rounded-full bg-amber-100 text-amber-800 text-xs font-bold">
-                    <span class="material-symbols-outlined text-[16px]">pending_actions</span>
-                    <?= (int) $pending_count ?> awaiting review
+    <!-- Shopify Polaris Segmented Control & Realtime Search Bar (No Filter Button) -->
+    <div class="bg-surface-container-lowest p-5 rounded-2xl border border-outline-variant/30 shadow-xs space-y-4">
+        
+        <!-- Segmented Status Tabs -->
+        <div class="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-xl border border-outline-variant/20 overflow-x-auto">
+            <button type="button" onclick="filterByStatus('')" class="status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= empty($filters['status']) ? 'bg-surface-container-lowest text-primary shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>" data-status="">
+                All Merchants (<?= (int) ($total_count ?? count($tenants ?? [])) ?>)
+            </button>
+            <button type="button" onclick="filterByStatus('active')" class="status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['status'] ?? '') === 'active' ? 'bg-surface-container-lowest text-emerald-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>" data-status="active">
+                <span class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Active (<?= (int) $active_count ?>)</span>
                 </span>
-            <?php endif; ?>
+            </button>
+            <button type="button" onclick="filterByStatus('pending')" class="status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['status'] ?? '') === 'pending' ? 'bg-surface-container-lowest text-amber-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>" data-status="pending">
+                <span class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 <?= !empty($pending_count) ? 'animate-pulse' : '' ?>"></span>
+                    <span>Pending (<?= (int) $pending_count ?>)</span>
+                </span>
+            </button>
+            <button type="button" onclick="filterByStatus('suspended')" class="status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['status'] ?? '') === 'suspended' ? 'bg-surface-container-lowest text-slate-700 dark:text-slate-200 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>" data-status="suspended">
+                <span class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span>Suspended</span>
+                </span>
+            </button>
+            <button type="button" onclick="filterByStatus('rejected')" class="status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all <?= ($filters['status'] ?? '') === 'rejected' ? 'bg-surface-container-lowest text-rose-600 shadow-xs' : 'text-on-surface-variant hover:text-on-surface' ?>" data-status="rejected">
+                <span class="inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                    <span>Rejected</span>
+                </span>
+            </button>
         </div>
-        <div class="px-6 py-4 border-b border-outline-variant/20 bg-surface-container-low/50 flex flex-wrap gap-sm items-center">
-            <form method="get" action="<?= base_url('admin/tenants') ?>" class="flex flex-wrap gap-sm flex-1">
-                <div class="relative flex-1 min-w-0 sm:min-w-[220px]">
-                    <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
-                    <input name="q" value="<?= esc($filters['q'] ?? '') ?>" placeholder="Search shops, owners, or IDs..." class="w-full pl-xl pr-md py-sm bg-surface-container-lowest border border-outline-variant rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
-                </div>
-                <select name="status" class="bg-surface-container-lowest border border-outline-variant rounded-lg px-md py-sm text-sm">
-                    <option value="">All Status</option>
-                    <option value="active" <?= ($filters['status']??'')==='active'?'selected':'' ?>>Active</option>
-                    <option value="pending" <?= ($filters['status']??'')==='pending'?'selected':'' ?>>Pending</option>
-                    <option value="suspended" <?= ($filters['status']??'')==='suspended'?'selected':'' ?>>Suspended</option>
-                    <option value="rejected" <?= ($filters['status']??'')==='rejected'?'selected':'' ?>>Rejected</option>
-                </select>
-                <div class="flex items-center gap-1.5 text-xs text-on-surface-variant">
-                    <label for="per_page_select" class="font-medium">Show:</label>
-                    <select name="per_page" id="per_page_select" onchange="this.form.submit()" class="bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-primary/30">
+
+        <!-- Realtime Search & Controls Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <!-- Realtime Search Input -->
+            <div class="relative flex-1 min-w-[260px]">
+                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+                <input id="realtimeSearchInput" 
+                       type="text" 
+                       value="<?= esc($filters['q'] ?? '') ?>" 
+                       placeholder="Instant search by shop name, owner, email, or ID..." 
+                       class="w-full pl-9 pr-8 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all placeholder:text-on-surface-variant/50">
+                <button type="button" id="clearSearchBtn" onclick="clearRealtimeSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-0.5 rounded-full" title="Clear search">
+                    <span class="material-symbols-outlined text-[16px]">close</span>
+                </button>
+            </div>
+
+            <!-- Show Pages & Stats Indicator -->
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+                    <label for="per_page_select" class="font-bold text-[11px] uppercase tracking-wider text-on-surface-variant/70">Show:</label>
+                    <select name="per_page" id="per_page_select" onchange="changePageSize(this.value)" class="bg-surface-container-low border border-outline-variant/40 rounded-xl px-3 py-1.5 text-xs font-bold text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="5" <?= ($per_page ?? 10) == 5 ? 'selected' : '' ?>>5</option>
                         <option value="10" <?= ($per_page ?? 10) == 10 ? 'selected' : '' ?>>10</option>
                         <option value="20" <?= ($per_page ?? 10) == 20 ? 'selected' : '' ?>>20</option>
+                        <option value="50" <?= ($per_page ?? 10) == 50 ? 'selected' : '' ?>>50</option>
                     </select>
                 </div>
-                <button type="submit" class="bg-primary text-on-primary px-md py-sm rounded-lg text-sm font-semibold">Filter</button>
-            </form>
+
+                <span id="realtimeMatchCount" class="text-xs font-semibold text-primary px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20">
+                    <?= count($tenants ?? []) ?> items shown
+                </span>
+            </div>
         </div>
-        <div class="responsive-table">
-            <table class="w-full text-left border-collapse">
-                <thead><tr class="bg-surface-container-low/50 text-label-sm text-on-surface-variant/70 uppercase">
-                    <th class="py-sm px-md">Shop Name</th><th class="py-sm px-md">Owner</th><th class="py-sm px-md">Permit</th><th class="py-sm px-md">Date Joined</th><th class="py-sm px-md text-center">Status</th><th class="py-sm px-md text-right">Actions</th>
-                </tr></thead>
-                <tbody>
+    </div>
+
+    <!-- Tenants Data Table (Polaris IndexTable Aesthetic) -->
+    <section class="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto w-full">
+            <table class="w-full text-left border-collapse min-w-[980px]" id="tenantsTable">
+                <thead class="bg-surface-container-low/70 border-b border-outline-variant/30 text-[11px] font-bold text-on-surface-variant/70 uppercase tracking-wider">
+                    <tr>
+                        <th class="py-3 px-5 whitespace-nowrap">Merchant Details</th>
+                        <th class="py-3 px-5 whitespace-nowrap">Owner / Contact</th>
+                        <th class="py-3 px-5 whitespace-nowrap">Permit Status</th>
+                        <th class="py-3 px-5 whitespace-nowrap">Date Onboarded</th>
+                        <th class="py-3 px-5 text-center whitespace-nowrap">Status</th>
+                        <th class="py-3 px-5 text-right whitespace-nowrap min-w-[190px]">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-outline-variant/20 text-xs" id="tenantsTableBody">
                     <?php if (!empty($tenants)): foreach ($tenants as $t): ?>
-                        <tr class="border-b border-outline-variant/10 hover:bg-surface-container-low">
-                            <td class="py-md px-md font-semibold"><?= esc($t['shop_name']) ?><p class="text-xs text-on-surface-variant font-normal">ID: TEN-<?= esc(str_pad($t['id'],3,'0',STR_PAD_LEFT)) ?></p></td>
-                            <td class="py-md px-md text-sm"><?= esc(($t['first_name']??'') . ' ' . ($t['last_name']??'')) ?><p class="text-xs text-on-surface-variant"><?= esc($t['email']??'') ?></p></td>
-                            <td class="py-md px-md text-xs">
-                                <?php if (!empty($t['business_permit_url'])): ?>
-                                    <button type="button" data-permit-url="<?= esc(base_url('admin/tenants/permit/' . (int) $t['id']), 'attr') ?>" data-shop-name="<?= esc($t['shop_name'], 'attr') ?>" onclick="openPermitModal(this)" class="inline-flex items-center gap-xs text-primary font-semibold hover:underline">
-                                        <span class="material-symbols-outlined text-[18px]">description</span> View
-                                    </button>
-                                <?php else: ?>
-                                    <span class="inline-flex items-center gap-xs text-error font-semibold"><span class="material-symbols-outlined text-[18px]">warning</span> No permit</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="py-md px-md text-xs text-on-surface-variant"><?= date('M d, Y', strtotime($t['created_at'])) ?></td>
-                            <td class="py-md px-md text-center"><?= status_badge($t['status'] ?? 'active') ?></td>
-                            <td class="py-md px-md text-right">
-                                <?php $tenantStatus = $t['status'] ?? 'active'; ?>
-                                <?php if (in_array($tenantStatus, ['pending', 'active', 'suspended'], true)): ?>
-                                    <div class="relative inline-block">
-                                        <button type="button" data-row="<?= (int) $t['id'] ?>" onclick="toggleTenantMenu(this)" class="tenant-more-toggle p-xs hover:bg-surface-container-high rounded text-on-surface-variant" title="Tenant actions" aria-haspopup="true" aria-expanded="false">
-                                            <span class="material-symbols-outlined">more_vert</span>
-                                        </button>
-                                        <div id="tenant-more-menu-<?= (int) $t['id'] ?>" class="hidden tenant-more-menu z-50 bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-lg p-sm min-w-[190px]" role="menu">
-                                            <?php if (!empty($t['business_permit_url'])): ?>
-                                                <button type="button" data-permit-url="<?= esc(base_url('admin/tenants/permit/' . (int) $t['id']), 'attr') ?>" data-shop-name="<?= esc($t['shop_name'], 'attr') ?>" onclick="openPermitModal(this)" class="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-left text-label-sm text-on-surface hover:bg-surface-container-low">
-                                                    <span class="material-symbols-outlined text-[18px]">description</span> View Permit
-                                                </button>
-                                            <?php endif; ?>
-                                            <?php if ($tenantStatus === 'pending'): ?>
-                                                <form action="<?= base_url('admin/tenants/approve') ?>" method="POST" class="border-t border-outline-variant/20 mt-xs pt-xs">
-                                                    <?= csrf_field() ?><input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
-                                                    <button type="submit" class="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-label-sm text-primary font-semibold hover:bg-primary/10" onclick="return confirm('Approve this tenant?');">
-                                                        <span class="material-symbols-outlined text-[18px]">verified</span> Approve Tenant
-                                                    </button>
-                                                </form>
-                                                <form action="<?= base_url('admin/tenants/reject') ?>" method="POST" class="space-y-xs border-t border-outline-variant/20 mt-xs pt-xs">
-                                                    <?= csrf_field() ?><input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
-                                                    <textarea name="rejection_reason" required maxlength="255" rows="2" class="w-full p-sm bg-surface-container-low border border-outline-variant rounded-lg text-label-sm" placeholder="Rejection reason"></textarea>
-                                                    <button type="submit" class="w-full flex items-center justify-center gap-sm px-sm py-sm rounded-lg text-label-sm text-error font-semibold hover:bg-error/10" onclick="return confirm('Reject this tenant application?');">
-                                                        <span class="material-symbols-outlined text-[18px]">cancel</span> Reject Tenant
-                                                    </button>
-                                                </form>
-                                            <?php elseif ($tenantStatus === 'active'): ?>
-                                                <form action="<?= base_url('admin/tenants/toggle-status') ?>" method="POST" class="border-t border-outline-variant/20 mt-xs pt-xs">
-                                                    <?= csrf_field() ?><input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
-                                                    <button type="submit" class="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-label-sm text-error font-semibold hover:bg-error/10"><span class="material-symbols-outlined text-[18px]">block</span> Suspend Tenant</button>
-                                                </form>
-                                            <?php elseif ($tenantStatus === 'suspended'): ?>
-                                                <form action="<?= base_url('admin/tenants/toggle-status') ?>" method="POST" class="border-t border-outline-variant/20 mt-xs pt-xs">
-                                                    <?= csrf_field() ?><input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
-                                                    <button type="submit" class="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-label-sm text-primary font-semibold hover:bg-primary/10"><span class="material-symbols-outlined text-[18px]">check_circle</span> Activate Tenant</button>
-                                                </form>
+                        <?php 
+                        $tStatus = $t['status'] ?? 'active'; 
+                        $shopSlug = $t['slug'] ?? '';
+                        $ownerFull = trim(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? ''));
+                        ?>
+                        <tr class="tenant-row hover:bg-surface-container-low/40 transition-colors group" 
+                            id="tenant-row-<?= (int) $t['id'] ?>"
+                            data-shop-name="<?= esc(strtolower($t['shop_name'] ?? '')) ?>"
+                            data-owner="<?= esc(strtolower($ownerFull)) ?>"
+                            data-email="<?= esc(strtolower($t['email'] ?? '')) ?>"
+                            data-id="ten-<?= esc(str_pad($t['id'], 3, '0', STR_PAD_LEFT)) ?>"
+                            data-status="<?= esc($tStatus) ?>">
+                            
+                            <!-- Merchant Details -->
+                            <td class="py-3.5 px-5">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/20 via-blue-500/20 to-indigo-500/20 text-primary border border-primary/20 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                                        <?php if (!empty($t['logo_url'])): ?>
+                                            <img src="<?= esc(logo_url($t['logo_url'])) ?>" alt="<?= esc($t['shop_name']) ?>" class="w-full h-full object-cover rounded-xl">
+                                        <?php else: ?>
+                                            <span><?= esc(mb_strtoupper(mb_substr($t['shop_name'] ?? 'S', 0, 2))) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="font-bold text-on-surface group-hover:text-primary transition-colors truncate max-w-xs md:max-w-sm">
+                                                <?= esc($t['shop_name']) ?>
+                                            </span>
+                                            <?php if (!empty($shopSlug)): ?>
+                                                <a href="<?= base_url('shop/' . esc($shopSlug)) ?>" target="_blank" rel="noopener" class="text-on-surface-variant hover:text-primary inline-flex items-center transition-colors" title="View live storefront">
+                                                    <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+                                                </a>
                                             <?php endif; ?>
                                         </div>
+                                        <div class="flex items-center gap-2 mt-0.5 text-[11px] text-on-surface-variant/70">
+                                            <span class="font-mono text-[10px] bg-surface-container px-1.5 py-0.2 rounded border border-outline-variant/20">
+                                                TEN-<?= esc(str_pad($t['id'], 3, '0', STR_PAD_LEFT)) ?>
+                                            </span>
+                                            <span class="uppercase tracking-wider font-semibold text-[10px] text-outline">
+                                                <?= esc($t['plan'] ?? 'standard') ?>
+                                            </span>
+                                        </div>
                                     </div>
-                                <?php elseif ($tenantStatus === 'rejected'): ?>
-                                    <div class="text-left max-w-[220px]"><span class="text-xs text-error">Rejected<?= !empty($t['rejection_reason']) ? ': ' . esc($t['rejection_reason']) : '' ?></span></div>
+                                </div>
+                            </td>
+
+                            <!-- Owner / Contact -->
+                            <td class="py-3.5 px-5">
+                                <div class="min-w-0">
+                                    <p class="font-semibold text-on-surface truncate">
+                                        <?= esc($ownerFull ?: 'Unassigned Owner') ?>
+                                    </p>
+                                    <p class="text-[11px] text-on-surface-variant/70 truncate flex items-center gap-1 mt-0.5">
+                                        <span class="material-symbols-outlined text-[13px] text-outline">mail</span>
+                                        <span><?= esc($t['email'] ?? 'No email provided') ?></span>
+                                    </p>
+                                </div>
+                            </td>
+
+                            <!-- Permit Status -->
+                            <td class="py-3.5 px-5 whitespace-nowrap">
+                                <?php if (!empty($t['business_permit_url'])): ?>
+                                    <button type="button" 
+                                            data-permit-url="<?= esc(base_url('admin/tenants/permit/' . (int) $t['id']), 'attr') ?>" 
+                                            data-shop-name="<?= esc($t['shop_name'], 'attr') ?>" 
+                                            onclick="openPermitModal(this)" 
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container-low hover:bg-surface-container border border-outline-variant/30 hover:border-primary/40 text-primary font-bold text-[11px] transition-all group/btn shadow-2xs whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[16px] text-primary">description</span>
+                                        <span>View Document</span>
+                                    </button>
                                 <?php else: ?>
-                                    <span class="text-xs text-on-surface-variant">—</span>
+                                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 font-semibold text-[11px] whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[14px]">warning</span>
+                                        <span>No Permit</span>
+                                    </span>
                                 <?php endif; ?>
+                            </td>
+
+                            <!-- Date Onboarded -->
+                            <td class="py-3.5 px-5 text-on-surface-variant font-medium whitespace-nowrap">
+                                <?= date('M d, Y', strtotime($t['created_at'])) ?>
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td class="py-3.5 px-5 text-center whitespace-nowrap">
+                                <?= status_badge($tStatus) ?>
+                            </td>
+
+                            <!-- Redesigned Actions Column -->
+                            <td class="py-3.5 px-5 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center justify-end gap-1.5 flex-nowrap">
+                                    <?php if ($tStatus === 'pending'): ?>
+                                        <!-- Quick Approve Button -->
+                                        <form action="<?= base_url('admin/tenants/approve') ?>" method="POST" class="inline-flex items-center shrink-0" onsubmit="return confirm('Approve <?= esc($t['shop_name'], 'js') ?> for active marketplace operations?');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
+                                            <button type="submit" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs active:scale-95 transition-all whitespace-nowrap shrink-0" title="Approve Merchant Application">
+                                                <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                                                <span>Approve</span>
+                                            </button>
+                                        </form>
+
+                                        <!-- Quick Reject Trigger Modal -->
+                                        <button type="button" 
+                                                onclick="openRejectModal(<?= (int)$t['id'] ?>, '<?= esc($t['shop_name'], 'js') ?>')" 
+                                                class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 font-bold text-xs transition-all whitespace-nowrap shrink-0" title="Reject Merchant Application">
+                                            <span class="material-symbols-outlined text-[16px]">cancel</span>
+                                            <span>Reject</span>
+                                        </button>
+
+                                    <?php elseif ($tStatus === 'active'): ?>
+                                        <!-- Suspend Button -->
+                                        <form action="<?= base_url('admin/tenants/toggle-status') ?>" method="POST" class="inline-flex items-center shrink-0" onsubmit="return confirm('Suspend <?= esc($t['shop_name'], 'js') ?>? Products and storefront access will be temporarily locked.');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
+                                            <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-surface-container-low hover:bg-rose-500/10 text-on-surface-variant hover:text-rose-600 border border-outline-variant/30 hover:border-rose-500/30 font-semibold text-xs transition-all whitespace-nowrap shrink-0" title="Suspend Merchant">
+                                                <span class="material-symbols-outlined text-[16px]">block</span>
+                                                <span>Suspend</span>
+                                            </button>
+                                        </form>
+
+                                    <?php elseif ($tStatus === 'suspended'): ?>
+                                        <!-- Activate Button -->
+                                        <form action="<?= base_url('admin/tenants/toggle-status') ?>" method="POST" class="inline-flex items-center shrink-0" onsubmit="return confirm('Reactivate <?= esc($t['shop_name'], 'js') ?>? Storefront will resume normal sales.');">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="tenant_id" value="<?= (int) $t['id'] ?>">
+                                            <button type="submit" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-primary text-on-primary hover:bg-primary/90 font-bold text-xs shadow-xs active:scale-95 transition-all whitespace-nowrap shrink-0" title="Reactivate Merchant">
+                                                <span class="material-symbols-outlined text-[16px]">check</span>
+                                                <span>Activate</span>
+                                            </button>
+                                        </form>
+
+                                    <?php elseif ($tStatus === 'rejected'): ?>
+                                        <span class="text-[11px] text-rose-600 font-semibold truncate max-w-[150px] inline-block shrink-0" title="<?= esc($t['rejection_reason'] ?? 'Rejected') ?>">
+                                            <?= !empty($t['rejection_reason']) ? esc($t['rejection_reason']) : 'Rejected' ?>
+                                        </span>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; else: ?>
-                        <tr><td colspan="6" class="py-lg text-center text-on-surface-variant">No tenant shops found.</td></tr>
+                        <tr id="emptyRowState">
+                            <td colspan="6" class="py-12 text-center">
+                                <div class="w-12 h-12 rounded-2xl bg-surface-container flex items-center justify-center mx-auto mb-2 text-outline">
+                                    <span class="material-symbols-outlined text-2xl">store_off</span>
+                                </div>
+                                <p class="text-sm font-bold text-on-surface">No tenant merchants found</p>
+                                <p class="text-xs text-on-surface-variant mt-0.5">Try modifying your search or clearing active filters.</p>
+                            </td>
+                        </tr>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Controls -->
         <?php if (isset($pager)): ?>
             <?php
             $total   = (int) $pager->getTotal('tenants');
@@ -151,12 +321,14 @@
             $start   = $total === 0 ? 0 : ($cur - 1) * $perPage + 1;
             $end     = min($cur * $perPage, $total);
             ?>
-            <div class="px-6 py-3 bg-surface-container-low/30 flex justify-between items-center border-t border-outline-variant/20 flex-wrap gap-sm">
-                <p class="text-xs text-on-surface-variant">Showing <?= number_format($start) ?> to <?= number_format($end) ?> of <?= number_format($total) ?> results · Confidential revenue hidden</p>
+            <div class="px-5 py-3.5 bg-surface-container-low/70 flex justify-between items-center border-t border-outline-variant/30 flex-wrap gap-2 text-xs">
+                <p class="font-medium text-on-surface-variant">
+                    Showing <span class="font-bold text-on-surface"><?= number_format($start) ?></span> to <span class="font-bold text-on-surface"><?= number_format($end) ?></span> of <span class="font-bold text-on-surface"><?= number_format($total) ?></span> merchants
+                </p>
                 <?php if ($pages > 1): ?>
-                    <div class="flex items-center gap-xs">
-                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('tenants') ?>" title="Previous">
-                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                    <div class="flex items-center gap-1">
+                        <a class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container border border-outline-variant/30 <?= $cur <= 1 ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getPreviousPageURI('tenants') ?>" title="Previous Page">
+                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
                         </a>
                         <?php
                         $window = [];
@@ -168,21 +340,71 @@
                         $prev = 0;
                         foreach ($window as $num):
                             if ($num - $prev > 1): ?>
-                                <span class="px-xs text-outline text-xs">...</span>
+                                <span class="px-1 text-outline">...</span>
                             <?php endif; ?>
-                            <a class="w-8 h-8 rounded flex items-center justify-center text-xs <?= $cur === $num ? 'bg-primary text-on-primary font-semibold' : 'hover:bg-surface-container-high text-on-surface' ?>" href="<?= $pager->getPageURI($num, 'tenants') ?>"><?= $num ?></a>
+                            <a class="w-8 h-8 rounded-lg flex items-center justify-center font-bold <?= $cur === $num ? 'bg-primary text-on-primary shadow-xs' : 'hover:bg-surface-container border border-outline-variant/30 text-on-surface-variant' ?>" href="<?= $pager->getPageURI($num, 'tenants') ?>"><?= $num ?></a>
                         <?php $prev = $num; endforeach; ?>
-                        <a class="p-sm rounded hover:bg-surface-container-high <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('tenants') ?>" title="Next">
-                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        <a class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container border border-outline-variant/30 <?= $cur >= $pages ? 'pointer-events-none opacity-30' : '' ?>" href="<?= $pager->getNextPageURI('tenants') ?>" title="Next Page">
+                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                         </a>
                     </div>
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="px-6 py-3 bg-surface-container-low/30 border-t border-outline-variant/20 text-xs text-on-surface-variant">Showing 1 to <?= count($tenants ?? []) ?> of <?= esc($total_count ?? count($tenants ?? [])) ?> results · Confidential revenue hidden</div>
+            <div class="px-5 py-3.5 bg-surface-container-low/70 border-t border-outline-variant/30 text-xs text-on-surface-variant">
+                Showing 1 to <?= count($tenants ?? []) ?> of <?= esc($total_count ?? count($tenants ?? [])) ?> merchants
+            </div>
         <?php endif; ?>
     </section>
 
+</div>
+
+<!-- Reject Tenant Modal -->
+<div id="reject-tenant-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md" role="dialog" aria-modal="true" aria-labelledby="reject-modal-title">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-xs" onclick="closeRejectModal()"></div>
+    <div class="relative w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface-container-lowest shadow-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+            <div class="flex items-center gap-2 text-rose-600">
+                <span class="material-symbols-outlined text-[22px]">cancel</span>
+                <h3 id="reject-modal-title" class="text-base font-bold text-on-surface">Reject Application</h3>
+            </div>
+            <button type="button" onclick="closeRejectModal()" class="rounded-lg p-1 text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <p class="text-xs text-on-surface-variant">
+            Provide a mandatory rejection reason for <strong id="reject-shop-name" class="text-on-surface"></strong>. The applicant will be notified via their registered email.
+        </p>
+
+        <form action="<?= base_url('admin/tenants/reject') ?>" method="POST" class="space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="tenant_id" id="reject-tenant-id" value="">
+            <div>
+                <label for="rejection_reason" class="block text-[11px] font-bold uppercase tracking-wider text-on-surface-variant/70 mb-1.5">
+                    Reason for Rejection <span class="text-rose-600">*</span>
+                </label>
+                <textarea name="rejection_reason" 
+                          id="rejection_reason" 
+                          required 
+                          maxlength="255" 
+                          rows="3" 
+                          class="w-full p-3 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs text-on-surface focus:outline-none focus:ring-2 focus:ring-rose-500 placeholder:text-on-surface-variant/50" 
+                          placeholder="e.g. Expired Mayor's permit, incomplete business registration documents, or illegible photos."></textarea>
+                <span class="text-[10px] text-on-surface-variant/60 block mt-1">Maximum 255 characters.</span>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/20">
+                <button type="button" onclick="closeRejectModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs active:scale-95 transition-all flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">cancel</span>
+                    <span>Confirm Rejection</span>
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div id="permit-preview-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md" role="dialog" aria-modal="true" aria-labelledby="permit-preview-title" aria-hidden="true">
@@ -210,9 +432,11 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    let activeTenantMenu = null;
     let permitModalTrigger = null;
+    let activeFilterStatus = '<?= esc($filters['status'] ?? '') ?>';
+    let searchDebounceTimeout = null;
 
+    // Permit Modal controls
     function openPermitModal(button) {
         const modal = document.getElementById('permit-preview-modal');
         const frame = document.getElementById('permit-preview-frame');
@@ -222,7 +446,6 @@
 
         if (!modal || !frame || !title || !openInNewTab || !permitUrl) return;
 
-        closeTenantMenus();
         permitModalTrigger = button;
         title.textContent = button.dataset.shopName ? button.dataset.shopName + ' — Business Permit' : 'Business Permit';
         openInNewTab.href = permitUrl;
@@ -248,53 +471,165 @@
         return true;
     }
 
-    function closeTenantMenus() {
-        if (activeTenantMenu) {
-            activeTenantMenu.classList.add('hidden');
-            activeTenantMenu = null;
-        }
-        document.querySelectorAll('.tenant-more-toggle[aria-expanded="true"]').forEach((button) => button.setAttribute('aria-expanded', 'false'));
+    // Reject Modal controls
+    function openRejectModal(tenantId, shopName) {
+        const modal = document.getElementById('reject-tenant-modal');
+        const idInput = document.getElementById('reject-tenant-id');
+        const shopLabel = document.getElementById('reject-shop-name');
+        const reasonInput = document.getElementById('rejection_reason');
+
+        if (!modal) return;
+        idInput.value = tenantId;
+        shopLabel.textContent = shopName;
+        if (reasonInput) reasonInput.value = '';
+
+        modal.classList.remove('hidden');
+        setTimeout(() => reasonInput && reasonInput.focus(), 50);
     }
 
-    function toggleTenantMenu(button) {
-        const menu = document.getElementById('tenant-more-menu-' + button.dataset.row);
-        if (!menu) return;
-        if (activeTenantMenu === menu) {
-            closeTenantMenus();
-            return;
-        }
-        closeTenantMenus();
-        document.body.appendChild(menu);
-        menu.classList.remove('hidden');
-        menu.style.position = 'fixed';
-        const rect = button.getBoundingClientRect();
-        const gap = 8;
-        const left = rect.right + menu.offsetWidth <= window.innerWidth - gap
-            ? rect.right - menu.offsetWidth
-            : Math.max(gap, window.innerWidth - menu.offsetWidth - gap);
-        menu.style.left = left + 'px';
-        if (rect.bottom + gap + menu.offsetHeight <= window.innerHeight - gap) {
-            menu.style.top = (rect.bottom + gap) + 'px';
-            menu.style.bottom = '';
-        } else {
-            menu.style.top = '';
-            menu.style.bottom = (window.innerHeight - rect.top + gap) + 'px';
-        }
-        activeTenantMenu = menu;
-        button.setAttribute('aria-expanded', 'true');
+    function closeRejectModal() {
+        const modal = document.getElementById('reject-tenant-modal');
+        if (modal) modal.classList.add('hidden');
     }
+
+    // Realtime Client-Side Filtering
+    function applyRealtimeFilters() {
+        const searchInput = document.getElementById('realtimeSearchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+        const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+        const rows = document.querySelectorAll('#tenantsTableBody tr.tenant-row');
+        const countBadge = document.getElementById('realtimeMatchCount');
+        let visibleCount = 0;
+
+        if (clearBtn) {
+            if (query.length > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+
+        rows.forEach(row => {
+            const shopName = row.dataset.shopName || '';
+            const owner = row.dataset.owner || '';
+            const email = row.dataset.email || '';
+            const id = row.dataset.id || '';
+            const status = row.dataset.status || '';
+
+            const matchesStatus = !activeFilterStatus || (status === activeFilterStatus);
+            const matchesQuery = !query || (
+                shopName.includes(query) ||
+                owner.includes(query) ||
+                email.includes(query) ||
+                id.includes(query)
+            );
+
+            if (matchesStatus && matchesQuery) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        if (countBadge) {
+            countBadge.textContent = visibleCount + ' items shown';
+        }
+
+        const emptyState = document.getElementById('emptyRowState');
+        if (emptyState) {
+            if (visibleCount === 0 && rows.length > 0) {
+                emptyState.style.display = '';
+            } else if (visibleCount > 0) {
+                emptyState.style.display = 'none';
+            }
+        }
+    }
+
+    // Status Tab Switcher (Shopify Polaris pattern)
+    function filterByStatus(status) {
+        activeFilterStatus = status;
+
+        // Update Tab Button Styles
+        document.querySelectorAll('.status-tab-btn').forEach(btn => {
+            const btnStatus = btn.dataset.status || '';
+            if (btnStatus === status) {
+                btn.className = 'status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all bg-surface-container-lowest text-primary shadow-xs';
+            } else {
+                btn.className = 'status-tab-btn px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all text-on-surface-variant hover:text-on-surface';
+            }
+        });
+
+        applyRealtimeFilters();
+
+        // If paginated dataset is larger than page, sync URL after brief delay
+        clearTimeout(searchDebounceTimeout);
+        searchDebounceTimeout = setTimeout(() => {
+            syncUrlParams();
+        }, 600);
+    }
+
+    function clearRealtimeSearch() {
+        const searchInput = document.getElementById('realtimeSearchInput');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
+        applyRealtimeFilters();
+        syncUrlParams();
+    }
+
+    function changePageSize(perPage) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('per_page', perPage);
+        url.searchParams.delete('page_tenants');
+        window.location.href = url.toString();
+    }
+
+    function syncUrlParams() {
+        const searchInput = document.getElementById('realtimeSearchInput');
+        const q = searchInput ? searchInput.value.trim() : '';
+        const url = new URL(window.location.href);
+
+        let changed = false;
+        if (q) {
+            if (url.searchParams.get('q') !== q) { url.searchParams.set('q', q); changed = true; }
+        } else {
+            if (url.searchParams.has('q')) { url.searchParams.delete('q'); changed = true; }
+        }
+
+        if (activeFilterStatus) {
+            if (url.searchParams.get('status') !== activeFilterStatus) { url.searchParams.set('status', activeFilterStatus); changed = true; }
+        } else {
+            if (url.searchParams.has('status')) { url.searchParams.delete('status'); changed = true; }
+        }
+
+        if (changed) {
+            url.searchParams.delete('page_tenants');
+            window.location.href = url.toString();
+        }
+    }
+
+    // Input event for instant typing search
+    document.getElementById('realtimeSearchInput')?.addEventListener('input', function() {
+        applyRealtimeFilters();
+        clearTimeout(searchDebounceTimeout);
+        searchDebounceTimeout = setTimeout(() => {
+            syncUrlParams();
+        }, 800);
+    });
+
+    // Close modals on escape or outside click
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            if (!closePermitModal()) closeRejectModal();
+        }
+    });
 
     document.addEventListener('click', function (event) {
         if (event.target.closest('[data-permit-modal-close]')) {
             closePermitModal();
-            return;
         }
-        if (!event.target.closest('.tenant-more-menu') && !event.target.closest('.tenant-more-toggle')) closeTenantMenus();
     });
-    document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && !closePermitModal()) closeTenantMenus();
-    });
-    window.addEventListener('scroll', closeTenantMenus, true);
-    window.addEventListener('resize', closeTenantMenus);
+
+    // Run filter check on load
+    applyRealtimeFilters();
 </script>
 <?= $this->endSection() ?>
