@@ -100,56 +100,94 @@ class Database extends Config
         }
 
         // -----------------------------------------------------------
-        // Explicit env-var overrides for Vercel (underscore/caps names)
+        // Environment variable resolution for Railway, Vercel, and local
         // -----------------------------------------------------------
-        // Vercel does not allow dots in env var names, so CI's auto-
-        // mapping of "database.default.hostname" never fires. We read
-        // the Vercel-style names directly and fall back to whatever
-        // CI already loaded (which covers the local .env case).
+        // Supports Railway native MySQL variables (MYSQLHOST, MYSQLPORT, etc.),
+        // Railway MySQL URLs (MYSQL_URL), CI4 dotted keys (database.default.*),
+        // and uppercase/Vercel keys (DATABASE_DEFAULT_*).
         // -----------------------------------------------------------
 
+        // 1. Connection URL support (Railway MySQL_URL / DATABASE_URL)
+        $dbUrl = $this->firstEnv(['MYSQL_URL', 'DATABASE_URL', 'JAWSDB_URL', 'CLEARDB_DATABASE_URL'], '');
+        if ($dbUrl !== '') {
+            $parsed = parse_url($dbUrl);
+            if ($parsed !== false) {
+                if (!empty($parsed['host'])) {
+                    $this->default['hostname'] = $parsed['host'];
+                }
+                if (!empty($parsed['user'])) {
+                    $this->default['username'] = urldecode($parsed['user']);
+                }
+                if (isset($parsed['pass'])) {
+                    $this->default['password'] = urldecode($parsed['pass']);
+                }
+                if (!empty($parsed['port'])) {
+                    $this->default['port'] = (int) $parsed['port'];
+                }
+                if (!empty($parsed['path'])) {
+                    $this->default['database'] = ltrim($parsed['path'], '/');
+                }
+            }
+        }
+
+        // 2. Individual parameter overrides
         $this->default['hostname'] = $this->firstEnv(
-            ['DATABASE_DEFAULT_HOSTNAME', 'DB_HOST', 'DB_HOSTNAME'],
+            ['MYSQLHOST', 'MYSQL_HOST', 'DATABASE_DEFAULT_HOSTNAME', 'database.default.hostname', 'database_default_hostname', 'DB_HOST', 'DB_HOSTNAME'],
             $this->default['hostname'] ?: 'localhost'
         );
 
         $this->default['username'] = $this->firstEnv(
-            ['DATABASE_DEFAULT_USERNAME', 'DB_USER', 'DB_USERNAME'],
+            ['MYSQLUSER', 'MYSQL_USER', 'DATABASE_DEFAULT_USERNAME', 'database.default.username', 'database_default_username', 'DB_USER', 'DB_USERNAME'],
             $this->default['username'] ?: ''
         );
 
         $this->default['password'] = $this->firstEnv(
-            ['DATABASE_DEFAULT_PASSWORD', 'DB_PASS', 'DB_PASSWORD'],
+            ['MYSQLPASSWORD', 'MYSQL_PASSWORD', 'DATABASE_DEFAULT_PASSWORD', 'database.default.password', 'database_default_password', 'DB_PASS', 'DB_PASSWORD'],
             $this->default['password'] ?: ''
         );
 
         $this->default['database'] = $this->firstEnv(
-            ['DATABASE_DEFAULT_DATABASE', 'DB_DATABASE', 'DB_NAME'],
+            ['MYSQLDATABASE', 'MYSQL_DATABASE', 'DATABASE_DEFAULT_DATABASE', 'database.default.database', 'database_default_database', 'DB_DATABASE', 'DB_NAME'],
             $this->default['database'] ?: 'blax_marketplace'
         );
 
-        $driver = $this->firstEnv(['DATABASE_DEFAULT_DBDRIVER', 'DB_DRIVER'], '');
+        $driver = $this->firstEnv(
+            ['DATABASE_DEFAULT_DBDRIVER', 'database.default.DBDriver', 'database_default_dbdriver', 'DB_DRIVER'],
+            ''
+        );
         if ($driver !== '') {
             $this->default['DBDriver'] = $driver;
         }
 
-        $prefix = $this->firstEnv(['DATABASE_DEFAULT_DBPREFIX', 'DB_PREFIX'], null);
+        $prefix = $this->firstEnv(
+            ['DATABASE_DEFAULT_DBPREFIX', 'database.default.DBPrefix', 'database_default_dbprefix', 'DB_PREFIX'],
+            null
+        );
         if ($prefix !== null) {
             $this->default['DBPrefix'] = $prefix;
         }
 
-        $charset = $this->firstEnv(['DATABASE_DEFAULT_CHARSET', 'DB_CHARSET'], '');
+        $charset = $this->firstEnv(
+            ['DATABASE_DEFAULT_CHARSET', 'database.default.charset', 'database_default_charset', 'DB_CHARSET'],
+            ''
+        );
         if ($charset !== '') {
             $this->default['charset'] = $charset;
         }
 
-        $collat = $this->firstEnv(['DATABASE_DEFAULT_DBCOLLAT', 'DB_COLLATION'], '');
+        $collat = $this->firstEnv(
+            ['DATABASE_DEFAULT_DBCOLLAT', 'database.default.DBCollat', 'database_default_dbcollat', 'DB_COLLATION'],
+            ''
+        );
         if ($collat !== '') {
             $this->default['DBCollat'] = $collat;
         }
 
         // Port: auto-detect TiDB Cloud (port 4000) vs standard MySQL (3306)
-        $envPort = $this->firstEnv(['DATABASE_DEFAULT_PORT', 'DB_PORT'], '');
+        $envPort = $this->firstEnv(
+            ['MYSQLPORT', 'MYSQL_PORT', 'DATABASE_DEFAULT_PORT', 'database.default.port', 'database_default_port', 'DB_PORT'],
+            ''
+        );
         if ($envPort !== '') {
             $this->default['port'] = (int) $envPort;
         } elseif (str_contains((string) $this->default['hostname'], 'tidbcloud.com')) {
@@ -157,7 +195,7 @@ class Database extends Config
         }
 
         // Enable compression for TiDB Cloud or any Vercel deployment
-        if (str_contains((string) $this->default['hostname'], 'tidbcloud.com') || getenv('VERCEL') === '1') {
+        if (str_contains((string) $this->default['hostname'], 'tidbcloud.com') || $this->readEnv('VERCEL') === '1') {
             $this->default['compress'] = true;
         }
 
@@ -165,24 +203,51 @@ class Database extends Config
         // Production safety: disable DBDebug so DB errors become
         // logged/handled failures instead of raw exceptions dumped
         // to visitors. pConnect remains false (correct for serverless).
-        // NOTE: Connection pooling (e.g. ProxySQL) should be evaluated
-        // if TiDB Cloud max-connections becomes a bottleneck.
         // -----------------------------------------------------------
-        $ciEnv = getenv('CI_ENVIRONMENT') ?: ENVIRONMENT;
-        if ($ciEnv === 'production' || getenv('VERCEL') === '1') {
+        $ciEnv = $this->firstEnv(['CI_ENVIRONMENT'], ENVIRONMENT);
+        if ($ciEnv === 'production' || $this->readEnv('VERCEL') === '1') {
             $this->default['DBDebug'] = false;
         }
     }
 
     /**
-     * Return the first non-empty getenv() value from the list of keys,
+     * Read an environment variable safely across CodeIgniter's env(),
+     * $_ENV, $_SERVER, and getenv().
+     */
+    private function readEnv(string $key): ?string
+    {
+        if (function_exists('env')) {
+            $val = env($key);
+            if ($val !== null && $val !== '') {
+                return (string) $val;
+            }
+        }
+
+        if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
+            return (string) $_ENV[$key];
+        }
+
+        if (isset($_SERVER[$key]) && $_SERVER[$key] !== '') {
+            return (string) $_SERVER[$key];
+        }
+
+        $val = getenv($key);
+        if ($val !== false && $val !== '') {
+            return (string) $val;
+        }
+
+        return null;
+    }
+
+    /**
+     * Return the first non-empty environment variable from the list of keys,
      * or $fallback if none are set.
      */
-    private function firstEnv(array $keys, ?string $fallback): string
+    private function firstEnv(array $keys, ?string $fallback = null): string
     {
         foreach ($keys as $key) {
-            $val = getenv($key);
-            if ($val !== false && $val !== '') {
+            $val = $this->readEnv($key);
+            if ($val !== null && $val !== '') {
                 return $val;
             }
         }

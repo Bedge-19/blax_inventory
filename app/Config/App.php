@@ -214,7 +214,15 @@ class App extends BaseConfig
             || getenv('VERCEL_ENV') !== false
             || (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'vercel.app'));
 
-        if ($isVercel || $isProduction) {
+        $envBaseURL = (function_exists('env') ? env('app.baseURL') : null)
+            ?: getenv('app.baseURL')
+            ?: getenv('APP_BASEURL')
+            ?: getenv('APP_BASE_URL');
+
+        if (!empty($envBaseURL)) {
+            $this->baseURL = rtrim((string) $envBaseURL, '/') . '/';
+            $this->indexPage = '';
+        } elseif ($isVercel || $isProduction) {
             if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '' && !str_contains($_SERVER['HTTP_HOST'], 'localhost')) {
                 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                     || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
@@ -233,6 +241,14 @@ class App extends BaseConfig
             if (str_contains($host, 'localhost:8080') || str_contains($host, '127.0.0.1:8080')) {
                 $this->baseURL = $scheme . '://' . $host . '/';
                 $this->indexPage = '';
+            }
+        }
+
+        // Dynamically allow the current HTTP_HOST so SiteURIFactory always accepts it
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
+            $hostOnly = explode(':', (string) $_SERVER['HTTP_HOST'])[0];
+            if ($hostOnly !== '' && !in_array($hostOnly, $this->allowedHostnames, true)) {
+                $this->allowedHostnames[] = $hostOnly;
             }
         }
     }

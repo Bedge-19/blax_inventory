@@ -33,6 +33,7 @@ RUN chown -R www-data:www-data /var/www/html/writable \
     && chmod -R 775 /var/www/html/writable
 
 # Copy Nginx configuration template and entrypoint script
+RUN rm -f /etc/nginx/sites-enabled/default
 COPY docker/nginx.conf.template /etc/nginx/conf.d/default.conf.template
 RUN chmod +x /var/www/html/docker/entrypoint.sh
 
