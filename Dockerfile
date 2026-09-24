@@ -1,10 +1,9 @@
-FROM php:8.3-apache
+FROM php:8.3-fpm
 
-# System deps + PHP extensions this app needs
-# - intl, mbstring: required by CodeIgniter 4 core
-# - mysqli, pdo_mysql: database.default.DBDriver = MySQLi in .env.example
-# - gd, curl, zip: needed by cloudinary/cloudinary_php for image uploads
+# Install Nginx, gettext-base (for envsubst), system build tools, and PHP extension dependencies
 RUN apt-get update && apt-get install -y \
+    nginx \
+    gettext-base \
     libicu-dev \
     libzip-dev \
     libpng-dev \
@@ -14,39 +13,29 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install intl mbstring pdo_mysql mysqli zip gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Fix Apache MPM conflict: ensure only mpm_prefork is enabled with mod_php
-RUN a2dismod mpm_event mpm_worker 2>/dev/null; a2enmod mpm_prefork
-
-# Enable Apache rewrite (CI4 needs this for its .htaccess routing)
-RUN a2enmod rewrite
-
-# CI4's entry point is public/index.php, not the project root
-ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
-
-# Allow .htaccess overrides (CI4 relies on this for pretty URLs)
-RUN sed -ri -e 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
-
+# Copy Composer binary from official composer image
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# Copy application source code
 COPY . .
 
+# Install PHP production dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# CI4 needs writable/ to actually be writable by the web server
+# Set correct permissions for CodeIgniter 4 writable storage directory
 RUN chown -R www-data:www-data /var/www/html/writable \
     && chmod -R 775 /var/www/html/writable
 
-# Railway injects $PORT at container start; Apache must listen on it
-RUN sed -i 's/Listen 80/Listen ${PORT}/' /etc/apache2/ports.conf
-RUN sed -i 's/:80/:${PORT}/' /etc/apache2/sites-available/000-default.conf
+# Copy Nginx configuration template and entrypoint script
+COPY docker/nginx.conf.template /etc/nginx/conf.d/default.conf.template
+RUN chmod +x /var/www/html/docker/entrypoint.sh
 
 EXPOSE 8080
 
-CMD ["apache2-foreground"]
+CMD ["/var/www/html/docker/entrypoint.sh"]
