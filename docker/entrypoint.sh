@@ -3,6 +3,7 @@ set -e
 
 # Default PORT to 8080 if not injected by Railway
 export PORT="${PORT:-8080}"
+export CI_ENVIRONMENT="${CI_ENVIRONMENT:-production}"
 
 echo "Starting container on PORT ${PORT}..."
 

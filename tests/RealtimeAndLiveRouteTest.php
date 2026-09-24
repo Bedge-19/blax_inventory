@@ -193,6 +193,7 @@ class RealtimeAndLiveRouteTest extends CIUnitTestCase
 
         // Link dummy order
         $db = \Config\Database::connect();
+        $db->table('orders')->where('id', 999991)->delete();
         $db->table('orders')->insert([
             'id'                 => 999991,
             'shop_id'            => (int) $shop['id'],

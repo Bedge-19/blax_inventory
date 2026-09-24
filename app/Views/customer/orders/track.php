@@ -367,7 +367,7 @@
                                         title="Center Map on Courier"
                                         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all hover:scale-105 active:scale-95">
                                     <span class="material-symbols-outlined text-[16px]">my_location</span>
-                                    <span>Center Courier</span>
+                                    <span>Center on Courier</span>
                                 </button>
                             </div>
                         </div>
@@ -423,6 +423,7 @@
 
 <script>
     // Map Coordinates Data passed from Controller
+    const STORE_COORDS   = <?= json_encode($storeCoords ?? null) ?>;
     const DEST_COORDS    = <?= json_encode($destCoords) ?>;
     const COURIER_COORDS = <?= json_encode($courierCoords) ?>;
     const DEST_ADDRESS   = <?= json_encode($destAddressText) ?>;

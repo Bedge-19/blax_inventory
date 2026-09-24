@@ -25,30 +25,48 @@ class Cloudinary extends BaseConfig
      */
     public string $rootFolder = 'blax';
 
+    /**
+     * Whether local disk storage (public/uploads/...) is permitted as a fallback
+     * when Cloudinary is unconfigured or encounters an error.
+     * Defaults to true in development; can be toggled via ALLOW_LOCAL_FALLBACK env var.
+     */
+    public bool $allowLocalFallback = true;
+
     public function __construct()
     {
         parent::__construct();
 
-        $this->cloudinaryUrl = (string) (env('CLOUDINARY_URL')
-            ?: (getenv('CLOUDINARY_URL') ?: ($_ENV['CLOUDINARY_URL'] ?? ($_SERVER['CLOUDINARY_URL'] ?? $this->cloudinaryUrl))));
-        $this->cloudName     = (string) (env('CLOUDINARY_CLOUD_NAME')
-            ?: (getenv('CLOUDINARY_CLOUD_NAME') ?: ($_ENV['CLOUDINARY_CLOUD_NAME'] ?? ($_SERVER['CLOUDINARY_CLOUD_NAME'] ?? $this->cloudName))));
-        $this->apiKey        = (string) (env('CLOUDINARY_API_KEY')
-            ?: (getenv('CLOUDINARY_API_KEY') ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? $this->apiKey))));
-        $this->apiSecret     = (string) (env('CLOUDINARY_API_SECRET')
-            ?: (getenv('CLOUDINARY_API_SECRET') ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? $this->apiSecret))));
+        $this->cloudinaryUrl = (string) (getenv('CLOUDINARY_URL')
+            ?: (env('CLOUDINARY_URL') ?: ($_ENV['CLOUDINARY_URL'] ?? ($_SERVER['CLOUDINARY_URL'] ?? $this->cloudinaryUrl))));
+        $this->cloudName     = (string) (getenv('CLOUDINARY_CLOUD_NAME')
+            ?: (env('CLOUDINARY_CLOUD_NAME') ?: ($_ENV['CLOUDINARY_CLOUD_NAME'] ?? ($_SERVER['CLOUDINARY_CLOUD_NAME'] ?? $this->cloudName))));
+        $this->apiKey        = (string) (getenv('CLOUDINARY_API_KEY')
+            ?: (env('CLOUDINARY_API_KEY') ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? $this->apiKey))));
+        $this->apiSecret     = (string) (getenv('CLOUDINARY_API_SECRET')
+            ?: (env('CLOUDINARY_API_SECRET') ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? $this->apiSecret))));
 
         // Parse credentials from CLOUDINARY_URL if provided
-        if (!empty($this->cloudinaryUrl) && preg_match('#^cloudinary://([^:]+):([^@]+)@([a-zA-Z0-9_-]+)$#', trim($this->cloudinaryUrl), $matches)) {
-            if (empty($this->apiKey)) {
-                $this->apiKey = $matches[1];
+        if (!empty($this->cloudinaryUrl)) {
+            $parsed = parse_url(trim($this->cloudinaryUrl));
+            if ($parsed !== false) {
+                if (empty($this->apiKey) && !empty($parsed['user'])) {
+                    $this->apiKey = urldecode($parsed['user']);
+                }
+                if (empty($this->apiSecret) && !empty($parsed['pass'])) {
+                    $this->apiSecret = urldecode($parsed['pass']);
+                }
+                if (empty($this->cloudName) && !empty($parsed['host'])) {
+                    $this->cloudName = $parsed['host'];
+                }
             }
-            if (empty($this->apiSecret)) {
-                $this->apiSecret = $matches[2];
-            }
-            if (empty($this->cloudName)) {
-                $this->cloudName = $matches[3];
-            }
+        }
+
+        $fallbackEnv = getenv('ALLOW_LOCAL_FALLBACK') ?: (env('ALLOW_LOCAL_FALLBACK') ?? ($_ENV['ALLOW_LOCAL_FALLBACK'] ?? null));
+        if ($fallbackEnv !== null) {
+            $this->allowLocalFallback = filter_var($fallbackEnv, FILTER_VALIDATE_BOOLEAN);
+        } else {
+            $ciEnv = getenv('CI_ENVIRONMENT') ?: (env('CI_ENVIRONMENT') ?: (defined('ENVIRONMENT') ? ENVIRONMENT : 'development'));
+            $this->allowLocalFallback = ($ciEnv !== 'production');
         }
     }
 }

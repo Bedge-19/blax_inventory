@@ -239,6 +239,8 @@ class CustomerOrderTrackingTest extends CIUnitTestCase
         $customer = $userModel->where('role', 'customer')->first();
         $this->assertNotNull($customer);
 
+        \Config\Database::connect()->table('orders')->where('customer_id', (int) $customer['id'])->where('status', 'in_transit')->delete();
+
         $shop = (new ShopModel())->first();
         $this->assertNotNull($shop);
 

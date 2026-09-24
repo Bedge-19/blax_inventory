@@ -930,6 +930,14 @@
                 const accuracy = Math.round(pos.coords.accuracy || 0);
                 const now = Date.now();
 
+                // Discard low-accuracy GPS readings to prevent marker jitter
+                if (accuracy > 50) {
+                    console.log(`[GPS] Discarding low-accuracy reading: ${accuracy}m`);
+                    const dot = document.getElementById('gpsIndicatorDot');
+                    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+                    return;
+                }
+
                 let bearing = 0;
                 let speedMps = pos.coords.speed || 0;
 
@@ -1005,7 +1013,7 @@
             },
             {
                 enableHighAccuracy: true,
-                maximumAge: 5000,
+                maximumAge: 2000,
                 timeout: 10000
             }
         );

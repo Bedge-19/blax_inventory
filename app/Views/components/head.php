@@ -6,6 +6,7 @@
 <title><?= esc($title ?? 'Blax') ?></title>
 
 <script>
+window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
 (function() {
     window.getCsrfToken = function() {
         const meta = document.querySelector('meta[name="csrf-token"]');

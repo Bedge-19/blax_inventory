@@ -256,6 +256,10 @@ class Tenant extends BaseController
             $notifModel->markAllRead($userId);
         }
 
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON(['success' => true]);
+        }
+
         return redirect()->back()->with('success', 'Notifications marked as read.');
     }
 
@@ -2995,51 +2999,24 @@ class Tenant extends BaseController
 
         $cloudinary = new \App\Libraries\CloudinaryService();
         $publicId   = 'logo_' . $shopId . '_' . time() . '_' . bin2hex(random_bytes(4));
-        $newLogoUrl = null;
-
-        if ($cloudinary->isConfigured()) {
-            try {
-                $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_SHOP_LOGOS, $publicId);
-                if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                    $newLogoUrl = $uploadRes['secure_url'];
-                }
-            } catch (\Throwable $e) {
-                log_message('error', '[Tenant::saveShopLogo] Cloudinary upload exception: ' . $e->getMessage());
-            }
-        }
-
-        // Resilient local storage fallback
-        if (!$newLogoUrl) {
-            $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'shop_logos';
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0775, true);
-            }
-            $fileName = $file->getRandomName();
-            if ($file->isValid() && !$file->hasMoved()) {
-                $file->move($uploadDir, $fileName);
-                $newLogoUrl = 'uploads/shop_logos/' . $fileName;
-            }
-        }
+        $newLogoUrl = $cloudinary->uploadOrFallback(
+            $file,
+            \App\Libraries\CloudinaryService::FOLDER_SHOP_LOGOS,
+            'shop_logos',
+            $publicId
+        );
 
         if (!$newLogoUrl) {
-            return redirect()->back()->with('error', 'Failed to save shop logo. Please try again.');
+            $err = $cloudinary->getLastError();
+            log_message('error', '[Tenant::saveShopLogo] Upload failed: ' . ($err ?: 'Unknown error'));
+            return redirect()->back()->with('error', 'Failed to save shop logo' . ($err ? ': ' . $err : '. Please try again.'));
         }
 
         (new ShopModel())->update($shopId, ['logo_url' => $newLogoUrl]);
 
         // Safe cleanup: only clean up old logo asset after successful DB update
         if (!empty($shop['logo_url']) && $shop['logo_url'] !== $newLogoUrl) {
-            if ($cloudinary->isCloudinaryUrl($shop['logo_url'])) {
-                $oldPublicId = $cloudinary->extractPublicId($shop['logo_url']);
-                if ($oldPublicId) {
-                    $cloudinary->deleteAsset($oldPublicId, 'image');
-                }
-            } elseif (strpos($shop['logo_url'], 'uploads/shop_logos/') === 0) {
-                $oldPath = ROOTPATH . 'public/' . $shop['logo_url'];
-                if (is_file($oldPath)) {
-                    @unlink($oldPath);
-                }
-            }
+            $cloudinary->deleteOldAsset($shop['logo_url'], 'image');
         }
 
         return redirect()->back()->with('success', 'Shop logo updated.');
@@ -3167,31 +3144,12 @@ class Tenant extends BaseController
                 }
 
                 $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
-                $imageUrl = null;
-
-                if ($cloudinary->isConfigured()) {
-                    try {
-                        $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
-                        if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                            $imageUrl = $uploadRes['secure_url'];
-                        }
-                    } catch (\Throwable $e) {
-                        log_message('error', '[Tenant::handleProductImageUpload] Cloudinary upload exception: ' . $e->getMessage());
-                    }
-                }
-
-                // Resilient local storage fallback
-                if (!$imageUrl) {
-                    $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'products';
-                    if (!is_dir($uploadDir)) {
-                        @mkdir($uploadDir, 0775, true);
-                    }
-                    $fileName = $file->getRandomName();
-                    if ($file->isValid() && !$file->hasMoved()) {
-                        $file->move($uploadDir, $fileName);
-                        $imageUrl = 'uploads/products/' . $fileName;
-                    }
-                }
+                $imageUrl = $cloudinary->uploadOrFallback(
+                    $file,
+                    \App\Libraries\CloudinaryService::FOLDER_PRODUCTS,
+                    'products',
+                    $publicId
+                );
 
                 if ($imageUrl) {
                     $isPrimary = ($existingCount === 0) ? 1 : 0;
@@ -3215,31 +3173,12 @@ class Tenant extends BaseController
                 $mime = $single->getMimeType();
                 if (isset($mimeMap[$mime]) && $single->getSize() <= $maxBytes) {
                     $publicId = 'prod_' . $productId . '_' . time() . '_' . bin2hex(random_bytes(4));
-                    $imageUrl = null;
-
-                    if ($cloudinary->isConfigured()) {
-                        try {
-                            $uploadRes = $cloudinary->uploadImage($single, \App\Libraries\CloudinaryService::FOLDER_PRODUCTS, $publicId);
-                            if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                                $imageUrl = $uploadRes['secure_url'];
-                            }
-                        } catch (\Throwable $e) {
-                            log_message('error', '[Tenant::handleProductImageUpload] Cloudinary single upload exception: ' . $e->getMessage());
-                        }
-                    }
-
-                    // Resilient local storage fallback
-                    if (!$imageUrl) {
-                        $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'products';
-                        if (!is_dir($uploadDir)) {
-                            @mkdir($uploadDir, 0775, true);
-                        }
-                        $fileName = $single->getRandomName();
-                        if ($single->isValid() && !$single->hasMoved()) {
-                            $single->move($uploadDir, $fileName);
-                            $imageUrl = 'uploads/products/' . $fileName;
-                        }
-                    }
+                    $imageUrl = $cloudinary->uploadOrFallback(
+                        $single,
+                        \App\Libraries\CloudinaryService::FOLDER_PRODUCTS,
+                        'products',
+                        $publicId
+                    );
 
                     if ($imageUrl) {
                         $isPrimary = ($existingCount === 0) ? 1 : 0;
@@ -3373,17 +3312,7 @@ class Tenant extends BaseController
 
         // Delete asset from Cloudinary or local physical file
         $cloudinary = new \App\Libraries\CloudinaryService();
-        if ($cloudinary->isCloudinaryUrl($image['image_url'])) {
-            $publicId = $cloudinary->extractPublicId($image['image_url']);
-            if ($publicId) {
-                $cloudinary->deleteAsset($publicId, 'image');
-            }
-        } elseif (str_starts_with($image['image_url'], 'uploads/')) {
-            $filePath = ROOTPATH . 'public/' . $image['image_url'];
-            if (file_exists($filePath)) {
-                @unlink($filePath);
-            }
-        }
+        $cloudinary->deleteOldAsset($image['image_url'], 'image');
 
         // Delete database record
         $imageModel->delete($imageId);

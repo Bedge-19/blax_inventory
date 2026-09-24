@@ -585,7 +585,8 @@ class DeliveryModel extends Model
             ->where("COALESCE(o.fulfillment_method, pr.fulfillment_method)", 'delivery')
             ->whereIn('d.status', ['shipped', 'in_transit'])
             ->where('d.current_lat IS NOT NULL')
-            ->where('d.current_lng IS NOT NULL');
+            ->where('d.current_lng IS NOT NULL')
+            ->where('d.location_updated_at IS NOT NULL');
 
         if ($search !== null && $search !== '') {
             $builder->groupStart()->like('d.tracking_id', $search)->orLike('d.destination_address', $search)->orLike('s.shop_name', $search)->groupEnd();

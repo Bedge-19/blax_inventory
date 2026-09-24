@@ -287,14 +287,35 @@
             ];
 
             const closeAllNotifPanels = function () {
+                let anyWasOpen = false;
                 dropdownPairs.forEach(function (pair) {
                     const p = document.getElementById(pair.panelId);
                     const t = document.getElementById(pair.toggleId);
                     if (p && !p.classList.contains('hidden')) {
+                        anyWasOpen = true;
                         p.classList.add('hidden');
                         if (t) t.setAttribute('aria-expanded', 'false');
                     }
                 });
+
+                if (anyWasOpen) {
+                    const baseUrl = (typeof window.BASE_URL === 'string' && window.BASE_URL)
+                        ? window.BASE_URL.replace(/\/?$/, '/')
+                        : (window.location.origin + '/');
+                    const markUrl = baseUrl + 'notifications/mark-all-read';
+
+                    fetch(markUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }).catch(function () {});
+
+                    // Instantly hide unread badge indicators in UI
+                    document.querySelectorAll('#notif-toggle span.bg-error, #notif-dropdown-toggle span.bg-error, #admin-notif-toggle span.bg-error, .notif-badge').forEach(function (badge) {
+                        badge.classList.add('hidden');
+                    });
+                }
             };
 
             dropdownPairs.forEach(function (pair) {

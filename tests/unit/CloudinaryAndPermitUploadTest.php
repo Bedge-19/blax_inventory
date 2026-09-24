@@ -77,4 +77,54 @@ class CloudinaryAndPermitUploadTest extends CIUnitTestCase
         $this->assertFileExists($testFile);
         @unlink($testFile);
     }
+
+    public function testTestConnectionReturnsDiagnosticsForPlaceholder()
+    {
+        $cfg = new CloudinaryConfig();
+        $cfg->cloudName = 'blax';
+        $cfg->apiKey    = '533212736738489';
+        $cfg->apiSecret = '-GXmGMS_v-Pkko35mImPie6O7SM';
+
+        $service = new CloudinaryService($cfg);
+        $res = $service->testConnection();
+
+        $this->assertFalse($res['success']);
+        $this->assertArrayHasKey('message', $res);
+        $this->assertArrayHasKey('hint', $res);
+    }
+
+    public function testUploadOrFallbackSavesToLocalDiskWhenCloudinaryUnconfigured()
+    {
+        $cfg = new CloudinaryConfig();
+        $cfg->cloudName = 'blax'; // unconfigured placeholder
+        $cfg->allowLocalFallback = true;
+
+        $service = new CloudinaryService($cfg);
+
+        // Create temporary test file
+        $tempFile = tempnam(sys_get_temp_dir(), 'test_cld_') . '.jpg';
+        file_put_contents($tempFile, 'fake image data for test');
+
+        $resultUrl = $service->uploadOrFallback(
+            $tempFile,
+            CloudinaryService::FOLDER_PRODUCTS,
+            'products_test',
+            'test_prod_1'
+        );
+
+        $this->assertNotNull($resultUrl);
+        $this->assertStringStartsWith('uploads/products_test/', $resultUrl);
+
+        $localPath = FCPATH . $resultUrl;
+        $this->assertFileExists($localPath);
+
+        // Test deleteOldAsset on local file
+        $deleted = $service->deleteOldAsset($resultUrl);
+        $this->assertTrue($deleted);
+        $this->assertFileDoesNotExist($localPath);
+
+        if (file_exists($tempFile)) {
+            @unlink($tempFile);
+        }
+    }
 }

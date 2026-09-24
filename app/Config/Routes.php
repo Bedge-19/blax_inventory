@@ -30,6 +30,7 @@ $routes->get('logout', 'Auth::logout');
 $routes->get('notifications/click/(:num)', 'NotificationController::click/$1');
 $routes->post('notifications/mark-read/(:num)', 'NotificationController::markRead/$1');
 $routes->post('notifications/mark-all-read', 'NotificationController::markAllRead');
+$routes->post('notifications/markAllRead', 'NotificationController::markAllRead');
 
 // Customer Pages
 $routes->get('categories', 'Customer::categories');

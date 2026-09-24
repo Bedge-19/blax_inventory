@@ -132,27 +132,27 @@ class Database extends Config
 
         // 2. Individual parameter overrides
         $this->default['hostname'] = $this->firstEnv(
-            ['MYSQLHOST', 'MYSQL_HOST', 'DATABASE_DEFAULT_HOSTNAME', 'database.default.hostname', 'database_default_hostname', 'DB_HOST', 'DB_HOSTNAME'],
+            ['MYSQLHOST', 'MYSQL_HOST', 'DATABASE_DEFAULT_HOSTNAME', 'DB_HOST', 'DB_HOSTNAME', 'database.default.hostname', 'database_default_hostname'],
             $this->default['hostname'] ?: 'localhost'
         );
 
         $this->default['username'] = $this->firstEnv(
-            ['MYSQLUSER', 'MYSQL_USER', 'DATABASE_DEFAULT_USERNAME', 'database.default.username', 'database_default_username', 'DB_USER', 'DB_USERNAME'],
+            ['MYSQLUSER', 'MYSQL_USER', 'DATABASE_DEFAULT_USERNAME', 'DB_USER', 'DB_USERNAME', 'database.default.username', 'database_default_username'],
             $this->default['username'] ?: ''
         );
 
         $this->default['password'] = $this->firstEnv(
-            ['MYSQLPASSWORD', 'MYSQL_PASSWORD', 'DATABASE_DEFAULT_PASSWORD', 'database.default.password', 'database_default_password', 'DB_PASS', 'DB_PASSWORD'],
+            ['MYSQLPASSWORD', 'MYSQL_PASSWORD', 'DATABASE_DEFAULT_PASSWORD', 'DB_PASS', 'DB_PASSWORD', 'database.default.password', 'database_default_password'],
             $this->default['password'] ?: ''
         );
 
         $this->default['database'] = $this->firstEnv(
-            ['MYSQLDATABASE', 'MYSQL_DATABASE', 'DATABASE_DEFAULT_DATABASE', 'database.default.database', 'database_default_database', 'DB_DATABASE', 'DB_NAME'],
+            ['MYSQLDATABASE', 'MYSQL_DATABASE', 'DATABASE_DEFAULT_DATABASE', 'DB_DATABASE', 'DB_NAME', 'database.default.database', 'database_default_database'],
             $this->default['database'] ?: 'blax_marketplace'
         );
 
         $driver = $this->firstEnv(
-            ['DATABASE_DEFAULT_DBDRIVER', 'database.default.DBDriver', 'database_default_dbdriver', 'DB_DRIVER'],
+            ['DATABASE_DEFAULT_DBDRIVER', 'DB_DRIVER', 'database.default.DBDriver', 'database_default_dbdriver'],
             ''
         );
         if ($driver !== '') {
@@ -160,7 +160,7 @@ class Database extends Config
         }
 
         $prefix = $this->firstEnv(
-            ['DATABASE_DEFAULT_DBPREFIX', 'database.default.DBPrefix', 'database_default_dbprefix', 'DB_PREFIX'],
+            ['DATABASE_DEFAULT_DBPREFIX', 'DB_PREFIX', 'database.default.DBPrefix', 'database_default_dbprefix'],
             null
         );
         if ($prefix !== null) {
@@ -168,7 +168,7 @@ class Database extends Config
         }
 
         $charset = $this->firstEnv(
-            ['DATABASE_DEFAULT_CHARSET', 'database.default.charset', 'database_default_charset', 'DB_CHARSET'],
+            ['DATABASE_DEFAULT_CHARSET', 'DB_CHARSET', 'database.default.charset', 'database_default_charset'],
             ''
         );
         if ($charset !== '') {
@@ -176,7 +176,7 @@ class Database extends Config
         }
 
         $collat = $this->firstEnv(
-            ['DATABASE_DEFAULT_DBCOLLAT', 'database.default.DBCollat', 'database_default_dbcollat', 'DB_COLLATION'],
+            ['DATABASE_DEFAULT_DBCOLLAT', 'DB_COLLATION', 'database.default.DBCollat', 'database_default_dbcollat'],
             ''
         );
         if ($collat !== '') {
@@ -184,14 +184,20 @@ class Database extends Config
         }
 
         // Port: auto-detect TiDB Cloud (port 4000) vs standard MySQL (3306)
-        $envPort = $this->firstEnv(
-            ['MYSQLPORT', 'MYSQL_PORT', 'DATABASE_DEFAULT_PORT', 'database.default.port', 'database_default_port', 'DB_PORT'],
+        $explicitPort = $this->firstEnv(
+            ['MYSQLPORT', 'MYSQL_PORT', 'DATABASE_DEFAULT_PORT', 'DB_PORT'],
             ''
         );
-        if ($envPort !== '') {
-            $this->default['port'] = (int) $envPort;
+        $dottedPort = $this->firstEnv(
+            ['database.default.port', 'database_default_port'],
+            ''
+        );
+        if ($explicitPort !== '') {
+            $this->default['port'] = (int) $explicitPort;
         } elseif (str_contains((string) $this->default['hostname'], 'tidbcloud.com')) {
             $this->default['port'] = 4000;
+        } elseif ($dottedPort !== '') {
+            $this->default['port'] = (int) $dottedPort;
         }
 
         // Enable compression for TiDB Cloud or any Vercel deployment
@@ -216,11 +222,9 @@ class Database extends Config
      */
     private function readEnv(string $key): ?string
     {
-        if (function_exists('env')) {
-            $val = env($key);
-            if ($val !== null && $val !== '') {
-                return (string) $val;
-            }
+        $val = getenv($key);
+        if ($val !== false && $val !== '') {
+            return (string) $val;
         }
 
         if (isset($_ENV[$key]) && $_ENV[$key] !== '') {
@@ -231,9 +235,11 @@ class Database extends Config
             return (string) $_SERVER[$key];
         }
 
-        $val = getenv($key);
-        if ($val !== false && $val !== '') {
-            return (string) $val;
+        if (function_exists('env')) {
+            $val = env($key);
+            if ($val !== null && $val !== '') {
+                return (string) $val;
+            }
         }
 
         return null;

@@ -550,7 +550,7 @@
                 zoomControl: true,
                 mapTypeControl: false,
                 streetViewControl: false,
-                fullscreenControl: false
+                fullscreenControl: true
             });
 
             // Create draggable marker
@@ -698,6 +698,51 @@
                         initOrUpdateModalMap(lat, lng);
                     } else {
                         initOrUpdateModalMap(lat, lng);
+                    }
+
+                    // Reverse-geocode to sync City/Barangay selects
+                    if (typeof google !== 'undefined' && google.maps && google.maps.Geocoder) {
+                        const geocoder = new google.maps.Geocoder();
+                        geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+                            if (status === 'OK' && results && results.length > 0) {
+                                let detectedCity = '';
+                                let detectedBarangay = '';
+                                for (const result of results) {
+                                    for (const comp of result.address_components) {
+                                        if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_3')) {
+                                            detectedCity = comp.long_name;
+                                        }
+                                        if (comp.types.includes('sublocality') || comp.types.includes('sublocality_level_1') || comp.types.includes('neighborhood')) {
+                                            if (!detectedBarangay) detectedBarangay = comp.long_name;
+                                        }
+                                    }
+                                }
+                                // Try to match and set City select
+                                const citySelect = document.getElementById('addr-city');
+                                if (citySelect && detectedCity) {
+                                    for (const opt of citySelect.options) {
+                                        if (opt.value && detectedCity.toLowerCase().includes(opt.value.toLowerCase())) {
+                                            citySelect.value = opt.value;
+                                            citySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                                            break;
+                                        }
+                                    }
+                                }
+                                // Try to match and set Barangay select (after city change triggers list update)
+                                setTimeout(() => {
+                                    const brgySelect = document.getElementById('addr-barangay');
+                                    if (brgySelect && detectedBarangay) {
+                                        for (const opt of brgySelect.options) {
+                                            if (opt.value && (opt.value === detectedBarangay || detectedBarangay.toLowerCase().includes(opt.value.toLowerCase()))) {
+                                                brgySelect.value = opt.value;
+                                                brgySelect.dispatchEvent(new Event('change', { bubbles: true }));
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }, 300);
+                            }
+                        });
                     }
                 },
                 err => {

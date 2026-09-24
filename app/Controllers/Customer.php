@@ -690,9 +690,28 @@ class Customer extends BaseController
         $barangay   = trim((string) ($this->request->getPost('barangay') ?: $this->request->getPost('address_line2')));
         $postedCity = trim((string) $this->request->getPost('city'));
 
-        $isTupi = (stripos($postedCity, 'tupi') !== false) || in_array($barangay, $tupiBarangays, true);
-        $city = $isTupi ? 'Tupi' : 'Polomolok';
-        $postalCode = $isTupi ? '9505' : '9504';
+        // Determine city: trust the user's explicit selection first
+        if (stripos($postedCity, 'tupi') !== false) {
+            $city = 'Tupi';
+            $postalCode = '9505';
+        } elseif (stripos($postedCity, 'polomolok') !== false) {
+            $city = 'Polomolok';
+            $postalCode = '9504';
+        } else {
+            // Fallback: infer from barangay ONLY for unambiguous names
+            $ambiguousBarangays = array_intersect($polomolokBarangays, $tupiBarangays);
+            if (in_array($barangay, $ambiguousBarangays, true)) {
+                // Can't determine from barangay alone — default to Polomolok
+                $city = 'Polomolok';
+                $postalCode = '9504';
+            } elseif (in_array($barangay, $tupiBarangays, true)) {
+                $city = 'Tupi';
+                $postalCode = '9505';
+            } else {
+                $city = 'Polomolok';
+                $postalCode = '9504';
+            }
+        }
 
         // Scoped strictly to Polomolok and Tupi, South Cotabato
         $data = [
@@ -1296,41 +1315,20 @@ class Customer extends BaseController
                     foreach ($refFiles as $rf) {
                         if ($rf && $rf->isValid() && !$rf->hasMoved()) {
                             if (in_array($rf->getMimeType(), $allowedMimes, true) && $rf->getSize() <= $maxBytes) {
-                                $uploadedRef = false;
-                                if ($cloudinary->isConfigured()) {
-                                    try {
-                                        $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
-                                        $refUpload = $cloudinary->uploadImage($rf, \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS, $refPublicId);
-                                        if ($refUpload && !empty($refUpload['secure_url'])) {
-                                            $stagedRefPhotos[] = [
-                                                'file_name' => $rf->getClientName(),
-                                                'file_path' => $refUpload['secure_url'],
-                                                'file_size' => $rf->getSize(),
-                                            ];
-                                            $uploadedRef = true;
-                                        }
-                                    } catch (\Throwable $e) {
-                                        log_message('error', 'Cloudinary ref upload error: ' . $e->getMessage());
-                                    }
-                                }
-
-                                if (!$uploadedRef) {
-                                    // Resilient local fallback for reference photo
-                                    $localRefDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing' . DIRECTORY_SEPARATOR . 'references';
-                                    if (!is_dir($localRefDir)) {
-                                        @mkdir($localRefDir, 0775, true);
-                                    }
-                                    $refRandName = $rf->getRandomName();
-                                    try {
-                                        $rf->move($localRefDir, $refRandName);
-                                        $stagedRefPhotos[] = [
-                                            'file_name' => $rf->getClientName(),
-                                            'file_path' => 'uploads/printing/references/' . $refRandName,
-                                            'file_size' => $rf->getSize(),
-                                        ];
-                                    } catch (\Throwable $moveRefEx) {
-                                        log_message('error', 'Local ref photo move error: ' . $moveRefEx->getMessage());
-                                    }
+                                $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
+                                $refUploadUrl = $cloudinary->uploadOrFallback(
+                                    $rf,
+                                    \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS,
+                                    'printing/references',
+                                    $refPublicId,
+                                    'image'
+                                );
+                                if ($refUploadUrl) {
+                                    $stagedRefPhotos[] = [
+                                        'file_name' => $rf->getClientName(),
+                                        'file_path' => $refUploadUrl,
+                                        'file_size' => $rf->getSize(),
+                                    ];
                                 }
                             }
                         }
@@ -1339,39 +1337,19 @@ class Customer extends BaseController
             }
 
             $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-            if ($cloudinary->isConfigured()) {
-                try {
-                    $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
-                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                        $fileUrl = $uploadRes['secure_url'];
-                    }
-                } catch (\Throwable $e) {
-                    log_message('error', 'Cloudinary DOCX upload error: ' . $e->getMessage());
-                }
-            }
+            $fileUrl = $cloudinary->uploadOrFallback(
+                $file,
+                \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS,
+                'printing/documents',
+                $docPublicId,
+                'raw'
+            );
 
             if (!$fileUrl) {
-                // Local fallback for Word documents
-                $localDocDir = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
-                $publicDocDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
-                if (!is_dir($localDocDir)) {
-                    @mkdir($localDocDir, 0775, true);
-                }
-                if (!is_dir($publicDocDir)) {
-                    @mkdir($publicDocDir, 0775, true);
-                }
-
-                $docName = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
-                try {
-                    $file->move($localDocDir, $docName);
-                    // Also mirror to public dir if possible
-                    @copy($localDocDir . DIRECTORY_SEPARATOR . $docName, $publicDocDir . DIRECTORY_SEPARATOR . $docName);
-                    $fileUrl = 'uploads/printing/' . $docName;
-                } catch (\Throwable $moveEx) {
-                    log_message('error', 'Failed to move DOCX to local storage: ' . $moveEx->getMessage());
-                    session()->setFlashdata('error', 'Failed to save document. Please try again.');
-                    return redirect()->back();
-                }
+                $err = $cloudinary->getLastError();
+                log_message('error', '[Customer::submitPrintingOrder] DOCX upload failed: ' . ($err ?: 'Unknown error'));
+                session()->setFlashdata('error', 'Failed to upload document' . ($err ? ': ' . $err : '. Please try again.'));
+                return redirect()->back();
             }
         } else {
             // PDF Document
@@ -1393,39 +1371,19 @@ class Customer extends BaseController
             }
 
             $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
-            if ($cloudinary->isConfigured()) {
-                try {
-                    $uploadRes = $cloudinary->uploadRawFile($file, \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS, $docPublicId);
-                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                        $fileUrl = $uploadRes['secure_url'];
-                    }
-                } catch (\Throwable $e) {
-                    log_message('error', 'Cloudinary PDF upload error: ' . $e->getMessage());
-                }
-            }
+            $fileUrl = $cloudinary->uploadOrFallback(
+                $file,
+                \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS,
+                'printing/documents',
+                $docPublicId,
+                'raw'
+            );
 
             if (!$fileUrl) {
-                // Local fallback for PDF documents
-                $localDocDir = WRITEPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
-                $publicDocDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'printing';
-                if (!is_dir($localDocDir)) {
-                    @mkdir($localDocDir, 0775, true);
-                }
-                if (!is_dir($publicDocDir)) {
-                    @mkdir($publicDocDir, 0775, true);
-                }
-
-                $docName = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
-                try {
-                    $file->move($localDocDir, $docName);
-                    // Also mirror to public dir if possible
-                    @copy($localDocDir . DIRECTORY_SEPARATOR . $docName, $publicDocDir . DIRECTORY_SEPARATOR . $docName);
-                    $fileUrl = 'uploads/printing/' . $docName;
-                } catch (\Throwable $moveEx) {
-                    log_message('error', 'Failed to move PDF to local storage: ' . $moveEx->getMessage());
-                    session()->setFlashdata('error', 'Failed to save PDF document. Please try again.');
-                    return redirect()->back();
-                }
+                $err = $cloudinary->getLastError();
+                log_message('error', '[Customer::submitPrintingOrder] PDF upload failed: ' . ($err ?: 'Unknown error'));
+                session()->setFlashdata('error', 'Failed to upload PDF' . ($err ? ': ' . $err : '. Please try again.'));
+                return redirect()->back();
             }
         }
 
@@ -1853,7 +1811,7 @@ class Customer extends BaseController
         if (!$file || !$file->isValid() || $file->hasMoved()) {
             return $this->response->setStatusCode(400)->setJSON([
                 'success' => false,
-                'error'   => 'No document file received.',
+                'error'   => 'No PDF file received.',
             ]);
         }
 
@@ -2055,38 +2013,20 @@ class Customer extends BaseController
             }
 
             $publicId = 'usr_' . $userId . '_' . time() . '_' . bin2hex(random_bytes(4));
-            $newAvatarUrl = null;
-
-            if ($cloudinary->isConfigured()) {
-                try {
-                    $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_PROFILES, $publicId);
-                    if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                        $newAvatarUrl = $uploadRes['secure_url'];
-                    }
-                } catch (\Throwable $e) {
-                    log_message('error', '[Customer::updateProfile] Cloudinary avatar upload error: ' . $e->getMessage());
-                }
-            }
-
-            // Resilient local storage fallback
-            if (!$newAvatarUrl) {
-                $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'profiles';
-                if (!is_dir($uploadDir)) {
-                    @mkdir($uploadDir, 0775, true);
-                }
-                $fileName = $file->getRandomName();
-                if ($file->isValid() && !$file->hasMoved()) {
-                    $file->move($uploadDir, $fileName);
-                    $newAvatarUrl = 'uploads/profiles/' . $fileName;
-                }
-            }
+            $newAvatarUrl = $cloudinary->uploadOrFallback(
+                $file,
+                \App\Libraries\CloudinaryService::FOLDER_PROFILES,
+                'profiles',
+                $publicId
+            );
 
             if ($newAvatarUrl) {
                 $updates['profile_image_url'] = $newAvatarUrl;
                 $oldProfileImageToDelete      = $current['profile_image_url'] ?? null;
                 $session->set('profile_image_url', $updates['profile_image_url']);
             } else {
-                session()->setFlashdata('error', 'Failed to upload profile picture. Please try again.');
+                $err = $cloudinary->getLastError();
+                session()->setFlashdata('error', 'Failed to upload profile picture' . ($err ? ': ' . $err : '. Please try again.'));
                 return redirect()->back();
             }
         } elseif ($removeImage) {
@@ -2099,17 +2039,7 @@ class Customer extends BaseController
 
         // Safe cleanup: only delete old asset after successful DB update
         if (!empty($oldProfileImageToDelete) && $oldProfileImageToDelete !== ($updates['profile_image_url'] ?? null)) {
-            if ($cloudinary->isCloudinaryUrl($oldProfileImageToDelete)) {
-                $oldPublicId = $cloudinary->extractPublicId($oldProfileImageToDelete);
-                if ($oldPublicId) {
-                    $cloudinary->deleteAsset($oldPublicId, 'image');
-                }
-            } elseif (strpos($oldProfileImageToDelete, 'uploads/profiles/') === 0) {
-                $oldPath = ROOTPATH . 'public/' . $oldProfileImageToDelete;
-                if (is_file($oldPath)) {
-                    @unlink($oldPath);
-                }
-            }
+            $cloudinary->deleteOldAsset($oldProfileImageToDelete, 'image');
         }
 
         $session->set([

@@ -41,6 +41,8 @@ class CloudinaryService
     protected AdminApi $adminApi;
     protected CloudinaryConfig $config;
     protected bool $initialized = false;
+    protected ?string $lastError = null;
+    protected ?array $lastErrorDetails = null;
 
     public function __construct(?CloudinaryConfig $config = null)
     {
@@ -53,9 +55,86 @@ class CloudinaryService
      */
     public function isConfigured(): bool
     {
+        $dummyCloudNames = ['blax', 'your_cloud_name', 'your-cloud-name', 'placeholder'];
+        if (in_array(strtolower(trim($this->config->cloudName ?? '')), $dummyCloudNames, true)) {
+            return false;
+        }
+
         return !empty($this->config->cloudName)
             && !empty($this->config->apiKey)
-            && !empty($this->config->apiSecret);
+            && !empty($this->config->apiSecret)
+            && !str_starts_with(strtolower(trim($this->config->apiKey ?? '')), 'your_')
+            && !str_starts_with(strtolower(trim($this->config->apiSecret ?? '')), 'your_');
+    }
+
+    /**
+     * Get the last error message recorded during an upload or API call.
+     */
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    /**
+     * Get the last error details array.
+     */
+    public function getLastErrorDetails(): ?array
+    {
+        return $this->lastErrorDetails;
+    }
+
+    /**
+     * Get the Cloudinary configuration instance.
+     */
+    public function getConfig(): CloudinaryConfig
+    {
+        return $this->config;
+    }
+
+    /**
+     * Test Cloudinary connection and credentials.
+     * Returns an informative diagnostics array with success status, error details, and actionable hints.
+     */
+    public function testConnection(): array
+    {
+        if (!$this->isConfigured()) {
+            return [
+                'success' => false,
+                'message' => 'Cloudinary is not configured. Cloud name is missing or set to placeholder.',
+                'details' => [
+                    'cloud_name'     => $this->config->cloudName,
+                    'has_api_key'    => !empty($this->config->apiKey),
+                    'has_api_secret' => !empty($this->config->apiSecret),
+                ],
+                'hint' => "Ensure CLOUDINARY_CLOUD_NAME is set to your actual cloud name in .env instead of 'blax'.",
+            ];
+        }
+
+        try {
+            $res = $this->adminApi->ping();
+            return [
+                'success' => true,
+                'message' => 'Cloudinary connection verified successfully.',
+                'details' => $res,
+            ];
+        } catch (\Throwable $e) {
+            $rawMsg = $e->getMessage();
+            $hint = '';
+            if (str_contains(strtolower($rawMsg), 'cloud_name mismatch')) {
+                $hint = "Your API Key and Secret are valid, but the cloud name '{$this->config->cloudName}' does not match your Cloudinary account. Log in to https://console.cloudinary.com and copy the exact 'Cloud name' from your dashboard into CLOUDINARY_CLOUD_NAME.";
+            } elseif (str_contains(strtolower($rawMsg), 'invalid api_key') || str_contains(strtolower($rawMsg), 'unknown api_key')) {
+                $hint = 'The provided CLOUDINARY_API_KEY was not recognized by Cloudinary.';
+            } elseif (str_contains(strtolower($rawMsg), 'signature') || str_contains(strtolower($rawMsg), 'authorization')) {
+                $hint = 'Authentication failed. Check that CLOUDINARY_API_SECRET is correct.';
+            }
+
+            return [
+                'success' => false,
+                'message' => $rawMsg,
+                'details' => ['raw_error' => $rawMsg],
+                'hint'    => $hint,
+            ];
+        }
     }
 
     /**
@@ -85,7 +164,7 @@ class CloudinaryService
 
     /**
      * Upload an image file (JPG, PNG, WEBP, GIF) to Cloudinary.
-     * Applies safe maximum dimension bounding (1920x1920) to limit storage usage.
+     * Applies safe maximum dimension bounding (1920x1920) and optimal compression.
      *
      * @param string|UploadedFile $file
      * @param string $folder
@@ -96,6 +175,8 @@ class CloudinaryService
     public function uploadImage($file, string $folder, ?string $publicId = null, array $options = []): ?array
     {
         $defaultOptions = [
+            'quality'        => 'auto',
+            'fetch_format'   => 'auto',
             'transformation' => [
                 'width'  => 1920,
                 'height' => 1920,
@@ -178,14 +259,19 @@ class CloudinaryService
      */
     protected function uploadAsset($file, string $folder, string $resourceType, ?string $publicId = null, array $options = []): ?array
     {
+        $this->lastError = null;
+        $this->lastErrorDetails = null;
+
         if (!$this->isConfigured()) {
-            log_message('error', 'CloudinaryService::uploadAsset: Cloudinary is not configured. Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET in environment.');
+            $this->lastError = "Cloudinary is not configured. Cloud name '{$this->config->cloudName}' is invalid or missing credentials.";
+            log_message('warning', "CloudinaryService::uploadAsset: {$this->lastError}");
             return null;
         }
 
         $filePath = $this->resolveFilePath($file);
         if ($filePath === null || !is_file($filePath)) {
-            log_message('error', 'CloudinaryService::uploadAsset: Invalid or missing file path.');
+            $this->lastError = 'Invalid or missing file path for upload.';
+            log_message('error', "CloudinaryService::uploadAsset: {$this->lastError}");
             return null;
         }
 
@@ -212,9 +298,127 @@ class CloudinaryService
                 'created_at'    => (string) ($response['created_at'] ?? date('Y-m-d H:i:s')),
             ];
         } catch (\Throwable $e) {
-            log_message('error', "Cloudinary upload failed ({$resourceType} in {$folder}): " . $e->getMessage());
+            $msg = $e->getMessage();
+            $this->lastError = $msg;
+            $this->lastErrorDetails = ['exception' => get_class($e), 'message' => $msg];
+
+            if (str_contains(strtolower($msg), 'cloud_name mismatch')) {
+                log_message('error', "[Cloudinary] CLOUD_NAME MISMATCH: The API key is valid, but the cloud name '{$this->config->cloudName}' in .env is incorrect. Please update CLOUDINARY_CLOUD_NAME with your real Cloudinary cloud name.");
+            } else {
+                log_message('error', "Cloudinary upload failed ({$resourceType} in {$folder}): {$msg}");
+            }
             return null;
         }
+    }
+
+    /**
+     * Resilient high-level asset upload:
+     * Attempts Cloudinary upload first. If Cloudinary is unconfigured or encounters an error,
+     * it gracefully falls back to local disk storage (public/uploads/{localSubdir}) when
+     * allowLocalFallback is enabled (always true in development).
+     *
+     * @param string|UploadedFile $file
+     * @param string $cldFolder Cloudinary folder constant (e.g. FOLDER_SHOP_LOGOS)
+     * @param string $localSubdir Subdirectory relative to public/uploads/ (e.g. 'shop_logos')
+     * @param string|null $publicId
+     * @param string $resourceType 'image' or 'raw'
+     * @param array $options
+     * @return string|null Returns Cloudinary HTTPS URL or relative local path 'uploads/...'
+     */
+    public function uploadOrFallback(
+        $file,
+        string $cldFolder,
+        string $localSubdir,
+        ?string $publicId = null,
+        string $resourceType = 'image',
+        array $options = []
+    ): ?string {
+        // 1. Attempt Cloudinary upload if configured
+        if ($this->isConfigured()) {
+            try {
+                $uploadRes = ($resourceType === 'raw')
+                    ? $this->uploadRawFile($file, $cldFolder, $publicId, $options)
+                    : $this->uploadImage($file, $cldFolder, $publicId, $options);
+
+                if ($uploadRes && !empty($uploadRes['secure_url'])) {
+                    return $uploadRes['secure_url'];
+                }
+            } catch (\Throwable $e) {
+                $this->lastError = $e->getMessage();
+                log_message('error', "[CloudinaryService::uploadOrFallback] Cloudinary exception: " . $e->getMessage());
+            }
+        }
+
+        // 2. If Cloudinary failed or unconfigured, check if local fallback is allowed
+        if (!$this->config->allowLocalFallback) {
+            log_message('error', "[CloudinaryService::uploadOrFallback] Cloudinary upload unavailable/failed (" . ($this->lastError ?? 'unconfigured') . ") and local fallback is disabled in this environment.");
+            return null;
+        }
+
+        // 3. Perform resilient local disk storage write
+        $cleanSubdir = trim(str_replace(['..', '\\'], ['', '/'], $localSubdir), '/');
+        $targetDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $cleanSubdir);
+
+        if (!is_dir($targetDir) && !@mkdir($targetDir, 0755, true) && !is_dir($targetDir)) {
+            log_message('error', "[CloudinaryService::uploadOrFallback] Failed to create local directory: {$targetDir}");
+            return null;
+        }
+
+        try {
+            if ($file instanceof UploadedFile) {
+                if (!$file->isValid() || $file->hasMoved()) {
+                    log_message('error', "[CloudinaryService::uploadOrFallback] Invalid uploaded file or file already moved.");
+                    return null;
+                }
+                $newName = $file->getRandomName();
+                $file->move($targetDir, $newName);
+                $relPath = 'uploads/' . $cleanSubdir . '/' . $newName;
+            } elseif (is_string($file) && is_file($file)) {
+                $ext = pathinfo($file, PATHINFO_EXTENSION);
+                $newName = time() . '_' . bin2hex(random_bytes(6)) . ($ext ? '.' . $ext : '');
+                if (!@copy($file, $targetDir . DIRECTORY_SEPARATOR . $newName)) {
+                    log_message('error', "[CloudinaryService::uploadOrFallback] Failed to copy file to local target.");
+                    return null;
+                }
+                $relPath = 'uploads/' . $cleanSubdir . '/' . $newName;
+            } else {
+                log_message('error', "[CloudinaryService::uploadOrFallback] Unsupported file parameter provided.");
+                return null;
+            }
+
+            log_message('notice', "[CloudinaryService::uploadOrFallback] Cloudinary unconfigured/failed (" . ($this->lastError ?? 'not configured') . "). Stored safely to local disk: {$relPath}");
+            return $relPath;
+        } catch (\Throwable $e) {
+            log_message('error', "[CloudinaryService::uploadOrFallback] Local fallback storage error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Delete an existing asset, whether it is hosted on Cloudinary or local disk.
+     */
+    public function deleteOldAsset(?string $assetUrl, string $resourceType = 'image'): bool
+    {
+        if ($assetUrl === null || trim($assetUrl) === '') {
+            return false;
+        }
+
+        $assetUrl = trim($assetUrl);
+
+        if ($this->isCloudinaryUrl($assetUrl)) {
+            $publicId = $this->extractPublicId($assetUrl);
+            return $publicId ? $this->deleteAsset($publicId, $resourceType) : false;
+        }
+
+        if (str_starts_with($assetUrl, 'uploads/')) {
+            $cleanRel = trim(str_replace(['..', '\\'], ['', '/'], $assetUrl), '/');
+            $localPath = FCPATH . str_replace('/', DIRECTORY_SEPARATOR, $cleanRel);
+            if (is_file($localPath)) {
+                return @unlink($localPath);
+            }
+        }
+
+        return false;
     }
 
     /**

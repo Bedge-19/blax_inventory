@@ -936,34 +936,17 @@ class Admin extends BaseController
         }
         $cloudinary = new \App\Libraries\CloudinaryService();
         $publicId = 'cms_' . time() . '_' . bin2hex(random_bytes(4));
-        $newImageUrl = null;
-
-        if ($cloudinary->isConfigured()) {
-            try {
-                $uploadRes = $cloudinary->uploadImage($file, \App\Libraries\CloudinaryService::FOLDER_CMS, $publicId);
-                if ($uploadRes && !empty($uploadRes['secure_url'])) {
-                    $newImageUrl = $uploadRes['secure_url'];
-                }
-            } catch (\Throwable $e) {
-                log_message('error', '[Admin::uploadContentImage] Cloudinary upload error: ' . $e->getMessage());
-            }
-        }
-
-        // Resilient local storage fallback
-        if (!$newImageUrl) {
-            $uploadDir = FCPATH . 'uploads' . DIRECTORY_SEPARATOR . 'cms';
-            if (!is_dir($uploadDir)) {
-                @mkdir($uploadDir, 0775, true);
-            }
-            $fileName = $file->getRandomName();
-            if ($file->isValid() && !$file->hasMoved()) {
-                $file->move($uploadDir, $fileName);
-                $newImageUrl = 'uploads/cms/' . $fileName;
-            }
-        }
+        $newImageUrl = $cloudinary->uploadOrFallback(
+            $file,
+            \App\Libraries\CloudinaryService::FOLDER_CMS,
+            'cms',
+            $publicId
+        );
 
         if (!$newImageUrl) {
-            return redirect()->back()->with('error', 'Failed to save image. Please try again.');
+            $err = $cloudinary->getLastError();
+            log_message('error', '[Admin::uploadContentImage] Upload failed: ' . ($err ?: 'Unknown error'));
+            return redirect()->back()->with('error', 'Failed to save image' . ($err ? ': ' . $err : '. Please try again.'));
         }
 
         $model->update($id, ['image_url'=>$newImageUrl, 'updated_by'=>(int)session()->get('user_id')]);
@@ -971,15 +954,7 @@ class Admin extends BaseController
 
         // Safe cleanup: only delete old asset after successful DB update
         if (!empty($row['image_url']) && $row['image_url'] !== $newImageUrl) {
-            if ($cloudinary->isCloudinaryUrl($row['image_url'])) {
-                $oldPublicId = $cloudinary->extractPublicId($row['image_url']);
-                if ($oldPublicId) {
-                    $cloudinary->deleteAsset($oldPublicId, 'image');
-                }
-            } elseif (strpos($row['image_url'], 'uploads/cms/') === 0) {
-                $old = ROOTPATH . 'public/' . $row['image_url'];
-                if (is_file($old)) @unlink($old);
-            }
+            $cloudinary->deleteOldAsset($row['image_url'], 'image');
         }
 
         return redirect()->back()->with('success','Image updated.');
