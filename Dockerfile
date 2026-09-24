@@ -14,9 +14,11 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install intl mbstring pdo_mysql mysqli zip gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Fix Apache MPM conflict: ensure only mpm_prefork is enabled with mod_php
+RUN a2dismod mpm_event mpm_worker 2>/dev/null; a2enmod mpm_prefork
 
 # Enable Apache rewrite (CI4 needs this for its .htaccess routing)
 RUN a2enmod rewrite
