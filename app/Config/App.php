@@ -204,51 +204,37 @@ class App extends BaseConfig
     {
         parent::__construct();
 
-        $isProduction = (defined('ENVIRONMENT') && ENVIRONMENT === 'production')
-            || env('CI_ENVIRONMENT') === 'production'
-            || getenv('CI_ENVIRONMENT') === 'production';
-
-        $isVercel = !empty($_SERVER['VERCEL'])
-            || getenv('VERCEL') === '1'
-            || isset($_SERVER['VERCEL_ENV'])
-            || getenv('VERCEL_ENV') !== false
-            || (isset($_SERVER['HTTP_HOST']) && str_contains($_SERVER['HTTP_HOST'], 'vercel.app'));
-
-        $envBaseURL = (function_exists('env') ? env('app.baseURL') : null)
-            ?: getenv('app.baseURL')
-            ?: getenv('APP_BASEURL')
-            ?: getenv('APP_BASE_URL');
-
-        if (!empty($envBaseURL)) {
-            $this->baseURL = rtrim((string) $envBaseURL, '/') . '/';
-            $this->indexPage = '';
-        } elseif ($isVercel || $isProduction) {
-            if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '' && !str_contains($_SERVER['HTTP_HOST'], 'localhost')) {
-                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-                    ? 'https' : 'http';
-                $this->baseURL = $scheme . '://' . $_SERVER['HTTP_HOST'] . '/';
-            } else {
-                $this->baseURL = 'https://blaxmarketplace.vercel.app/';
-            }
-            $this->indexPage = '';
-        } elseif (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
+        // 1. Detect dynamic base URL when running in an HTTP request context
+        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
             $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                 || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
                 ? 'https' : 'http';
             $host = $_SERVER['HTTP_HOST'];
 
-            if (str_contains($host, 'localhost:8080') || str_contains($host, '127.0.0.1:8080')) {
-                $this->baseURL = $scheme . '://' . $host . '/';
-                $this->indexPage = '';
-            }
-        }
+            // Determine if the app is served from a subfolder (e.g. Laragon /blax_inventory/public) or web root (Docker, Railway, Spark)
+            $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+            $basePath = (trim($scriptDir, '/') !== '') ? '/' . trim($scriptDir, '/') . '/' : '/';
 
-        // Dynamically allow the current HTTP_HOST so SiteURIFactory always accepts it
-        if (isset($_SERVER['HTTP_HOST']) && $_SERVER['HTTP_HOST'] !== '') {
-            $hostOnly = explode(':', (string) $_SERVER['HTTP_HOST'])[0];
+            $this->baseURL = $scheme . '://' . $host . $basePath;
+            $this->indexPage = '';
+
+            // Dynamically allow the current HTTP_HOST so SiteURIFactory always accepts it
+            $hostOnly = explode(':', (string) $host)[0];
             if ($hostOnly !== '' && !in_array($hostOnly, $this->allowedHostnames, true)) {
                 $this->allowedHostnames[] = $hostOnly;
+            }
+        } else {
+            // 2. Non-HTTP context (CLI, Spark, automated testing) - check environment variables or production fallback
+            $envBaseURL = (function_exists('env') ? env('app.baseURL') : null)
+                ?: getenv('app.baseURL')
+                ?: getenv('APP_BASEURL')
+                ?: getenv('APP_BASE_URL');
+
+            if (!empty($envBaseURL)) {
+                $this->baseURL = rtrim((string) $envBaseURL, '/') . '/';
+                $this->indexPage = '';
+            } else {
+                $this->baseURL = 'https://blaxinventory-production.up.railway.app/';
             }
         }
     }
