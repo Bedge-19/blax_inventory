@@ -69,10 +69,20 @@ server {
         deny all;
     }
 
-    # Cache static assets
-    location ~* \.(jpg|jpeg|png|gif|ico|css|js|webp|svg|woff|woff2|ttf|eot)$ {
+    # Cache media & fonts
+    location ~* \.(jpg|jpeg|png|gif|ico|webp|svg|woff|woff2|ttf|eot)$ {
         expires 30d;
         add_header Cache-Control "public, no-transform, max-age=2592000";
+        add_header Access-Control-Allow-Origin "*";
+        access_log off;
+        log_not_found off;
+        try_files $uri =404;
+    }
+
+    # Cache CSS & JS with must-revalidate
+    location ~* \.(css|js)$ {
+        expires 7d;
+        add_header Cache-Control "public, max-age=604800, must-revalidate";
         add_header Access-Control-Allow-Origin "*";
         access_log off;
         log_not_found off;

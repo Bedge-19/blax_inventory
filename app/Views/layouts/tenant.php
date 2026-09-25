@@ -289,7 +289,7 @@
                     </div>
 
                     <!-- Profile Dropdown -->
-                    <div class="flex items-center gap-sm relative">
+                    <div class="relative inline-flex items-center">
                         <?php
                             $tenantAvatarUrl = '';
                             if (!empty($shop['logo_url'])) {
@@ -309,7 +309,7 @@
                             <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-on-surface transition-transform group-hover:translate-y-0.5 hidden sm:inline">expand_more</span>
                         </button>
 
-                        <div id="tenant-profile-dropdown" class="dropdown-menu fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-56 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-2 z-50">
+                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 min-w-[240px] w-max max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-2 z-50 origin-top-right">
                             <div class="px-3 py-2 border-b border-outline-variant/15 mb-1.5">
                                 <p class="text-xs font-bold text-on-surface truncate"><?= esc($shopName) ?></p>
                                 <p class="text-[10px] text-on-surface-variant truncate"><?= esc(session()->get('user_email') ?? 'Merchant') ?></p>

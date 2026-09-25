@@ -267,7 +267,7 @@
                     </div>
 
                     <!-- Quick Admin Dropdown -->
-                    <div class="relative">
+                    <div class="relative inline-flex items-center">
                         <button id="admin-profile-toggle" type="button" class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-surface-container border border-outline-variant/30 transition-colors" aria-haspopup="true" aria-expanded="false" aria-label="Admin menu">
                             <div class="w-7 h-7 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center font-bold text-xs shrink-0">
                                 <?= esc($adminInitials) ?>
@@ -275,7 +275,7 @@
                             <span class="hidden md:inline text-xs font-semibold text-on-surface truncate max-w-[100px]"><?= esc($adminName) ?></span>
                             <span class="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
                         </button>
-                        <div id="admin-profile-quickmenu" class="hidden fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-48 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/40 py-1.5 z-50 text-xs">
+                        <div id="admin-profile-quickmenu" class="hidden absolute right-0 top-full mt-2 min-w-[220px] w-max max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/40 py-1.5 z-50 text-xs origin-top-right">
                             <div class="px-3 py-2 border-b border-outline-variant/20 mb-1">
                                 <p class="font-bold text-on-surface truncate"><?= esc($adminName) ?></p>
                                 <p class="text-[10px] text-on-surface-variant truncate"><?= esc($adminEmail) ?></p>

@@ -165,7 +165,7 @@
                     </button>
 
                     <!-- Profile Dropdown -->
-                    <div id="profile-dropdown" class="dropdown-menu fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-64 bg-surface-container-lowest rounded-2xl sm:rounded-xl shadow-2xl border border-outline-variant/30 py-2 z-50">
+                    <div id="profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 min-w-[240px] w-max max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 py-2 z-50 origin-top-right">
 
                     <div class="px-md py-sm border-b border-outline-variant/10 flex items-center gap-md">
 

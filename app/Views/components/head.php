@@ -338,10 +338,16 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
 <!-- Preconnect for Google Fonts to accelerate typography paint -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="<?= base_url('css/tailwind.css?v=1.0.2') ?>">
+<?php
+    $cssPath = FCPATH . 'css/tailwind.css';
+    $cssVer = is_file($cssPath) ? filemtime($cssPath) : '2.1.0';
+    $jsPath = FCPATH . 'js/blax-ui.js';
+    $jsVer = is_file($jsPath) ? filemtime($jsPath) : '2.1.0';
+?>
+<link rel="stylesheet" href="<?= base_url('css/tailwind.css?v=' . $cssVer) ?>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-<script src="<?= base_url('js/blax-ui.js?v=1.0.2') ?>" defer></script>
+<script src="<?= base_url('js/blax-ui.js?v=' . $jsVer) ?>" defer></script>
 
 <style>
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
@@ -366,6 +372,44 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
         .sidebar-item:hover { background-color: #e6e8ea; }
         .order-table-row:hover { background-color: #eceef0; }
         .delay-150ms { transition-delay: 150ms; }
+
+        /* Bulletproof Navigation & Profile Dropdown Positioning */
+        #profile-dropdown,
+        #tenant-profile-dropdown,
+        #admin-profile-quickmenu {
+            position: absolute !important;
+            top: calc(100% + 0.5rem) !important;
+            right: 0 !important;
+            left: auto !important;
+            min-width: 240px !important;
+            width: max-content !important;
+            max-width: calc(100vw - 1.5rem) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+            transform-origin: top right !important;
+            z-index: 9999 !important;
+            white-space: nowrap !important;
+        }
+        #notif-panel,
+        #admin-notif-panel,
+        #notif-dropdown {
+            position: absolute !important;
+            top: calc(100% + 0.5rem) !important;
+            right: 0 !important;
+            left: auto !important;
+            width: 20rem !important;
+            max-width: calc(100vw - 1.5rem) !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 8px 10px -6px rgba(0, 0, 0, 0.15) !important;
+            transform-origin: top right !important;
+            z-index: 9999 !important;
+        }
+        #profile-dropdown a,
+        #profile-dropdown button,
+        #tenant-profile-dropdown a,
+        #tenant-profile-dropdown button,
+        #admin-profile-quickmenu a,
+        #admin-profile-quickmenu button {
+            white-space: nowrap !important;
+        }
         
         /* Dark Mode — Inline Critical Overrides (prevents FOUC) */
         html.dark { color-scheme: dark; }
