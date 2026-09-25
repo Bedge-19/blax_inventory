@@ -18,9 +18,9 @@
 
     $sc = $siteContents ?? [];
     $psTitle = $sc['hero_title']['text_value'] ?? 'Professional Printing, Everywhere You Are.';
-    $psSubtitle = $sc['hero_subtitle']['text_value'] ?? 'Every verified printing partner on our Polomolok network is equipped with commercial-grade production equipment. From quick thesis binding to large-format event tarpaulins, we bring the print shop to your fingertips.';
-    $psImage = $sc['hero_image']['image_url'] ?? 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80';
-    if ($psImage && !str_starts_with($psImage, 'http')) $psImage = base_url($psImage);
+    $rawHeroImg = trim($sc['hero_image']['image_url'] ?? '');
+    $psImage = !empty($rawHeroImg) ? $rawHeroImg : 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80';
+    if (!empty($psImage) && !str_starts_with($psImage, 'http')) $psImage = base_url($psImage);
 ?>
 
 <main class="max-w-container-max mx-auto px-4 md:px-8 lg:px-10 flex-grow w-full py-6 sm:py-8 md:py-10 flex flex-col gap-10 sm:gap-14 md:gap-20">

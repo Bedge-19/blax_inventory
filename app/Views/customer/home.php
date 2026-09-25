@@ -263,7 +263,7 @@
         <div class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-2.5 sm:gap-4 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 lg:grid-cols-5">
             <?php if (!empty($shops)): ?>
                 <?php foreach ($shops as $s): ?>
-                    <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="card-elevated rounded-2xl overflow-hidden flex flex-col group transition-all duration-300 w-[140px] sm:w-auto shrink-0 snap-start">
+                    <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="card-elevated bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-primary/40 rounded-2xl overflow-hidden flex flex-col group transition-all duration-300 w-[140px] sm:w-auto shrink-0 snap-start">
                         
                         <!-- Mini Decorative Banner Header -->
                         <div class="h-10 sm:h-12 w-full bg-gradient-to-r from-blue-600/15 via-indigo-600/20 to-primary/15 relative">

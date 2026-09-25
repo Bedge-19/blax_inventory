@@ -122,7 +122,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-4 md:gap-5">
             <?php if (!empty($shops)): ?>
                 <?php foreach ($shops as $s): ?>
-                    <div class="card-elevated rounded-2xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
+                    <div class="card-elevated bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-primary/40 rounded-2xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
                         
                         <div>
                             <!-- Header Cover Banner (Compact on mobile) -->

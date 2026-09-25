@@ -117,6 +117,8 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
         .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(229, 231, 235, 0.5); }
         .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(229, 231, 235, 0.5); }
         .glassmorphism { backdrop-filter: blur(16px); background-color: rgba(255, 255, 255, 0.8); border: 1px solid rgba(255, 255, 255, 0.3); }
+        .card-elevated { background-color: #ffffff; border: 1px solid rgba(226, 232, 240, 0.9); box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04); }
+        .card-elevated:hover { border-color: rgba(37, 99, 235, 0.4); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08); }
         .bg-pattern { background-color: #f7f9fb; background-image: radial-gradient(at 15% 20%, rgba(37,99,235,0.08) 0px, transparent 50%), radial-gradient(at 85% 15%, rgba(0,116,166,0.06) 0px, transparent 50%), radial-gradient(at 70% 90%, rgba(0,74,198,0.07) 0px, transparent 50%); }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
