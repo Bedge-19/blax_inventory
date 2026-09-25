@@ -208,6 +208,11 @@
                         <span class="text-[11px]">System Nominal</span>
                     </div>
 
+                    <!-- Theme Switcher -->
+                    <button type="button" class="theme-toggle-btn w-9 h-9 rounded-xl border border-outline-variant/30 hover:bg-surface-container flex items-center justify-center text-on-surface-variant relative transition-colors" title="Toggle dark / light theme" aria-label="Toggle theme">
+                        <span class="material-symbols-outlined theme-toggle-icon text-[20px]">dark_mode</span>
+                    </button>
+
                     <!-- Notification Bell Dropdown -->
                     <div class="relative">
                         <button id="admin-notif-toggle" type="button" class="w-9 h-9 rounded-xl border border-outline-variant/30 hover:bg-surface-container flex items-center justify-center text-on-surface-variant relative transition-colors" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">

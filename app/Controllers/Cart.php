@@ -43,19 +43,37 @@ class Cart extends BaseController
         $cartItems = $cartItemModel->getCartItemsWithProducts($cart['id']);
         $addresses = $addressModel->where('user_id', $userId)->findAll();
 
+        $itemsByShop = [];
         $total = 0;
+        $selectedCount = 0;
         foreach ($cartItems as $item) {
+            $shopId = (int) ($item['shop_id'] ?? 0);
+            if (!isset($itemsByShop[$shopId])) {
+                $itemsByShop[$shopId] = [
+                    'shop_id'         => $shopId,
+                    'shop_name'       => $item['shop_name'] ?? 'Merchant Store',
+                    'shop_slug'       => $item['shop_slug'] ?? '',
+                    'offers_delivery' => (int) ($item['offers_delivery'] ?? 1),
+                    'offers_pickup'   => (int) ($item['offers_pickup'] ?? 1),
+                    'items'           => [],
+                ];
+            }
+            $itemsByShop[$shopId]['items'][] = $item;
+
             if (!empty($item['is_selected'])) {
                 $total += $item['price'] * $item['quantity'];
+                $selectedCount += $item['quantity'];
             }
         }
 
         return view('customer/cart', [
-            'cart'        => $cart,
-            'cartItems'   => $cartItems,
-            'addresses'   => $addresses,
-            'total'       => $total,
-            'shippingFee' => 50.00,
+            'cart'          => $cart,
+            'cartItems'     => $cartItems,
+            'itemsByShop'   => $itemsByShop,
+            'addresses'     => $addresses,
+            'total'         => $total,
+            'selectedCount' => $selectedCount,
+            'shippingFee'   => 50.00,
         ]);
     }
 
@@ -251,7 +269,7 @@ class Cart extends BaseController
                 'variant_label'    => $variantLabel,
                 'quantity'         => $quantity,
                 'unit_price'       => $unitPrice,
-                'is_selected'      => 1,
+                'is_selected'      => 0,
                 'expires_at'       => $expiresAt,
                 'last_reminder_at' => null,
                 'reminder_count'   => 0,
@@ -289,19 +307,16 @@ class Cart extends BaseController
         } else {
             $existing = $cartItemModel->where('cart_id', $cart['id'])->where('is_selected', 1)->findAll();
             $selectedIds = array_column($existing, 'id');
-            if (empty($selectedIds)) {
-                $all = $cartItemModel->where('cart_id', $cart['id'])->findAll();
-                $selectedIds = array_column($all, 'id');
-                if ($selectedIds) {
-                    $cartItemModel->builder()->where('cart_id', $cart['id'])->update(['is_selected' => 1]);
-                }
-            }
+        }
+
+        if (empty($selectedIds)) {
+            return redirect()->to('/cart')->with('error', 'Please select at least one item from your cart to proceed with checkout.');
         }
 
         $cartItems = $cartItemModel->getCartItemsWithProducts($cart['id']);
 
-        if (empty($cartItems) || empty($selectedIds)) {
-            return redirect()->to('/cart');
+        if (empty($cartItems)) {
+            return redirect()->to('/cart')->with('error', 'Your cart is empty.');
         }
 
         // Task 10: Require at least one address before checkout

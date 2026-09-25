@@ -1,22 +1,28 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<?php if (session()->getFlashdata('success')): ?>
-    <div class="p-md rounded-xl bg-green-100 text-green-800 text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('success')) ?></div>
-<?php endif; ?>
-
-<?php if (session()->getFlashdata('error')): ?>
-    <div class="p-md rounded-xl bg-error-container text-on-error-container text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('error')) ?></div>
-<?php endif; ?>
-
 <div class="flex flex-1 flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'favorites']) ?>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+    <main class="flex-1 p-3 sm:p-6 md:p-8 lg:p-10 overflow-y-auto">
 
-        <div class="max-w-6xl mx-auto">
+        <div class="max-w-5xl mx-auto space-y-6">
+
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                    <span class="material-symbols-outlined text-lg shrink-0">check_circle</span>
+                    <span><?= esc(session()->getFlashdata('success')) ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="p-4 rounded-2xl bg-error-container/20 border border-error/30 text-error text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                    <span class="material-symbols-outlined text-lg shrink-0">error</span>
+                    <span><?= esc(session()->getFlashdata('error')) ?></span>
+                </div>
+            <?php endif; ?>
 
             <div class="mb-xl">
 

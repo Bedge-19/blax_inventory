@@ -76,3 +76,253 @@ body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
     .dropdown-menu:hover { opacity: 1; visibility: visible; }
 }
 .profile-dropdown-toggle { display: inline-flex; }
+
+/* ══════════════════════════════════════════════════════════════════
+   Dark Mode — Midnight Slate & Deep Sapphire
+   Global CSS overrides that remap common Tailwind utility colors
+   when html.dark is active. This single block covers all 25+ view
+   files without per-file edits.
+   ══════════════════════════════════════════════════════════════════ */
+html.dark {
+    color-scheme: dark;
+}
+
+/* ── Base Body ── */
+html.dark body {
+    background-color: #0b0f19;
+    color: #e2e8f0;
+}
+
+/* ── Semantic Surface Backgrounds ── */
+html.dark .bg-background    { background-color: #0b0f19; }
+html.dark .bg-surface        { background-color: #111827; }
+html.dark .bg-surface-container-lowest  { background-color: #151f32; }
+html.dark .bg-surface-container-low     { background-color: #1e293b; }
+html.dark .bg-surface-container         { background-color: #222f46; }
+html.dark .bg-surface-container-high    { background-color: #293854; }
+html.dark .bg-surface-container-highest { background-color: #324466; }
+
+/* ── Semantic Text Colors ── */
+html.dark .text-on-surface          { color: #f1f5f9; }
+html.dark .text-on-surface-variant  { color: #94a3b8; }
+html.dark .text-outline             { color: #64748b; }
+
+/* ── Semantic Border Colors ── */
+html.dark .border-outline-variant,
+html.dark .border-outline-variant\/10,
+html.dark .border-outline-variant\/15,
+html.dark .border-outline-variant\/20,
+html.dark .border-outline-variant\/30,
+html.dark .border-outline-variant\/40,
+html.dark .border-outline-variant\/50 {
+    border-color: rgba(51, 65, 85, 0.6);
+}
+
+/* ══════════════════════════════════════════════
+   TEXT COLOR REMAPPING — Slate Scale
+   Dark text → Light text for dark backgrounds
+   ══════════════════════════════════════════════ */
+html.dark .text-slate-900  { color: #f1f5f9 !important; }
+html.dark .text-slate-800  { color: #e2e8f0 !important; }
+html.dark .text-slate-700  { color: #cbd5e1 !important; }
+html.dark .text-slate-600  { color: #94a3b8 !important; }
+html.dark .text-slate-500  { color: #94a3b8 !important; }
+html.dark .text-slate-400  { color: #64748b !important; }
+html.dark .text-slate-300  { color: #475569 !important; }
+
+/* TEXT COLOR REMAPPING — Gray Scale */
+html.dark .text-gray-900   { color: #f9fafb !important; }
+html.dark .text-gray-800   { color: #e5e7eb !important; }
+html.dark .text-gray-700   { color: #d1d5db !important; }
+html.dark .text-gray-600   { color: #9ca3af !important; }
+html.dark .text-gray-500   { color: #9ca3af !important; }
+html.dark .text-gray-400   { color: #6b7280 !important; }
+
+/* TEXT COLOR REMAPPING — Special dark headings */
+html.dark .text-indigo-950  { color: #c7d2fe !important; }
+html.dark .text-indigo-900  { color: #a5b4fc !important; }
+html.dark .text-blue-900    { color: #93c5fd !important; }
+html.dark .text-blue-800    { color: #93c5fd !important; }
+
+/* ══════════════════════════════════════════════
+   BACKGROUND COLOR REMAPPING
+   White/Light backgrounds → Dark surfaces
+   ══════════════════════════════════════════════ */
+html.dark .bg-white     { background-color: #151f32 !important; }
+html.dark .bg-slate-50  { background-color: #111827 !important; }
+html.dark .bg-slate-100 { background-color: #1e293b !important; }
+html.dark .bg-slate-200 { background-color: #222f46 !important; }
+html.dark .bg-slate-300 { background-color: #293854 !important; }
+html.dark .bg-gray-50   { background-color: #111827 !important; }
+html.dark .bg-gray-100  { background-color: #1e293b !important; }
+html.dark .bg-gray-200  { background-color: #222f46 !important; }
+
+/* Light tinted backgrounds → Dark tinted equivalents */
+html.dark .bg-blue-50    { background-color: rgba(37, 99, 235, 0.15) !important; }
+html.dark .bg-blue-100   { background-color: rgba(37, 99, 235, 0.20) !important; }
+html.dark .bg-indigo-50  { background-color: rgba(99, 102, 241, 0.15) !important; }
+html.dark .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.20) !important; }
+html.dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.15) !important; }
+html.dark .bg-emerald-100{ background-color: rgba(16, 185, 129, 0.20) !important; }
+html.dark .bg-green-50   { background-color: rgba(34, 197, 94, 0.15) !important; }
+html.dark .bg-green-100  { background-color: rgba(34, 197, 94, 0.20) !important; }
+html.dark .bg-amber-50   { background-color: rgba(245, 158, 11, 0.15) !important; }
+html.dark .bg-amber-100  { background-color: rgba(245, 158, 11, 0.20) !important; }
+html.dark .bg-red-50     { background-color: rgba(239, 68, 68, 0.15) !important; }
+html.dark .bg-red-100    { background-color: rgba(239, 68, 68, 0.20) !important; }
+html.dark .bg-rose-50    { background-color: rgba(244, 63, 94, 0.15) !important; }
+html.dark .bg-orange-50  { background-color: rgba(249, 115, 22, 0.15) !important; }
+html.dark .bg-sky-50     { background-color: rgba(14, 165, 233, 0.15) !important; }
+html.dark .bg-purple-50  { background-color: rgba(168, 85, 247, 0.15) !important; }
+html.dark .bg-violet-50  { background-color: rgba(139, 92, 246, 0.15) !important; }
+
+/* Opacity white backgrounds */
+html.dark .bg-white\/90  { background-color: rgba(21, 31, 50, 0.90) !important; }
+html.dark .bg-white\/95  { background-color: rgba(21, 31, 50, 0.95) !important; }
+html.dark .bg-white\/80  { background-color: rgba(21, 31, 50, 0.80) !important; }
+
+/* ══════════════════════════════════════════════
+   BORDER COLOR REMAPPING
+   Light borders → Dark subtle borders
+   ══════════════════════════════════════════════ */
+html.dark .border-slate-100 { border-color: rgba(51, 65, 85, 0.3) !important; }
+html.dark .border-slate-200 { border-color: rgba(51, 65, 85, 0.5) !important; }
+html.dark .border-slate-300 { border-color: rgba(51, 65, 85, 0.6) !important; }
+html.dark .border-gray-100  { border-color: rgba(55, 65, 81, 0.3) !important; }
+html.dark .border-gray-200  { border-color: rgba(55, 65, 81, 0.5) !important; }
+html.dark .border-gray-300  { border-color: rgba(55, 65, 81, 0.6) !important; }
+
+/* Opacity border variants */
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90 { border-color: rgba(51, 65, 85, 0.45) !important; }
+
+/* ══════════════════════════════════════════════
+   HOVER STATE REMAPPING
+   ══════════════════════════════════════════════ */
+html.dark .hover\:bg-slate-50:hover   { background-color: #1e293b !important; }
+html.dark .hover\:bg-slate-100:hover  { background-color: #222f46 !important; }
+html.dark .hover\:bg-gray-50:hover    { background-color: #1e293b !important; }
+html.dark .hover\:bg-gray-100:hover   { background-color: #222f46 !important; }
+html.dark .hover\:bg-white:hover      { background-color: #1e293b !important; }
+
+/* Hover text */
+html.dark .hover\:text-slate-900:hover { color: #f1f5f9 !important; }
+html.dark .hover\:text-slate-800:hover { color: #e2e8f0 !important; }
+html.dark .hover\:text-gray-900:hover  { color: #f9fafb !important; }
+
+/* Group hover text */
+html.dark .group-hover\:text-slate-900:hover,
+html.dark .group:hover .group-hover\:text-slate-900 { color: #f1f5f9 !important; }
+
+/* ══════════════════════════════════════════════
+   GRADIENT REMAPPING
+   from-white / via-white → dark equivalents
+   ══════════════════════════════════════════════ */
+html.dark .from-white     { --tw-gradient-from: #151f32 !important; }
+html.dark .via-white      { --tw-gradient-via: #151f32 !important; }
+html.dark .to-white       { --tw-gradient-to: #151f32 !important; }
+html.dark .via-white\/90  { --tw-gradient-via: rgba(21, 31, 50, 0.90) !important; }
+html.dark .via-white\/95  { --tw-gradient-via: rgba(21, 31, 50, 0.95) !important; }
+html.dark .to-blue-50     { --tw-gradient-to: rgba(37, 99, 235, 0.10) !important; }
+html.dark .to-blue-50\/70 { --tw-gradient-to: rgba(37, 99, 235, 0.07) !important; }
+html.dark .from-blue-50   { --tw-gradient-from: rgba(37, 99, 235, 0.10) !important; }
+
+/* ══════════════════════════════════════════════
+   COMPONENT CLASS OVERRIDES
+   ══════════════════════════════════════════════ */
+html.dark .card-elevated {
+    background: #151f32;
+    border-color: rgba(51, 65, 85, 0.6);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -1px rgba(0, 0, 0, 0.3);
+}
+html.dark .card-elevated:hover {
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.4);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+html.dark .glass-panel,
+html.dark .glass-card,
+html.dark .glassmorphism {
+    background-color: rgba(17, 24, 39, 0.85);
+    border-color: rgba(51, 65, 85, 0.4);
+}
+
+html.dark .bg-pattern {
+    background-color: #0b0f19;
+    background-image: radial-gradient(at 15% 20%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 85% 15%, rgba(14,165,233,0.10) 0px, transparent 50%), radial-gradient(at 70% 90%, rgba(37,99,235,0.10) 0px, transparent 50%);
+}
+
+html.dark .mobile-drawer {
+    background: #111827;
+    border-left: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+html.dark .sidebar-item:hover {
+    background-color: #1e293b;
+}
+html.dark .order-table-row:hover {
+    background-color: #1e293b;
+}
+
+/* ── Form Controls ── */
+html.dark select,
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark textarea {
+    background-color: #151f32;
+    color: #f1f5f9;
+    border-color: rgba(51, 65, 85, 0.6);
+}
+html.dark select option {
+    background-color: #151f32;
+    color: #f1f5f9;
+}
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #64748b;
+}
+
+/* ── Tables ── */
+html.dark table th {
+    background-color: #1e293b;
+    color: #cbd5e1;
+    border-color: rgba(51, 65, 85, 0.5);
+}
+html.dark table td {
+    border-color: rgba(51, 65, 85, 0.3);
+}
+html.dark table tbody tr:hover {
+    background-color: rgba(30, 41, 59, 0.5);
+}
+
+/* ── Dividers ── */
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(51, 65, 85, 0.4) !important;
+}
+
+/* ── Ring / Focus Colors ── */
+html.dark .ring-slate-200 { --tw-ring-color: rgba(51, 65, 85, 0.5) !important; }
+html.dark .ring-slate-300 { --tw-ring-color: rgba(51, 65, 85, 0.6) !important; }
+html.dark .focus\:ring-slate-200:focus { --tw-ring-color: rgba(51, 65, 85, 0.5) !important; }
+
+/* ── Shadow adjustments ── */
+html.dark .shadow-sm,
+html.dark .shadow-xs,
+html.dark .shadow-2xs {
+    --tw-shadow-color: rgba(0, 0, 0, 0.4);
+}
+html.dark .shadow-md {
+    --tw-shadow-color: rgba(0, 0, 0, 0.5);
+}
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+    --tw-shadow-color: rgba(0, 0, 0, 0.6);
+}
+
+/* ── Placeholder / Empty State Text ── */
+html.dark .placeholder\:text-slate-400::placeholder { color: #64748b !important; }
+html.dark .placeholder\:text-gray-400::placeholder  { color: #6b7280 !important; }
+
+

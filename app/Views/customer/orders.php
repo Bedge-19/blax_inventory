@@ -6,348 +6,391 @@
     <?= view('components/profile_sidebar', ['activeNav' => 'orders']) ?>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+    <main class="flex-1 p-3 sm:p-6 md:p-8 lg:p-10 overflow-y-auto">
 
-        <div class="max-w-6xl mx-auto space-y-6">
+        <div class="max-w-5xl mx-auto space-y-6">
 
-            <header class="mb-xl">
-
-            <h1 class="text-headline-lg font-headline-lg mb-base">My Orders</h1>
-
-            <?php if (!empty($orders)): ?>
-
-                <!-- Tabs -->
-                <div class="flex border-b border-outline-variant/30 gap-lg overflow-x-auto pb-px">
-
-                    <button type="button" class="px-base py-md font-label-sm text-label-sm text-primary border-b-2 border-primary whitespace-nowrap" data-filter="all">All Orders</button>
-                    <button type="button" class="px-base py-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap" data-filter="active">Active</button>
-                    <button type="button" class="px-base py-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap" data-filter="completed">Completed</button>
-                    <button type="button" class="px-base py-md font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap" data-filter="cancelled">Cancelled</button>
-
-                </div>
-
-            <?php endif; ?>
-
-        </header>
-
-        <?php if (!empty($orders)): ?>
-
-            <!-- Order List -->
-            <div class="flex flex-col gap-lg">
-
-                <?php
-                    $statusIcons = [
-                        'pending'         => 'schedule',
-                        'processing'      => 'schedule',
-                        'shipped'         => 'local_shipping',
-                        'ready_for_pickup'=> 'store',
-                        'delivered'       => 'task_alt',
-                        'completed'       => 'task_alt',
-                        'cancelled'       => 'cancel',
-                    ];
-                    $orderGroup = [
-                        'pending'         => 'active',
-                        'processing'      => 'active',
-                        'shipped'         => 'active',
-                        'ready_for_pickup'=> 'active',
-                        'delivered'       => 'completed',
-                        'completed'       => 'completed',
-                        'cancelled'       => 'cancelled',
-                    ];
-                ?>
-
-                <?php foreach ($orders as $order): ?>
-
-                    <?php
-                        $orderStatus = strtolower((string) ($order['status'] ?? 'pending'));
-                        $statusIcon  = $statusIcons[$orderStatus] ?? 'receipt_long';
-                        $group       = $orderGroup[$orderStatus] ?? 'active';
-
-                        $orderedOn = date('M d, Y', strtotime($order['placed_at'] ?? $order['created_at'] ?? 'now'));
-
-                        $thumbnails = array_slice($order['items'] ?? [], 0, 2);
-                        $extraItems = max(0, count($order['items'] ?? []) - 2);
-                    ?>
-
-                    <div class="glass-card rounded-xl p-md md:p-lg flex flex-col md:flex-row gap-lg hover:shadow-md transition-all group" data-group="<?= esc($group) ?>" data-status="<?= esc($orderStatus) ?>">
-
-                        <div class="flex-1">
-
-                            <div class="flex justify-between items-start mb-md">
-
-                                <div>
-
-                                    <h3 class="text-title-lg font-title-lg mb-xs">#<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?></h3>
-
-                                    <div class="flex items-center gap-sm flex-wrap">
-
-                                        <span class="flex items-center gap-xs bg-tertiary-container/10 text-tertiary-container px-sm py-xs rounded-full text-label-sm font-label-sm">
-
-                                            <span class="material-symbols-outlined text-[14px]"><?= $statusIcon ?></span>
-                                            <?= humanize_status($orderStatus) ?>
-
-                                        </span>
-
-                                        <?php $isPickupCard = (($order['fulfillment_method'] ?? 'delivery') === 'pickup'); ?>
-                                        <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border <?= $isPickupCard ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/60' : 'bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800/60' ?>">
-                                            <span class="material-symbols-outlined text-[13px]"><?= $isPickupCard ? 'storefront' : 'local_shipping' ?></span>
-                                            <span><?= $isPickupCard ? 'Store Pick-up' : 'Doorstep Delivery' ?></span>
-                                        </span>
-
-                                        <span class="text-on-surface-variant text-label-sm">Ordered on <?= esc($orderedOn) ?></span>
-
-                                    </div>
-
-                                </div>
-
-                                <span class="text-title-lg font-title-lg text-primary font-bold">₱<?= number_format((float) $order['total_amount'], 2) ?></span>
-
-                            </div>
-
-                            <!-- Order Tracking Timeline -->
-                            <?php
-                                $isCancelled = ($orderStatus === 'cancelled');
-                                $isPickup = (($order['fulfillment_method'] ?? 'delivery') === 'pickup');
-                                $currentStep = match($orderStatus) {
-                                    'pending'                                  => 1,
-                                    'processing'                               => 2,
-                                    'shipped', 'in_transit', 'ready_for_pickup' => 3,
-                                    'delivered', 'completed'                   => 4,
-                                    default                                    => 1,
-                                };
-                                $steps = [
-                                    1 => ['label' => 'Placed'],
-                                    2 => ['label' => 'Processing'],
-                                    3 => ['label' => $isPickup ? 'Ready' : 'Shipped'],
-                                    4 => ['label' => 'Completed'],
-                                ];
-                            ?>
-                            <?php if ($isCancelled): ?>
-                                <div class="my-sm py-xs px-sm bg-error-container/20 border border-error-container/50 rounded-xl flex items-center gap-xs text-error text-xs font-semibold">
-                                    <span class="material-symbols-outlined text-[16px]">cancel</span>
-                                    <span>This order has been cancelled.</span>
-                                </div>
-                            <?php else: ?>
-                                <div class="my-md py-sm">
-                                    <div class="flex items-center w-full">
-                                        <?php foreach ($steps as $stepNum => $stepData):
-                                            $isCompleted = ($stepNum < $currentStep) || ($orderStatus === 'delivered' || $orderStatus === 'completed');
-                                            $isCurrent   = ($stepNum === $currentStep) && !($orderStatus === 'delivered' || $orderStatus === 'completed');
-                                        ?>
-                                            <?php if ($stepNum > 1): ?>
-                                                <!-- Connector line -->
-                                                <div class="flex-1 h-[3px] mx-0.5 rounded-full transition-all duration-500 <?= ($isCompleted || ($isCurrent && $stepNum <= $currentStep)) ? 'bg-blue-600' : 'bg-outline-variant/30' ?>"></div>
-                                            <?php endif; ?>
-
-                                            <!-- Step node -->
-                                            <div class="flex flex-col items-center gap-1 shrink-0">
-                                                <?php if ($isCompleted): ?>
-                                                    <!-- Completed step -->
-                                                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm ring-2 ring-blue-600/20">
-                                                        <span class="material-symbols-outlined text-[16px]">check</span>
-                                                    </div>
-                                                <?php elseif ($isCurrent): ?>
-                                                    <!-- Active step -->
-                                                    <div class="relative w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm">
-                                                        <span class="absolute w-full h-full rounded-full bg-blue-500 animate-ping opacity-30"></span>
-                                                        <span class="w-3 h-3 rounded-full bg-white relative z-10"></span>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <!-- Pending step -->
-                                                    <div class="w-8 h-8 rounded-full bg-surface-container-high border-2 border-outline-variant/50 flex items-center justify-center">
-                                                        <span class="w-2 h-2 rounded-full bg-outline-variant/60"></span>
-                                                    </div>
-                                                <?php endif; ?>
-                                                <span class="text-[10px] md:text-[11px] whitespace-nowrap font-bold <?= $isCompleted ? 'text-blue-700' : ($isCurrent ? 'text-blue-600' : 'text-on-surface-variant/60') ?>"><?= $stepData['label'] ?></span>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-
-                            <div class="space-y-xs mb-md bg-surface-container-low/50 p-sm rounded-xl border border-outline-variant/20">
-                                <?php foreach (array_slice($order['items'] ?? [], 0, 2) as $item): ?>
-                                    <?php
-                                        $itemImg = product_image_url($item['image_url'] ?? '', 'thumbnail');
-                                        $pName = !empty($item['product_name']) ? $item['product_name'] : 'Product Item';
-                                    ?>
-                                    <div class="flex items-center gap-sm">
-                                        <div class="relative w-12 h-12 rounded-lg overflow-hidden border border-outline-variant/30 bg-surface-container-low flex items-center justify-center shrink-0">
-                                            <?php if (!empty($itemImg)): ?>
-                                                <img class="w-full h-full object-cover" src="<?= esc($itemImg) ?>" alt="<?= esc($pName) ?>">
-                                            <?php else: ?>
-                                                <span class="material-symbols-outlined text-outline text-lg">inventory_2</span>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-body-sm font-semibold text-on-surface truncate">
-                                                <?= esc($pName) ?>
-                                                <?php if (!empty($item['variant_label'])): ?>
-                                                    <span class="text-[11px] font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded ml-1"><?= esc($item['variant_label']) ?></span>
-                                                <?php endif; ?>
-                                            </p>
-                                            <p class="text-label-sm text-on-surface-variant">Qty: <?= (int) ($item['quantity'] ?? 1) ?> · ₱<?= number_format((float) ($item['unit_price'] ?? 0), 2) ?></p>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
-                                <?php if ($extraItems > 0): ?>
-                                    <p class="text-xs text-on-surface-variant font-medium pt-1 border-t border-outline-variant/15">+<?= $extraItems ?> more item(s) in this order</p>
-                                <?php endif; ?>
-                            </div>
-
-                            <?php if ($orderStatus === 'cancelled'): ?>
-
-                                <div class="bg-surface-container-low rounded-lg p-md flex items-center gap-md">
-
-                                    <span class="material-symbols-outlined text-error">cancel</span>
-
-                                    <div>
-                                        <p class="text-label-sm font-label-sm text-on-surface-variant">Cancelled on</p>
-                                        <p class="text-body-md font-body-md font-semibold"><?= !empty($order['cancelled_at']) ? date('M d, Y • h:i A', strtotime($order['cancelled_at'])) : '—' ?></p>
-                                    </div>
-
-                                </div>
-
-                            <?php elseif ($orderStatus === 'delivered' || $orderStatus === 'completed'): ?>
-
-                                <div class="bg-surface-container-low rounded-lg p-md flex items-center gap-md">
-
-                                    <span class="material-symbols-outlined text-on-surface-variant">check_circle</span>
-
-                                    <div>
-                                        <p class="text-label-sm font-label-sm text-on-surface-variant">Delivered on</p>
-                                        <p class="text-body-md font-body-md font-semibold"><?= !empty($order['completed_at']) ? date('M d, Y • h:i A', strtotime($order['completed_at'])) : '—' ?></p>
-                                    </div>
-
-                                </div>
-
-                            <?php elseif (($order['fulfillment_method'] ?? 'delivery') === 'pickup'): ?>
-
-                                <div class="bg-surface-container-low rounded-lg p-md flex items-center gap-md">
-
-                                    <span class="material-symbols-outlined text-primary">store</span>
-
-                                    <div>
-                                        <p class="text-label-sm font-label-sm text-on-surface-variant">Pickup at</p>
-                                        <p class="text-body-md font-body-md font-semibold"><?= esc($order['shop_name'] ?? 'RHK Merchant') ?></p>
-                                    </div>
-
-                                </div>
-
-                            <?php else: ?>
-
-                                <div class="bg-surface-container-low rounded-lg p-md flex items-center gap-md">
-
-                                    <span class="material-symbols-outlined text-primary">local_shipping</span>
-
-                                    <div>
-                                        <p class="text-label-sm font-label-sm text-on-surface-variant">Estimated Delivery</p>
-                                        <p class="text-body-md font-body-md font-semibold">Standard Delivery</p>
-                                    </div>
-
-                                </div>
-
-                            <?php endif; ?>
-
-                            <p class="text-xs text-on-surface-variant opacity-80 mt-md">Shop: <?= esc($order['shop_name'] ?? 'RHK Merchant') ?></p>
-
+            <!-- Page Title & Tabs -->
+            <header class="space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <div class="flex items-center gap-2 text-xs font-semibold text-outline mb-1">
+                            <a href="<?= base_url('customer/profile') ?>" class="hover:text-primary transition-colors">Account</a>
+                            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                            <span class="text-on-surface">My Orders</span>
                         </div>
-
-                        <div class="flex md:flex-col justify-end gap-sm md:w-52 shrink-0">
-
-                            <?php if ($orderStatus !== 'cancelled'): ?>
-
-                                <?php if ($orderStatus === 'delivered' || $orderStatus === 'completed'): ?>
-
-                                    <button type="button" 
-                                            class="rate-order-btn flex-1 md:flex-none bg-amber-500 hover:bg-amber-600 text-white py-sm px-md rounded-lg font-button text-button transition-colors flex items-center justify-center gap-xs shadow-sm"
-                                            data-order='<?= esc(json_encode($order), 'attr') ?>'>
-                                        <span class="material-symbols-outlined text-[16px]">star</span>
-                                        <span>Rate Product & Shop</span>
-                                    </button>
-
-                                    <a href="<?= base_url('shop/' . url_title($order['shop_name'] ?? 'rhk', '-', true)) ?>" class="flex-1 md:flex-none text-center bg-surface-container-highest text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-outline-variant transition-colors">Buy Again</a>
-
-                                <?php elseif (($order['fulfillment_method'] ?? 'delivery') === 'pickup'): ?>
-
-                                    <?php 
-                                        $shopLoc = trim(($order['shop_address'] ?? '') . ' ' . ($order['shop_city'] ?? ''));
-                                        if ($shopLoc === '') $shopLoc = 'Poblacion, Polomolok';
-                                    ?>
-                                    <?php if ($orderStatus === 'ready_for_pickup'): ?>
-                                        <button type="button" 
-                                                class="order-qr-btn flex-1 md:flex-none bg-primary text-on-primary py-sm px-md rounded-lg font-button text-button hover:bg-primary-container transition-all flex items-center justify-center gap-xs shadow-sm active:scale-95"
-                                                data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>"
-                                                data-shop="<?= esc($order['shop_name'] ?? 'Storefront') ?>"
-                                                data-location="<?= esc($shopLoc) ?>"
-                                                data-status="<?= esc(humanize_status($orderStatus)) ?>"
-                                                data-date="<?= esc($orderedOn) ?>"
-                                                data-paid="<?= ($order['payment_status'] ?? '') === 'paid' ? 'PAID' : 'UNPAID' ?>">
-                                            <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
-                                            <span>View Pick-up QR Code</span>
-                                        </button>
-                                    <?php else: ?>
-                                        <span class="text-xs text-on-surface-variant/70 font-medium text-center py-sm px-md bg-surface-container/70 border border-outline-variant/30 rounded-lg flex items-center justify-center gap-1">
-                                            <span class="material-symbols-outlined text-[15px] text-outline">schedule</span>
-                                            <span>QR available when ready</span>
-                                        </span>
-                                    <?php endif; ?>
-
-                                <?php else: ?>
-
-                                    <?php if (in_array($orderStatus, ['shipped', 'in_transit'], true)): ?>
-                                        <a href="<?= base_url('customer/orders/track/' . esc($order['order_number'] ?? $order['id'])) ?>" 
-                                           class="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition gap-1.5 flex-1 md:flex-none">
-                                            <span class="material-symbols-outlined text-[18px]">local_shipping</span>
-                                            <span>Track Order</span>
-                                        </a>
-                                    <?php else: ?>
-                                        <span class="text-xs text-on-surface-variant/70 font-medium text-center py-sm px-md bg-surface-container/70 border border-outline-variant/30 rounded-lg flex items-center justify-center gap-1">
-                                            <span class="material-symbols-outlined text-[15px] text-outline">schedule</span>
-                                            <span>Tracking available once shipped</span>
-                                        </span>
-                                    <?php endif; ?>
-
-                                <?php endif; ?>
-
+                        <h1 class="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight flex items-center gap-2.5">
+                            <span>My Orders</span>
+                            <?php if (!empty($orders)): ?>
+                                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                                    <?= count($orders) ?> <?= count($orders) === 1 ? 'order' : 'orders' ?>
+                                </span>
                             <?php endif; ?>
-
-                            <!-- Cancel Order Button: only visible strictly if status is pending or processing -->
-                            <?php if (in_array($orderStatus, ['pending', 'processing'], true)): ?>
-                                <button type="button" 
-                                        class="cancel-order-btn flex-1 md:flex-none border border-error/50 text-error hover:bg-error-container/20 py-sm px-md rounded-lg font-button text-button transition-colors flex items-center justify-center gap-xs"
-                                        data-id="<?= (int) $order['id'] ?>"
-                                        data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>">
-                                    <span class="material-symbols-outlined text-[16px]">close</span>
-                                    <span>Cancel Order</span>
-                                </button>
-                            <?php endif; ?>
-
-                            <button type="button" class="order-details-btn flex-1 md:flex-none border border-outline-variant text-on-surface py-sm px-md rounded-lg font-button text-button hover:bg-surface-container-high transition-colors" data-order='<?= esc(json_encode($order), 'attr') ?>'>Order Details</button>
-
-                        </div>
-
+                        </h1>
                     </div>
 
-                <?php endforeach; ?>
-
-            </div>
-
-        <?php else: ?>
-
-            <div class="glass-card rounded-2xl p-xxl text-center max-w-md mx-auto my-xl border border-outline-variant/30 flex flex-col items-center">
-                <div class="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-md">
-                    <span class="material-symbols-outlined text-4xl">inventory_2</span>
+                    <a href="<?= base_url('/') ?>" class="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors self-start sm:self-auto">
+                        <span class="material-symbols-outlined text-[18px]">storefront</span>
+                        <span>Browse Marketplace</span>
+                    </a>
                 </div>
-                <h2 class="text-title-lg font-bold text-on-surface mb-xs">No orders yet</h2>
-                <p class="text-body-md text-on-surface-variant max-w-md mb-lg">When you place orders for products or printing services, you will be able to track their progress and pick-up QR codes right here.</p>
-                <a href="<?= base_url('/') ?>" class="inline-flex items-center gap-xs bg-primary text-on-primary px-lg py-md rounded-xl font-button hover:bg-primary-container transition-all shadow-sm">
-                    <span class="material-symbols-outlined text-[20px]">storefront</span>
-                    <span>Explore Marketplace</span>
-                </a>
-            </div>
 
-        <?php endif; ?>
+                <?php if (!empty($orders)): ?>
+                    <?php
+                        $countAll = count($orders);
+                        $countActive = 0;
+                        $countCompleted = 0;
+                        $countCancelled = 0;
+                        foreach ($orders as $o) {
+                            $st = strtolower((string) ($o['status'] ?? 'pending'));
+                            if ($st === 'cancelled') {
+                                $countCancelled++;
+                            } elseif (in_array($st, ['delivered', 'completed'], true)) {
+                                $countCompleted++;
+                            } else {
+                                $countActive++;
+                            }
+                        }
+                    ?>
+                    <!-- Filter Tabs with Count Pills -->
+                    <div class="flex border-b border-outline-variant/30 gap-2 sm:gap-4 overflow-x-auto no-scrollbar pb-px">
+                        <button type="button" class="px-3.5 py-2.5 font-bold text-xs sm:text-sm text-primary border-b-2 border-primary whitespace-nowrap flex items-center gap-1.5 transition-all" data-filter="all">
+                            <span>All Orders</span>
+                            <span class="px-1.5 py-0.2 bg-primary/10 text-primary rounded-full text-[10px]"><?= $countAll ?></span>
+                        </button>
+                        <button type="button" class="px-3.5 py-2.5 font-bold text-xs sm:text-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1.5" data-filter="active">
+                            <span>Active</span>
+                            <span class="px-1.5 py-0.2 bg-surface-container-high text-on-surface-variant rounded-full text-[10px]"><?= $countActive ?></span>
+                        </button>
+                        <button type="button" class="px-3.5 py-2.5 font-bold text-xs sm:text-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1.5" data-filter="completed">
+                            <span>Completed</span>
+                            <span class="px-1.5 py-0.2 bg-surface-container-high text-on-surface-variant rounded-full text-[10px]"><?= $countCompleted ?></span>
+                        </button>
+                        <button type="button" class="px-3.5 py-2.5 font-bold text-xs sm:text-sm text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap flex items-center gap-1.5" data-filter="cancelled">
+                            <span>Cancelled</span>
+                            <span class="px-1.5 py-0.2 bg-surface-container-high text-on-surface-variant rounded-full text-[10px]"><?= $countCancelled ?></span>
+                        </button>
+                    </div>
+                <?php endif; ?>
+            </header>
+
+            <?php if (!empty($orders)): ?>
+                <!-- Orders List -->
+                <div class="flex flex-col gap-5">
+                    <?php
+                        $statusIcons = [
+                            'pending'          => 'schedule',
+                            'processing'       => 'pending',
+                            'shipped'          => 'local_shipping',
+                            'in_transit'       => 'local_shipping',
+                            'ready_for_pickup' => 'storefront',
+                            'delivered'        => 'task_alt',
+                            'completed'        => 'task_alt',
+                            'cancelled'        => 'cancel',
+                        ];
+                        $statusPills = [
+                            'pending'          => 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+                            'processing'       => 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+                            'shipped'          => 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+                            'in_transit'       => 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+                            'ready_for_pickup' => 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                            'delivered'        => 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                            'completed'        => 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+                            'cancelled'        => 'bg-error/10 text-error border-error/30',
+                        ];
+                        $orderGroup = [
+                            'pending'          => 'active',
+                            'processing'       => 'active',
+                            'shipped'          => 'active',
+                            'in_transit'       => 'active',
+                            'ready_for_pickup' => 'active',
+                            'delivered'        => 'completed',
+                            'completed'        => 'completed',
+                            'cancelled'        => 'cancelled',
+                        ];
+                    ?>
+
+                    <?php foreach ($orders as $order): ?>
+                        <?php
+                            $orderStatus = strtolower((string) ($order['status'] ?? 'pending'));
+                            $statusIcon  = $statusIcons[$orderStatus] ?? 'receipt_long';
+                            $statusPill  = $statusPills[$orderStatus] ?? 'bg-surface-container-high text-on-surface-variant border-outline-variant/30';
+                            $group       = $orderGroup[$orderStatus] ?? 'active';
+                            $orderedOn   = date('M d, Y', strtotime($order['placed_at'] ?? $order['created_at'] ?? 'now'));
+                            $isPickup    = (($order['fulfillment_method'] ?? 'delivery') === 'pickup');
+                            $items       = $order['items'] ?? [];
+                            $totalItems  = count($items);
+                            $shopName    = !empty($order['shop_name']) ? $order['shop_name'] : 'Merchant Store';
+                            $shopLogo    = !empty($order['shop_logo']) ? $order['shop_logo'] : null;
+                        ?>
+
+                        <!-- Store Order Card (One card per store order) -->
+                        <div class="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 overflow-hidden shadow-2xs hover:shadow-sm transition-all" data-group="<?= esc($group) ?>" data-status="<?= esc($orderStatus) ?>">
+                            
+                            <!-- 1. Store Header Bar -->
+                            <div class="p-4 sm:p-5 bg-surface-container-low/70 border-b border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                
+                                <!-- Shop Branding & Order Ref -->
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-sm overflow-hidden border border-primary/20 shrink-0">
+                                        <?php if (!empty($shopLogo)): ?>
+                                            <img src="<?= esc(product_image_url($shopLogo, 'thumbnail')) ?>" alt="<?= esc($shopName) ?>" class="w-full h-full object-cover">
+                                        <?php else: ?>
+                                            <span class="material-symbols-outlined text-[20px]">storefront</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2">
+                                            <a href="<?= base_url('shop/' . url_title($shopName, '-', true)) ?>" class="text-xs sm:text-sm font-bold text-on-surface hover:text-primary transition-colors truncate flex items-center gap-1">
+                                                <span><?= esc($shopName) ?></span>
+                                                <span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+                                            </a>
+                                        </div>
+                                        <p class="text-[11px] text-on-surface-variant flex items-center gap-1.5 mt-0.5">
+                                            <span class="font-mono font-bold text-primary">#<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?></span>
+                                            <span>•</span>
+                                            <span>Placed <?= esc($orderedOn) ?></span>
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Status & Fulfillment Pills -->
+                                <div class="flex items-center gap-2 flex-wrap shrink-0">
+                                    <!-- Fulfillment Method -->
+                                    <span class="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full border <?= $isPickup ? 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-500/30' : 'bg-blue-500/10 text-blue-800 dark:text-blue-300 border-blue-500/30' ?>">
+                                        <span class="material-symbols-outlined text-[13px]"><?= $isPickup ? 'storefront' : 'local_shipping' ?></span>
+                                        <span><?= $isPickup ? 'Store Pick-up' : 'Doorstep Delivery' ?></span>
+                                    </span>
+
+                                    <!-- Status Pill -->
+                                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-extrabold border uppercase tracking-wider <?= esc($statusPill) ?>">
+                                        <span class="material-symbols-outlined text-[14px]"><?= $statusIcon ?></span>
+                                        <span><?= humanize_status($orderStatus) ?></span>
+                                    </span>
+                                </div>
+
+                            </div>
+
+                            <!-- 2. Order Body: Stepper & Products -->
+                            <div class="p-4 sm:p-6 space-y-5">
+
+                                <!-- Order Progress Stepper (Hidden on Cancelled) -->
+                                <?php if ($orderStatus === 'cancelled'): ?>
+                                    <div class="p-3 bg-error/10 border border-error/20 rounded-2xl flex items-center gap-2.5 text-error text-xs font-semibold">
+                                        <span class="material-symbols-outlined text-lg shrink-0">cancel</span>
+                                        <span>This order has been cancelled. If payment was made via GCash, please contact shop support.</span>
+                                    </div>
+                                <?php else: ?>
+                                    <?php
+                                        $currentStep = match($orderStatus) {
+                                            'pending'                                   => 1,
+                                            'processing'                                => 2,
+                                            'shipped', 'in_transit', 'ready_for_pickup' => 3,
+                                            'delivered', 'completed'                    => 4,
+                                            default                                     => 1,
+                                        };
+                                        $steps = [
+                                            1 => ['label' => 'Placed', 'icon' => 'receipt'],
+                                            2 => ['label' => 'Processing', 'icon' => 'sync'],
+                                            3 => ['label' => $isPickup ? 'Ready for Pickup' : 'Shipped', 'icon' => $isPickup ? 'store' : 'local_shipping'],
+                                            4 => ['label' => 'Completed', 'icon' => 'task_alt'],
+                                        ];
+                                    ?>
+                                    <div class="py-1 px-2 sm:px-4">
+                                        <div class="flex items-center w-full">
+                                            <?php foreach ($steps as $stepNum => $stepData):
+                                                $isCompleted = ($stepNum < $currentStep) || ($orderStatus === 'delivered' || $orderStatus === 'completed');
+                                                $isCurrent   = ($stepNum === $currentStep) && !($orderStatus === 'delivered' || $orderStatus === 'completed');
+                                            ?>
+                                                <?php if ($stepNum > 1): ?>
+                                                    <!-- Connector Line -->
+                                                    <div class="flex-1 h-[3px] mx-1 sm:mx-2 rounded-full transition-all duration-500 <?= ($isCompleted || ($isCurrent && $stepNum <= $currentStep)) ? 'bg-primary' : 'bg-outline-variant/30' ?>"></div>
+                                                <?php endif; ?>
+
+                                                <!-- Step Node -->
+                                                <div class="flex flex-col items-center gap-1.5 shrink-0">
+                                                    <?php if ($isCompleted): ?>
+                                                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-xs ring-2 ring-primary/20">
+                                                            <span class="material-symbols-outlined text-[15px] sm:text-[17px]">check</span>
+                                                        </div>
+                                                    <?php elseif ($isCurrent): ?>
+                                                        <div class="relative w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary text-white flex items-center justify-center shadow-sm">
+                                                            <span class="absolute w-full h-full rounded-full bg-primary animate-ping opacity-30"></span>
+                                                            <span class="w-2.5 h-2.5 rounded-full bg-white relative z-10"></span>
+                                                        </div>
+                                                    <?php else: ?>
+                                                        <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-surface-container-high border border-outline-variant/50 flex items-center justify-center text-outline">
+                                                            <span class="w-2 h-2 rounded-full bg-outline-variant/60"></span>
+                                                        </div>
+                                                    <?php endif; ?>
+                                                    <span class="text-[10px] sm:text-[11px] font-bold <?= $isCompleted ? 'text-primary' : ($isCurrent ? 'text-primary' : 'text-outline') ?> whitespace-nowrap text-center">
+                                                        <?= $stepData['label'] ?>
+                                                    </span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+
+                                <!-- Products List Inside This Store Order -->
+                                <div class="bg-surface-container-low/40 rounded-2xl border border-outline-variant/20 p-3 sm:p-4 divide-y divide-outline-variant/15">
+                                    <?php foreach ($items as $item): ?>
+                                        <?php
+                                            $itemImg = product_image_url($item['image_url'] ?? '', 'thumbnail');
+                                            $pName = !empty($item['product_name']) ? $item['product_name'] : 'Product Item';
+                                            $unitPrice = (float) ($item['unit_price'] ?? 0);
+                                            $qty = (int) ($item['quantity'] ?? 1);
+                                            $lineTotal = (float) ($item['line_total'] ?? ($unitPrice * $qty));
+                                        ?>
+                                        <div class="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3 sm:gap-4">
+                                            <!-- Thumbnail -->
+                                            <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-surface-container overflow-hidden border border-outline-variant/30 flex items-center justify-center shrink-0">
+                                                <?php if (!empty($itemImg)): ?>
+                                                    <img class="w-full h-full object-cover" src="<?= esc($itemImg) ?>" alt="<?= esc($pName) ?>" loading="lazy">
+                                                <?php else: ?>
+                                                    <span class="material-symbols-outlined text-outline text-2xl">inventory_2</span>
+                                                <?php endif; ?>
+                                            </div>
+
+                                            <!-- Product Info -->
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="text-xs sm:text-sm font-bold text-on-surface truncate">
+                                                    <?= esc($pName) ?>
+                                                </h4>
+                                                <div class="flex items-center gap-2 flex-wrap mt-0.5">
+                                                    <?php if (!empty($item['variant_label'])): ?>
+                                                        <span class="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20">
+                                                            <?= esc($item['variant_label']) ?>
+                                                        </span>
+                                                    <?php endif; ?>
+                                                    <span class="text-xs text-on-surface-variant">Qty: <strong class="text-on-surface font-semibold"><?= $qty ?></strong></span>
+                                                    <span class="text-xs text-outline">•</span>
+                                                    <span class="text-xs text-on-surface-variant">₱<?= number_format($unitPrice, 2) ?> each</span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Line Subtotal -->
+                                            <div class="text-right shrink-0">
+                                                <p class="text-xs sm:text-sm font-extrabold text-on-surface">₱<?= number_format($lineTotal, 2) ?></p>
+                                            </div>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+
+                            </div>
+
+                            <!-- 3. Order Footer: Pricing & Action Buttons -->
+                            <div class="px-4 py-4 sm:px-6 sm:py-4 bg-surface-container-low/50 border-t border-outline-variant/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                
+                                <!-- Total Amount -->
+                                <div>
+                                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider block">
+                                        Order Total (<?= $totalItems ?> <?= $totalItems === 1 ? 'item' : 'items' ?>)
+                                    </span>
+                                    <p class="text-lg sm:text-xl font-black text-primary">
+                                        ₱<?= number_format((float) $order['total_amount'], 2) ?>
+                                    </p>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="flex items-center gap-2 flex-wrap justify-end">
+
+                                    <!-- Rate Button (Completed Orders) -->
+                                    <?php if ($orderStatus === 'delivered' || $orderStatus === 'completed'): ?>
+                                        <button type="button" 
+                                                class="rate-order-btn inline-flex items-center gap-1 px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-2xs active:scale-95 cursor-pointer"
+                                                data-order='<?= esc(json_encode($order), 'attr') ?>'>
+                                            <span class="material-symbols-outlined text-[16px]">star</span>
+                                            <span>Rate Order</span>
+                                        </button>
+
+                                        <a href="<?= base_url('shop/' . url_title($shopName, '-', true)) ?>" class="inline-flex items-center gap-1 px-3.5 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-bold transition-all active:scale-95">
+                                            <span class="material-symbols-outlined text-[16px]">replay</span>
+                                            <span>Buy Again</span>
+                                        </a>
+                                    <?php endif; ?>
+
+                                    <!-- Store Pick-up QR Code Action -->
+                                    <?php if ($isPickup && $orderStatus !== 'cancelled'): ?>
+                                        <?php 
+                                            $shopLoc = trim(($order['shop_address'] ?? '') . ' ' . ($order['shop_city'] ?? ''));
+                                            if ($shopLoc === '') $shopLoc = 'Poblacion, Polomolok';
+                                        ?>
+                                        <?php if ($orderStatus === 'ready_for_pickup'): ?>
+                                            <button type="button" 
+                                                    class="order-qr-btn inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                                                    data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>"
+                                                    data-shop="<?= esc($shopName) ?>"
+                                                    data-location="<?= esc($shopLoc) ?>"
+                                                    data-status="<?= esc(humanize_status($orderStatus)) ?>"
+                                                    data-date="<?= esc($orderedOn) ?>"
+                                                    data-paid="<?= ($order['payment_status'] ?? '') === 'paid' ? 'PAID' : 'UNPAID' ?>">
+                                                <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
+                                                <span>View Pick-up QR</span>
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-[11px] text-on-surface-variant font-medium py-1.5 px-2.5 bg-surface-container/70 border border-outline-variant/30 rounded-xl inline-flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+                                                <span>QR available when ready</span>
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+
+                                    <!-- Doorstep Delivery Live Tracking -->
+                                    <?php if (!$isPickup && $orderStatus !== 'cancelled'): ?>
+                                        <?php if (in_array($orderStatus, ['shipped', 'in_transit'], true)): ?>
+                                            <a href="<?= base_url('customer/orders/track/' . esc($order['order_number'] ?? $order['id'])) ?>" 
+                                               class="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95">
+                                                <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                                                <span>Track Order</span>
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-[11px] text-on-surface-variant font-medium py-1.5 px-2.5 bg-surface-container/70 border border-outline-variant/30 rounded-xl inline-flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[14px] text-outline">schedule</span>
+                                                <span>Tracking available once shipped</span>
+                                            </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+
+                                    <!-- Cancel Order (Pending only) -->
+                                    <?php if (in_array($orderStatus, ['pending', 'processing'], true)): ?>
+                                        <button type="button" 
+                                                class="cancel-order-btn inline-flex items-center gap-1 px-3 py-2 border border-error/40 text-error hover:bg-error/10 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer"
+                                                data-id="<?= (int) $order['id'] ?>"
+                                                data-number="<?= esc($order['order_number'] ?? ('ORD-' . $order['id'])) ?>">
+                                            <span class="material-symbols-outlined text-[16px]">close</span>
+                                            <span>Cancel</span>
+                                        </button>
+                                    <?php endif; ?>
+
+                                    <!-- Details Button -->
+                                    <button type="button" class="order-details-btn inline-flex items-center gap-1 px-3.5 py-2 border border-outline-variant/50 text-on-surface hover:bg-surface-container-high rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer" data-order='<?= esc(json_encode($order), 'attr') ?>'>
+                                        <span class="material-symbols-outlined text-[16px] text-outline">info</span>
+                                        <span>Details</span>
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+            <?php else: ?>
+                <!-- Empty Orders State -->
+                <div class="bg-surface-container-lowest rounded-3xl p-8 sm:p-14 text-center max-w-md mx-auto my-8 border border-outline-variant/30 shadow-sm flex flex-col items-center">
+                    <div class="w-20 h-20 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-4xl">inventory_2</span>
+                    </div>
+                    <h2 class="text-xl font-bold text-on-surface mb-1">No Orders Found</h2>
+                    <p class="text-xs sm:text-sm text-on-surface-variant max-w-sm mb-6 leading-relaxed">You haven't placed any marketplace or printing orders yet. Discover our verified local merchant catalogs and print services today!</p>
+                    <a href="<?= base_url('/') ?>" class="inline-flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold text-xs sm:text-sm shadow-md hover:bg-primary/90 transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-[18px]">storefront</span>
+                        <span>Explore Marketplace</span>
+                    </a>
+                </div>
+            <?php endif; ?>
 
         </div>
 
@@ -356,169 +399,162 @@
 </div>
 
 <!-- Order Details Modal -->
-<div id="order-details-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">
+<div id="order-details-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="order-details-overlay"></div>
-    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-md">
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-5 sm:p-7 flex flex-col gap-4 z-10 max-h-[90vh] overflow-y-auto animate-scale-up">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-3">
             <div>
-                <span class="text-[10px] uppercase font-bold text-outline tracking-wider">Order Details</span>
-                <h3 class="text-title-lg font-bold text-primary font-mono" id="od-number">#ORD-00000</h3>
+                <span class="text-[10px] uppercase font-bold text-outline tracking-wider block">Order Details</span>
+                <h3 class="text-base sm:text-lg font-bold text-primary font-mono" id="od-number">#ORD-00000</h3>
             </div>
-            <button type="button" id="od-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
-                <span class="material-symbols-outlined">close</span>
+            <button type="button" id="od-close" class="p-1.5 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
 
-        <div class="grid grid-cols-2 gap-sm text-sm bg-surface-container-low p-md rounded-2xl border border-outline-variant/20">
+        <div class="grid grid-cols-2 gap-2.5 text-xs bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/20">
             <div>
-                <span class="text-[10px] uppercase font-bold text-outline block">Shop</span>
-                <span id="od-shop" class="font-semibold text-on-surface"></span>
+                <span class="text-[10px] uppercase font-bold text-outline block">Merchant Store</span>
+                <span id="od-shop" class="font-bold text-on-surface"></span>
             </div>
             <div>
                 <span class="text-[10px] uppercase font-bold text-outline block">Date Placed</span>
-                <span id="od-date" class="text-on-surface"></span>
+                <span id="od-date" class="text-on-surface font-medium"></span>
             </div>
             <div>
                 <span class="text-[10px] uppercase font-bold text-outline block">Fulfillment</span>
-                <span id="od-fulfillment" class="text-on-surface capitalize"></span>
+                <span id="od-fulfillment" class="text-on-surface font-medium capitalize"></span>
             </div>
             <div>
                 <span class="text-[10px] uppercase font-bold text-outline block">Payment</span>
-                <span id="od-payment" class="font-semibold uppercase text-primary"></span>
+                <span id="od-payment" class="font-bold uppercase text-primary"></span>
             </div>
         </div>
 
         <div>
-            <h4 class="text-xs uppercase font-bold text-outline tracking-wider mb-sm">Purchased Items</h4>
-            <div id="od-items-list" class="space-y-sm divide-y divide-outline-variant/10"></div>
+            <h4 class="text-[11px] uppercase font-extrabold text-outline tracking-wider mb-2">Purchased Items</h4>
+            <div id="od-items-list" class="space-y-2 divide-y divide-outline-variant/10"></div>
         </div>
 
-        <div class="border-t border-outline-variant/20 pt-md space-y-xs text-sm">
-            <div class="flex justify-between text-on-surface-variant">
-                <span>Total Amount</span>
-                <span id="od-total" class="font-bold text-primary text-title-md">₱0.00</span>
-            </div>
+        <div class="border-t border-outline-variant/20 pt-3 flex justify-between items-center text-sm">
+            <span class="font-bold text-on-surface">Grand Total</span>
+            <span id="od-total" class="font-black text-primary text-lg sm:text-xl">₱0.00</span>
         </div>
 
-        <button type="button" id="od-done" class="w-full py-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-button font-button transition-all">Close</button>
+        <button type="button" id="od-done" class="w-full py-3 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-bold transition-all">Close</button>
     </div>
 </div>
 
 <!-- Order Pick-up QR Modal -->
-<div id="order-qr-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">
+<div id="order-qr-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="order-qr-overlay"></div>
-    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-sm p-xl flex flex-col items-center gap-md text-center z-10">
-        <div class="flex justify-between items-center w-full border-b border-outline-variant/20 pb-md">
-            <div class="flex items-center gap-xs text-primary font-bold">
-                <span class="material-symbols-outlined text-2xl">qr_code_2</span>
-                <span class="text-title-md">Store Pick-up Pass</span>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-sm p-6 flex flex-col items-center gap-4 text-center z-10 animate-scale-up">
+        <div class="flex justify-between items-center w-full border-b border-outline-variant/20 pb-3">
+            <div class="flex items-center gap-1.5 text-primary font-bold text-sm">
+                <span class="material-symbols-outlined text-xl">qr_code_2</span>
+                <span>Store Pick-up Pass</span>
             </div>
             <button type="button" id="order-qr-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
-                <span class="material-symbols-outlined">close</span>
+                <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
         
-        <div class="flex flex-col items-center justify-center bg-white p-6 rounded-2xl shadow-inner border border-slate-100 w-full max-w-[240px] aspect-square mx-auto">
+        <div class="flex flex-col items-center justify-center bg-white p-5 rounded-2xl shadow-inner border border-slate-100 w-full max-w-[220px] aspect-square mx-auto">
             <div id="order-qr-canvas" class="flex justify-center items-center w-full h-full"></div>
         </div>
         
         <div class="flex flex-col items-center w-full space-y-1">
             <span class="text-[10px] uppercase tracking-widest text-outline font-bold">Order Identifier</span>
-            <span id="order-qr-number" class="text-headline-sm font-mono font-bold text-primary">#ORD-00000</span>
+            <span id="order-qr-number" class="text-base font-mono font-black text-primary">#ORD-00000</span>
             
-            <div class="flex items-center justify-center gap-2 mt-1">
-                <span id="order-qr-shop" class="text-xs font-semibold text-on-surface"></span>
-                <span class="text-on-surface-variant/40">•</span>
-                <span id="order-qr-payment" class="text-[11px] font-bold px-2 py-0.5 rounded-full"></span>
+            <div class="flex items-center justify-center gap-1.5 mt-1">
+                <span id="order-qr-shop" class="text-xs font-bold text-on-surface"></span>
+                <span class="text-outline">•</span>
+                <span id="order-qr-payment" class="text-[10px] font-bold px-2 py-0.5 rounded-full"></span>
             </div>
 
-            <div id="order-qr-location-box" class="text-[11px] text-on-surface-variant/90 mt-1 flex items-center justify-center gap-1">
+            <div id="order-qr-location-box" class="text-[11px] text-on-surface-variant mt-1 flex items-center justify-center gap-1">
                 <span class="material-symbols-outlined text-[14px] text-primary">location_on</span>
                 <span id="order-qr-location">Poblacion, Polomolok</span>
             </div>
 
-            <p id="order-qr-instructions" class="text-xs text-on-surface-variant/80 mt-2.5 leading-relaxed italic px-2">
-                Present this QR code to the cashier at <span id="order-qr-inst-shop" class="font-semibold text-on-surface not-italic">the store</span> to verify and collect your order.
+            <p id="order-qr-instructions" class="text-[11px] text-on-surface-variant/80 mt-2 leading-relaxed italic px-2">
+                Present this QR code to the cashier at <span id="order-qr-inst-shop" class="font-semibold text-on-surface not-italic">the store</span> to claim your order.
             </p>
-
-            <div class="mt-3 p-2 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-1.5 text-amber-800 text-[11px] font-medium text-left w-full">
-                <span class="material-symbols-outlined text-[16px] text-amber-600 shrink-0">brightness_high</span>
-                <span>Turn up screen brightness for fast mobile scanner reading</span>
-            </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 w-full">
-            <button type="button" id="order-qr-download" class="w-full py-md bg-surface-container-highest hover:bg-outline-variant text-on-surface rounded-xl text-button font-button transition-all flex items-center justify-center gap-xs">
-                <span class="material-symbols-outlined text-[18px]">download</span>
-                <span>Download QR</span>
+        <div class="grid grid-cols-2 gap-2 w-full pt-1">
+            <button type="button" id="order-qr-download" class="w-full py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">download</span>
+                <span>Download</span>
             </button>
-            <button type="button" id="order-qr-done" class="w-full py-md bg-primary text-on-primary rounded-xl text-button font-button hover:bg-primary-container transition-all active:scale-95 shadow-md">Close</button>
+            <button type="button" id="order-qr-done" class="w-full py-2.5 bg-primary text-white rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm active:scale-95">Close</button>
         </div>
     </div>
 </div>
 
 <!-- Rate Order / Product & Shop Modal -->
-<div id="rate-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+<div id="rate-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="rate-overlay"></div>
-    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-md">
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-lg p-5 sm:p-7 flex flex-col gap-4 z-10 max-h-[90vh] overflow-y-auto animate-scale-up">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-3">
             <div>
-                <span class="text-[10px] uppercase font-bold text-outline tracking-wider">Leave Feedback</span>
-                <h3 class="text-title-lg font-bold text-on-surface" id="rate-title">Rate Your Order</h3>
+                <span class="text-[10px] uppercase font-bold text-outline tracking-wider block">Customer Feedback</span>
+                <h3 class="text-base sm:text-lg font-bold text-on-surface" id="rate-title">Rate Your Order Experience</h3>
             </div>
-            <button type="button" id="rate-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
-                <span class="material-symbols-outlined">close</span>
+            <button type="button" id="rate-close" class="p-1.5 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors">
+                <span class="material-symbols-outlined text-lg">close</span>
             </button>
         </div>
 
-        <form id="rate-form" class="space-y-lg">
+        <form id="rate-form" class="space-y-4">
             <input type="hidden" id="rate-shop-id" value="">
             <input type="hidden" id="rate-product-id" value="">
             <input type="hidden" id="rate-order-id" value="">
 
             <!-- Shop Rating -->
-            <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/20 space-y-xs">
+            <div class="bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/20 space-y-2">
                 <div class="flex justify-between items-center">
-                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Shop Rating: <span id="rate-shop-name" class="text-primary font-semibold">Store</span></label>
+                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Shop Service: <span id="rate-shop-name" class="text-primary font-bold">Store</span></label>
                     <span id="rate-shop-val-text" class="text-xs font-bold text-amber-500">5 / 5</span>
                 </div>
                 <div class="flex items-center gap-1" id="shop-star-group">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
                         <button type="button" class="shop-star text-amber-400 hover:scale-110 transition-transform" data-val="<?= $i ?>">
-                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">star</span>
                         </button>
                     <?php endfor; ?>
                 </div>
                 <input type="hidden" id="rate-shop-score" value="5">
-                <textarea id="rate-shop-comment" rows="2" placeholder="How was the seller's service and order packaging?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+                <textarea id="rate-shop-comment" rows="2" placeholder="How was the shop's fulfillment speed and service?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
             </div>
 
             <!-- Product Rating -->
-            <div class="bg-surface-container-low p-md rounded-2xl border border-outline-variant/20 space-y-xs" id="product-rating-section">
+            <div class="bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/20 space-y-2" id="product-rating-section">
                 <div class="flex justify-between items-center">
-                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Product Rating: <span id="rate-product-name" class="text-primary font-semibold">Product</span></label>
+                    <label class="text-xs font-bold text-on-surface uppercase tracking-wide">Product Quality: <span id="rate-product-name" class="text-primary font-bold">Product</span></label>
                     <span id="rate-prod-val-text" class="text-xs font-bold text-amber-500">5 / 5</span>
                 </div>
                 <div class="flex items-center gap-1" id="prod-star-group">
                     <?php for ($i = 1; $i <= 5; $i++): ?>
                         <button type="button" class="prod-star text-amber-400 hover:scale-110 transition-transform" data-val="<?= $i ?>">
-                            <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span class="material-symbols-outlined text-[26px]" style="font-variation-settings: 'FILL' 1;">star</span>
                         </button>
                     <?php endfor; ?>
                 </div>
                 <input type="hidden" id="rate-prod-score" value="5">
-                <textarea id="rate-prod-comment" rows="2" placeholder="How was the quality of the item received?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
+                <textarea id="rate-prod-comment" rows="2" placeholder="How was the product quality and packaging?" class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/40 bg-surface focus:border-primary focus:ring-1 focus:ring-primary"></textarea>
             </div>
 
-            <div id="rate-error" class="hidden p-sm bg-error-container/20 border border-error-container/50 rounded-xl text-xs text-error font-semibold flex items-center gap-1.5">
-                <span class="material-symbols-outlined text-[16px]">error</span>
+            <div id="rate-error" class="hidden p-2.5 bg-error/10 border border-error/30 rounded-xl text-xs text-error font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px] shrink-0">error</span>
                 <span id="rate-error-text">Failed to submit review.</span>
             </div>
 
-            <div class="flex justify-end gap-sm pt-xs border-t border-outline-variant/20">
-                <button type="button" id="rate-cancel" class="py-sm px-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-button text-button transition-all font-semibold">Cancel</button>
-                <button type="submit" id="rate-submit-btn" class="py-sm px-xl bg-primary hover:bg-primary-container text-on-primary rounded-xl font-button text-button transition-all font-semibold flex items-center justify-center gap-xs shadow-md active:scale-95">
-                    <span class="material-symbols-outlined text-[18px]">send</span>
+            <div class="flex justify-end gap-2 pt-2 border-t border-outline-variant/20">
+                <button type="button" id="rate-cancel" class="py-2.5 px-4 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-bold transition-all">Cancel</button>
+                <button type="submit" id="rate-submit-btn" class="py-2.5 px-6 bg-primary hover:bg-primary/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">send</span>
                     <span>Submit Reviews</span>
                 </button>
             </div>
@@ -527,33 +563,33 @@
 </div>
 
 <!-- Cancel Order Confirmation Modal -->
-<div id="cancel-order-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+<div id="cancel-order-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="cancel-order-overlay"></div>
-    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-md p-lg md:p-xl flex flex-col gap-md z-10">
-        <div class="flex items-center gap-sm">
-            <div class="w-12 h-12 rounded-2xl bg-error-container/20 flex items-center justify-center shrink-0 text-error">
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-md p-5 sm:p-6 flex flex-col gap-3.5 z-10 animate-scale-up">
+        <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-error/10 text-error flex items-center justify-center shrink-0">
                 <span class="material-symbols-outlined text-2xl">warning</span>
             </div>
             <div>
-                <h3 class="text-title-lg font-bold text-on-surface" id="cancel-modal-title">Cancel Order?</h3>
-                <p class="text-xs text-on-surface-variant font-medium">Permanent Action</p>
+                <h3 class="text-base font-bold text-on-surface" id="cancel-modal-title">Cancel Order?</h3>
+                <p class="text-xs text-on-surface-variant font-medium">This action cannot be undone</p>
             </div>
         </div>
 
-        <p class="text-body-md text-on-surface-variant leading-relaxed">
-            Are you sure you want to cancel this order? This action cannot be undone.
+        <p class="text-xs sm:text-sm text-on-surface-variant leading-relaxed">
+            Are you sure you want to cancel this order? Any reserved stocks will be restored to the merchant immediately.
         </p>
 
-        <div id="cancel-modal-error" class="hidden p-sm bg-error-container/20 border border-error-container/50 rounded-xl text-xs text-error font-semibold flex items-center gap-1.5">
-            <span class="material-symbols-outlined text-[16px]">error</span>
+        <div id="cancel-modal-error" class="hidden p-2.5 bg-error/10 border border-error/30 rounded-xl text-xs text-error font-semibold flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px] shrink-0">error</span>
             <span id="cancel-error-text">Failed to cancel order.</span>
         </div>
 
-        <div class="flex items-center gap-sm pt-sm border-t border-outline-variant/20">
-            <button type="button" id="cancel-modal-keep" class="flex-1 py-md bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-button text-button transition-all font-semibold">Keep Order</button>
-            <button type="button" id="cancel-modal-confirm" class="flex-1 py-md bg-error hover:bg-error/90 text-white rounded-xl font-button text-button transition-all font-semibold flex items-center justify-center gap-xs shadow-md active:scale-95">
+        <div class="flex items-center gap-2 pt-2 border-t border-outline-variant/20">
+            <button type="button" id="cancel-modal-keep" class="flex-1 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl text-xs font-bold transition-all">Keep Order</button>
+            <button type="button" id="cancel-modal-confirm" class="flex-1 py-2.5 bg-error hover:bg-error/90 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-1">
                 <span id="cancel-spinner" class="material-symbols-outlined text-[16px] animate-spin hidden">progress_activity</span>
-                <span id="cancel-confirm-text">Yes, Cancel Order</span>
+                <span id="cancel-confirm-text">Yes, Cancel</span>
             </button>
         </div>
     </div>
@@ -608,18 +644,18 @@
         
         if (isPaid === 'PAID') {
             qrPayment.textContent = 'PAID ONLINE';
-            qrPayment.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800';
+            qrPayment.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30';
         } else {
             qrPayment.textContent = 'PAY AT COUNTER';
-            qrPayment.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-900';
+            qrPayment.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30';
         }
 
         qrCanvas.innerHTML = '';
         if (window.QRCode) {
             new QRCode(qrCanvas, {
                 text: orderNum,
-                width: 200,
-                height: 200,
+                width: 190,
+                height: 190,
                 colorDark: '#0f172a',
                 colorLight: '#ffffff',
                 correctLevel: QRCode.CorrectLevel.H
@@ -807,11 +843,11 @@
                 if (submitBtn) submitBtn.disabled = false;
                 closeRateModal();
                 if (typeof showToast === 'function') {
-                    showToast('Thank you! Your reviews have been submitted.', 'success');
+                    showToast('Thank you! Your review has been submitted.', 'success');
                 } else {
-                    alert('Thank you! Your reviews have been submitted.');
+                    alert('Thank you! Your review has been submitted.');
                 }
-            }).catch(function (err) {
+            }).catch(function () {
                 if (submitBtn) submitBtn.disabled = false;
                 if (rateErr && rateErrText) {
                     rateErrText.textContent = 'Failed to submit reviews. Please try again.';
@@ -836,21 +872,13 @@
 
     function openCancelModal(orderId, orderNumber) {
         currentCancelId = orderId;
-        if (cancelTitle) {
-            cancelTitle.textContent = 'Cancel Order #' + orderNumber + '?';
-        }
-        if (cancelErr) {
-            cancelErr.classList.add('hidden');
-        }
-        if (cancelModal) {
-            cancelModal.classList.remove('hidden');
-        }
+        if (cancelTitle) cancelTitle.textContent = 'Cancel Order #' + orderNumber + '?';
+        if (cancelErr) cancelErr.classList.add('hidden');
+        if (cancelModal) cancelModal.classList.remove('hidden');
     }
 
     function closeCancelModal() {
-        if (cancelModal) {
-            cancelModal.classList.add('hidden');
-        }
+        if (cancelModal) cancelModal.classList.add('hidden');
         currentCancelId = null;
     }
 
@@ -894,7 +922,7 @@
             })
             .then(function(result) {
                 cancelSpinner.classList.add('hidden');
-                cancelText.textContent = 'Yes, Cancel Order';
+                cancelText.textContent = 'Yes, Cancel';
                 cancelConfirm.disabled = false;
 
                 if (result.ok && result.data && result.data.success) {
@@ -913,9 +941,9 @@
                     }
                 }
             })
-            .catch(function(err) {
+            .catch(function() {
                 cancelSpinner.classList.add('hidden');
-                cancelText.textContent = 'Yes, Cancel Order';
+                cancelText.textContent = 'Yes, Cancel';
                 cancelConfirm.disabled = false;
                 if (cancelErr && cancelErrText) {
                     cancelErrText.textContent = 'Network error. Please try again.';
@@ -961,7 +989,7 @@
                 if (!raw) return;
                 var order = JSON.parse(raw);
                 if (odNumber) odNumber.textContent = '#' + (order.order_number || ('ORD-' + order.id));
-                if (odShop) odShop.textContent = order.shop_name || 'Blax Marketplace Merchant';
+                if (odShop) odShop.textContent = order.shop_name || 'Merchant Store';
                 if (odDate) odDate.textContent = order.placed_at || order.created_at || '—';
                 if (odFulfill) odFulfill.textContent = order.fulfillment_method || 'Delivery';
                 if (odPayment) odPayment.textContent = (order.payment_method || 'Cash') + ' (' + (order.payment_status || 'Pending') + ')';
@@ -971,13 +999,13 @@
                     odItems.innerHTML = '';
                     (order.items || []).forEach(function (it) {
                         var div = document.createElement('div');
-                        div.className = 'pt-sm flex items-center justify-between gap-sm text-sm';
+                        div.className = 'pt-2 flex items-center justify-between gap-3 text-xs sm:text-sm';
                         var nameSpan = document.createElement('div');
                         nameSpan.className = 'flex-1 min-w-0';
                         var pName = it.product_name || 'Product Item';
-                        var pHtml = '<p class="font-semibold text-on-surface truncate">' + escapeHtml(pName) + '</p>';
+                        var pHtml = '<p class="font-bold text-on-surface truncate">' + escapeHtml(pName) + '</p>';
                         if (it.variant_label) {
-                            pHtml += '<span class="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded">' + escapeHtml(it.variant_label) + '</span>';
+                            pHtml += '<span class="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.2 rounded border border-primary/20">' + escapeHtml(it.variant_label) + '</span>';
                         }
                         nameSpan.innerHTML = pHtml;
 
@@ -986,7 +1014,7 @@
                         var qty = parseInt(it.quantity, 10) || 1;
                         var uPrice = parseFloat(it.unit_price || 0);
                         var lineTot = parseFloat(it.line_total || (qty * uPrice));
-                        qtyPrice.innerHTML = '<span class="text-xs text-on-surface-variant font-medium">' + qty + ' × ₱' + uPrice.toFixed(2) + '</span><p class="font-bold text-on-surface">₱' + lineTot.toFixed(2) + '</p>';
+                        qtyPrice.innerHTML = '<span class="text-[11px] text-on-surface-variant">' + qty + ' × ₱' + uPrice.toFixed(2) + '</span><p class="font-bold text-on-surface">₱' + lineTot.toFixed(2) + '</p>';
 
                         div.appendChild(nameSpan);
                         div.appendChild(qtyPrice);

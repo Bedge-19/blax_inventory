@@ -1236,11 +1236,32 @@ class Customer extends BaseController
         });
         $recentActivity = array_slice($recentActivity, 0, 5);
 
+        $addressModel = new ShippingAddressModel();
+        $defaultAddress = $addressModel->where('user_id', $userId)->where('is_default', 1)->first();
+        if (!$defaultAddress) {
+            $defaultAddress = $addressModel->where('user_id', $userId)->first();
+        }
+        $savedAddressesCount = $addressModel->where('user_id', $userId)->countAllResults();
+
+        // Favorite shops count
+        $favoriteCount = 0;
+        try {
+            $db = \Config\Database::connect();
+            if ($db->tableExists('shop_favorites')) {
+                $favoriteCount = $db->table('shop_favorites')->where('user_id', $userId)->countAllResults();
+            }
+        } catch (\Throwable $e) {
+            $favoriteCount = 0;
+        }
+
         return view('customer/profile', [
-            'user'            => $user,
-            'totalOrders'     => count($orders),
-            'activePrinting'  => $activePrinting,
-            'recentActivity'  => $recentActivity,
+            'user'                => $user,
+            'totalOrders'         => count($orders),
+            'activePrinting'      => $activePrinting,
+            'recentActivity'      => $recentActivity,
+            'defaultAddress'      => $defaultAddress,
+            'savedAddressesCount' => $savedAddressesCount,
+            'favoriteCount'       => $favoriteCount,
         ]);
     }
 

@@ -222,6 +222,11 @@
                         </a>
                     <?php endif; ?>
 
+                    <!-- Theme Switcher -->
+                    <button type="button" class="theme-toggle-btn text-on-surface-variant hover:text-on-surface p-2 hover:bg-surface-container rounded-xl relative transition-colors" title="Toggle dark / light theme" aria-label="Toggle theme">
+                        <span class="material-symbols-outlined theme-toggle-icon text-[22px]">dark_mode</span>
+                    </button>
+
                     <!-- Notification Bell -->
                     <div class="relative">
                         <button id="notif-toggle" type="button" class="text-on-surface-variant hover:text-on-surface p-2 hover:bg-surface-container rounded-xl relative transition-colors" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">

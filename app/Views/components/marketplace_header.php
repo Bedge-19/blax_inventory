@@ -77,6 +77,11 @@
 
         <div class="flex items-center gap-sm">
 
+            <!-- Theme Toggle Button -->
+            <button type="button" class="theme-toggle-btn p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Toggle dark / light theme" aria-label="Toggle theme">
+                <span class="material-symbols-outlined theme-toggle-icon text-[20px]">dark_mode</span>
+            </button>
+
             <div class="relative block">
                 <button id="notif-dropdown-toggle" type="button" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
                     <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
@@ -85,7 +90,7 @@
                     <?php endif; ?>
                 </button>
 
-                <div id="notif-dropdown" class="hidden absolute right-0 top-full mt-2 w-80 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-2 z-50">
+                <div id="notif-dropdown" class="hidden fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-80 w-auto max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 py-2 z-50">
                     <div class="px-md py-xs border-b border-outline-variant/20 flex justify-between items-center">
                         <div class="flex items-center gap-xs">
                             <span class="font-bold text-xs text-on-surface">Notifications</span>
@@ -160,7 +165,7 @@
                     </button>
 
                     <!-- Profile Dropdown -->
-                    <div id="profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-64 bg-surface-container-lowest rounded-xl shadow-xl border border-outline-variant/30 py-2 z-50">
+                    <div id="profile-dropdown" class="dropdown-menu fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-64 w-auto max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-2xl sm:rounded-xl shadow-xl border border-outline-variant/30 py-2 z-50">
 
                     <div class="px-md py-sm border-b border-outline-variant/10 flex items-center gap-md">
 
@@ -207,6 +212,14 @@
                         <span>Purchase Product</span>
 
                     </a>
+
+                    <button type="button" class="theme-toggle-btn w-full flex items-center justify-between px-md py-sm text-body-md text-on-surface hover:bg-surface-container-low transition-colors text-left">
+                        <div class="flex items-center gap-md">
+                            <span class="material-symbols-outlined theme-toggle-icon text-outline">dark_mode</span>
+                            <span>Theme</span>
+                        </div>
+                        <span class="text-[11px] font-semibold text-primary px-2 py-0.5 rounded-md bg-primary/10 theme-mode-label">Toggle</span>
+                    </button>
 
                     <div class="my-1 border-t border-outline-variant/20"></div>
 
@@ -300,6 +313,21 @@
                 <span>Featured Shops</span>
             </a>
         </nav>
+    </div>
+
+    <!-- Theme Switcher in Mobile Drawer -->
+    <div class="p-4 border-t border-outline-variant/20 bg-surface-container-low/30 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-primary text-[20px] theme-toggle-icon">dark_mode</span>
+            <div>
+                <p class="text-xs font-bold text-on-surface">Theme Mode</p>
+                <p class="text-[10px] text-on-surface-variant">Switch light/dark appearance</p>
+            </div>
+        </div>
+        <button type="button" class="theme-toggle-btn px-3 py-1.5 rounded-xl bg-surface-container-lowest hover:bg-surface-container-high border border-outline-variant/30 text-xs font-bold text-on-surface flex items-center gap-1.5 transition-all shadow-2xs">
+            <span class="material-symbols-outlined theme-toggle-icon text-[16px] text-primary">dark_mode</span>
+            <span class="theme-mode-label">Toggle</span>
+        </button>
     </div>
 
     <!-- Merchant Portal Callout at Bottom of Drawer -->

@@ -12,6 +12,46 @@
 (function () {
     'use strict';
 
+    // ── 0. Global Dark Mode Theme Engine ──────────────────────────────
+    window.getBlaxTheme = function () {
+        return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    };
+
+    window.setBlaxTheme = function (theme) {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            try { localStorage.setItem('blax_theme', 'dark'); } catch (e) {}
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            try { localStorage.setItem('blax_theme', 'light'); } catch (e) {}
+        }
+        updateThemeToggleIcons();
+        window.dispatchEvent(new CustomEvent('blax:theme-changed', { detail: { theme: theme } }));
+    };
+
+    window.toggleBlaxTheme = function () {
+        const isDark = document.documentElement.classList.contains('dark');
+        window.setBlaxTheme(isDark ? 'light' : 'dark');
+    };
+
+    function updateThemeToggleIcons() {
+        const isDark = document.documentElement.classList.contains('dark');
+        document.querySelectorAll('.theme-toggle-btn').forEach(function (btn) {
+            const icon = btn.querySelector('.theme-toggle-icon, .material-symbols-outlined');
+            const text = btn.querySelector('.theme-toggle-text');
+            if (icon) {
+                icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+            if (text) {
+                text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            }
+            btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+            btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        });
+    }
+
     // ── 1. CSRF & Fetch Interceptor ───────────────────────────────────
     window.getCsrfToken = function () {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -193,6 +233,19 @@
 
     // ── 4. Safe UI Interactivity Setup (DOM Ready) ─────────────────────
     function initBlaxUI() {
+        // Theme Toggles
+        try {
+            updateThemeToggleIcons();
+            document.querySelectorAll('.theme-toggle-btn').forEach(function (btn) {
+                if (btn.dataset.themeBound === 'true') return;
+                btn.dataset.themeBound = 'true';
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    window.toggleBlaxTheme();
+                });
+            });
+        } catch (e) {}
+
         // A. Mobile Navigation Drawer
         try {
             const menuToggle = document.getElementById('mobile-menu-toggle');

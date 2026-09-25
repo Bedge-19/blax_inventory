@@ -1,22 +1,53 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<?php if (session()->getFlashdata('success')): ?>
-    <div class="p-md rounded-xl bg-green-100 text-green-800 text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('success')) ?></div>
-<?php endif; ?>
-
-<?php if (session()->getFlashdata('error')): ?>
-    <div class="p-md rounded-xl bg-error-container text-on-error-container text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('error')) ?></div>
-<?php endif; ?>
-
 <div class="flex flex-1 flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'printing']) ?>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
+    <main class="flex-1 p-3 sm:p-6 md:p-8 lg:p-10 overflow-y-auto">
 
-        <div class="max-w-6xl mx-auto flex flex-col gap-gutter">
+        <div class="max-w-5xl mx-auto space-y-6">
+
+            <!-- Flash Notices -->
+            <?php if (session()->getFlashdata('success')): ?>
+                <div class="p-4 rounded-2xl bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-300 text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                    <span class="material-symbols-outlined text-lg shrink-0">check_circle</span>
+                    <span><?= esc(session()->getFlashdata('success')) ?></span>
+                </div>
+            <?php endif; ?>
+
+            <?php if (session()->getFlashdata('error')): ?>
+                <div class="p-4 rounded-2xl bg-error-container/20 border border-error/30 text-error text-xs sm:text-sm font-semibold flex items-center gap-2.5 shadow-2xs animate-fade-in">
+                    <span class="material-symbols-outlined text-lg shrink-0">error</span>
+                    <span><?= esc(session()->getFlashdata('error')) ?></span>
+                </div>
+            <?php endif; ?>
+
+            <!-- Page Title & Navigation -->
+            <header class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-2 text-xs font-semibold text-outline mb-1">
+                        <a href="<?= base_url('customer/profile') ?>" class="hover:text-primary transition-colors">Account</a>
+                        <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+                        <span class="text-on-surface">Printing Requests</span>
+                    </div>
+                    <h1 class="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight flex items-center gap-2.5">
+                        <span>Printing Requests</span>
+                        <?php if (!empty($requests)): ?>
+                            <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                                <?= count($requests) ?> <?= count($requests) === 1 ? 'job' : 'jobs' ?>
+                            </span>
+                        <?php endif; ?>
+                    </h1>
+                </div>
+
+                <a href="<?= base_url('printing-services') ?>" class="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-primary/80 transition-colors self-start sm:self-auto">
+                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                    <span>New Printing Request</span>
+                </a>
+            </header>
 
             <?php if (!empty($requests)): ?>
 
