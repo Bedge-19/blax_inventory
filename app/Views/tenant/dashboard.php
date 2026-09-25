@@ -158,8 +158,8 @@ $compactMoney = function (float $v): string {
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
             <div class="flex items-center justify-between">
-                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Total Revenue</p>
-                <span class="w-10 h-10 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Total Revenue</p>
+                <span class="w-10 h-10 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
                     <span class="material-symbols-outlined fill-icon">payments</span>
                 </span>
             </div>
@@ -169,8 +169,8 @@ $compactMoney = function (float $v): string {
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
             <div class="flex items-center justify-between">
-                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Total Sales</p>
-                <span class="w-10 h-10 rounded-xl bg-surface-variant text-on-surface-variant flex items-center justify-center">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Total Sales</p>
+                <span class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center">
                     <span class="material-symbols-outlined fill-icon">shopping_bag</span>
                 </span>
             </div>
@@ -180,8 +180,8 @@ $compactMoney = function (float $v): string {
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
             <div class="flex items-center justify-between">
-                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Pending Orders</p>
-                <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Pending Orders</p>
+                <span class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center">
                     <span class="material-symbols-outlined fill-icon">pending_actions</span>
                 </span>
             </div>
@@ -191,8 +191,8 @@ $compactMoney = function (float $v): string {
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
             <div class="flex items-center justify-between">
-                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Printing Requests</p>
-                <span class="w-10 h-10 rounded-xl bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+                <p class="text-label-sm text-on-surface-variant uppercase tracking-wider font-semibold">Printing Requests</p>
+                <span class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 flex items-center justify-center">
                     <span class="material-symbols-outlined fill-icon">print</span>
                 </span>
             </div>
@@ -345,11 +345,14 @@ $compactMoney = function (float $v): string {
 
         <?php else: ?>
 
-            <div class="text-center py-xl text-on-surface-variant">
+            <div class="text-center py-10 text-on-surface-variant flex flex-col items-center justify-center gap-2">
 
-                <span class="material-symbols-outlined text-3xl">check_circle</span>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-2xl">check_circle</span>
+                </div>
 
-                <p class="text-label-sm mt-sm">All items are sufficiently stocked.</p>
+                <p class="text-xs font-bold text-on-surface">Healthy Inventory</p>
+                <p class="text-xs text-on-surface-variant">All items are sufficiently stocked.</p>
 
             </div>
 
