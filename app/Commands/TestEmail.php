@@ -44,10 +44,13 @@ class TestEmail extends BaseCommand
             CLI::write('Attempting to send email via Brevo HTTP API (Port 443)...', 'yellow');
             $brevoMailer = new \App\Libraries\BrevoMailer();
             if ($brevoMailer->send($to, 'Test Recipient', $subject, $body)) {
-                CLI::write("Test email successfully sent to {$to} via Brevo HTTP API!", 'green');
+                CLI::write("✓ Test email successfully sent to {$to} via Brevo HTTP API!", 'green');
                 return EXIT_SUCCESS;
             }
-            CLI::error('Brevo HTTP API failed. Falling back to SMTP...');
+            CLI::error('Brevo HTTP API failed: ' . ($brevoMailer->lastError ?: 'Unknown error'));
+            CLI::write('Falling back to SMTP...', 'yellow');
+        } else {
+            CLI::write('Notice: BREVO_API_KEY is not set. Using SMTP directly...', 'light_gray');
         }
 
         // 2. SMTP fallback

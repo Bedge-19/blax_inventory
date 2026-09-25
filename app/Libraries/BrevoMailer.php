@@ -10,6 +10,12 @@ class BrevoMailer
 {
     private BrevoConfig $config;
 
+    /**
+     * Diagnostic properties for error reporting and debugging.
+     */
+    public ?string $lastError = null;
+    public ?int $lastStatusCode = null;
+
     public function __construct(?BrevoConfig $config = null)
     {
         $this->config = $config ?? config(BrevoConfig::class);
@@ -26,21 +32,26 @@ class BrevoMailer
      */
     public function send(string $toEmail, string $toName, string $subject, string $htmlBody): bool
     {
+        $this->lastError = null;
+        $this->lastStatusCode = null;
+
         $toEmail = trim($toEmail);
         if ($toEmail === '' || ! filter_var($toEmail, FILTER_VALIDATE_EMAIL)) {
-            log_message('error', 'BrevoMailer: Invalid recipient email address: ' . $toEmail);
+            $this->lastError = "Invalid recipient email address: '{$toEmail}'";
+            log_message('error', 'BrevoMailer: ' . $this->lastError);
             return false;
         }
 
         $apiKey = trim($this->config->apiKey);
         if ($apiKey === '') {
-            // Unconfigured; return false so caller can fall back to SMTP
+            $this->lastError = 'BREVO_API_KEY is not configured or empty.';
             return false;
         }
 
-        $senderEmail = trim($this->config->senderEmail);
+        $senderEmail = strtolower(trim($this->config->senderEmail));
         if ($senderEmail === '' || ! filter_var($senderEmail, FILTER_VALIDATE_EMAIL)) {
-            log_message('error', 'BrevoMailer: Invalid or missing sender email in configuration.');
+            $this->lastError = "BREVO_SENDER_EMAIL is invalid or not configured ('{$senderEmail}').";
+            log_message('error', 'BrevoMailer: ' . $this->lastError);
             return false;
         }
 
@@ -77,17 +88,19 @@ class BrevoMailer
                 'json'    => $payload,
             ]);
 
-            $statusCode = $response->getStatusCode();
+            $this->lastStatusCode = $response->getStatusCode();
             $responseBody = (string) $response->getBody();
 
-            if ($statusCode >= 200 && $statusCode < 300) {
-                log_message('info', "BrevoMailer: Email successfully sent to {$toEmail} (Status {$statusCode})");
+            if ($this->lastStatusCode >= 200 && $this->lastStatusCode < 300) {
+                log_message('info', "BrevoMailer: Email successfully sent to {$toEmail} (Status {$this->lastStatusCode})");
                 return true;
             }
 
-            log_message('error', "BrevoMailer: Failed to send email to {$toEmail}. HTTP {$statusCode}: {$responseBody}");
+            $this->lastError = "HTTP {$this->lastStatusCode}: {$responseBody}";
+            log_message('error', "BrevoMailer: Failed to send email to {$toEmail}. {$this->lastError}");
             return false;
         } catch (Throwable $e) {
+            $this->lastError = "Exception: " . $e->getMessage();
             log_message('error', "BrevoMailer: Exception while sending email to {$toEmail}: " . $e->getMessage());
             return false;
         }

@@ -466,6 +466,7 @@
             const params = [];
             if (lastOrderId !== null) params.push('last_order_id=' + lastOrderId);
             if (lastPrintingId !== null) params.push('last_printing_id=' + lastPrintingId);
+            params.push('_t=' + Date.now());
             if (params.length > 0) url += '?' + params.join('&');
 
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })

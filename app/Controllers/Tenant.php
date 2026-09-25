@@ -559,15 +559,16 @@ class Tenant extends BaseController
         }
 
         $shopId = (int) $res['shopId'];
-        $lastOrderId = (int) $this->request->getGet('last_order_id');
-        $lastPrintingId = (int) $this->request->getGet('last_printing_id');
+        $rawLastOrderId = $this->request->getGet('last_order_id');
+        $rawLastPrintingId = $this->request->getGet('last_printing_id');
 
         $orderModel = new OrderModel();
         $printingModel = new PrintingRequestModel();
 
         // 1. Fetch new orders for this shop in a single JOIN query (0 N+1 roundtrips)
         $newOrders = [];
-        if ($lastOrderId > 0) {
+        if ($rawLastOrderId !== null && $rawLastOrderId !== '') {
+            $lastOrderId = (int) $rawLastOrderId;
             $rawOrders = $orderModel->select('orders.*, users.first_name, users.last_name, users.phone as cust_phone, users.profile_image_url, shipping_addresses.address_line1, shipping_addresses.address_line2, shipping_addresses.phone as addr_phone, (SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) as calc_items_count')
                 ->join('users', 'users.id = orders.customer_id', 'left')
                 ->join('shipping_addresses', 'shipping_addresses.id = orders.shipping_address_id', 'left')
@@ -656,7 +657,8 @@ class Tenant extends BaseController
 
         // 2. Fetch new printing requests in a single JOIN query
         $newPrinting = [];
-        if ($lastPrintingId > 0) {
+        if ($rawLastPrintingId !== null && $rawLastPrintingId !== '') {
+            $lastPrintingId = (int) $rawLastPrintingId;
             $rawPrinting = $printingModel->select('printing_requests.*, users.first_name, users.last_name, users.phone as cust_phone, users.email as cust_email, users.profile_image_url')
                 ->join('users', 'users.id = printing_requests.customer_id', 'left')
                 ->where('printing_requests.shop_id', $shopId)
