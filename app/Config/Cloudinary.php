@@ -7,7 +7,7 @@ use CodeIgniter\Config\BaseConfig;
 class Cloudinary extends BaseConfig
 {
     /**
-     * Complete Cloudinary URL (optional):
+     * Complete Cloudinary URL:
      * cloudinary://API_KEY:API_SECRET@CLOUD_NAME
      */
     public string $cloudinaryUrl = '';
@@ -36,29 +36,40 @@ class Cloudinary extends BaseConfig
     {
         parent::__construct();
 
-        $this->cloudinaryUrl = (string) (getenv('CLOUDINARY_URL')
+        $rawUrl = (string) (getenv('CLOUDINARY_URL')
             ?: (env('CLOUDINARY_URL') ?: ($_ENV['CLOUDINARY_URL'] ?? ($_SERVER['CLOUDINARY_URL'] ?? $this->cloudinaryUrl))));
-        $this->cloudName     = (string) (getenv('CLOUDINARY_CLOUD_NAME')
+        $rawCloudName = (string) (getenv('CLOUDINARY_CLOUD_NAME')
             ?: (env('CLOUDINARY_CLOUD_NAME') ?: ($_ENV['CLOUDINARY_CLOUD_NAME'] ?? ($_SERVER['CLOUDINARY_CLOUD_NAME'] ?? $this->cloudName))));
-        $this->apiKey        = (string) (getenv('CLOUDINARY_API_KEY')
+        $rawApiKey = (string) (getenv('CLOUDINARY_API_KEY')
             ?: (env('CLOUDINARY_API_KEY') ?: ($_ENV['CLOUDINARY_API_KEY'] ?? ($_SERVER['CLOUDINARY_API_KEY'] ?? $this->apiKey))));
-        $this->apiSecret     = (string) (getenv('CLOUDINARY_API_SECRET')
+        $rawApiSecret = (string) (getenv('CLOUDINARY_API_SECRET')
             ?: (env('CLOUDINARY_API_SECRET') ?: ($_ENV['CLOUDINARY_API_SECRET'] ?? ($_SERVER['CLOUDINARY_API_SECRET'] ?? $this->apiSecret))));
 
-        // Parse credentials from CLOUDINARY_URL if provided
+        // Clean any angle brackets, surrounding quotes, and whitespace
+        $this->cloudinaryUrl = $this->sanitizeCredential($rawUrl);
+        $this->cloudName     = $this->sanitizeCredential($rawCloudName);
+        $this->apiKey        = $this->sanitizeCredential($rawApiKey);
+        $this->apiSecret     = $this->sanitizeCredential($rawApiSecret);
+
+        // Parse credentials from CLOUDINARY_URL if individual ones are not fully provided
         if (!empty($this->cloudinaryUrl)) {
-            $parsed = parse_url(trim($this->cloudinaryUrl));
+            $parsed = parse_url($this->cloudinaryUrl);
             if ($parsed !== false) {
                 if (empty($this->apiKey) && !empty($parsed['user'])) {
-                    $this->apiKey = urldecode($parsed['user']);
+                    $this->apiKey = $this->sanitizeCredential(urldecode($parsed['user']));
                 }
                 if (empty($this->apiSecret) && !empty($parsed['pass'])) {
-                    $this->apiSecret = urldecode($parsed['pass']);
+                    $this->apiSecret = $this->sanitizeCredential(urldecode($parsed['pass']));
                 }
                 if (empty($this->cloudName) && !empty($parsed['host'])) {
-                    $this->cloudName = $parsed['host'];
+                    $this->cloudName = $this->sanitizeCredential($parsed['host']);
                 }
             }
+        }
+
+        // Auto-synthesize clean CLOUDINARY_URL if separate credentials are provided
+        if (!empty($this->cloudName) && !empty($this->apiKey) && !empty($this->apiSecret)) {
+            $this->cloudinaryUrl = "cloudinary://{$this->apiKey}:{$this->apiSecret}@{$this->cloudName}";
         }
 
         $fallbackEnv = getenv('ALLOW_LOCAL_FALLBACK') ?: (env('ALLOW_LOCAL_FALLBACK') ?? ($_ENV['ALLOW_LOCAL_FALLBACK'] ?? null));
@@ -67,5 +78,15 @@ class Cloudinary extends BaseConfig
         } else {
             $this->allowLocalFallback = true;
         }
+    }
+
+    /**
+     * Strip accidental angle brackets <>, quotes, and whitespace from environment strings.
+     */
+    protected function sanitizeCredential(string $value): string
+    {
+        $value = trim($value, " \t\n\r\0\x0B\"'<>");
+        // Remove inner < and > if copied from documentation templates like <api_key>:<api_secret>
+        return str_replace(['<', '>'], '', $value);
     }
 }

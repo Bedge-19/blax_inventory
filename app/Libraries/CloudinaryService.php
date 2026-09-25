@@ -37,8 +37,8 @@ class CloudinaryService
         'banner'    => 'c_limit,w_1440,f_auto,q_auto',
     ];
 
-    protected UploadApi $uploadApi;
-    protected AdminApi $adminApi;
+    protected ?UploadApi $uploadApi = null;
+    protected ?AdminApi $adminApi = null;
     protected CloudinaryConfig $config;
     protected bool $initialized = false;
     protected ?string $lastError = null;
@@ -51,20 +51,24 @@ class CloudinaryService
     }
 
     /**
-     * Check if Cloudinary credentials are fully configured in the environment.
+     * Check if Cloudinary credentials are fully configured and valid.
      */
     public function isConfigured(): bool
     {
-        $dummyCloudNames = ['blax', 'your_cloud_name', 'your-cloud-name', 'placeholder'];
-        if (in_array(strtolower(trim($this->config->cloudName ?? '')), $dummyCloudNames, true)) {
+        $dummyCloudNames = ['blax', 'your_cloud_name', 'your-cloud-name', 'placeholder', '<your_cloud_name>'];
+        $cleanCloudName = strtolower(trim(str_replace(['<', '>'], '', $this->config->cloudName ?? '')));
+
+        if (empty($cleanCloudName) || in_array($cleanCloudName, $dummyCloudNames, true)) {
             return false;
         }
 
-        return !empty($this->config->cloudName)
-            && !empty($this->config->apiKey)
-            && !empty($this->config->apiSecret)
-            && !str_starts_with(strtolower(trim($this->config->apiKey ?? '')), 'your_')
-            && !str_starts_with(strtolower(trim($this->config->apiSecret ?? '')), 'your_');
+        $cleanKey    = trim(str_replace(['<', '>'], '', $this->config->apiKey ?? ''));
+        $cleanSecret = trim(str_replace(['<', '>'], '', $this->config->apiSecret ?? ''));
+
+        return !empty($cleanKey)
+            && !empty($cleanSecret)
+            && !str_starts_with(strtolower($cleanKey), 'your_')
+            && !str_starts_with(strtolower($cleanSecret), 'your_');
     }
 
     /**
@@ -106,11 +110,14 @@ class CloudinaryService
                     'has_api_key'    => !empty($this->config->apiKey),
                     'has_api_secret' => !empty($this->config->apiSecret),
                 ],
-                'hint' => "Ensure CLOUDINARY_CLOUD_NAME is set to your actual cloud name in .env instead of 'blax'.",
+                'hint' => 'Ensure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are set in .env without angle brackets.',
             ];
         }
 
         try {
+            if ($this->adminApi === null) {
+                $this->initCloudinary();
+            }
             $res = $this->adminApi->ping();
             return [
                 'success' => true,
@@ -123,7 +130,7 @@ class CloudinaryService
             if (str_contains(strtolower($rawMsg), 'cloud_name mismatch')) {
                 $hint = "Your API Key and Secret are valid, but the cloud name '{$this->config->cloudName}' does not match your Cloudinary account. Log in to https://console.cloudinary.com and copy the exact 'Cloud name' from your dashboard into CLOUDINARY_CLOUD_NAME.";
             } elseif (str_contains(strtolower($rawMsg), 'invalid api_key') || str_contains(strtolower($rawMsg), 'unknown api_key')) {
-                $hint = 'The provided CLOUDINARY_API_KEY was not recognized by Cloudinary.';
+                $hint = 'The provided CLOUDINARY_API_KEY was not recognized by Cloudinary. Verify the API key in your Cloudinary console.';
             } elseif (str_contains(strtolower($rawMsg), 'signature') || str_contains(strtolower($rawMsg), 'authorization')) {
                 $hint = 'Authentication failed. Check that CLOUDINARY_API_SECRET is correct.';
             }
@@ -138,18 +145,20 @@ class CloudinaryService
     }
 
     /**
-     * Initialize Cloudinary SDK configuration using URL or separate environment variables.
+     * Initialize Cloudinary SDK configuration using sanitized URL or individual credentials.
      */
     protected function initCloudinary(): void
     {
-        if (!empty($this->config->cloudinaryUrl)) {
-            $cldConfig = Configuration::instance($this->config->cloudinaryUrl);
+        $cleanUrl = $this->sanitizeString($this->config->cloudinaryUrl ?? '');
+
+        if (!empty($cleanUrl) && str_starts_with($cleanUrl, 'cloudinary://')) {
+            $cldConfig = Configuration::instance($cleanUrl);
         } else {
             $cldConfig = new Configuration([
                 'cloud' => [
-                    'cloud_name' => $this->config->cloudName ?: '',
-                    'api_key'    => $this->config->apiKey ?: '',
-                    'api_secret' => $this->config->apiSecret ?: '',
+                    'cloud_name' => $this->sanitizeString($this->config->cloudName ?? ''),
+                    'api_key'    => $this->sanitizeString($this->config->apiKey ?? ''),
+                    'api_secret' => $this->sanitizeString($this->config->apiSecret ?? ''),
                 ],
                 'url' => [
                     'secure' => true,
@@ -175,8 +184,9 @@ class CloudinaryService
     public function uploadImage($file, string $folder, ?string $publicId = null, array $options = []): ?array
     {
         $defaultOptions = [
-            'quality'        => 'auto',
+            'quality'        => 'auto:good',
             'fetch_format'   => 'auto',
+            'flags'          => 'progressive',
             'transformation' => [
                 'width'  => 1920,
                 'height' => 1920,
@@ -255,7 +265,7 @@ class CloudinaryService
     }
 
     /**
-     * Core asset upload implementation.
+     * Core asset upload implementation with automatic transient retry.
      */
     protected function uploadAsset($file, string $folder, string $resourceType, ?string $publicId = null, array $options = []): ?array
     {
@@ -283,39 +293,62 @@ class CloudinaryService
         ], $options);
 
         if ($publicId !== null && trim($publicId) !== '') {
-            $params['public_id'] = $publicId;
+            $params['public_id'] = $this->sanitizePublicId($publicId);
         }
 
-        try {
-            $response = $this->uploadApi->upload($filePath, $params);
+        if ($this->uploadApi === null) {
+            $this->initCloudinary();
+        }
 
-            return [
-                'secure_url'    => (string) ($response['secure_url'] ?? $response['url'] ?? ''),
-                'public_id'     => (string) ($response['public_id'] ?? ''),
-                'resource_type' => (string) ($response['resource_type'] ?? $resourceType),
-                'format'        => (string) ($response['format'] ?? ''),
-                'bytes'         => (int) ($response['bytes'] ?? 0),
-                'created_at'    => (string) ($response['created_at'] ?? date('Y-m-d H:i:s')),
-            ];
-        } catch (\Throwable $e) {
-            $msg = $e->getMessage();
-            $this->lastError = $msg;
-            $this->lastErrorDetails = ['exception' => get_class($e), 'message' => $msg];
+        $maxAttempts = 2;
+        $attempt = 0;
 
-            if (str_contains(strtolower($msg), 'cloud_name mismatch')) {
-                log_message('error', "[Cloudinary] CLOUD_NAME MISMATCH: The API key is valid, but the cloud name '{$this->config->cloudName}' in .env is incorrect. Please update CLOUDINARY_CLOUD_NAME with your real Cloudinary cloud name.");
-            } else {
-                log_message('error', "Cloudinary upload failed ({$resourceType} in {$folder}): {$msg}");
+        while ($attempt < $maxAttempts) {
+            $attempt++;
+            try {
+                $response = $this->uploadApi->upload($filePath, $params);
+
+                return [
+                    'secure_url'    => (string) ($response['secure_url'] ?? $response['url'] ?? ''),
+                    'public_id'     => (string) ($response['public_id'] ?? ''),
+                    'resource_type' => (string) ($response['resource_type'] ?? $resourceType),
+                    'format'        => (string) ($response['format'] ?? ''),
+                    'bytes'         => (int) ($response['bytes'] ?? 0),
+                    'created_at'    => (string) ($response['created_at'] ?? date('Y-m-d H:i:s')),
+                ];
+            } catch (\Throwable $e) {
+                $msg = $e->getMessage();
+                $this->lastError = $msg;
+                $this->lastErrorDetails = ['exception' => get_class($e), 'message' => $msg, 'attempt' => $attempt];
+
+                // If authentication or cloud name mismatch error, fail fast without useless retry
+                if (str_contains(strtolower($msg), 'cloud_name mismatch')
+                    || str_contains(strtolower($msg), 'invalid api_key')
+                    || str_contains(strtolower($msg), 'unknown api_key')
+                    || str_contains(strtolower($msg), 'signature')
+                ) {
+                    log_message('error', "[Cloudinary] Authentication failure: {$msg}");
+                    return null;
+                }
+
+                if ($attempt < $maxAttempts) {
+                    usleep(200000); // 200ms backoff before retry
+                    continue;
+                }
+
+                log_message('error', "Cloudinary upload failed ({$resourceType} in {$folder}) after {$attempt} attempts: {$msg}");
+                return null;
             }
-            return null;
         }
+
+        return null;
     }
 
     /**
      * Resilient high-level asset upload:
      * Attempts Cloudinary upload first. If Cloudinary is unconfigured or encounters an error,
      * it gracefully falls back to local disk storage (public/uploads/{localSubdir}) when
-     * allowLocalFallback is enabled (always true in development).
+     * allowLocalFallback is enabled.
      *
      * @param string|UploadedFile $file
      * @param string $cldFolder Cloudinary folder constant (e.g. FOLDER_SHOP_LOGOS)
@@ -423,19 +456,18 @@ class CloudinaryService
 
     /**
      * Delete an asset from Cloudinary using its public_id.
-     *
-     * @param string $publicId
-     * @param string $resourceType 'image' or 'raw'
-     * @return bool
      */
     public function deleteAsset(string $publicId, string $resourceType = 'image'): bool
     {
         $publicId = trim($publicId);
-        if ($publicId === '') {
+        if ($publicId === '' || !$this->isConfigured()) {
             return false;
         }
 
         try {
+            if ($this->uploadApi === null) {
+                $this->initCloudinary();
+            }
             $result = $this->uploadApi->destroy($publicId, [
                 'resource_type' => $resourceType,
                 'invalidate'    => true,
@@ -506,5 +538,21 @@ class CloudinaryService
         }
 
         return null;
+    }
+
+    /**
+     * Sanitize string removing quotes and angle brackets.
+     */
+    protected function sanitizeString(string $val): string
+    {
+        return str_replace(['<', '>'], '', trim($val, " \t\n\r\0\x0B\"'<>"));
+    }
+
+    /**
+     * Sanitize public_id for safe Cloudinary asset naming.
+     */
+    protected function sanitizePublicId(string $id): string
+    {
+        return preg_replace('/[^a-zA-Z0-9_\-\/]/', '_', trim($id));
     }
 }

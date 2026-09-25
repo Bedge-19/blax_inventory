@@ -18,9 +18,11 @@
 
     $sc = $siteContents ?? [];
     $psTitle = $sc['hero_title']['text_value'] ?? 'Professional Printing, Everywhere You Are.';
-    $rawHeroImg = trim($sc['hero_image']['image_url'] ?? '');
-    $psImage = !empty($rawHeroImg) ? $rawHeroImg : 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80';
-    if (!empty($psImage) && !str_starts_with($psImage, 'http')) $psImage = base_url($psImage);
+    $psSubtitle = $sc['hero_subtitle']['text_value'] ?? 'Connect directly with verified local commercial and custom printing shops in Polomolok for large format tarpaulins, documents, promotional apparel, and marketing merchandise.';
+    $rawHeroImg = !empty($sc['hero_image']['image_url']) 
+        ? $sc['hero_image']['image_url'] 
+        : (!empty($sc['hero_image']['text_value']) ? $sc['hero_image']['text_value'] : null);
+    $psImage = cms_image_url($rawHeroImg, 'banner', 'https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=1200&q=80');
 ?>
 
 <main class="max-w-container-max mx-auto px-4 md:px-8 lg:px-10 flex-grow w-full py-6 sm:py-8 md:py-10 flex flex-col gap-10 sm:gap-14 md:gap-20">
