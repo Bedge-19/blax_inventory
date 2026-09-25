@@ -125,6 +125,14 @@
                             <span class="material-symbols-outlined text-[14px]">my_location</span>
                             <span>Center</span>
                         </button>
+                        <!-- Force GPS Sync Button -->
+                        <button type="button" 
+                                onclick="refreshTenantGps()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-primary hover:text-white text-xs font-bold transition-all cursor-pointer"
+                                title="Force GPS Location Re-detect">
+                            <span class="material-symbols-outlined text-[14px] text-primary">sync</span>
+                            <span>Sync GPS</span>
+                        </button>
                     </div>
                 </div>
 
@@ -751,6 +759,104 @@
         return R * c;
     }
 
+    let hasAcquiredFirstFix = false;
+
+    function processGpsPosition(pos) {
+        if (!pos || !pos.coords) return;
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const accuracy = Math.round(pos.coords.accuracy || 10);
+        const now = Date.now();
+
+        let bearing = 0;
+        let speedMps = (typeof pos.coords.speed === 'number' && !isNaN(pos.coords.speed) && pos.coords.speed >= 0) ? pos.coords.speed : 0;
+
+        // Rotate rider icon to heading if available or bearing
+        if (lastSentCoords) {
+            bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+            const iconRotate = document.getElementById('tenantRiderIconRotate');
+            if (iconRotate && Math.hypot(lat - lastSentCoords.lat, lng - lastSentCoords.lng) > 0.00002) {
+                iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
+            }
+
+            // Estimate speed if device speed is null
+            if (!pos.coords.speed && lastPositionTimestamp > 0) {
+                const dist = distanceMeters(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
+                const timeSec = (now - lastPositionTimestamp) / 1000;
+                if (timeSec > 0 && dist > 1) {
+                    speedMps = dist / timeSec;
+                }
+            }
+        }
+
+        lastPositionTimestamp = now;
+        currentRiderLatLng = { lat, lng };
+
+        // Update Telemetry HUD
+        updateTelemetryHUD(lat, lng, accuracy, speedMps, bearing);
+
+        // Update marker position on map (compatible with AdvancedMarkerElement and legacy Marker)
+        if (riderMarker) {
+            if (typeof riderMarker.setPosition === 'function') {
+                riderMarker.setPosition(new google.maps.LatLng(lat, lng));
+            } else {
+                riderMarker.position = { lat: lat, lng: lng };
+            }
+        }
+
+        // On first GPS fix, smoothly center on real location and draw road route
+        if (!hasAcquiredFirstFix) {
+            hasAcquiredFirstFix = true;
+            if (mapInstance) {
+                mapInstance.panTo(currentRiderLatLng);
+                mapInstance.setZoom(16);
+            }
+            fetchDeliveryRoute({ lat, lng }, destLatLng);
+            sendLocationUpdate(lat, lng, accuracy);
+            return;
+        }
+
+        // Camera auto-follow tracking
+        if (isTenantAutoFollow && mapInstance) {
+            mapInstance.panTo(currentRiderLatLng);
+        }
+
+        let shouldSend = false;
+        if (now - lastSentTime >= 5000) {
+            shouldSend = true;
+        } else if (lastSentCoords && distanceMeters(lat, lng, lastSentCoords.lat, lastSentCoords.lng) >= 5) {
+            if (now - lastSentTime >= 2500) {
+                shouldSend = true;
+            }
+        }
+
+        if (shouldSend) {
+            sendLocationUpdate(lat, lng, accuracy);
+
+            // If rider moved > 35 meters since last route calculation, refresh road polyline to destination
+            if (!lastTenantRouteOrigin || Math.hypot(lat - lastTenantRouteOrigin.lat, lng - lastTenantRouteOrigin.lng) > 0.00035) {
+                fetchDeliveryRoute({ lat, lng }, destLatLng);
+            }
+        }
+    }
+
+    function handleGpsError(err) {
+        let msg = 'Unable to retrieve GPS location.';
+        let isDenied = false;
+        if (err.code === err.PERMISSION_DENIED) {
+            msg = 'Location permission denied. Please allow GPS access in your browser settings.';
+            isDenied = true;
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+            msg = 'GPS signal unavailable. Trying network location...';
+        } else if (err.code === err.TIMEOUT) {
+            msg = 'GPS signal timed out. Retrying automatically...';
+        }
+        const statusElem = document.getElementById('gpsStatusText');
+        if (statusElem) statusElem.textContent = msg;
+        const dot = document.getElementById('gpsIndicatorDot');
+        if (dot) dot.className = isDenied ? 'w-2.5 h-2.5 rounded-full bg-red-500' : 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+    }
+
     function startGpsBroadcasting() {
         if (!navigator.geolocation) {
             const statusElem = document.getElementById('gpsStatusText');
@@ -758,101 +864,54 @@
             return;
         }
 
-        watchId = navigator.geolocation.watchPosition(
+        const statusElem = document.getElementById('gpsStatusText');
+        if (statusElem) statusElem.textContent = 'Acquiring GPS fix from device...';
+
+        // 1. Immediate single-fix query (try high accuracy first, fallback to standard network location)
+        navigator.geolocation.getCurrentPosition(
             (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                const accuracy = Math.round(pos.coords.accuracy || 0);
-                const now = Date.now();
-
-                // Discard low-accuracy GPS readings to prevent marker jitter
-                if (accuracy > 50) {
-                    console.log(`[GPS] Discarding low-accuracy reading: ${accuracy}m`);
-                    const dot = document.getElementById('gpsIndicatorDot');
-                    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
-                    return;
-                }
-
-                let bearing = 0;
-                let speedMps = pos.coords.speed || 0;
-
-                // Rotate rider icon to heading if available or bearing
-                if (lastSentCoords) {
-                    bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
-                    const iconRotate = document.getElementById('tenantRiderIconRotate');
-                    if (iconRotate && Math.hypot(lat - lastSentCoords.lat, lng - lastSentCoords.lng) > 0.00002) {
-                        iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
-                    }
-
-                    // Estimate speed if device speed is null
-                    if (!pos.coords.speed && lastPositionTimestamp > 0) {
-                        const dist = distanceMeters(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
-                        const timeSec = (now - lastPositionTimestamp) / 1000;
-                        if (timeSec > 0) {
-                            speedMps = dist / timeSec;
-                        }
-                    }
-                }
-
-                lastPositionTimestamp = now;
-                currentRiderLatLng = { lat, lng };
-
-                // Update Telemetry HUD
-                updateTelemetryHUD(lat, lng, accuracy, speedMps, bearing);
-
-                // Update marker position on map
-                if (riderMarker) {
-                    if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
-                        riderMarker.setPosition(new google.maps.LatLng(lat, lng));
-                    } else {
-                        riderMarker.position = { lat, lng };
-                    }
-                }
-
-                // Camera auto-follow tracking
-                if (isTenantAutoFollow && mapInstance) {
-                    mapInstance.panTo(currentRiderLatLng);
-                }
-
-                let shouldSend = false;
-                if (now - lastSentTime >= 6000) {
-                    shouldSend = true;
-                } else if (lastSentCoords && distanceMeters(lat, lng, lastSentCoords.lat, lastSentCoords.lng) >= 5) {
-                    if (now - lastSentTime >= 3000) {
-                        shouldSend = true;
-                    }
-                }
-
-                if (shouldSend) {
-                    sendLocationUpdate(lat, lng, accuracy);
-
-                    // If rider moved > 40 meters since last route calculation, refresh road polyline to destination
-                    if (!lastTenantRouteOrigin || Math.hypot(lat - lastTenantRouteOrigin.lat, lng - lastTenantRouteOrigin.lng) > 0.0004) {
-                        fetchDeliveryRoute({ lat, lng }, destLatLng);
-                    }
-                }
+                processGpsPosition(pos);
             },
             (err) => {
-                let msg = 'Unable to retrieve GPS location.';
-                if (err.code === err.PERMISSION_DENIED) {
-                    msg = 'Location permission denied. Please allow GPS access in your browser to broadcast live position.';
-                } else if (err.code === err.POSITION_UNAVAILABLE) {
-                    msg = 'GPS signal unavailable. Please check device location services.';
-                } else if (err.code === err.TIMEOUT) {
-                    msg = 'Location request timed out. Retrying...';
-                }
-                const statusElem = document.getElementById('gpsStatusText');
-                if (statusElem) statusElem.textContent = msg;
-                const dot = document.getElementById('gpsIndicatorDot');
-                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500';
+                console.warn('[GPS] Initial high accuracy lock failed, falling back to standard accuracy:', err.message);
+                navigator.geolocation.getCurrentPosition(
+                    (fallbackPos) => {
+                        processGpsPosition(fallbackPos);
+                    },
+                    (fallbackErr) => {
+                        handleGpsError(fallbackErr);
+                    },
+                    { enableHighAccuracy: false, timeout: 15000, maximumAge: 10000 }
+                );
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 2000 }
+        );
+
+        // 2. Continuous watchPosition for live motion updates
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+        }
+
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                processGpsPosition(pos);
+            },
+            (err) => {
+                handleGpsError(err);
             },
             {
                 enableHighAccuracy: true,
-                maximumAge: 2000,
-                timeout: 10000
+                maximumAge: 3000,
+                timeout: 12000
             }
         );
     }
+
+    window.refreshTenantGps = function() {
+        hasAcquiredFirstFix = false;
+        startGpsBroadcasting();
+    };
 
     function sendLocationUpdate(lat, lng, accuracy) {
         lastSentTime = Date.now();
