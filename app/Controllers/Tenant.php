@@ -641,6 +641,14 @@ class Tenant extends BaseController
 
                 foreach ($newOrders as &$no) {
                     $no['items'] = $itemsByOrder[$no['id']] ?? [];
+                    if (!empty($no['items'])) {
+                        $pNames = array_column($no['items'], 'product_name');
+                        $no['items_summary'] = count($pNames) > 2
+                            ? ($pNames[0] . ', ' . $pNames[1] . ' +' . (count($pNames) - 2) . ' more')
+                            : implode(', ', $pNames);
+                    } else {
+                        $no['items_summary'] = 'Standard Order Items';
+                    }
                 }
                 unset($no);
             }

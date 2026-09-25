@@ -1698,8 +1698,7 @@
             if (btn) btn.setAttribute('title', 'Show Queue');
         }
     // Real-time KPI & Summary Synchronization
-    window.addEventListener('blax:order-summary-update', function(e) {
-        const summary = e.detail;
+    function syncOrderKpis(summary) {
         if (!summary) return;
 
         const kpiTotal = document.getElementById('kpi-orders-total');
@@ -1721,7 +1720,10 @@
         if (kpiRevenue && summary.revenue_today !== undefined) {
             kpiRevenue.textContent = '₱' + Number(summary.revenue_today).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
-    });
+    }
+
+    window.addEventListener('blax:order-summary-update', function(e) { syncOrderKpis(e.detail); });
+    window.addEventListener('blax:summary-update', function(e) { syncOrderKpis(e.detail); });
 
     // Real-time Order Injection without page refresh
     window.addEventListener('blax:new-order', function(e) {

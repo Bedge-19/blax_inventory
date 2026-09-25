@@ -494,24 +494,28 @@
                     // 2. New orders
                     if (res.has_new_orders && Array.isArray(res.new_orders) && res.new_orders.length > 0) {
                         playChime();
+                        console.info('[Blax Realtime] Incoming new orders:', res.new_orders);
                         res.new_orders.forEach(ord => {
                             showRealtimeToast('order', ord);
                             window.dispatchEvent(new CustomEvent('blax:new-order', { detail: ord }));
                         });
                         if (res.summary) {
                             window.dispatchEvent(new CustomEvent('blax:summary-update', { detail: res.summary }));
+                            window.dispatchEvent(new CustomEvent('blax:order-summary-update', { detail: res.summary }));
                         }
                     }
 
                     // 3. New printing requests
                     if (res.has_new_printing && Array.isArray(res.new_printing) && res.new_printing.length > 0) {
                         playChime();
+                        console.info('[Blax Realtime] Incoming new printing requests:', res.new_printing);
                         res.new_printing.forEach(pr => {
                             showRealtimeToast('printing', pr);
                             window.dispatchEvent(new CustomEvent('blax:new-printing', { detail: pr }));
                         });
                         if (res.printing_summary) {
                             window.dispatchEvent(new CustomEvent('blax:printing-summary-update', { detail: res.printing_summary }));
+                            window.dispatchEvent(new CustomEvent('blax:summary-update', { detail: res.printing_summary }));
                         }
                     }
                 })
