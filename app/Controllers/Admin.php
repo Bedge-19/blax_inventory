@@ -371,30 +371,35 @@ class Admin extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        // Release PHP session lock immediately so concurrent browser requests are never blocked
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $lastOrderId = (int) $this->request->getGet('last_order_id');
         $lastPrintingId = (int) $this->request->getGet('last_printing_id');
 
         $orderModel = new \App\Models\OrderModel();
         $printingModel = new \App\Models\PrintingRequestModel();
-        $userModel = new \App\Models\UserModel();
-        $shopModel = new \App\Models\ShopModel();
 
+        // 1. Fetch new orders for admin across all shops with a single JOIN query
         $newOrders = [];
         if ($lastOrderId > 0) {
-            $raw = $orderModel->where('id >', $lastOrderId)
-                ->orderBy('id', 'ASC')
+            $raw = $orderModel->select('orders.*, shops.shop_name, users.first_name, users.last_name')
+                ->join('shops', 'shops.id = orders.shop_id', 'left')
+                ->join('users', 'users.id = orders.customer_id', 'left')
+                ->where('orders.id >', $lastOrderId)
+                ->orderBy('orders.id', 'ASC')
                 ->findAll();
 
             foreach ($raw as $ord) {
-                $shop = $shopModel->find($ord['shop_id']);
-                $cust = $userModel->find($ord['customer_id']);
-                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                $custName = trim(($ord['first_name'] ?? '') . ' ' . ($ord['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
 
                 $newOrders[] = [
                     'id'                 => (int) $ord['id'],
                     'order_number'       => $ord['order_number'] ?? ('ORD-' . $ord['id']),
-                    'shop_name'          => $shop['shop_name'] ?? 'Store Partner',
+                    'shop_name'          => $ord['shop_name'] ?? 'Store Partner',
                     'customer_name'      => $custName,
                     'total_amount'       => (float) ($ord['total_amount'] ?? 0),
                     'total_amount_fmt'   => number_format((float) ($ord['total_amount'] ?? 0), 2),
@@ -405,22 +410,24 @@ class Admin extends BaseController
             }
         }
 
+        // 2. Fetch new printing requests across all shops with a single JOIN query
         $newPrinting = [];
         if ($lastPrintingId > 0) {
-            $rawPr = $printingModel->where('id >', $lastPrintingId)
-                ->orderBy('id', 'ASC')
+            $rawPr = $printingModel->select('printing_requests.*, shops.shop_name, users.first_name, users.last_name')
+                ->join('shops', 'shops.id = printing_requests.shop_id', 'left')
+                ->join('users', 'users.id = printing_requests.customer_id', 'left')
+                ->where('printing_requests.id >', $lastPrintingId)
+                ->orderBy('printing_requests.id', 'ASC')
                 ->findAll();
 
             foreach ($rawPr as $pr) {
-                $shop = $shopModel->find($pr['shop_id']);
-                $cust = $userModel->find($pr['customer_id']);
-                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                $custName = trim(($pr['first_name'] ?? '') . ' ' . ($pr['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
 
                 $newPrinting[] = [
                     'id'                 => (int) $pr['id'],
                     'request_number'     => $pr['request_number'] ?? ('PR-' . $pr['id']),
-                    'shop_name'          => $shop['shop_name'] ?? 'Store Partner',
+                    'shop_name'          => $pr['shop_name'] ?? 'Store Partner',
                     'customer_name'      => $custName,
                     'total_amount'       => (float) ($pr['total_price'] ?? 0),
                     'total_amount_fmt'   => number_format((float) ($pr['total_price'] ?? 0), 2),

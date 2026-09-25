@@ -156,10 +156,13 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
 })();
 </script>
 
-<link rel="stylesheet" href="<?= base_url('css/tailwind.css') ?>">
+<!-- Preconnect for Google Fonts to accelerate typography paint -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="<?= base_url('css/tailwind.css?v=1.0.2') ?>">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
-<script src="<?= base_url('js/blax-ui.js') ?>" defer></script>
+<script src="<?= base_url('js/blax-ui.js?v=1.0.2') ?>" defer></script>
 
 <style>
         body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }

@@ -272,9 +272,10 @@ class SeasonalAiService
      *
      * @param int         $shopId
      * @param string|null $seasonKey ('school'|'holiday'|'graduation'|'exams'|'business')
+     * @param bool        $allowExternalAi Whether to make live external Cohere API calls on cache miss
      * @return array
      */
-    public function getSeasonalAnalysis(int $shopId, ?string $seasonKey = null): array
+    public function getSeasonalAnalysis(int $shopId, ?string $seasonKey = null, bool $allowExternalAi = true): array
     {
         $activeDetected = $this->detectActiveSeason();
         $selectedKey    = ($seasonKey && isset(self::$seasons[$seasonKey])) ? $seasonKey : $activeDetected;
@@ -444,7 +445,8 @@ class SeasonalAiService
             $selectedKey,
             $seasonDef,
             $recommendations,
-            $expansionIdeas
+            $expansionIdeas,
+            $allowExternalAi
         );
 
         $isCohereActive = ($this->cohereClient && $this->cohereClient->isConfigured());
@@ -471,13 +473,14 @@ class SeasonalAiService
 
     /**
      * Generate concise spotlight summary specifically for the Tenant Dashboard widget.
+     * Guaranteed instant (0ms external latency) by using deterministic local heuristics.
      *
      * @param int $shopId
      * @return array
      */
     public function getDashboardSpotlight(int $shopId): array
     {
-        $analysis = $this->getSeasonalAnalysis($shopId);
+        $analysis = $this->getSeasonalAnalysis($shopId, null, false);
 
         // Filter top 3 highest urgency items that need restock
         $urgentItems = array_values(array_filter($analysis['recommendations'], function ($r) {
@@ -510,7 +513,8 @@ class SeasonalAiService
         string $seasonKey,
         array &$seasonDef,
         array &$recommendations,
-        array &$expansionIdeas
+        array &$expansionIdeas,
+        bool $allowExternalAi = true
     ): ?array {
         if (! $this->cohereClient || ! $this->cohereClient->isConfigured()) {
             return null;
@@ -525,6 +529,10 @@ class SeasonalAiService
             }
         } catch (\Throwable $e) {
             // Cache lookup fail-safe
+        }
+
+        if (! $allowExternalAi) {
+            return null;
         }
 
         // Prepare top items needing restock for the model prompt

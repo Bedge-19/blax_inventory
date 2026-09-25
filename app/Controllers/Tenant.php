@@ -552,36 +552,42 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        // Release PHP session lock immediately so concurrent browser requests are never blocked
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $shopId = (int) $res['shopId'];
         $lastOrderId = (int) $this->request->getGet('last_order_id');
         $lastPrintingId = (int) $this->request->getGet('last_printing_id');
 
         $orderModel = new OrderModel();
-        $userModel = new UserModel();
         $printingModel = new PrintingRequestModel();
 
-        // 1. Fetch new orders for this shop
+        // 1. Fetch new orders for this shop in a single JOIN query (0 N+1 roundtrips)
         $newOrders = [];
         if ($lastOrderId > 0) {
-            $rawOrders = $orderModel->where('shop_id', $shopId)
-                ->where('id >', $lastOrderId)
-                ->orderBy('id', 'ASC')
+            $rawOrders = $orderModel->select('orders.*, users.first_name, users.last_name, users.phone as cust_phone, users.profile_image_url, shipping_addresses.address_line1, shipping_addresses.address_line2, shipping_addresses.phone as addr_phone, (SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) as calc_items_count')
+                ->join('users', 'users.id = orders.customer_id', 'left')
+                ->join('shipping_addresses', 'shipping_addresses.id = orders.shipping_address_id', 'left')
+                ->where('orders.shop_id', $shopId)
+                ->where('orders.id >', $lastOrderId)
+                ->orderBy('orders.id', 'ASC')
                 ->findAll();
 
             foreach ($rawOrders as $ord) {
-                $cust = $userModel->find($ord['customer_id']);
-                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                $custName = trim(($ord['first_name'] ?? '') . ' ' . ($ord['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
-                $initials = strtoupper(substr($cust['first_name'] ?? 'C', 0, 1) . substr($cust['last_name'] ?? 'U', 0, 1));
+                $initials = strtoupper(substr($ord['first_name'] ?? 'C', 0, 1) . substr($ord['last_name'] ?? 'U', 0, 1));
 
-                $itemsCount = (int) (new OrderItemModel())->where('order_id', $ord['id'])->countAllResults();
+                $itemsCount = (int) ($ord['calc_items_count'] ?? 1);
                 if ($itemsCount === 0) $itemsCount = 1;
 
-                $addr = null;
-                if (!empty($ord['shipping_address_id'])) {
-                    $addr = (new ShippingAddressModel())->find($ord['shipping_address_id']);
-                }
-                $deliveryAddr = $addr ? trim(($addr['address_line1'] ?? '') . ', ' . ($addr['address_line2'] ?? '')) : 'Customer Address';
+                $addrLine1 = trim((string)($ord['address_line1'] ?? ''));
+                $addrLine2 = trim((string)($ord['address_line2'] ?? ''));
+                $deliveryAddr = ($addrLine1 !== '' || $addrLine2 !== '') 
+                    ? trim($addrLine1 . ($addrLine2 !== '' ? ', ' . $addrLine2 : '')) 
+                    : 'Customer Address';
 
                 $isPickup = strtolower($ord['fulfillment_method'] ?? '') === 'pickup';
 
@@ -590,8 +596,8 @@ class Tenant extends BaseController
                     'order_number'       => $ord['order_number'] ?? ('ORD-' . $ord['id']),
                     'customer_name'      => $custName,
                     'customer_initials'  => $initials,
-                    'customer_phone'     => $addr['phone'] ?? $cust['phone'] ?? 'N/A',
-                    'customer_image'     => $cust['profile_image_url'] ?? '',
+                    'customer_phone'     => $ord['addr_phone'] ?? $ord['cust_phone'] ?? 'N/A',
+                    'customer_image'     => $ord['profile_image_url'] ?? '',
                     'total_amount'       => (float) ($ord['total_amount'] ?? 0),
                     'total_amount_fmt'   => number_format((float) ($ord['total_amount'] ?? 0), 2),
                     'items_count'        => $itemsCount,
@@ -605,19 +611,20 @@ class Tenant extends BaseController
             }
         }
 
-        // 2. Fetch new printing requests for this shop
+        // 2. Fetch new printing requests in a single JOIN query
         $newPrinting = [];
         if ($lastPrintingId > 0) {
-            $rawPrinting = $printingModel->where('shop_id', $shopId)
-                ->where('id >', $lastPrintingId)
-                ->orderBy('id', 'ASC')
+            $rawPrinting = $printingModel->select('printing_requests.*, users.first_name, users.last_name')
+                ->join('users', 'users.id = printing_requests.customer_id', 'left')
+                ->where('printing_requests.shop_id', $shopId)
+                ->where('printing_requests.id >', $lastPrintingId)
+                ->orderBy('printing_requests.id', 'ASC')
                 ->findAll();
 
             foreach ($rawPrinting as $pr) {
-                $cust = $userModel->find($pr['customer_id']);
-                $custName = trim(($cust['first_name'] ?? '') . ' ' . ($cust['last_name'] ?? ''));
+                $custName = trim(($pr['first_name'] ?? '') . ' ' . ($pr['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
-                $initials = strtoupper(substr($cust['first_name'] ?? 'C', 0, 1) . substr($cust['last_name'] ?? 'U', 0, 1));
+                $initials = strtoupper(substr($pr['first_name'] ?? 'C', 0, 1) . substr($pr['last_name'] ?? 'U', 0, 1));
 
                 $newPrinting[] = [
                     'id'                 => (int) $pr['id'],
