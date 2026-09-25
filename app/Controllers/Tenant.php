@@ -552,6 +552,7 @@ class Tenant extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        $userId = (int) session()->get('user_id');
         // Release PHP session lock immediately so concurrent browser requests are never blocked
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
@@ -652,10 +653,9 @@ class Tenant extends BaseController
         $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
 
         // 3. Live Notification Telemetry
-        $userId = (int) session()->get('user_id');
         $notifModel = new \App\Models\NotificationModel();
-        $unreadCount = $notifModel->getUnreadCount($userId);
-        $recentNotifs = $notifModel->getRecent($userId, 6);
+        $unreadCount = $userId > 0 ? $notifModel->getUnreadCount($userId) : 0;
+        $recentNotifs = $userId > 0 ? $notifModel->getRecent($userId, 6) : [];
 
         return $this->response
             ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
@@ -2561,6 +2561,11 @@ class Tenant extends BaseController
         }
 
         $data = ['status' => $dbStatus];
+        if (in_array($dbStatus, ['delivered', 'returned', 'cancelled', 'ready_for_pickup'], true)) {
+            $data['location_updated_at'] = null;
+            $data['current_lat']         = null;
+            $data['current_lng']         = null;
+        }
         if ($dbStatus === 'shipped' && empty($row['shipped_at'])) {
             $data['shipped_at'] = date('Y-m-d H:i:s');
         }
@@ -5807,7 +5812,22 @@ class Tenant extends BaseController
         }
 
         $shopId = (int) $res['shopId'];
-        $deliveryId = (int) $this->request->getPost('delivery_id');
+        $userRole = (string) (session()->get('user_role') ?? '');
+
+        // Release PHP session lock immediately so unload beacon never hangs
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
+        $rawJson = null;
+        try {
+            $rawJson = $this->request->getJSON(true);
+        } catch (\Throwable $e) {}
+
+        $deliveryId = (int) ($this->request->getPost('delivery_id')
+            ?: $this->request->getVar('delivery_id')
+            ?: ($rawJson['delivery_id'] ?? 0)
+            ?: ($this->request->getRawInput()['delivery_id'] ?? 0));
 
         if ($deliveryId <= 0) {
             return $this->response->setStatusCode(400)->setJSON(['status' => 'error', 'message' => 'Missing delivery_id']);
@@ -5821,13 +5841,15 @@ class Tenant extends BaseController
         }
 
         $actualShopId = $deliveryModel->resolveShopId($deliveryId) ?? (int) ($delivery['shop_id'] ?? 0);
-        if ($actualShopId > 0 && $actualShopId !== $shopId && session()->get('user_role') !== 'admin') {
+        if ($actualShopId > 0 && $actualShopId !== $shopId && $userRole !== 'admin') {
             return $this->response->setStatusCode(403)->setJSON(['status' => 'error', 'message' => 'Forbidden']);
         }
 
-        // Deactivate active broadcast session by setting location_updated_at to NULL
+        // Deactivate active broadcast session by setting location_updated_at, current_lat, current_lng to NULL
         $deliveryModel->update($deliveryId, [
             'location_updated_at' => null,
+            'current_lat'         => null,
+            'current_lng'         => null,
         ]);
 
         return $this->response->setJSON(['status' => 'success', 'message' => 'Broadcast stopped']);

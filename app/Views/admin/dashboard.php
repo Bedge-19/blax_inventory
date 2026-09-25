@@ -600,6 +600,20 @@
         }
         tooltip.classList.add('hidden');
     });
+
+    // Real-time Event Listeners for Dynamic Admin Platform Updates
+    window.addEventListener('blax:admin-new-order', function(e) {
+        const order = e.detail;
+        if (!order) return;
+        // Broadcast custom notification or update telemetry
+        console.debug('[Admin Realtime] New platform order received:', order);
+    });
+
+    window.addEventListener('blax:admin-new-printing', function(e) {
+        const pr = e.detail;
+        if (!pr) return;
+        console.debug('[Admin Realtime] New printing request received:', pr);
+    });
 })();
 </script>
 <?= $this->endSection() ?>

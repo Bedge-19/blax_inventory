@@ -965,29 +965,53 @@
         });
     }
 
+    let isExitBroadcastStopped = false;
     function stopBroadcastingOnExit() {
         if (watchId !== null) {
-            navigator.geolocation.clearWatch(watchId);
+            try { navigator.geolocation.clearWatch(watchId); } catch(e) {}
             watchId = null;
         }
-        if (DELIVERY_ID) {
-            const formData = new FormData();
-            formData.append('delivery_id', DELIVERY_ID);
+        if (DELIVERY_ID && !isExitBroadcastStopped) {
+            isExitBroadcastStopped = true;
             const stopUrl = '<?= base_url('tenant/deliveries/stop-broadcast') ?>';
+            const params = new URLSearchParams();
+            params.append('delivery_id', String(DELIVERY_ID));
+            const csrfToken = window.getCsrfToken ? window.getCsrfToken() : '';
+            if (csrfToken) {
+                params.append('<?= csrf_token() ?>', csrfToken);
+            }
+            const payload = params.toString();
+
             if (navigator.sendBeacon) {
-                navigator.sendBeacon(stopUrl, formData);
-            } else {
+                const blob = new Blob([payload], { type: 'application/x-www-form-urlencoded; charset=UTF-8' });
+                navigator.sendBeacon(stopUrl, blob);
+            }
+
+            try {
                 fetch(stopUrl, {
                     method: 'POST',
-                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: payload,
                     keepalive: true
                 }).catch(() => {});
-            }
+            } catch(e) {}
         }
     }
 
     window.addEventListener('beforeunload', stopBroadcastingOnExit);
     window.addEventListener('pagehide', stopBroadcastingOnExit);
+    window.addEventListener('unload', stopBroadcastingOnExit);
+
+    // Intercept navigation link clicks to immediately unpublish courier pin before page teardown
+    document.addEventListener('click', function(e) {
+        const link = e.target.closest('a');
+        if (link && link.href && !link.target && !link.href.startsWith('javascript:') && !link.href.includes('#')) {
+            stopBroadcastingOnExit();
+        }
+    }, { capture: true });
 
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {

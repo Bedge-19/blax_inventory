@@ -354,7 +354,7 @@
 
 
     <!-- Real-time Order & Printing Notification Toast Container -->
-    <div id="blax-tenant-toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
+    <div id="blax-tenant-toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
     <script>
     (function() {
@@ -362,6 +362,17 @@
         let lastPrintingId = null;
         let pollTimer = null;
         let isInitial = true;
+
+        function getTenantToastContainer() {
+            let container = document.getElementById('blax-tenant-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'blax-tenant-toast-container';
+                container.className = 'fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
 
         // Web Audio synthesized two-tone notification chime (zero file dependencies)
         function playChime() {
@@ -401,7 +412,7 @@
         }
 
         function showRealtimeToast(type, data) {
-            const container = document.getElementById('blax-tenant-toast-container');
+            const container = getTenantToastContainer();
             if (!container) return;
 
             const toast = document.createElement('div');
@@ -602,7 +613,7 @@
                 type === 'printing' ? 'print' : 'notifications'
             );
 
-            const container = document.getElementById('blax-tenant-toast-container');
+            const container = getTenantToastContainer();
             if (!container) return;
 
             const toast = document.createElement('div');

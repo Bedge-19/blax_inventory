@@ -244,8 +244,13 @@
         }
     }
 
-    function toggleAdminMapType() {
-        if (!mapInstance || typeof google === 'undefined' || !google.maps) return;
+    window.toggleAdminMapType = function() {
+        if (!mapInstance || typeof google === 'undefined' || !google.maps) {
+            currentAdminMapType = (currentAdminMapType === 'hybrid') ? 'roadmap' : 'hybrid';
+            localStorage.setItem(MAP_TYPE_STORAGE_KEY, currentAdminMapType);
+            updateAdminMapTypeToggleUI();
+            return;
+        }
         if (currentAdminMapType === 'hybrid') {
             currentAdminMapType = 'roadmap';
             mapInstance.setMapTypeId(google.maps.MapTypeId.ROADMAP);
@@ -255,7 +260,7 @@
         }
         localStorage.setItem(MAP_TYPE_STORAGE_KEY, currentAdminMapType);
         updateAdminMapTypeToggleUI();
-    }
+    };
 
     function calculateBearing(lat1, lon1, lat2, lon2) {
         const toRad = deg => (deg * Math.PI) / 180;
@@ -675,6 +680,7 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
+        updateAdminMapTypeToggleUI();
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {
             window.initAdminMap();
         }

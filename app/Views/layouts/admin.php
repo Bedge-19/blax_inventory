@@ -337,13 +337,24 @@
     </script>
 
     <!-- Admin Real-time Marketplace Alerts Container -->
-    <div id="blax-admin-toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
+    <div id="blax-admin-toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
 
     <script>
     (function() {
         let lastOrderId = null;
         let lastPrintingId = null;
         let isInitial = true;
+
+        function getAdminToastContainer() {
+            let container = document.getElementById('blax-admin-toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'blax-admin-toast-container';
+                container.className = 'fixed top-5 right-5 z-[9999] flex flex-col gap-2.5 pointer-events-none max-w-sm w-full';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
 
         function playAdminChime() {
             try {
@@ -381,7 +392,7 @@
         }
 
         function showAdminToast(type, data) {
-            const container = document.getElementById('blax-admin-toast-container');
+            const container = getAdminToastContainer();
             if (!container) return;
 
             const toast = document.createElement('div');
@@ -568,7 +579,7 @@
                 type === 'printing' ? 'print' : 'notifications'
             );
 
-            const container = document.getElementById('blax-admin-toast-container');
+            const container = getAdminToastContainer();
             if (!container) return;
 
             const toast = document.createElement('div');

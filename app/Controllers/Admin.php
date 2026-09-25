@@ -364,6 +364,7 @@ class Admin extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        $adminUserId = (int) session()->get('user_id');
         // Release PHP session lock immediately so concurrent browser requests are never blocked
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
@@ -437,8 +438,7 @@ class Admin extends BaseController
         $maxPrRow = $printingModel->selectMax('id')->first();
         $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
 
-        $adminUserId = (int) session()->get('user_id');
-        $unreadCount = (new \App\Models\NotificationModel())->getUnreadCount($adminUserId);
+        $unreadCount = $adminUserId > 0 ? (new \App\Models\NotificationModel())->getUnreadCount($adminUserId) : 0;
 
         return $this->response
             ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
