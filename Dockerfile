@@ -32,6 +32,14 @@ RUN composer install --no-dev --optimize-autoloader --no-interaction
 RUN chown -R www-data:www-data /var/www/html/writable \
     && chmod -R 775 /var/www/html/writable
 
+RUN mkdir -p /var/www/html/public/uploads/profiles \
+             /var/www/html/public/uploads/product_images \
+             /var/www/html/public/uploads/business_permits \
+             /var/www/html/public/uploads/shop_logos \
+             /var/www/html/public/uploads/cms \
+    && chown -R www-data:www-data /var/www/html/public/uploads \
+    && chmod -R 775 /var/www/html/public/uploads
+
 # Copy Nginx configuration template and entrypoint script
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY docker/nginx.conf.template /etc/nginx/conf.d/default.conf.template
