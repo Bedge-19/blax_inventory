@@ -1,14 +1,14 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<div class="flex flex-1 flex-col md:flex-row max-w-container-max mx-auto w-full relative">
+<div class="flex flex-1 flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50 relative">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'addresses']) ?>
 
     <!-- Content Area -->
     <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
 
-        <div class="max-w-5xl mx-auto space-y-6">
+        <div class="max-w-6xl mx-auto space-y-6">
 
             <!-- Page Header -->
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest border border-outline-variant/30 rounded-2xl p-6 shadow-xs">
@@ -417,10 +417,7 @@
 
 </div>
 
-<!-- Back Button -->
-<button type="button" class="hidden md:flex fixed bottom-8 left-8 w-14 h-14 bg-surface-container-highest text-on-surface rounded-full shadow-lg border border-outline-variant/30 items-center justify-center hover:scale-110 transition-transform active:scale-95 z-40 group" aria-label="Go Back" onclick="window.history.back()">
-    <span class="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-</button>
+
 
 <script>
 (function () {

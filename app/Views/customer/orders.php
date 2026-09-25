@@ -1,14 +1,16 @@
 <?= $this->extend('layouts/marketplace') ?>
 <?= $this->section('content') ?>
 
-<div class="flex flex-1 flex-col md:flex-row max-w-container-max mx-auto w-full">
+<div class="flex flex-1 flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'orders']) ?>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-md md:p-xl overflow-y-auto">
+    <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
 
-        <header class="mb-xl">
+        <div class="max-w-6xl mx-auto space-y-6">
+
+            <header class="mb-xl">
 
             <h1 class="text-headline-lg font-headline-lg mb-base">My Orders</h1>
 
@@ -347,15 +349,11 @@
 
         <?php endif; ?>
 
+        </div>
+
     </main>
 
 </div>
-
-<button aria-label="Go Back" onclick="window.history.back()" class="hidden md:flex fixed bottom-lg left-lg w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-xl items-center justify-center z-50 hover:scale-105 transition-transform duration-200 border border-outline-variant">
-
-    <span class="material-symbols-outlined text-[32px]">arrow_back</span>
-
-</button>
 
 <!-- Order Details Modal -->
 <div id="order-details-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">

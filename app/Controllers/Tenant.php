@@ -128,32 +128,37 @@ class Tenant extends BaseController
         $notifications = $notifModel->getRecent($userId);
         $unreadCount   = $notifModel->getUnreadCount($userId);
 
+        // ---- AI Seasonal Intelligence Spotlight for Dashboard ----
+        $seasonalService   = new \App\Libraries\SeasonalAiService();
+        $seasonalSpotlight = $seasonalService->getDashboardSpotlight($shopId);
+
         return view('tenant/dashboard', [
-            'shop'           => $shop,
-            'active_warning' => $activeWarning,
+            'shop'               => $shop,
+            'active_warning'     => $activeWarning,
+            'seasonal_spotlight' => $seasonalSpotlight,
             // KPI values
-            'total_revenue'  => $kpis['total_revenue'],
-            'total_sales'    => $kpis['total_sales'],
-            'pending_orders' => $kpis['pending_orders'],
-            'printing_count' => $kpis['printing_count'],
+            'total_revenue'      => $kpis['total_revenue'],
+            'total_sales'        => $kpis['total_sales'],
+            'pending_orders'     => $kpis['pending_orders'],
+            'printing_count'     => $kpis['printing_count'],
             // KPI deltas (neutral when there is no prior-period data)
-            'revenue_delta'  => $this->deltaPercent($kpis['rev_current'], $kpis['rev_previous']),
-            'sales_delta'    => $this->deltaPercent($kpis['sales_current'], $kpis['sales_previous']),
-            'pending_delta'  => $this->deltaPercent($kpis['pending_current'], $kpis['pending_previous']),
-            'printing_delta' => $this->deltaPercent($kpis['print_current'], $kpis['print_previous']),
+            'revenue_delta'      => $this->deltaPercent($kpis['rev_current'], $kpis['rev_previous']),
+            'sales_delta'        => $this->deltaPercent($kpis['sales_current'], $kpis['sales_previous']),
+            'pending_delta'      => $this->deltaPercent($kpis['pending_current'], $kpis['pending_previous']),
+            'printing_delta'     => $this->deltaPercent($kpis['print_current'], $kpis['print_previous']),
             // Sales Overview chart
-            'chart_labels'   => $chart['labels'],
-            'chart_values'   => $chart['values'],
-            'chart_max'      => $chartMax,
-            'chart_total'    => array_sum($chart['values']),
+            'chart_labels'       => $chart['labels'],
+            'chart_values'       => $chart['values'],
+            'chart_max'          => $chartMax,
+            'chart_total'        => array_sum($chart['values']),
             // Lists
-            'low_stock_items'  => $lowStockItems,
-            'low_stock_count'  => $lowStockCount,
-            'recent_orders'    => $recentOrders,
-            'recent_requests'  => $recentRequests,
+            'low_stock_items'    => $lowStockItems,
+            'low_stock_count'    => $lowStockCount,
+            'recent_orders'      => $recentOrders,
+            'recent_requests'    => $recentRequests,
             // Header notifications
-            'notifications'    => $notifications,
-            'unread_count'     => $unreadCount,
+            'notifications'      => $notifications,
+            'unread_count'       => $unreadCount,
         ]);
     }
 
@@ -1623,13 +1628,19 @@ class Tenant extends BaseController
         // ---- Top products ----
         $topProducts = $orderModel->getTopProductsForShop($shopId, 5);
 
-        // ---- Revenue over time (current + previous window) ----
-        $chart = $orderModel->getSalesChartData($shopId, $range, true);
-        $chartMax = max(array_merge($chart['values'], $chart['previous_values'] ?? []));
+        // ---- Sales chart data ----
+        $chart    = $orderModel->getSalesChartData($shopId, $range, true);
+        $chartMax = !empty($chart['values']) ? max($chart['values']) : 0.0;
+
+        // ---- AI Seasonal Demand & Restock Intelligence ----
+        $seasonalService = new \App\Libraries\SeasonalAiService();
+        $seasonParam     = (string) $this->request->getGet('season');
+        $seasonalData    = $seasonalService->getSeasonalAnalysis($shopId, $seasonParam ?: null);
 
         return view('tenant/analytics', [
             'shop'                => $shop,
             'range'               => $range,
+            'seasonal_data'       => $seasonalData,
             'total_revenue'       => $totalRevenue,
             'total_orders'        => $orderModel->getOrderCountForShop($shopId),
             'avg_order_value'     => $aov,
@@ -1648,6 +1659,25 @@ class Tenant extends BaseController
             'activeNav'           => 'analytics',
             'title'               => 'Analytics Dashboard',
         ]);
+    }
+
+    /**
+     * AJAX endpoint providing dynamic seasonal AI demand analysis
+     * when merchant toggles seasons without a full page refresh.
+     */
+    public function seasonalAnalytics()
+    {
+        $res = $this->getShopOrRedirect();
+        if ($res instanceof \CodeIgniter\HTTP\RedirectResponse) {
+            return $this->response->setJSON(['error' => 'Unauthorized']);
+        }
+        $shopId = (int) $res['shopId'];
+        $seasonParam = (string) $this->request->getGet('season');
+
+        $seasonalService = new \App\Libraries\SeasonalAiService();
+        $seasonalData    = $seasonalService->getSeasonalAnalysis($shopId, $seasonParam ?: null);
+
+        return $this->response->setJSON($seasonalData);
     }
 
     public function settings()

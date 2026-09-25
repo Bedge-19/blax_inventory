@@ -70,6 +70,89 @@ $compactMoney = function (float $v): string {
         </div>
     <?php endif; ?>
 
+    <?php if (!empty($seasonal_spotlight) && !empty($seasonal_spotlight['top_items'])): ?>
+        <!-- AI Seasonal Intelligence & Restock Forecast Banner -->
+        <div class="rounded-3xl p-5 lg:p-6 bg-gradient-to-r from-blue-900/95 via-indigo-900/95 to-slate-900 text-white shadow-xl border border-white/10 relative overflow-hidden group">
+            <!-- Ambient Glow -->
+            <div class="absolute -top-16 -right-16 w-64 h-64 bg-primary/30 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                <div class="max-w-xl">
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider bg-white/15 text-sky-200 border border-white/20 backdrop-blur-xs">
+                            <span class="material-symbols-outlined text-[15px]"><?= esc($seasonal_spotlight['icon']) ?></span>
+                            <span>Active Season: <?= esc($seasonal_spotlight['short_name']) ?></span>
+                        </span>
+                        <?php if (!empty($seasonal_spotlight['cohere_powered'])): ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-400/20 text-sky-200 border border-sky-400/30">
+                                <span class="material-symbols-outlined text-[13px]">smart_toy</span>
+                                <span>Cohere AI</span>
+                            </span>
+                        <?php endif; ?>
+                        <?php if ($seasonal_spotlight['critical_count'] > 0): ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-xs animate-pulse">
+                                <span><?= (int) $seasonal_spotlight['critical_count'] ?> Critical Stockouts</span>
+                            </span>
+                        <?php endif; ?>
+                    </div>
+                    <h3 class="text-lg sm:text-xl font-extrabold tracking-tight text-white">
+                        AI Seasonal Restock Recommendations
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+                        <?php if (!empty($seasonal_spotlight['cohere_summary'])): ?>
+                            <?= esc($seasonal_spotlight['cohere_summary']) ?>
+                        <?php else: ?>
+                            Demand is accelerating in Polomolok for <?= esc($seasonal_spotlight['short_name']) ?>. Replenish high-velocity items to capture an estimated <strong class="text-amber-300 font-extrabold">₱<?= number_format($seasonal_spotlight['est_opp_revenue'], 2) ?></strong> in seasonal sales.
+                        <?php endif; ?>
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3 shrink-0">
+                    <a href="<?= base_url('tenant/analytics') ?>" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-extrabold hover:bg-slate-100 transition-all shadow-md active:scale-95">
+                        <span>Explore Full AI Forecast</span>
+                        <span class="material-symbols-outlined text-[18px]">insights</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Spotlight Top Restock Items -->
+            <div class="relative z-10 mt-5 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <?php foreach ($seasonal_spotlight['top_items'] as $item): ?>
+                    <div class="bg-white/10 hover:bg-white/15 rounded-2xl p-3.5 border border-white/10 backdrop-blur-xs transition-all flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 truncate block"><?= esc($item['category']) ?></span>
+                                <span class="text-[10px] font-black px-2 py-0.5 rounded-full uppercase <?= $item['urgency'] === 'critical' ? 'bg-rose-500 text-white' : 'bg-amber-400 text-slate-900' ?>">
+                                    <?= $item['urgency'] === 'critical' ? 'Urgent' : 'Low Buffer' ?>
+                                </span>
+                            </div>
+                            <h4 class="text-xs font-bold text-white truncate mt-1" title="<?= esc($item['name']) ?>">
+                                <?= esc($item['name']) ?>
+                            </h4>
+                            <div class="mt-2.5 flex items-center justify-between text-[11px] text-slate-300">
+                                <span>Stock: <strong class="text-white font-mono"><?= $item['current_stock'] ?></strong> / <?= $item['target_buffer'] ?> pcs</span>
+                                <span class="font-mono text-emerald-300 font-bold">+<?= $item['restock_units'] ?> needed</span>
+                            </div>
+                            <!-- Mini Progress Bar -->
+                            <div class="w-full bg-white/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                                <div class="h-full rounded-full <?= $item['urgency'] === 'critical' ? 'bg-rose-400' : 'bg-amber-400' ?>" style="width: <?= $item['stock_pct'] ?>%"></div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 pt-2.5 border-t border-white/10 flex items-center justify-between">
+                            <span class="text-[10px] text-slate-300">Est. ₱<?= number_format($item['est_revenue_uplift'], 2) ?></span>
+                            <a href="<?= base_url('tenant/inventory?search=' . urlencode($item['name'])) ?>" class="inline-flex items-center gap-1 text-[11px] font-bold text-sky-300 hover:text-white transition-colors">
+                                <span>Restock</span>
+                                <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    <?php endif; ?>
+
     <!-- KPI Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
 

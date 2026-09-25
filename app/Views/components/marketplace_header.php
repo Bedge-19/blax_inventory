@@ -9,7 +9,7 @@
 ?>
 
 <header class="bg-surface-container-lowest shadow-sm sticky top-0 z-40 w-full border-b border-outline-variant/30">
-    <div class="flex justify-between items-center w-full min-h-[60px] sm:min-h-[72px] py-2 px-3 sm:px-6 md:px-8 lg:px-10 max-w-container-max mx-auto">
+    <div class="flex justify-between items-center w-full min-h-[60px] sm:min-h-[72px] py-2 px-4 sm:px-6 md:px-8 lg:px-10">
 
     <div class="flex items-center gap-2 sm:gap-4 md:gap-6 lg:gap-xl">
 

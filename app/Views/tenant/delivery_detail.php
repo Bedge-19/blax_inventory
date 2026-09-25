@@ -156,8 +156,25 @@
                     </div>
                 </div>
 
-                <!-- Google Maps Canvas -->
-                <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0 relative" style="min-height:480px;"></div>
+                <!-- Google Maps Canvas with Floating QR Code Scanner -->
+                <div class="relative w-full overflow-hidden">
+                    <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0 relative" style="min-height:480px;"></div>
+
+                    <!-- Floating QR Code Scanner Action Pill Button on Map -->
+                    <div class="absolute top-3.5 left-3.5 z-20">
+                        <button type="button" 
+                                id="btnFloatingQrScan"
+                                onclick="openDeliveryScanner()" 
+                                class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-primary to-blue-600 text-white font-bold text-xs shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all border border-white/30 backdrop-blur-md group">
+                            <span class="relative flex h-2.5 w-2.5">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-80"></span>
+                                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-200"></span>
+                            </span>
+                            <span class="material-symbols-outlined text-[19px] group-hover:rotate-12 transition-transform">qr_code_scanner</span>
+                            <span class="tracking-wide">Scan Delivery QR</span>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Map Legend & Driver GPS Action Tools Banner -->
                 <div class="p-3 bg-surface-container-low/70 border-t border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant flex-wrap gap-2">
@@ -172,66 +189,6 @@
                         </span>
                     </div>
 
-                    <!-- GPS Tools Button Group -->
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                        <!-- Route Simulator (Test Drive) Tool Button -->
-                        <button type="button" 
-                                id="btnToggleSimModal"
-                                onclick="toggleGpsSimulator()" 
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs transition-all active:scale-95">
-                            <span class="material-symbols-outlined text-[15px]">play_circle</span>
-                            <span id="simBtnLabel">GPS Simulator</span>
-                        </button>
-
-                        <!-- Click-to-Pin Manual GPS Tool -->
-                        <button type="button" 
-                                id="btnToggleClickPin"
-                                onclick="toggleClickToPinMode()" 
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all">
-                            <span class="material-symbols-outlined text-[15px] text-primary">pin_drop</span>
-                            <span id="clickPinLabel">Click-to-Pin</span>
-                        </button>
-
-                        <!-- Recalculate Route Button -->
-                        <button type="button" 
-                                onclick="forceRecalculateRoute()" 
-                                title="Recalculate Route with Routes API"
-                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all">
-                            <span class="material-symbols-outlined text-[15px] text-blue-600">route</span>
-                            <span>Re-route</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- GPS Route Simulator Floating Deck (when active) -->
-            <div id="simulatorControlsDeck" class="hidden bg-surface-container-lowest rounded-2xl p-md border-2 border-purple-400 shadow-md space-y-sm transition-all">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                        <span class="p-1.5 bg-purple-100 text-purple-800 rounded-lg material-symbols-outlined text-[18px]">sports_motorsports</span>
-                        <div>
-                            <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider">Live Route Simulation Tool</h4>
-                            <p class="text-[11px] text-on-surface-variant">Simulates rider movement along the road polyline and broadcasts live coordinates.</p>
-                        </div>
-                    </div>
-                    <span id="simProgressLabel" class="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">0% Progress</span>
-                </div>
-
-                <div class="flex items-center gap-2 pt-1 flex-wrap">
-                    <button type="button" id="btnSimPlayPause" onclick="toggleSimPlayPause()" class="px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs">
-                        <span id="simPlayPauseIcon" class="material-symbols-outlined text-[16px]">play_arrow</span>
-                        <span id="simPlayPauseText">Start Simulation</span>
-                    </button>
-                    <button type="button" onclick="resetSimRoute()" class="px-3 py-1.5 rounded-xl bg-surface-container border border-outline-variant text-xs font-bold hover:bg-surface-container-high inline-flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[16px]">restart_alt</span>
-                        <span>Reset</span>
-                    </button>
-                    <div class="flex items-center gap-1 ml-auto text-xs">
-                        <span class="text-outline font-semibold">Speed:</span>
-                        <button type="button" onclick="setSimSpeed(1)" id="btnSimSpeed1" class="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-600 text-white">1x</button>
-                        <button type="button" onclick="setSimSpeed(2)" id="btnSimSpeed2" class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface">2x</button>
-                        <button type="button" onclick="setSimSpeed(5)" id="btnSimSpeed5" class="px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface">5x</button>
-                    </div>
                 </div>
             </div>
 
@@ -289,13 +246,13 @@
                 </div>
 
                 <!-- Status Update Form -->
-                <form action="<?= base_url('tenant/deliveries/update-status') ?>" method="POST" class="pt-sm border-t border-outline-variant/20 space-y-sm">
+                <form id="deliveryStatusForm" action="<?= base_url('tenant/deliveries/update-status') ?>" method="POST" class="pt-sm border-t border-outline-variant/20 space-y-sm">
                     <?= csrf_field() ?>
                     <input type="hidden" name="delivery_id" value="<?= (int) $delivery['id'] ?>">
 
                     <label class="text-xs font-bold text-on-surface-variant uppercase block">Update Delivery Status</label>
                     <div class="flex items-center gap-xs">
-                        <select name="delivery_status" class="flex-1 p-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary">
+                        <select name="delivery_status" id="deliveryStatusSelect" class="flex-1 p-2.5 bg-surface-container-low border border-outline-variant rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary">
                             <option value="ready_for_pickup" <?= $curStatus === 'ready_for_pickup' ? 'selected' : '' ?>>Ready for Pickup</option>
                             <option value="shipped" <?= $curStatus === 'shipped' ? 'selected' : '' ?>>Shipped (Dispatched)</option>
                             <option value="in_transit" <?= $curStatus === 'in_transit' ? 'selected' : '' ?>>In Transit</option>
@@ -621,12 +578,7 @@
         }
     };
 
-    // GPS Telemetry & Tools State
-    let isClickPinActive = false;
-    let isSimulating = false;
-    let simIntervalId = null;
-    let simWaypointIdx = 0;
-    let simSpeedMultiplier = 1;
+    // GPS Telemetry State
     let lastPositionTimestamp = 0;
 
     function updateTelemetryHUD(lat, lng, accuracy, speedMps, bearingDeg) {
@@ -669,178 +621,7 @@
         }
     }
 
-    // Toggle Click-to-Pin Tool
-    function toggleClickToPinMode() {
-        isClickPinActive = !isClickPinActive;
-        const btn = document.getElementById('btnToggleClickPin');
-        const label = document.getElementById('clickPinLabel');
-        const mapEl = document.getElementById('singleDeliveryMap');
 
-        if (isClickPinActive) {
-            if (label) label.textContent = 'Pin Active (Click Map)';
-            if (btn) btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-xs shadow-sm transition-all';
-            if (mapEl) mapEl.style.cursor = 'crosshair';
-        } else {
-            if (label) label.textContent = 'Click-to-Pin';
-            if (btn) btn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-on-surface font-bold text-xs transition-all';
-            if (mapEl) mapEl.style.cursor = '';
-        }
-    }
-
-    // Toggle GPS Route Simulator Deck
-    function toggleGpsSimulator() {
-        const deck = document.getElementById('simulatorControlsDeck');
-        const simBtn = document.getElementById('btnToggleSimModal');
-        const simLabel = document.getElementById('simBtnLabel');
-        if (!deck) return;
-
-        if (deck.classList.contains('hidden')) {
-            deck.classList.remove('hidden');
-            if (simLabel) simLabel.textContent = 'Close Simulator';
-            if (simBtn) simBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-900 text-white font-bold text-xs shadow-sm transition-all';
-        } else {
-            deck.classList.add('hidden');
-            if (simLabel) simLabel.textContent = 'GPS Simulator';
-            if (simBtn) simBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs shadow-2xs transition-all';
-            if (isSimulating) {
-                toggleSimPlayPause();
-            }
-        }
-    }
-
-    function setSimSpeed(speed) {
-        simSpeedMultiplier = speed;
-        [1, 2, 5].forEach(s => {
-            const b = document.getElementById(`btnSimSpeed${s}`);
-            if (b) {
-                b.className = s === speed ? 'px-2 py-0.5 rounded text-[11px] font-bold bg-purple-600 text-white' : 'px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container text-on-surface';
-            }
-        });
-        if (isSimulating) {
-            clearInterval(simIntervalId);
-            startSimLoop();
-        }
-    }
-
-    function toggleSimPlayPause() {
-        isSimulating = !isSimulating;
-        const icon = document.getElementById('simPlayPauseIcon');
-        const txt = document.getElementById('simPlayPauseText');
-        const btn = document.getElementById('btnSimPlayPause');
-
-        if (isSimulating) {
-            if (icon) icon.textContent = 'pause';
-            if (txt) txt.textContent = 'Pause';
-            if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 inline-flex items-center gap-1 shadow-2xs';
-            startSimLoop();
-        } else {
-            if (icon) icon.textContent = 'play_arrow';
-            if (txt) txt.textContent = 'Resume';
-            if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs';
-            if (simIntervalId) clearInterval(simIntervalId);
-        }
-    }
-
-    function startSimLoop() {
-        if (!routePathPoints || routePathPoints.length < 2) {
-            routePathPoints = [currentRiderLatLng, destLatLng];
-        }
-
-        const intervalMs = Math.max(500, Math.round(2000 / simSpeedMultiplier));
-        if (simIntervalId) clearInterval(simIntervalId);
-
-        simIntervalId = setInterval(() => {
-            if (simWaypointIdx >= routePathPoints.length) {
-                // Completed simulation
-                isSimulating = false;
-                clearInterval(simIntervalId);
-                const icon = document.getElementById('simPlayPauseIcon');
-                const txt = document.getElementById('simPlayPauseText');
-                if (icon) icon.textContent = 'check';
-                if (txt) txt.textContent = 'Arrived at Destination';
-                const progressEl = document.getElementById('simProgressLabel');
-                if (progressEl) progressEl.textContent = '100% (Arrived)';
-                return;
-            }
-
-            const targetPt = routePathPoints[simWaypointIdx];
-            const lat = typeof targetPt.lat === 'function' ? targetPt.lat() : parseFloat(targetPt.lat);
-            const lng = typeof targetPt.lng === 'function' ? targetPt.lng() : parseFloat(targetPt.lng);
-
-            let bearing = 0;
-            if (lastSentCoords) {
-                bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
-                const iconRotate = document.getElementById('tenantRiderIconRotate');
-                if (iconRotate && Math.hypot(lat - lastSentCoords.lat, lng - lastSentCoords.lng) > 0.00001) {
-                    iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
-                }
-            }
-
-            currentRiderLatLng = { lat, lng };
-
-            if (riderMarker) {
-                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
-                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
-                } else {
-                    riderMarker.position = { lat, lng };
-                }
-            }
-
-            if (isTenantAutoFollow && mapInstance) {
-                mapInstance.panTo(currentRiderLatLng);
-            }
-
-            // Simulated speed calculation
-            const simSpeedMps = 10 * simSpeedMultiplier; // ~36-72 km/h
-            updateTelemetryHUD(lat, lng, 3, simSpeedMps, bearing);
-
-            // Update Progress in UI
-            const pct = Math.round((simWaypointIdx / (routePathPoints.length - 1)) * 100);
-            const progressEl = document.getElementById('simProgressLabel');
-            if (progressEl) progressEl.textContent = `${pct}% Progress`;
-
-            // Broadcast GPS coordinate to backend
-            sendLocationUpdate(lat, lng, 3);
-
-            simWaypointIdx++;
-        }, intervalMs);
-    }
-
-    function resetSimRoute() {
-        if (simIntervalId) clearInterval(simIntervalId);
-        simWaypointIdx = 0;
-        isSimulating = false;
-        const icon = document.getElementById('simPlayPauseIcon');
-        const txt = document.getElementById('simPlayPauseText');
-        const btn = document.getElementById('btnSimPlayPause');
-        if (icon) icon.textContent = 'play_arrow';
-        if (txt) txt.textContent = 'Start Simulation';
-        if (btn) btn.className = 'px-3 py-1.5 rounded-xl bg-purple-600 text-white text-xs font-bold hover:bg-purple-700 inline-flex items-center gap-1 shadow-2xs';
-        const progressEl = document.getElementById('simProgressLabel');
-        if (progressEl) progressEl.textContent = '0% Progress';
-
-        if (routePathPoints && routePathPoints.length > 0) {
-            const startPt = routePathPoints[0];
-            const lat = typeof startPt.lat === 'function' ? startPt.lat() : parseFloat(startPt.lat);
-            const lng = typeof startPt.lng === 'function' ? startPt.lng() : parseFloat(startPt.lng);
-            currentRiderLatLng = { lat, lng };
-            if (riderMarker) {
-                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
-                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
-                } else {
-                    riderMarker.position = { lat, lng };
-                }
-            }
-            if (mapInstance) mapInstance.panTo(currentRiderLatLng);
-            sendLocationUpdate(lat, lng, 3);
-        }
-    }
-
-    function forceRecalculateRoute() {
-        const etaEl = document.getElementById('hudEta');
-        if (etaEl) etaEl.textContent = 'Recalculating...';
-        fetchDeliveryRoute(currentRiderLatLng, destLatLng);
-    }
 
     function fetchDeliveryRoute(origin, destination) {
         lastTenantRouteOrigin = { lat: origin.lat, lng: origin.lng };
@@ -1083,56 +864,377 @@
     window.addEventListener('beforeunload', stopBroadcastingOnExit);
     window.addEventListener('pagehide', stopBroadcastingOnExit);
 
-    // Handle map click for Click-to-Pin Tool
-    function setupMapClickListener() {
-        if (!mapInstance) return;
-        mapInstance.addListener('click', (e) => {
-            if (!isClickPinActive || !e.latLng) return;
-            const lat = e.latLng.lat();
-            const lng = e.latLng.lng();
-
-            let bearing = 0;
-            if (lastSentCoords) {
-                bearing = calculateBearing(lastSentCoords.lat, lastSentCoords.lng, lat, lng);
-                const iconRotate = document.getElementById('tenantRiderIconRotate');
-                if (iconRotate) {
-                    iconRotate.style.transform = `rotate(${Math.round(bearing)}deg)`;
-                }
-            }
-
-            currentRiderLatLng = { lat, lng };
-
-            if (riderMarker) {
-                if (riderMarker.position && typeof riderMarker.position.lat === 'function') {
-                    riderMarker.setPosition(new google.maps.LatLng(lat, lng));
-                } else {
-                    riderMarker.position = { lat, lng };
-                }
-            }
-
-            if (isTenantAutoFollow) {
-                mapInstance.panTo(currentRiderLatLng);
-            }
-
-            updateTelemetryHUD(lat, lng, 3, 0, bearing);
-            sendLocationUpdate(lat, lng, 3);
-            fetchDeliveryRoute(currentRiderLatLng, destLatLng);
-        });
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
         if (typeof google !== 'undefined' && google.maps && !mapInstance) {
             window.initDeliveryDetailMap();
-            setupMapClickListener();
         }
     });
 
-    const origInitMap = window.initDeliveryDetailMap;
-    window.initDeliveryDetailMap = function() {
-        origInitMap();
-        setupMapClickListener();
-    };
+    // QR Code Scanner Handlers for Live Delivery View
+    const CURRENT_TRACKING_ID = <?= json_encode((string) ($delivery['tracking_id'] ?? '')) ?>;
+    const CURRENT_DELIVERY_STATUS = <?= json_encode((string) ($delivery['status'] ?? '')) ?>;
+    let deliveryDetailQrCode = null;
+    let currentDeliveryScanMode = 'camera';
+
+    function openDeliveryScanner() {
+        const modal = document.getElementById('deliveryDetailQrScannerModal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        resetScanResult();
+        switchDeliveryScanMode('camera');
+    }
+
+    function closeDeliveryScanner() {
+        const modal = document.getElementById('deliveryDetailQrScannerModal');
+        if (modal) modal.classList.add('hidden');
+        stopDeliveryCamera();
+        deliveryDetailQrCode = null;
+    }
+
+    function switchDeliveryScanMode(mode) {
+        currentDeliveryScanMode = mode;
+        const camBtn = document.getElementById('deliveryTabCameraBtn');
+        const fileBtn = document.getElementById('deliveryTabFileBtn');
+        const camBox = document.getElementById('deliveryCameraContainer');
+        const fileBox = document.getElementById('deliveryFileContainer');
+
+        if (mode === 'camera') {
+            if (camBtn) {
+                camBtn.classList.remove('text-on-surface-variant');
+                camBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-xs');
+            }
+            if (fileBtn) {
+                fileBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-xs');
+                fileBtn.classList.add('text-on-surface-variant');
+            }
+            if (camBox) camBox.classList.remove('hidden');
+            if (fileBox) fileBox.classList.add('hidden');
+            startDeliveryCamera();
+        } else {
+            if (fileBtn) {
+                fileBtn.classList.remove('text-on-surface-variant');
+                fileBtn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-xs');
+            }
+            if (camBtn) {
+                camBtn.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-xs');
+                camBtn.classList.add('text-on-surface-variant');
+            }
+            if (fileBox) fileBox.classList.remove('hidden');
+            if (camBox) camBox.classList.add('hidden');
+            stopDeliveryCamera();
+        }
+    }
+
+    function startDeliveryCamera() {
+        if (typeof Html5Qrcode === 'undefined') return;
+
+        if (window.isSecureContext === false && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            const statusEl = document.getElementById('scannerStatus');
+            if (statusEl) statusEl.textContent = 'Camera requires HTTPS or localhost. Please upload a photo or enter code manually.';
+            return;
+        }
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            const statusEl = document.getElementById('scannerStatus');
+            if (statusEl) statusEl.textContent = 'Camera is not supported on this browser context. Please upload a photo or enter code manually.';
+            return;
+        }
+
+        if (!deliveryDetailQrCode) {
+            deliveryDetailQrCode = new Html5Qrcode("delivery-detail-qr-reader");
+        }
+
+        const config = { fps: 12 };
+        deliveryDetailQrCode.start(
+            { facingMode: "environment" },
+            config,
+            (decodedText) => handleScannedCode(decodedText),
+            () => {}
+        ).catch(err => {
+            if (Html5Qrcode.getCameras) {
+                Html5Qrcode.getCameras().then(cameras => {
+                    if (cameras && cameras.length > 0) {
+                        deliveryDetailQrCode.start(
+                            cameras[0].id,
+                            config,
+                            (decodedText) => handleScannedCode(decodedText),
+                            () => {}
+                        ).catch(() => {
+                            const statusEl = document.getElementById('scannerStatus');
+                            if (statusEl) statusEl.textContent = 'Camera unavailable. Please upload a photo or enter code manually.';
+                        });
+                    } else {
+                        const statusEl = document.getElementById('scannerStatus');
+                        if (statusEl) statusEl.textContent = 'No camera found. Please upload a photo or enter code manually.';
+                    }
+                }).catch(() => {
+                    const statusEl = document.getElementById('scannerStatus');
+                    if (statusEl) statusEl.textContent = 'Camera permission denied or unavailable.';
+                });
+            } else {
+                const statusEl = document.getElementById('scannerStatus');
+                if (statusEl) statusEl.textContent = 'Camera unavailable. Please upload a photo or enter code manually.';
+            }
+        });
+    }
+
+    function stopDeliveryCamera() {
+        if (deliveryDetailQrCode) {
+            try {
+                if (deliveryDetailQrCode.isScanning) {
+                    deliveryDetailQrCode.stop().catch(() => {});
+                }
+            } catch (e) {}
+        }
+    }
+
+    function resetScanResult() {
+        const box = document.getElementById('scanResultBox');
+        if (box) box.classList.add('hidden');
+        const sub = document.getElementById('scanResultSub');
+        if (sub) sub.textContent = '';
+        const photoStatus = document.getElementById('photoScanStatus');
+        if (photoStatus) photoStatus.classList.add('hidden');
+    }
+
+    function handleScannedCode(rawText) {
+        if (!rawText) return;
+        if (deliveryDetailQrCode) {
+            try { deliveryDetailQrCode.pause(); } catch (e) {}
+        }
+        verifyScannedCode(rawText);
+    }
+
+    function handleDeliveryPhotoUpload(input) {
+        if (!input || !input.files || input.files.length === 0) return;
+        const file = input.files[0];
+        const statusEl = document.getElementById('photoScanStatus');
+        if (statusEl) {
+            statusEl.className = 'text-xs text-center text-primary font-bold animate-pulse';
+            statusEl.textContent = 'Scanning image for QR code...';
+            statusEl.classList.remove('hidden');
+        }
+
+        if (!deliveryDetailQrCode) {
+            deliveryDetailQrCode = new Html5Qrcode("delivery-detail-qr-reader");
+        }
+
+        deliveryDetailQrCode.scanFile(file, true)
+            .then(decodedText => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-emerald-600 font-bold';
+                    statusEl.textContent = 'QR Code detected! Verifying...';
+                }
+                handleScannedCode(decodedText);
+            })
+            .catch(err => {
+                if (statusEl) {
+                    statusEl.className = 'text-xs text-center text-red-600 font-bold';
+                    statusEl.textContent = 'Could not detect a QR code in this photo. Please ensure good lighting or enter the code manually.';
+                    statusEl.classList.remove('hidden');
+                }
+            });
+    }
+
+    function submitManualTracking() {
+        const val = (document.getElementById('manualTrackingInput').value || '').trim();
+        if (!val) return;
+        verifyScannedCode(val);
+    }
+
+    function verifyScannedCode(rawCode) {
+        const resultBox = document.getElementById('scanResultBox');
+        const msgEl = document.getElementById('scanResultMessage');
+        const subEl = document.getElementById('scanResultSub');
+        const iconEl = document.getElementById('scanResultIcon');
+        const btnContainer = document.getElementById('scanActionBtnContainer');
+        if (!resultBox || !msgEl || !iconEl || !btnContainer) return;
+
+        resultBox.classList.remove('hidden', 'bg-red-50', 'text-red-800', 'border-red-200', 'bg-emerald-50', 'text-emerald-800', 'border-emerald-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200');
+        btnContainer.innerHTML = '';
+
+        let cleaned = (rawCode || '').trim();
+        let matched = false;
+
+        try {
+            if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+                const parsed = JSON.parse(cleaned);
+                cleaned = parsed.tracking_id || parsed.tracking || parsed.order_number || cleaned;
+            }
+        } catch (e) {}
+
+        const cleanExpected = CURRENT_TRACKING_ID.replace(/^#/, '').trim().toLowerCase();
+        const cleanActual = cleaned.replace(/^#/, '').trim().toLowerCase();
+
+        if (cleanActual === cleanExpected || cleanActual.includes(cleanExpected) || cleanExpected.includes(cleanActual)) {
+            matched = true;
+        }
+
+        if (matched) {
+            resultBox.classList.add('bg-emerald-50', 'text-emerald-800', 'border-emerald-200');
+            iconEl.textContent = 'verified';
+            iconEl.className = 'material-symbols-outlined text-[24px] text-emerald-600 mt-0.5';
+            msgEl.textContent = `QR Code Verified: #${CURRENT_TRACKING_ID}`;
+            if (subEl) subEl.textContent = 'Customer pass and package tracking confirmed successfully.';
+
+            if (CURRENT_DELIVERY_STATUS !== 'delivered') {
+                btnContainer.innerHTML = `
+                    <button type="button" 
+                            onclick="confirmDeliveryCompletion()" 
+                            class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95">
+                        <span class="material-symbols-outlined text-[18px]">task_alt</span>
+                        <span>Confirm &amp; Mark as Delivered</span>
+                    </button>
+                `;
+            } else {
+                btnContainer.innerHTML = `
+                    <div class="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[16px]">check</span>
+                        <span>This package has already been marked as Delivered.</span>
+                    </div>
+                `;
+            }
+        } else {
+            resultBox.classList.add('bg-amber-50', 'text-amber-800', 'border-amber-200');
+            iconEl.textContent = 'warning';
+            iconEl.className = 'material-symbols-outlined text-[24px] text-amber-600 mt-0.5';
+            msgEl.textContent = `Scanned Code: ${cleaned}`;
+            if (subEl) subEl.textContent = `Does not match expected #${CURRENT_TRACKING_ID}. Please ensure you are scanning the customer's pass for this specific package.`;
+            btnContainer.innerHTML = `
+                <button type="button" 
+                        onclick="resetScanResult(); if(currentDeliveryScanMode==='camera') startDeliveryCamera();" 
+                        class="w-full py-2 px-3 bg-amber-600 text-white font-bold text-xs rounded-xl hover:bg-amber-700 transition-all flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                    <span>Scan Again</span>
+                </button>
+            `;
+        }
+    }
+
+    function confirmDeliveryCompletion() {
+        const sel = document.getElementById('deliveryStatusSelect');
+        const form = document.getElementById('deliveryStatusForm');
+        if (sel && form) {
+            sel.value = 'delivered';
+            form.submit();
+        }
+    }
 </script>
+
+<!-- Floating Delivery QR Code Scanner Modal -->
+<div id="deliveryDetailQrScannerModal" class="hidden fixed inset-0 bg-black/75 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-3xl p-6 sm:p-7 max-w-md w-full border border-outline-variant/30 shadow-2xl space-y-4 relative">
+        <div class="flex items-center justify-between border-b border-outline-variant/20 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-[24px]">qr_code_scanner</span>
+                </div>
+                <div>
+                    <h3 class="text-base font-bold text-on-surface">Scan Delivery QR Pass</h3>
+                    <p class="text-xs text-on-surface-variant font-mono">Expected: <strong class="text-primary">#<?= esc($delivery['tracking_id']) ?></strong></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeDeliveryScanner()" class="p-1.5 text-outline hover:text-on-surface rounded-full hover:bg-surface-container transition-colors">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!-- Scan Mode Tabs -->
+        <div class="flex items-center gap-1 p-1 bg-surface-container-low rounded-xl border border-outline-variant/20">
+            <button type="button" id="deliveryTabCameraBtn" onclick="switchDeliveryScanMode('camera')" class="flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all bg-surface-container-lowest text-primary shadow-xs flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">photo_camera</span>
+                <span>Live Camera</span>
+            </button>
+            <button type="button" id="deliveryTabFileBtn" onclick="switchDeliveryScanMode('file')" class="flex-1 py-2 px-2 rounded-lg text-xs font-bold transition-all text-on-surface-variant hover:text-on-surface flex items-center justify-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                <span>Scan from Photo</span>
+            </button>
+        </div>
+
+        <!-- Mode 1: Live Camera Viewfinder -->
+        <div id="deliveryCameraContainer" class="space-y-2">
+            <div class="rounded-2xl overflow-hidden bg-black aspect-square relative flex items-center justify-center border border-outline-variant/30 shadow-inner">
+                <div id="delivery-detail-qr-reader" class="w-full h-full"></div>
+                <div class="qr-viewfinder-overlay pointer-events-none absolute inset-4 border border-white/20 rounded-xl">
+                    <div class="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+                    <div class="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+                    <div class="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+                    <div class="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+                    <div class="qr-laser-line"></div>
+                </div>
+            </div>
+            <p id="scannerStatus" class="text-xs text-center text-on-surface-variant font-medium">Point camera directly at customer's pickup pass, doorstep QR, or printed receipt</p>
+        </div>
+
+        <!-- Mode 2: Scan from Photo / Image File -->
+        <div id="deliveryFileContainer" class="hidden space-y-2">
+            <label for="deliveryPhotoUpload" class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-primary/40 hover:border-primary rounded-2xl bg-primary/5 hover:bg-primary/10 transition-all cursor-pointer text-center group">
+                <span class="p-3 bg-primary/10 text-primary rounded-2xl material-symbols-outlined text-3xl group-hover:scale-110 transition-transform mb-2">image_search</span>
+                <span class="text-xs font-bold text-on-surface">Click to Select QR Photo / Take Photo</span>
+                <span class="text-[11px] text-on-surface-variant mt-1">Upload an image of the recipient's QR pass</span>
+                <input id="deliveryPhotoUpload" type="file" accept="image/*" class="hidden" onchange="handleDeliveryPhotoUpload(this)">
+            </label>
+            <p id="photoScanStatus" class="text-xs text-center text-on-surface-variant font-medium hidden"></p>
+        </div>
+
+        <!-- Result Box -->
+        <div id="scanResultBox" class="hidden p-3.5 rounded-2xl border space-y-2.5 transition-all">
+            <div class="flex items-start gap-2.5">
+                <span id="scanResultIcon" class="material-symbols-outlined text-[22px] mt-0.5">check_circle</span>
+                <div class="flex-1 min-w-0">
+                    <p id="scanResultMessage" class="text-xs font-bold leading-relaxed"></p>
+                    <p id="scanResultSub" class="text-[11px] text-on-surface-variant mt-0.5"></p>
+                </div>
+            </div>
+            <div id="scanActionBtnContainer" class="pt-1"></div>
+        </div>
+
+        <!-- Manual Tracking ID Input Fallback -->
+        <div class="pt-3 border-t border-outline-variant/20 space-y-1.5">
+            <label class="text-[11px] font-bold text-outline uppercase tracking-wider block">Manual Code / Tracking Entry</label>
+            <div class="flex items-center gap-1.5">
+                <input id="manualTrackingInput" 
+                       type="text" 
+                       placeholder="e.g. <?= esc($delivery['tracking_id']) ?>" 
+                       class="flex-1 px-3 py-2 bg-surface-container-low border border-outline-variant/40 rounded-xl text-xs font-mono font-bold focus:ring-2 focus:ring-primary focus:outline-none">
+                <button type="button" onclick="submitManualTracking()" class="px-3.5 py-2 bg-primary text-on-primary font-bold text-xs rounded-xl hover:bg-primary/90 transition-all shrink-0">
+                    Verify
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+#delivery-detail-qr-reader #qr-shaded-region {
+    display: none !important;
+}
+#delivery-detail-qr-reader {
+    border: none !important;
+}
+#delivery-detail-qr-reader video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 1rem !important;
+}
+.qr-laser-line {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    box-shadow: 0 0 10px #3b82f6;
+    animation: qrLaserScan 2s ease-in-out infinite alternate;
+}
+@keyframes qrLaserScan {
+    0% { top: 12px; }
+    100% { top: calc(100% - 14px); }
+}
+</style>
+
+<!-- HTML5 QR Code library -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <!-- Google Maps Platform JS API -->
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= esc(env('GOOGLE_MAPS_API_KEY')) ?>&libraries=marker,geometry&loading=async&callback=initDeliveryDetailMap" async defer></script>

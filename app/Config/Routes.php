@@ -114,6 +114,7 @@ $routes->group('tenant', ['filter' => 'roleAccess:tenant'], function ($routes) {
     $routes->get('withdrawals', 'Tenant::withdrawals');
     $routes->get('analytics', 'Tenant::analytics');
     $routes->get('analytics/data', 'Tenant::analyticsData');
+    $routes->get('analytics/seasonal', 'Tenant::seasonalAnalytics');
     $routes->get('settings', 'Tenant::settings');
     $routes->get('archive', 'Tenant::archive');
     $routes->get('dashboard/sales', 'Tenant::dashboardSalesData');

@@ -9,14 +9,14 @@
     <div class="p-md rounded-xl bg-error-container text-on-error-container text-sm font-medium mb-lg"><?= esc(session()->getFlashdata('error')) ?></div>
 <?php endif; ?>
 
-<div class="flex flex-1 flex-col md:flex-row max-w-container-max mx-auto w-full">
+<div class="flex flex-1 flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'printing']) ?>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-md md:p-xl overflow-y-auto">
+    <main class="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
 
-        <div class="flex flex-col gap-gutter">
+        <div class="max-w-6xl mx-auto flex flex-col gap-gutter">
 
             <?php if (!empty($requests)): ?>
 
@@ -365,10 +365,6 @@
     </main>
 
 </div>
-
-<button type="button" class="hidden md:flex fixed bottom-8 left-8 w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-lg border border-outline-variant/30 items-center justify-center hover:scale-110 transition-transform active:scale-95 z-50 group" aria-label="Go Back" onclick="window.history.back()">
-    <span class="material-symbols-outlined text-[32px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-</button>
 
 <!-- Track Progress Modal -->
 <div id="track-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-md">

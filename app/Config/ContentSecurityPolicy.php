@@ -99,6 +99,7 @@ class ContentSecurityPolicy extends BaseConfig
         'https://checkout.paymongo.com',
         'https://unpkg.com',
         'https://cdnjs.cloudflare.com',
+        'https://cdn.jsdelivr.net',
         'https://maps.googleapis.com',
         'https://places.googleapis.com',
         'https://routes.googleapis.com',

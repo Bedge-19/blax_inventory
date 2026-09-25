@@ -16,7 +16,7 @@
     $memberSince = date('F Y', strtotime($user['created_at'] ?? 'now'));
 ?>
 
-<div class="flex-1 flex flex-col md:flex-row max-w-container-max mx-auto w-full">
+<div class="flex-1 flex flex-col md:flex-row w-full min-h-[calc(100vh-72px)] bg-slate-50/50">
 
     <?= view('components/profile_sidebar', ['activeNav' => 'overview']) ?>
 
@@ -226,11 +226,7 @@
 
 </div>
 
-<button aria-label="Go Back" onclick="window.history.back()" class="hidden md:flex fixed bottom-lg left-lg w-16 h-16 bg-surface-container-highest text-on-surface rounded-full shadow-xl items-center justify-center z-50 hover:scale-105 transition-transform duration-200 border border-outline-variant">
 
-    <span class="material-symbols-outlined text-[32px]">arrow_back</span>
-
-</button>
 
 <!-- Edit Profile Modal -->
 <div id="edit-profile-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-lg">
