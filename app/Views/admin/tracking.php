@@ -119,16 +119,20 @@
                             <!-- Shop Card Header -->
                             <div class="p-md border-b border-outline-variant/20 bg-surface-container-low/40 flex items-center justify-between gap-sm">
                                 <div class="flex items-center gap-sm min-w-0">
-                                    <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
-                                        <?php if (!empty($shop['shop_logo'])): ?>
-                                            <img src="<?= esc(logo_url($shop['shop_logo'])) ?>" alt="<?= esc($shop['shop_name']) ?>" class="w-full h-full object-cover" />
+                                    <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs relative">
+                                        <?php 
+                                        $rawShopLogo = trim((string)($shop['shop_logo'] ?? ''));
+                                        $resolvedShopLogo = $rawShopLogo !== '' ? logo_url($rawShopLogo) : '';
+                                        ?>
+                                        <?php if (!empty($resolvedShopLogo)): ?>
+                                            <img src="<?= esc($resolvedShopLogo) ?>" alt="" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'material-symbols-outlined text-primary text-xl\'>storefront</span>';" />
                                         <?php else: ?>
                                             <span class="material-symbols-outlined text-primary text-xl">storefront</span>
                                         <?php endif; ?>
                                     </div>
                                     <div class="min-w-0">
                                         <h3 class="text-sm font-bold text-on-surface truncate"><?= esc($shop['shop_name']) ?></h3>
-                                        <p class="text-[11px] text-on-surface-variant">Polomolok Storefront</p>
+                                        <p class="text-[11px] text-on-surface-variant">Merchant Partner</p>
                                     </div>
                                 </div>
                                 <span class="shrink-0 px-2.5 py-1 bg-primary/10 text-primary border border-primary/20 text-xs font-bold rounded-full">
@@ -574,8 +578,18 @@
 
         let html = '<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">';
         groupedShops.forEach(shop => {
-            const shopLogo = shop.shop_logo 
-                ? `<img src="${encodeURI('<?= base_url() ?>/' + shop.shop_logo)}" alt="${escapeHtml(shop.shop_name)}" class="w-full h-full object-cover" />`
+            const rawLogo = (shop.shop_logo || '').trim();
+            let logoSrc = '';
+            if (rawLogo) {
+                if (rawLogo.startsWith('http://') || rawLogo.startsWith('https://')) {
+                    logoSrc = rawLogo;
+                } else {
+                    logoSrc = '<?= rtrim(base_url(), '/') ?>/' + rawLogo.replace(/^\/+/, '');
+                }
+            }
+
+            const shopLogo = logoSrc 
+                ? `<img src="${encodeURI(logoSrc)}" alt="" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\\\'material-symbols-outlined text-primary text-xl\\\'>storefront</span>';" />`
                 : `<span class="material-symbols-outlined text-primary text-xl">storefront</span>`;
 
             let deliveriesHtml = '';

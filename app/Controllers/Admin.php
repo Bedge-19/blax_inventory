@@ -259,10 +259,12 @@ class Admin extends BaseController
             }
 
             if (!isset($groupedShops[$sId])) {
+                $rawLogo = (string) ($pin['shop_logo'] ?? '');
+                $resolvedLogo = $rawLogo !== '' ? logo_url($rawLogo) : '';
                 $groupedShops[$sId] = [
                     'shop_id'    => $sId,
                     'shop_name'  => $sName,
-                    'shop_logo'  => $pin['shop_logo'] ?? '',
+                    'shop_logo'  => $resolvedLogo,
                     'shop_lat'   => $pin['shop_lat'] ?? null,
                     'shop_lng'   => $pin['shop_lng'] ?? null,
                     'count'      => 0,
@@ -322,10 +324,12 @@ class Admin extends BaseController
             }
 
             if (!isset($groupedShops[$sId])) {
+                $rawLogo = (string) ($pin['shop_logo'] ?? '');
+                $resolvedLogo = $rawLogo !== '' ? logo_url($rawLogo) : '';
                 $groupedShops[$sId] = [
                     'shop_id'    => $sId,
                     'shop_name'  => $sName,
-                    'shop_logo'  => $pin['shop_logo'] ?? '',
+                    'shop_logo'  => $resolvedLogo,
                     'shop_lat'   => $pin['shop_lat'] ?? null,
                     'shop_lng'   => $pin['shop_lng'] ?? null,
                     'count'      => 0,
