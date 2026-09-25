@@ -5,12 +5,47 @@
 
 <title><?= esc($title ?? 'Blax') ?></title>
 
-<!-- Early Theme Switcher Initializer (Prevents FOUC) -->
+<!-- Early Theme Switcher Initializer (Defaults to Light Mode, Prevents FOUC) -->
 <script>
 (function() {
+    window.updateThemeToggleIcons = function() {
+        const isDark = document.documentElement.classList.contains('dark');
+        document.querySelectorAll('.theme-toggle-btn').forEach(function(btn) {
+            const icon = btn.querySelector('.theme-toggle-icon, .material-symbols-outlined');
+            const text = btn.querySelector('.theme-toggle-text, .theme-mode-label');
+            if (icon) {
+                icon.textContent = isDark ? 'light_mode' : 'dark_mode';
+            }
+            if (text) {
+                text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            }
+            btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+            btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
+        });
+    };
+
+    window.setBlaxTheme = function(theme) {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            try { localStorage.setItem('blax_theme', 'dark'); } catch(e) {}
+        } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            try { localStorage.setItem('blax_theme', 'light'); } catch(e) {}
+        }
+        window.updateThemeToggleIcons();
+        window.dispatchEvent(new CustomEvent('blax:theme-changed', { detail: { theme: theme } }));
+    };
+
+    window.toggleBlaxTheme = function() {
+        const isDark = document.documentElement.classList.contains('dark');
+        window.setBlaxTheme(isDark ? 'light' : 'dark');
+    };
+
     try {
         const savedTheme = localStorage.getItem('blax_theme');
-        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        if (savedTheme === 'dark') {
             document.documentElement.classList.add('dark');
             document.documentElement.classList.remove('light');
         } else {
@@ -268,11 +303,11 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
         @media (min-width: 1024px) { .site-container { padding-left: 2rem; padding-right: 2rem; } }
 
         /* Dropdown tap helpers */
-        .dropdown-menu { opacity: 0; visibility: hidden; transition: opacity 0.15s, visibility 0.15s; }
-        .dropdown-menu.open { opacity: 1; visibility: visible; }
+        .dropdown-menu { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 0.15s ease, visibility 0.15s ease, transform 0.15s ease; }
+        .dropdown-menu.open { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
         @media (hover: hover) and (pointer: fine) {
             .dropdown-toggle:hover + .dropdown-menu,
-            .dropdown-menu:hover { opacity: 1; visibility: visible; }
+            .dropdown-menu:hover { opacity: 1; visibility: visible; pointer-events: auto; }
         }
         .profile-dropdown-toggle { display: inline-flex; }
     </style>

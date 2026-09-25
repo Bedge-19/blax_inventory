@@ -36,11 +36,11 @@
         window.setBlaxTheme(isDark ? 'light' : 'dark');
     };
 
-    function updateThemeToggleIcons() {
+    window.updateThemeToggleIcons = function () {
         const isDark = document.documentElement.classList.contains('dark');
         document.querySelectorAll('.theme-toggle-btn').forEach(function (btn) {
             const icon = btn.querySelector('.theme-toggle-icon, .material-symbols-outlined');
-            const text = btn.querySelector('.theme-toggle-text');
+            const text = btn.querySelector('.theme-toggle-text, .theme-mode-label');
             if (icon) {
                 icon.textContent = isDark ? 'light_mode' : 'dark_mode';
             }
@@ -50,7 +50,21 @@
             btn.setAttribute('title', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
             btn.setAttribute('aria-label', isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode');
         });
-    }
+    };
+
+    // Global event delegation for theme toggle buttons (handles static and dynamically added buttons)
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.theme-toggle-btn');
+        if (btn) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.toggleBlaxTheme();
+        }
+    });
+
+    try {
+        window.updateThemeToggleIcons();
+    } catch (e) {}
 
     // ── 1. CSRF & Fetch Interceptor ───────────────────────────────────
     window.getCsrfToken = function () {
@@ -416,7 +430,8 @@
         try {
             const customerProfileToggle = document.getElementById('profile-dropdown-toggle');
             const customerProfileDropdown = document.getElementById('profile-dropdown');
-            if (customerProfileToggle && customerProfileDropdown) {
+            if (customerProfileToggle && customerProfileDropdown && !customerProfileToggle.dataset.profileBound) {
+                customerProfileToggle.dataset.profileBound = 'true';
                 let isOpen = false;
                 const setOpen = function (open) {
                     isOpen = open;
@@ -425,26 +440,36 @@
                     } else {
                         customerProfileDropdown.classList.remove('open');
                     }
-                    customerProfileToggle.setAttribute('aria-expanded', open);
+                    customerProfileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
                     customerProfileToggle.classList.toggle('ring-2', open);
                     customerProfileToggle.classList.toggle('ring-primary', open);
                 };
 
                 customerProfileToggle.addEventListener('click', function (e) {
+                    e.preventDefault();
                     e.stopPropagation();
                     setOpen(!isOpen);
                 });
+
+                customerProfileDropdown.addEventListener('click', function (e) {
+                    // Stop bubbling so clicks inside menu don't trigger document close unless it's a link
+                    if (!e.target.closest('a')) {
+                        e.stopPropagation();
+                    }
+                });
+
                 document.addEventListener('click', function () {
-                    setOpen(false);
+                    if (isOpen) setOpen(false);
                 });
                 document.addEventListener('keydown', function (e) {
-                    if (e.key === 'Escape') setOpen(false);
+                    if (e.key === 'Escape' && isOpen) setOpen(false);
                 });
             }
 
             const tenantProfileToggle = document.getElementById('tenant-profile-toggle');
             const tenantProfileDropdown = document.getElementById('tenant-profile-dropdown');
-            if (tenantProfileToggle && tenantProfileDropdown) {
+            if (tenantProfileToggle && tenantProfileDropdown && !tenantProfileToggle.dataset.profileBound) {
+                tenantProfileToggle.dataset.profileBound = 'true';
                 let isTenantOpen = false;
                 const setTenantOpen = function (open) {
                     isTenantOpen = open;
@@ -453,18 +478,56 @@
                     } else {
                         tenantProfileDropdown.classList.remove('open');
                     }
-                    tenantProfileToggle.setAttribute('aria-expanded', open);
+                    tenantProfileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
                 };
 
                 tenantProfileToggle.addEventListener('click', function (e) {
+                    e.preventDefault();
                     e.stopPropagation();
                     setTenantOpen(!isTenantOpen);
                 });
+
+                tenantProfileDropdown.addEventListener('click', function (e) {
+                    if (!e.target.closest('a')) {
+                        e.stopPropagation();
+                    }
+                });
+
                 document.addEventListener('click', function () {
-                    setTenantOpen(false);
+                    if (isTenantOpen) setTenantOpen(false);
+                });
+            const adminProfileToggle = document.getElementById('admin-profile-toggle');
+            const adminProfileMenu = document.getElementById('admin-profile-quickmenu');
+            if (adminProfileToggle && adminProfileMenu && !adminProfileToggle.dataset.profileBound) {
+                adminProfileToggle.dataset.profileBound = 'true';
+                let isAdminOpen = false;
+                const setAdminOpen = function (open) {
+                    isAdminOpen = open;
+                    if (open) {
+                        adminProfileMenu.classList.remove('hidden');
+                    } else {
+                        adminProfileMenu.classList.add('hidden');
+                    }
+                    adminProfileToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                };
+
+                adminProfileToggle.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setAdminOpen(!isAdminOpen);
+                });
+
+                adminProfileMenu.addEventListener('click', function (e) {
+                    if (!e.target.closest('a')) {
+                        e.stopPropagation();
+                    }
+                });
+
+                document.addEventListener('click', function () {
+                    if (isAdminOpen) setAdminOpen(false);
                 });
                 document.addEventListener('keydown', function (e) {
-                    if (e.key === 'Escape') setTenantOpen(false);
+                    if (e.key === 'Escape' && isAdminOpen) setAdminOpen(false);
                 });
             }
         } catch (e) {}

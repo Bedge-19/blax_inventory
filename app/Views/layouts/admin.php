@@ -268,7 +268,7 @@
 
                     <!-- Quick Admin Dropdown -->
                     <div class="relative">
-                        <button type="button" class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-surface-container border border-outline-variant/30 transition-colors" onclick="document.getElementById('admin-profile-quickmenu').classList.toggle('hidden')">
+                        <button id="admin-profile-toggle" type="button" class="flex items-center gap-2 pl-1 pr-2 py-1 rounded-xl hover:bg-surface-container border border-outline-variant/30 transition-colors" aria-haspopup="true" aria-expanded="false" aria-label="Admin menu">
                             <div class="w-7 h-7 rounded-lg bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 flex items-center justify-center font-bold text-xs shrink-0">
                                 <?= esc($adminInitials) ?>
                             </div>

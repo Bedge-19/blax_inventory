@@ -351,49 +351,7 @@
 
     <?= $this->renderSection('scripts') ?>
 
-    <script>
-    (function () {
-        var sb = document.getElementById('sidebar-toggle');
-        var closeSb = document.getElementById('tenant-sidebar-close');
-        var aside = document.getElementById('tenant-sidebar');
-        var overlay = document.getElementById('tenant-sidebar-overlay');
-        
-        function openSidebar() {
-            if (!aside) return;
-            aside.classList.remove('hidden');
-            aside.classList.add('flex', 'z-50');
-            if (overlay) overlay.classList.add('active');
-            document.body.classList.add('mobile-nav-open');
-        }
-        
-        function closeSidebar() {
-            if (!aside) return;
-            aside.classList.add('hidden');
-            aside.classList.remove('flex', 'z-50');
-            if (overlay) overlay.classList.remove('active');
-            document.body.classList.remove('mobile-nav-open');
-        }
-        
-        if (sb) sb.addEventListener('click', openSidebar);
-        if (closeSb) closeSb.addEventListener('click', closeSidebar);
-        if (overlay) overlay.addEventListener('click', closeSidebar);
 
-        // Tenant profile dropdown toggle
-        var tdd = document.getElementById('tenant-profile-dropdown');
-        var tdt = document.getElementById('tenant-profile-toggle');
-        if (tdd && tdt) {
-            var tdo = false;
-            function tds(open) {
-                tdo = open;
-                if (open) tdd.classList.add('open'); else tdd.classList.remove('open');
-                tdt.setAttribute('aria-expanded', open);
-            }
-            tdt.addEventListener('click', function (e) { e.stopPropagation(); tds(!tdo); });
-            document.addEventListener('click', function () { tds(false); });
-            document.addEventListener('keydown', function (e) { if (e.key === 'Escape') tds(false); });
-        }
-    })();
-    </script>
 
     <!-- Real-time Order & Printing Notification Toast Container -->
     <div id="blax-tenant-toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-sm w-full"></div>
