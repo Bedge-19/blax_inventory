@@ -370,15 +370,16 @@ class Admin extends BaseController
             session_write_close();
         }
 
-        $lastOrderId = (int) $this->request->getGet('last_order_id');
-        $lastPrintingId = (int) $this->request->getGet('last_printing_id');
+        $rawLastOrderId = $this->request->getGet('last_order_id');
+        $rawLastPrintingId = $this->request->getGet('last_printing_id');
 
         $orderModel = new \App\Models\OrderModel();
         $printingModel = new \App\Models\PrintingRequestModel();
 
         // 1. Fetch new orders for admin across all shops with a single JOIN query
         $newOrders = [];
-        if ($lastOrderId > 0) {
+        if ($rawLastOrderId !== null && $rawLastOrderId !== '') {
+            $lastOrderId = (int) $rawLastOrderId;
             $raw = $orderModel->select('orders.*, shops.shop_name, users.first_name, users.last_name')
                 ->join('shops', 'shops.id = orders.shop_id', 'left')
                 ->join('users', 'users.id = orders.customer_id', 'left')
@@ -406,7 +407,8 @@ class Admin extends BaseController
 
         // 2. Fetch new printing requests across all shops with a single JOIN query
         $newPrinting = [];
-        if ($lastPrintingId > 0) {
+        if ($rawLastPrintingId !== null && $rawLastPrintingId !== '') {
+            $lastPrintingId = (int) $rawLastPrintingId;
             $rawPr = $printingModel->select('printing_requests.*, shops.shop_name, users.first_name, users.last_name')
                 ->join('shops', 'shops.id = printing_requests.shop_id', 'left')
                 ->join('users', 'users.id = printing_requests.customer_id', 'left')
