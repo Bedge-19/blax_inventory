@@ -121,7 +121,7 @@
                                 <div class="flex items-center gap-sm min-w-0">
                                     <div class="w-10 h-10 rounded-xl bg-surface-container-high border border-outline-variant/30 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
                                         <?php if (!empty($shop['shop_logo'])): ?>
-                                            <img src="<?= esc(base_url($shop['shop_logo'])) ?>" alt="<?= esc($shop['shop_name']) ?>" class="w-full h-full object-cover" />
+                                            <img src="<?= esc(logo_url($shop['shop_logo'])) ?>" alt="<?= esc($shop['shop_name']) ?>" class="w-full h-full object-cover" />
                                         <?php else: ?>
                                             <span class="material-symbols-outlined text-primary text-xl">storefront</span>
                                         <?php endif; ?>

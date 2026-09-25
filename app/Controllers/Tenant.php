@@ -3247,7 +3247,16 @@ class Tenant extends BaseController
                 }
             }
         }
-}
+
+        // 3. Ensure at least one image is marked primary for this product
+        $hasPrimary = $imageModel->where('product_id', $productId)->where('is_primary', 1)->countAllResults() > 0;
+        if (!$hasPrimary) {
+            $firstImage = $imageModel->where('product_id', $productId)->orderBy('sort_order', 'ASC')->orderBy('id', 'ASC')->first();
+            if ($firstImage) {
+                $imageModel->update($firstImage['id'], ['is_primary' => 1]);
+            }
+        }
+    }
 
     /**
      * Save product variants submitted via repeatable form fields.
@@ -4012,8 +4021,7 @@ class Tenant extends BaseController
 
         $db      = \Config\Database::connect();
         $builder = $db->table('products p')
-            ->select('p.id, p.name, p.price, p.stock_quantity, p.sku, p.category_id, pi.image_url')
-            ->join('product_images pi', 'pi.product_id = p.id AND pi.is_primary = 1', 'left')
+            ->select('p.id, p.name, p.price, p.stock_quantity, p.sku, p.category_id, (SELECT image_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1) as image_url', false)
             ->where('p.shop_id', $shopId)
             ->where('p.status', 'active')
             ->where('p.deleted_at IS NULL')
@@ -4030,7 +4038,7 @@ class Tenant extends BaseController
             ->groupEnd();
         }
 
-        $products = $builder->limit(20)->get()->getResultArray();
+        $products = $builder->limit(100)->get()->getResultArray();
 
         return $this->response->setJSON([
             'success'  => true,
@@ -4040,7 +4048,7 @@ class Tenant extends BaseController
                 'price'          => (float) $p['price'],
                 'stock_quantity' => (int) $p['stock_quantity'],
                 'sku'            => $p['sku'] ?? '',
-                'image_url'      => !empty($p['image_url']) ? base_url($p['image_url']) : null,
+                'image_url'      => !empty($p['image_url']) ? product_image_url($p['image_url'], 'card') : null,
             ], $products),
         ]);
     }

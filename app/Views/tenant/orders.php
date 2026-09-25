@@ -229,7 +229,7 @@
                                     <div class="w-9 h-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-xs font-bold shrink-0 shadow-2xs relative overflow-hidden">
                                         <span><?= esc($custInitials) ?></span>
                                         <?php if ($custProfileImg !== ''): ?>
-                                            <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(base_url($custProfileImg)) ?>" alt="<?= esc($custName) ?> avatar" loading="lazy" onerror="this.remove();">
+                                            <img class="absolute inset-0 w-full h-full object-cover rounded-full" src="<?= esc(profile_image_url($custProfileImg)) ?>" alt="<?= esc($custName) ?> avatar" loading="lazy" onerror="this.remove();">
                                         <?php endif; ?>
                                     </div>
                                     <span class="font-bold text-sm text-on-surface truncate"><?= esc($custName !== '' ? $custName : 'Customer') ?></span>
@@ -264,7 +264,7 @@
                                         <div class="flex items-center justify-between gap-2 text-xs">
                                              <div class="flex items-center gap-2 min-w-0 flex-1">
                                                 <?php if (!empty($it['product_image'])): ?>
-                                                    <img src="<?= esc(base_url($it['product_image'])) ?>" class="w-7 h-7 rounded-lg object-cover border border-outline-variant/20 shrink-0" alt="">
+                                                    <img src="<?= esc(product_image_url($it['product_image'], 'thumbnail')) ?>" class="w-7 h-7 rounded-lg object-cover border border-outline-variant/20 shrink-0" alt="">
                                                 <?php else: ?>
                                                     <span class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center shrink-0 text-outline text-[14px] material-symbols-outlined">inventory_2</span>
                                                 <?php endif; ?>

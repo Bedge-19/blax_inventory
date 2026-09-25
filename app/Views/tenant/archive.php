@@ -271,7 +271,7 @@
                                     <div class="flex items-center gap-2">
                                         <div class="w-7 h-7 rounded-full bg-surface-container-highest text-on-surface-variant flex items-center justify-center text-[11px] font-bold overflow-hidden shrink-0">
                                             <?php if ($archiverImage !== ''): ?>
-                                                <img class="w-full h-full object-cover" src="<?= esc(base_url($archiverImage)) ?>" alt="avatar" onerror="this.remove()">
+                                                <img class="w-full h-full object-cover" src="<?= esc(profile_image_url($archiverImage)) ?>" alt="avatar" onerror="this.remove()">
                                             <?php else: ?>
                                                 <span><?= esc($archiverInitials) ?></span>
                                             <?php endif; ?>

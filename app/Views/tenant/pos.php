@@ -281,7 +281,7 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
                                         <div class="flex items-center gap-2.5 min-w-0 flex-1">
                                             <?php $itemImg = trim((string) ($oit['gallery_image'] ?? '')); ?>
                                             <?php if ($itemImg !== ''): ?>
-                                                <img src="<?= esc(base_url($itemImg)) ?>" alt="<?= esc($oit['product_name']) ?>" class="w-11 h-11 object-cover rounded-lg border border-outline-variant/25 shrink-0 bg-surface-container" loading="lazy" onerror="this.remove();">
+                                                <img src="<?= esc(product_image_url($itemImg, 'thumbnail')) ?>" alt="<?= esc($oit['product_name']) ?>" class="w-11 h-11 object-cover rounded-lg border border-outline-variant/25 shrink-0 bg-surface-container" loading="lazy" onerror="this.remove();">
                                             <?php else: ?>
                                                 <div class="w-11 h-11 rounded-lg bg-surface-container flex items-center justify-center text-outline shrink-0">
                                                     <span class="material-symbols-outlined text-[20px]">inventory_2</span>
@@ -1494,7 +1494,7 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
             </div>
         `;
 
-        let url = `${BASE_URL}/tenant/pos/search-products?q=${encodeURIComponent(query)}`;
+        let url = `${BASE_URL}tenant/pos/search-products?q=${encodeURIComponent(query)}`;
         if (categoryId) {
             url += `&category_id=${encodeURIComponent(categoryId)}`;
         }
@@ -1527,7 +1527,7 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
                     <!-- Product Image -->
                     <div class="w-full aspect-square rounded-xl bg-surface-container overflow-hidden flex items-center justify-center relative">
                         ${p.image_url 
-                            ? `<img src="${p.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="${esc(p.name)}">` 
+                            ? `<img src="${p.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="${esc(p.name)}" onerror="this.parentElement.innerHTML='<div class=\\'text-primary/40 flex flex-col items-center gap-1\\'><span class=\\'material-symbols-outlined text-3xl sm:text-4xl\\'>inventory_2</span><span class=\\'text-[9px] uppercase font-bold text-outline\\'>No Image</span></div>'">` 
                             : `<div class="text-primary/40 flex flex-col items-center gap-1"><span class="material-symbols-outlined text-3xl sm:text-4xl">inventory_2</span><span class="text-[9px] uppercase font-bold text-outline">No Image</span></div>`}
                         
                         <!-- In-cart Badge -->
