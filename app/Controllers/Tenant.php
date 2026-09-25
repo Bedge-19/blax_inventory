@@ -261,8 +261,14 @@ class Tenant extends BaseController
             $notifModel->markAllRead($userId);
         }
 
-        if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true]);
+        if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+            return $this->response
+                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+                ->setJSON([
+                    'success'      => true,
+                    'unread_count' => $notifModel->getUnreadCount($userId),
+                    'message'      => 'Notifications marked as read.',
+                ]);
         }
 
         return redirect()->back()->with('success', 'Notifications marked as read.');
@@ -638,16 +644,27 @@ class Tenant extends BaseController
         $maxPrRow = $printingModel->where('shop_id', $shopId)->selectMax('id')->first();
         $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
 
-        return $this->response->setJSON([
-            'success'          => true,
-            'max_order_id'     => $currentMaxOrderId,
-            'max_printing_id'  => $currentMaxPrintId,
-            'has_new_orders'   => !empty($newOrders),
-            'new_orders'       => $newOrders,
-            'has_new_printing' => !empty($newPrinting),
-            'new_printing'     => $newPrinting,
-            'summary'          => $summary,
-        ]);
+        // 3. Live Notification Telemetry
+        $userId = (int) session()->get('user_id');
+        $notifModel = new \App\Models\NotificationModel();
+        $unreadCount = $notifModel->getUnreadCount($userId);
+        $recentNotifs = $notifModel->getRecent($userId, 6);
+
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON([
+                'success'          => true,
+                'max_order_id'     => $currentMaxOrderId,
+                'max_printing_id'  => $currentMaxPrintId,
+                'has_new_orders'   => !empty($newOrders),
+                'new_orders'       => $newOrders,
+                'has_new_printing' => !empty($newPrinting),
+                'new_printing'     => $newPrinting,
+                'unread_count'     => $unreadCount,
+                'notifications'    => $recentNotifs,
+                'summary'          => $summary,
+                'timestamp'        => date('Y-m-d H:i:s'),
+            ]);
     }
 
     /**

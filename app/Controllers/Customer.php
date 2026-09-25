@@ -927,15 +927,17 @@ class Customer extends BaseController
             ->orderBy('placed_at', 'DESC')
             ->findAll();
 
-        return $this->response->setJSON([
-            'success'       => true,
-            'unread_count'  => $unreadCount,
-            'max_notif_id'  => $maxNotifId,
-            'new_notifs'    => $newNotifs,
-            'has_new'       => !empty($newNotifs),
-            'active_orders' => $activeOrders,
-            'timestamp'     => date('Y-m-d H:i:s'),
-        ]);
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON([
+                'success'       => true,
+                'unread_count'  => $unreadCount,
+                'max_notif_id'  => $maxNotifId,
+                'new_notifs'    => $newNotifs,
+                'has_new'       => !empty($newNotifs),
+                'active_orders' => $activeOrders,
+                'timestamp'     => date('Y-m-d H:i:s'),
+            ]);
     }
 
     public function unfavoriteShop()

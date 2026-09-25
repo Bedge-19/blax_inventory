@@ -341,9 +341,9 @@
                     
                     <!-- Dynamic 3-Hour Discovery Rotation Badge -->
                     <?php if (empty($sort) || $sort === 'discovery'): ?>
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs" title="Featured showcase rotates every 3 hours across all shops">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs" title="Discovery Rotation • Rotates every 3h across all shops">
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>3h Discovery &bull; <span id="catalog-rotation-timer" class="font-bold" data-seconds="<?= (int) ($rotationInfo['seconds_remaining'] ?? 0) ?>"><?= esc($rotationInfo['formatted_time_left'] ?? '3h') ?> left</span></span>
+                            <span>Discovery Rotation &bull; Rotates every 3h &bull; <span id="catalog-rotation-timer" class="font-bold" data-seconds="<?= (int) ($rotationInfo['seconds_remaining'] ?? 0) ?>"><?= esc($rotationInfo['formatted_time_left'] ?? '3h') ?> left</span></span>
                         </span>
                     <?php else: ?>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">

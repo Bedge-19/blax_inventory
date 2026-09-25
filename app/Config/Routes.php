@@ -149,6 +149,7 @@ $routes->group('tenant', ['filter' => 'roleAccess:tenant'], function ($routes) {
     $routes->post('archive/bulk-delete', 'Tenant::bulkPermanentDelete');
     $routes->get('archive/export', 'Tenant::exportArchiveCsv');
     $routes->post('notifications/mark-read', 'Tenant::markNotificationsRead');
+    $routes->post('notifications/mark-all-read', 'Tenant::markNotificationsRead');
     $routes->get('pos/search-products', 'Tenant::posSearchProducts');
     $routes->post('pos/verify-qr', 'Tenant::posVerifyQr');
     $routes->post('pos/complete-pickup', 'Tenant::posCompletePickup');

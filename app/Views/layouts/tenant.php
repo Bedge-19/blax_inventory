@@ -512,7 +512,12 @@
                     if (res.max_order_id) lastOrderId = Math.max(lastOrderId || 0, res.max_order_id);
                     if (res.max_printing_id) lastPrintingId = Math.max(lastPrintingId || 0, res.max_printing_id);
 
-                    // 1. New orders
+                    // 1. Live Notification Count & List Sync
+                    if (typeof res.unread_count === 'number') {
+                        updateTenantNotifBadge(res.unread_count, res.notifications);
+                    }
+
+                    // 2. New orders
                     if (res.has_new_orders && Array.isArray(res.new_orders) && res.new_orders.length > 0) {
                         playChime();
                         res.new_orders.forEach(ord => {
@@ -524,7 +529,7 @@
                         }
                     }
 
-                    // 2. New printing requests
+                    // 3. New printing requests
                     if (res.has_new_printing && Array.isArray(res.new_printing) && res.new_printing.length > 0) {
                         playChime();
                         res.new_printing.forEach(pr => {
@@ -537,6 +542,82 @@
                     console.debug('Tenant realtime poll skipped:', err);
                 });
         }
+
+        function updateTenantNotifBadge(count, notifs) {
+            const toggleBtn = document.getElementById('notif-toggle');
+            if (!toggleBtn) return;
+
+            let badge = toggleBtn.querySelector('span.bg-error');
+            if (count > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'absolute top-1.5 right-1.5 min-w-[17px] h-[17px] px-1 bg-error text-on-error text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-surface-container-lowest animate-pulse';
+                    toggleBtn.appendChild(badge);
+                }
+                badge.textContent = count;
+            } else if (badge) {
+                badge.remove();
+            }
+
+            const headerUnread = document.querySelector('#notif-panel .bg-primary\\/10');
+            if (headerUnread) {
+                if (count > 0) {
+                    headerUnread.textContent = count + ' unread';
+                    headerUnread.classList.remove('hidden');
+                } else {
+                    headerUnread.classList.add('hidden');
+                }
+            }
+        }
+
+        // AJAX Mark All Read handler
+        document.addEventListener('DOMContentLoaded', function() {
+            const markAllForm = document.querySelector('#notif-panel form');
+            if (markAllForm) {
+                markAllForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    fetch(markAllForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            updateTenantNotifBadge(0);
+                            document.querySelectorAll('#notif-panel a.bg-primary\\/5').forEach(el => {
+                                el.classList.remove('bg-primary/5');
+                                el.classList.add('opacity-65');
+                            });
+                            const btn = markAllForm.querySelector('button');
+                            if (btn) btn.textContent = 'All read ✓';
+                        }
+                    })
+                    .catch(() => {
+                        markAllForm.submit(); // fallback to normal submit if fetch fails
+                    });
+                });
+            }
+
+            // Click listener on individual notification items for instant visual read feedback
+            document.querySelectorAll('#notif-panel a').forEach(item => {
+                item.addEventListener('click', function() {
+                    this.classList.remove('bg-primary/5');
+                    this.classList.add('opacity-65');
+                    const badge = document.querySelector('#notif-toggle span.bg-error');
+                    if (badge) {
+                        const current = parseInt(badge.textContent || '0', 10);
+                        if (current > 1) {
+                            badge.textContent = current - 1;
+                        } else {
+                            badge.remove();
+                        }
+                    }
+                });
+            });
+        });
 
         // Start polling loop every 4 seconds
         checkRealtime();

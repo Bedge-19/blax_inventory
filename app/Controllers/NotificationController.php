@@ -60,7 +60,9 @@ class NotificationController extends BaseController
 
         $notifModel->markRead($id, (int) $notification['user_id']);
 
-        return $this->response->setJSON(['success' => true]);
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON(['success' => true]);
     }
 
     /**
@@ -80,7 +82,9 @@ class NotificationController extends BaseController
         (new NotificationModel())->markAllRead($userId);
 
         if ($this->request->isAJAX()) {
-            return $this->response->setJSON(['success' => true]);
+            return $this->response
+                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+                ->setJSON(['success' => true, 'unread_count' => 0]);
         }
 
         return redirect()->back()->with('success', 'All notifications marked as read.');

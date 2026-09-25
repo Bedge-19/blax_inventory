@@ -157,83 +157,47 @@ $compactMoney = function (float $v): string {
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
-
             <div class="flex items-center justify-between">
-
                 <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Total Revenue</p>
-
                 <span class="w-10 h-10 rounded-xl bg-primary-container/20 text-primary flex items-center justify-center">
-
                     <span class="material-symbols-outlined fill-icon">payments</span>
-
                 </span>
-
             </div>
-
-            <h3 class="text-headline-md font-bold text-primary">₱<?= number_format($total_revenue, 2) ?></h3>
-
+            <h3 id="kpi-total-revenue" data-raw="<?= (float)$total_revenue ?>" class="text-headline-md font-bold text-primary transition-all duration-300">₱<?= number_format($total_revenue, 2) ?></h3>
             <?= $renderDelta($revenue_delta) ?>
-
         </div>
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
-
             <div class="flex items-center justify-between">
-
                 <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Total Sales</p>
-
                 <span class="w-10 h-10 rounded-xl bg-surface-variant text-on-surface-variant flex items-center justify-center">
-
                     <span class="material-symbols-outlined fill-icon">shopping_bag</span>
-
                 </span>
-
             </div>
-
-            <h3 class="text-headline-md font-bold text-on-surface"><?= number_format((int) $total_sales) ?></h3>
-
+            <h3 id="kpi-total-sales" data-raw="<?= (int)$total_sales ?>" class="text-headline-md font-bold text-on-surface transition-all duration-300"><?= number_format((int) $total_sales) ?></h3>
             <?= $renderDelta($sales_delta) ?>
-
         </div>
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
-
             <div class="flex items-center justify-between">
-
                 <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Pending Orders</p>
-
                 <span class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
-
                     <span class="material-symbols-outlined fill-icon">pending_actions</span>
-
                 </span>
-
             </div>
-
-            <h3 class="text-headline-md font-bold text-on-surface"><?= number_format((int) $pending_orders) ?></h3>
-
+            <h3 id="kpi-pending-orders" data-raw="<?= (int)$pending_orders ?>" class="text-headline-md font-bold text-on-surface transition-all duration-300"><?= number_format((int) $pending_orders) ?></h3>
             <?= $renderDelta($pending_delta) ?>
-
         </div>
 
         <div class="glass-card rounded-2xl p-lg flex flex-col gap-sm soft-shadow metric-card-hover">
-
             <div class="flex items-center justify-between">
-
                 <p class="text-label-sm text-on-surface-variant uppercase tracking-wider">Printing Requests</p>
-
                 <span class="w-10 h-10 rounded-xl bg-tertiary-container/20 text-tertiary flex items-center justify-center">
-
                     <span class="material-symbols-outlined fill-icon">print</span>
-
                 </span>
-
             </div>
-
-            <h3 class="text-headline-md font-bold text-tertiary"><?= number_format((int) $printing_count) ?></h3>
-
+            <h3 id="kpi-printing-count" data-raw="<?= (int)$printing_count ?>" class="text-headline-md font-bold text-tertiary transition-all duration-300"><?= number_format((int) $printing_count) ?></h3>
             <?= $renderDelta($printing_delta) ?>
-
         </div>
 
     </div>
@@ -424,7 +388,7 @@ $compactMoney = function (float $v): string {
 
                     </thead>
 
-                    <tbody>
+                    <tbody id="dashboard-recent-orders-tbody">
 
                         <?php if (!empty($recent_orders)): ?>
 
@@ -448,7 +412,7 @@ $compactMoney = function (float $v): string {
 
                         <?php else: ?>
 
-                            <tr><td colspan="5" class="py-lg text-center text-on-surface-variant">No orders yet.</td></tr>
+                            <tr id="dashboard-no-orders-row"><td colspan="5" class="py-lg text-center text-on-surface-variant">No orders yet.</td></tr>
 
                         <?php endif; ?>
 
@@ -488,7 +452,7 @@ $compactMoney = function (float $v): string {
 
                     </thead>
 
-                    <tbody>
+                    <tbody id="dashboard-recent-printing-tbody">
 
                         <?php if (!empty($recent_requests)): ?>
 
@@ -512,7 +476,7 @@ $compactMoney = function (float $v): string {
 
                         <?php else: ?>
 
-                            <tr><td colspan="5" class="py-lg text-center text-on-surface-variant">No printing requests yet.</td></tr>
+                            <tr id="dashboard-no-printing-row"><td colspan="5" class="py-lg text-center text-on-surface-variant">No printing requests yet.</td></tr>
 
                         <?php endif; ?>
 
@@ -648,12 +612,95 @@ $compactMoney = function (float $v): string {
         loadSalesRange(lastActiveBtn);
     });
 
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-            const currentSale = localStorage.getItem('blax_last_sale');
-            if (currentSale && currentSale !== lastSaleHandled) {
-                loadSalesRange(lastActiveBtn);
-            }
+    // Real-time Event Listeners for Instant Dashboard Metrics & Table Updating
+    window.addEventListener('blax:new-order', function (e) {
+        const order = e.detail;
+        if (!order) return;
+
+        // 1. Live KPI Increment: Total Sales
+        const salesEl = document.getElementById('kpi-total-sales');
+        if (salesEl) {
+            let currentSales = parseInt(salesEl.getAttribute('data-raw') || '0', 10) + 1;
+            salesEl.setAttribute('data-raw', currentSales);
+            salesEl.textContent = new Intl.NumberFormat().format(currentSales);
+            salesEl.classList.add('scale-110', 'text-primary');
+            setTimeout(() => salesEl.classList.remove('scale-110', 'text-primary'), 600);
+        }
+
+        // 2. Live KPI Increment: Total Revenue
+        const revEl = document.getElementById('kpi-total-revenue');
+        if (revEl && order.total_amount) {
+            let currentRev = parseFloat(revEl.getAttribute('data-raw') || '0') + parseFloat(order.total_amount);
+            revEl.setAttribute('data-raw', currentRev);
+            revEl.textContent = '₱' + new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(currentRev);
+            revEl.classList.add('scale-110', 'text-emerald-600');
+            setTimeout(() => revEl.classList.remove('scale-110', 'text-emerald-600'), 600);
+        }
+
+        // 3. Live KPI Increment: Pending Orders
+        const pendingEl = document.getElementById('kpi-pending-orders');
+        if (pendingEl) {
+            let currentPending = parseInt(pendingEl.getAttribute('data-raw') || '0', 10) + 1;
+            pendingEl.setAttribute('data-raw', currentPending);
+            pendingEl.textContent = new Intl.NumberFormat().format(currentPending);
+            pendingEl.classList.add('scale-110', 'text-amber-600');
+            setTimeout(() => pendingEl.classList.remove('scale-110', 'text-amber-600'), 600);
+        }
+
+        // 4. Prepend to Recent Orders Table
+        const tbody = document.getElementById('dashboard-recent-orders-tbody');
+        if (tbody) {
+            const noOrdersRow = document.getElementById('dashboard-no-orders-row');
+            if (noOrdersRow) noOrdersRow.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-outline-variant/10 bg-emerald-500/10 hover:bg-emerald-500/15 transition-all duration-500';
+            tr.innerHTML = `
+                <td class="py-md px-md font-semibold whitespace-nowrap text-primary">#${order.order_number} <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded ml-1 animate-pulse">⚡ Just Now</span></td>
+                <td class="py-md px-md font-medium text-on-surface">${order.customer_name}</td>
+                <td class="py-md px-md font-bold text-primary whitespace-nowrap">₱${order.total_amount_fmt}</td>
+                <td class="py-md px-md"><span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">Pending</span></td>
+                <td class="py-md px-md text-xs text-on-surface-variant whitespace-nowrap">Just now</td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        // 5. Trigger Sales Chart Refresh
+        if (lastActiveBtn) {
+            loadSalesRange(lastActiveBtn);
+        }
+    });
+
+    window.addEventListener('blax:new-printing', function (e) {
+        const pr = e.detail;
+        if (!pr) return;
+
+        // 1. Live KPI Increment: Printing Count
+        const prCountEl = document.getElementById('kpi-printing-count');
+        if (prCountEl) {
+            let currentPr = parseInt(prCountEl.getAttribute('data-raw') || '0', 10) + 1;
+            prCountEl.setAttribute('data-raw', currentPr);
+            prCountEl.textContent = new Intl.NumberFormat().format(currentPr);
+            prCountEl.classList.add('scale-110', 'text-purple-600');
+            setTimeout(() => prCountEl.classList.remove('scale-110', 'text-purple-600'), 600);
+        }
+
+        // 2. Prepend to Recent Printing Table
+        const tbody = document.getElementById('dashboard-recent-printing-tbody');
+        if (tbody) {
+            const noPrRow = document.getElementById('dashboard-no-printing-row');
+            if (noPrRow) noPrRow.remove();
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-outline-variant/10 bg-purple-500/10 hover:bg-purple-500/15 transition-all duration-500';
+            tr.innerHTML = `
+                <td class="py-md px-md font-semibold whitespace-nowrap text-tertiary">${pr.request_number} <span class="text-[9px] font-bold bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded ml-1 animate-pulse">⚡ New</span></td>
+                <td class="py-md px-md text-label-sm text-on-surface-variant truncate max-w-[160px]">${pr.service_name}</td>
+                <td class="py-md px-md font-medium text-on-surface">${pr.customer_name}</td>
+                <td class="py-md px-md font-bold text-tertiary whitespace-nowrap">₱${pr.total_amount_fmt}</td>
+                <td class="py-md px-md"><span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 border border-purple-300">New</span></td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
         }
     });
 })();

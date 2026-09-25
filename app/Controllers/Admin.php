@@ -437,15 +437,22 @@ class Admin extends BaseController
         $maxPrRow = $printingModel->selectMax('id')->first();
         $currentMaxPrintId = (int) ($maxPrRow['id'] ?? 0);
 
-        return $this->response->setJSON([
-            'success'          => true,
-            'max_order_id'     => $currentMaxOrderId,
-            'max_printing_id'  => $currentMaxPrintId,
-            'has_new_orders'   => !empty($newOrders),
-            'new_orders'       => $newOrders,
-            'has_new_printing' => !empty($newPrinting),
-            'new_printing'     => $newPrinting,
-        ]);
+        $adminUserId = (int) session()->get('user_id');
+        $unreadCount = (new \App\Models\NotificationModel())->getUnreadCount($adminUserId);
+
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON([
+                'success'          => true,
+                'max_order_id'     => $currentMaxOrderId,
+                'max_printing_id'  => $currentMaxPrintId,
+                'has_new_orders'   => !empty($newOrders),
+                'new_orders'       => $newOrders,
+                'has_new_printing' => !empty($newPrinting),
+                'new_printing'     => $newPrinting,
+                'unread_count'     => $unreadCount,
+                'timestamp'        => date('Y-m-d H:i:s'),
+            ]);
     }
 
     public function auditLog()

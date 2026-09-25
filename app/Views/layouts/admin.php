@@ -444,6 +444,10 @@
                     if (res.max_order_id) lastOrderId = Math.max(lastOrderId || 0, res.max_order_id);
                     if (res.max_printing_id) lastPrintingId = Math.max(lastPrintingId || 0, res.max_printing_id);
 
+                    if (typeof res.unread_count === 'number') {
+                        updateAdminNotifBadge(res.unread_count);
+                    }
+
                     if (res.has_new_orders && Array.isArray(res.new_orders) && res.new_orders.length > 0) {
                         playAdminChime();
                         res.new_orders.forEach(ord => {
@@ -464,6 +468,81 @@
                     console.debug('Admin realtime poll skipped:', err);
                 });
         }
+
+        function updateAdminNotifBadge(count) {
+            const toggleBtn = document.getElementById('admin-notif-toggle');
+            if (!toggleBtn) return;
+
+            let badge = toggleBtn.querySelector('span.bg-error');
+            if (count > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-error text-on-error text-[10px] font-bold rounded-full flex items-center justify-center shadow-xs animate-bounce';
+                    toggleBtn.appendChild(badge);
+                }
+                badge.textContent = count;
+            } else if (badge) {
+                badge.remove();
+            }
+
+            const headerUnread = document.querySelector('#admin-notif-panel .bg-primary\\/10');
+            if (headerUnread) {
+                if (count > 0) {
+                    headerUnread.textContent = count + ' new';
+                    headerUnread.classList.remove('hidden');
+                } else {
+                    headerUnread.classList.add('hidden');
+                }
+            }
+        }
+
+        // AJAX Mark All Read handler for Admin
+        document.addEventListener('DOMContentLoaded', function() {
+            const markAllForm = document.querySelector('#admin-notif-panel form');
+            if (markAllForm) {
+                markAllForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    fetch(markAllForm.action, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data.success) {
+                            updateAdminNotifBadge(0);
+                            document.querySelectorAll('#admin-notif-panel a.bg-primary\\/5').forEach(el => {
+                                el.classList.remove('bg-primary/5');
+                                el.classList.add('opacity-70');
+                            });
+                            const btn = markAllForm.querySelector('button');
+                            if (btn) btn.textContent = 'All read ✓';
+                        }
+                    })
+                    .catch(() => {
+                        markAllForm.submit();
+                    });
+                });
+            }
+
+            document.querySelectorAll('#admin-notif-panel a').forEach(item => {
+                item.addEventListener('click', function() {
+                    this.classList.remove('bg-primary/5');
+                    this.classList.add('opacity-70');
+                    const badge = document.querySelector('#admin-notif-toggle span.bg-error');
+                    if (badge) {
+                        const current = parseInt(badge.textContent || '0', 10);
+                        if (current > 1) {
+                            badge.textContent = current - 1;
+                        } else {
+                            badge.remove();
+                        }
+                    }
+                });
+            });
+        });
 
         checkAdminRealtime();
         setInterval(checkAdminRealtime, 5000);

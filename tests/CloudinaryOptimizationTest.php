@@ -87,8 +87,21 @@ final class CloudinaryOptimizationTest extends CIUnitTestCase
         $unsplash = 'https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';
         $this->assertSame($unsplash, product_image_url($unsplash));
 
-        $local = 'uploads/products/sample.jpg';
-        $this->assertSame(base_url($local), product_image_url($local));
+        $testDir = FCPATH . 'uploads/products';
+        if (!is_dir($testDir)) {
+            mkdir($testDir, 0755, true);
+        }
+        $testFile = $testDir . '/sample.jpg';
+        file_put_contents($testFile, 'dummy image data');
+
+        try {
+            $local = 'uploads/products/sample.jpg';
+            $this->assertSame(base_url($local), product_image_url($local));
+        } finally {
+            if (is_file($testFile)) {
+                @unlink($testFile);
+            }
+        }
     }
 
     public function testBackwardCompatibilityWithCustomFallback(): void
