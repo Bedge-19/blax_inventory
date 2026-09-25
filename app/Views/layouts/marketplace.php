@@ -46,9 +46,9 @@
 
 </head>
 
-<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col relative pb-16 md:pb-0">
+<body class="bg-background text-on-surface antialiased min-h-screen flex flex-col relative pb-16 md:pb-0 w-full max-w-full overflow-x-hidden">
 
-    <div class="flex-grow flex flex-col">
+    <div class="flex-grow flex flex-col w-full max-w-full overflow-x-hidden">
 
         <?= view('components/announcement_bar', ['cms' => $cmsGlobal]) ?>
 

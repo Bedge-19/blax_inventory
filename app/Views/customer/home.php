@@ -172,7 +172,7 @@
 
     <!-- Quick Category Pill Rail -->
     <?php if (!empty($categories)): ?>
-        <section class="w-full">
+        <section class="w-full max-w-full overflow-hidden">
             <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px] text-primary">category</span>
@@ -184,7 +184,7 @@
                 </a>
             </div>
 
-            <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div class="w-full max-w-full flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
                 <?php
                     $allParams = [];
                     if (!empty($sort) && $sort !== 'discovery') $allParams['sort'] = $sort;
@@ -216,7 +216,7 @@
 
     <!-- Search Results: Matching Shops (if searching) -->
     <?php if (($searchQuery ?? '') !== ''): ?>
-        <section class="flex flex-col gap-4">
+        <section class="flex flex-col gap-4 w-full max-w-full overflow-hidden">
             <div class="flex justify-between items-center">
                 <h2 class="font-extrabold text-xl sm:text-2xl text-slate-900">Shops matching &quot;<?= esc($searchQuery) ?>&quot;</h2>
                 <a class="text-primary font-bold text-xs sm:text-sm hover:underline flex items-center gap-1" href="<?= base_url('shops?q=' . urlencode($searchQuery)) ?>">
@@ -248,7 +248,7 @@
     <?php else: ?>
 
     <!-- Featured Shops - Rich Merchant Cards -->
-    <section class="flex flex-col gap-4">
+    <section class="flex flex-col gap-4 w-full max-w-full overflow-hidden">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-1">
             <div>
                 <h2 class="font-extrabold text-xl sm:text-2xl text-slate-900">Featured Local Shops</h2>
@@ -260,7 +260,7 @@
             </a>
         </div>
 
-        <div class="flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-2.5 sm:gap-4 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 lg:grid-cols-5">
+        <div class="w-full max-w-full flex overflow-x-auto no-scrollbar snap-x snap-mandatory gap-2.5 sm:gap-4 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 lg:grid-cols-5">
             <?php if (!empty($shops)): ?>
                 <?php foreach ($shops as $s): ?>
                     <a href="<?= base_url('shop/' . ($s['slug'] ?? $s['id'])) ?>" class="card-elevated bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-primary/40 rounded-2xl overflow-hidden flex flex-col group transition-all duration-300 w-[140px] sm:w-auto shrink-0 snap-start">

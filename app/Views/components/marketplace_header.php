@@ -9,11 +9,11 @@
 ?>
 
 <header class="bg-surface-container-lowest shadow-sm sticky top-0 z-40 w-full border-b border-outline-variant/30">
-    <div class="flex justify-between items-center w-full min-h-[60px] sm:min-h-[72px] py-2 px-4 sm:px-6 md:px-8 lg:px-10">
+    <div class="flex justify-between items-center w-full min-h-[56px] sm:min-h-[64px] md:min-h-[72px] py-2 px-3 sm:px-6 md:px-8 lg:px-10 max-w-full">
 
-    <div class="flex items-center gap-2 sm:gap-4 md:gap-6 lg:gap-xl">
+    <div class="flex items-center gap-2 sm:gap-4 md:gap-6 lg:gap-xl shrink-0">
 
-        <a href="<?= base_url('/') ?>" class="text-base sm:text-title-lg font-bold text-primary tracking-tight">MarketPlace</a>
+        <a href="<?= base_url('/') ?>" class="text-base sm:text-lg md:text-title-lg font-bold text-primary tracking-tight whitespace-nowrap">MarketPlace</a>
 
         <form id="ai-search-form" action="<?= base_url('search') ?>" method="GET" class="hidden md:flex items-center relative">
 
@@ -63,7 +63,7 @@
 
     </div>
 
-    <div class="flex items-center gap-md">
+    <div class="flex items-center gap-1 sm:gap-2 md:gap-md">
 
         <nav class="hidden lg:flex items-center gap-lg mr-md">
 
@@ -75,18 +75,19 @@
 
         </nav>
 
-        <div class="flex items-center gap-sm">
+        <div class="flex items-center gap-0.5 sm:gap-1.5">
 
-            <!-- Theme Toggle Button -->
-            <button type="button" class="theme-toggle-btn p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Toggle dark / light theme" aria-label="Toggle theme">
+            <!-- Theme Toggle Button (Desktop / Tablet only in top bar) -->
+            <button type="button" class="hidden sm:inline-flex theme-toggle-btn p-2 rounded-full hover:bg-surface-container-high relative items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Toggle dark / light theme" aria-label="Toggle theme">
                 <span class="material-symbols-outlined theme-toggle-icon text-[20px]">dark_mode</span>
             </button>
 
+            <!-- Notification Bell Dropdown Toggle -->
             <div class="relative block">
-                <button id="notif-dropdown-toggle" type="button" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-                    <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+                <button id="notif-dropdown-toggle" type="button" class="p-1.5 sm:p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                    <span class="material-symbols-outlined text-[20px] sm:text-[22px] text-on-surface-variant">notifications</span>
                     <?php if (!empty($unreadCount) && $unreadCount > 0): ?>
-                        <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface-container-lowest animate-pulse"></span>
+                        <span class="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface-container-lowest animate-pulse"></span>
                     <?php endif; ?>
                 </button>
 
@@ -126,14 +127,16 @@
                 </div>
             </div>
 
-            <a href="<?= base_url('cart') ?>" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Cart" aria-label="Shopping Cart">
-                <span class="material-symbols-outlined text-on-surface-variant">shopping_cart</span>
+            <!-- Cart Link -->
+            <a href="<?= base_url('cart') ?>" class="p-1.5 sm:p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="Cart" aria-label="Shopping Cart">
+                <span class="material-symbols-outlined text-[20px] sm:text-[22px] text-on-surface-variant">shopping_cart</span>
                 <span id="cart-count-badge" class="absolute top-0 right-0 bg-primary text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold <?= ($cartCount > 0) ? '' : 'hidden' ?>"><?= $cartCount ?></span>
             </a>
 
+            <!-- My Orders Link (Desktop / Tablet only in top bar) -->
             <?php if ($isLogged): ?>
-                <a href="<?= base_url('customer/orders') ?>" class="p-2 rounded-full hover:bg-surface-container-high relative flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="My Orders" aria-label="My Orders">
-                    <span class="material-symbols-outlined">receipt_long</span>
+                <a href="<?= base_url('customer/orders') ?>" class="hidden sm:inline-flex p-2 rounded-full hover:bg-surface-container-high relative items-center justify-center text-on-surface-variant hover:text-primary transition-colors" title="My Orders" aria-label="My Orders">
+                    <span class="material-symbols-outlined text-[20px]">receipt_long</span>
                     <?php if (!empty($activeOrdersCount) && $activeOrdersCount > 0): ?>
                         <span id="active-orders-badge" class="absolute top-0 right-0 bg-secondary text-white text-[10px] min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center font-bold" title="<?= (int)$activeOrdersCount ?> active order(s)"><?= (int)$activeOrdersCount ?></span>
                     <?php endif; ?>
@@ -141,16 +144,18 @@
             <?php endif; ?>
         </div>
 
-        <button id="mobile-menu-toggle" type="button" class="lg:hidden p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full" aria-label="Open menu">
-            <span class="material-symbols-outlined">menu</span>
+        <!-- Mobile Drawer Toggle -->
+        <button id="mobile-menu-toggle" type="button" class="lg:hidden p-1.5 sm:p-2 text-on-surface-variant hover:bg-surface-container-high rounded-full flex items-center justify-center" aria-label="Open menu">
+            <span class="material-symbols-outlined text-[22px] sm:text-[24px]">menu</span>
         </button>
 
-        <div class="flex items-center gap-xs sm:gap-sm pl-2 sm:pl-md border-l border-outline-variant/30 relative">
+        <!-- Profile / Sign In Area -->
+        <div class="flex items-center pl-1 sm:pl-2 md:pl-md border-l border-outline-variant/30 relative">
 
             <?php if ($isLogged): ?>
 
                 <div class="relative">
-                    <button id="profile-dropdown-toggle" type="button" class="profile-dropdown-toggle w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary focus:ring-2 focus:ring-primary transition-all text-xs sm:text-base" aria-haspopup="true" aria-expanded="false" aria-label="Profile menu">
+                    <button id="profile-dropdown-toggle" type="button" class="profile-dropdown-toggle w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary focus:ring-2 focus:ring-primary transition-all text-xs sm:text-base shrink-0" aria-haspopup="true" aria-expanded="false" aria-label="Profile menu">
 
                         <?php if (!empty($profileImage)): ?>
 
@@ -234,7 +239,7 @@
 
             <?php else: ?>
 
-                <a href="<?= base_url('login') ?>" class="bg-primary text-on-primary text-xs sm:text-button font-semibold sm:font-button px-3 py-1.5 sm:px-lg sm:py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-xs sm:shadow-sm whitespace-nowrap">
+                <a href="<?= base_url('login') ?>" class="bg-primary text-on-primary text-xs sm:text-button font-semibold sm:font-button px-2.5 py-1.5 sm:px-lg sm:py-md rounded-lg hover:bg-on-primary-fixed-variant transition-all shadow-xs sm:shadow-sm whitespace-nowrap">
                     Sign In
                 </a>
 
@@ -262,7 +267,38 @@
             </button>
         </div>
 
-        <?php if (!$isLogged): ?>
+        <?php if ($isLogged): ?>
+            <!-- User Profile Summary in Drawer -->
+            <div class="p-4 bg-gradient-to-br from-primary/10 via-primary/5 to-surface-container-low border-b border-outline-variant/20">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full overflow-hidden bg-primary/15 border border-primary/25 flex items-center justify-center font-bold text-primary shrink-0">
+                        <?php if (!empty($profileImage)): ?>
+                            <img class="w-full h-full object-cover" src="<?= esc(profile_image_url($profileImage)) ?>" alt="<?= esc($userName) ?> avatar">
+                        <?php else: ?>
+                            <?= $avatarChar ?>
+                        <?php endif; ?>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-xs text-on-surface truncate"><?= esc($userName) ?></p>
+                        <p class="text-[10px] text-on-surface-variant truncate"><?= esc($userEmail) ?></p>
+                        <span class="inline-flex items-center gap-1 mt-1 text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md">Customer</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3 pt-2.5 border-t border-outline-variant/15">
+                    <a href="<?= base_url('customer/orders') ?>" class="flex items-center justify-center gap-1 bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-[11px] font-semibold py-1.5 px-2 rounded-lg hover:border-primary transition-colors">
+                        <span class="material-symbols-outlined text-[15px] text-primary">shopping_bag</span>
+                        <span>Orders</span>
+                        <?php if (!empty($activeOrdersCount) && $activeOrdersCount > 0): ?>
+                            <span class="text-[9px] bg-secondary text-white font-bold px-1 rounded-full ml-0.5"><?= (int)$activeOrdersCount ?></span>
+                        <?php endif; ?>
+                    </a>
+                    <a href="<?= base_url('customer/printing') ?>" class="flex items-center justify-center gap-1 bg-surface-container-lowest border border-outline-variant/30 text-on-surface text-[11px] font-semibold py-1.5 px-2 rounded-lg hover:border-primary transition-colors">
+                        <span class="material-symbols-outlined text-[15px] text-primary">print</span>
+                        <span>Printing</span>
+                    </a>
+                </div>
+            </div>
+        <?php else: ?>
             <!-- Guest Welcome Card -->
             <div class="p-4 bg-gradient-to-br from-primary/10 via-primary/5 to-surface-container-low border-b border-outline-variant/20">
                 <div class="flex items-center gap-3 mb-3">
@@ -312,6 +348,20 @@
                 <span class="material-symbols-outlined text-[18px] <?= $activeNav === 'shops' ? 'text-primary' : 'text-outline' ?>">storefront</span>
                 <span>Featured Shops</span>
             </a>
+            <?php if ($isLogged): ?>
+                <a class="text-on-surface hover:bg-surface-container-low text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('customer/profile') ?>">
+                    <span class="material-symbols-outlined text-[18px] text-outline">person</span>
+                    <span>Account Profile</span>
+                </a>
+                <a class="text-on-surface hover:bg-surface-container-low text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors" href="<?= base_url('customer/addresses') ?>">
+                    <span class="material-symbols-outlined text-[18px] text-outline">location_on</span>
+                    <span>Shipping Addresses</span>
+                </a>
+                <a class="text-error hover:bg-error-container/20 text-xs sm:text-body-md px-4 py-3 flex items-center gap-3 transition-colors font-medium" href="<?= base_url('logout') ?>">
+                    <span class="material-symbols-outlined text-[18px] text-error">logout</span>
+                    <span>Logout</span>
+                </a>
+            <?php endif; ?>
         </nav>
     </div>
 
