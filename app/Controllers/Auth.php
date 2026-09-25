@@ -180,18 +180,7 @@ class Auth extends BaseController
                 $resetLink = base_url('reset-password/' . $rawToken);
 
                 try {
-                    $emailService = service('email');
-                    $emailService->setTo($email);
-                    $emailService->setSubject('Password Reset Request - Blax Marketplace');
-                    $emailService->setMessage(
-                        "Hello " . esc($user['first_name']) . ",<br><br>" .
-                        "We received a request to reset the password for your Blax account.<br>" .
-                        "Click the link below to set a new password:<br><br>" .
-                        "<a href=\"" . esc($resetLink) . "\">" . esc($resetLink) . "</a><br><br>" .
-                        "This link will expire in 1 hour.<br><br>" .
-                        "If you did not request a password reset, you can safely ignore this email."
-                    );
-                    $emailService->send();
+                    (new \App\Services\MailService())->sendPasswordReset($email, (string) ($user['first_name'] ?? 'User'), $resetLink);
                 } catch (\Throwable $e) {
                     log_message('error', 'Failed to send password reset email: ' . $e->getMessage());
                 }
