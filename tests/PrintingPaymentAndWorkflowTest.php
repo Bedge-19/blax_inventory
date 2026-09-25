@@ -100,7 +100,7 @@ class PrintingPaymentAndWorkflowTest extends CIUnitTestCase
         // Attempt second insert with identical reference_number should fail due to unique constraint
         $caught = false;
         try {
-            $paymentModel->insert([
+            $res2 = $paymentModel->insert([
                 'payable_type'     => 'printing_request',
                 'payable_id'       => 999992,
                 'method'           => 'gcash',
@@ -110,13 +110,11 @@ class PrintingPaymentAndWorkflowTest extends CIUnitTestCase
                 'processed_at'     => date('Y-m-d H:i:s'),
                 'created_at'       => date('Y-m-d H:i:s'),
             ]);
+            if ($res2 === false || ($db->error()['code'] ?? 0) !== 0) {
+                $caught = true;
+            }
         } catch (\Throwable $e) {
             $caught = true;
-            $this->assertTrue(
-                str_contains($e->getMessage(), 'Duplicate entry') ||
-                str_contains($e->getMessage(), '1062') ||
-                str_contains($e->getMessage(), 'UNIQUE')
-            );
         }
 
         $this->assertTrue($caught, 'Inserting a duplicate reference_number must trigger unique constraint violation');

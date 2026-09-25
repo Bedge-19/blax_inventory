@@ -426,8 +426,9 @@
             });
         } catch (e) {}
 
-        // D. Profile Dropdowns (Customer & Tenant)
+        // D. Profile Dropdowns (Customer, Tenant, Admin)
         try {
+            // 1. Customer Profile Dropdown
             const customerProfileToggle = document.getElementById('profile-dropdown-toggle');
             const customerProfileDropdown = document.getElementById('profile-dropdown');
             if (customerProfileToggle && customerProfileDropdown && !customerProfileToggle.dataset.profileBound) {
@@ -452,7 +453,6 @@
                 });
 
                 customerProfileDropdown.addEventListener('click', function (e) {
-                    // Stop bubbling so clicks inside menu don't trigger document close unless it's a link
                     if (!e.target.closest('a')) {
                         e.stopPropagation();
                     }
@@ -466,6 +466,7 @@
                 });
             }
 
+            // 2. Tenant Profile Dropdown
             const tenantProfileToggle = document.getElementById('tenant-profile-toggle');
             const tenantProfileDropdown = document.getElementById('tenant-profile-dropdown');
             if (tenantProfileToggle && tenantProfileDropdown && !tenantProfileToggle.dataset.profileBound) {
@@ -496,6 +497,12 @@
                 document.addEventListener('click', function () {
                     if (isTenantOpen) setTenantOpen(false);
                 });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && isTenantOpen) setTenantOpen(false);
+                });
+            }
+
+            // 3. Admin Profile Dropdown
             const adminProfileToggle = document.getElementById('admin-profile-toggle');
             const adminProfileMenu = document.getElementById('admin-profile-quickmenu');
             if (adminProfileToggle && adminProfileMenu && !adminProfileToggle.dataset.profileBound) {

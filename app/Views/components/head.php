@@ -43,6 +43,84 @@
         window.setBlaxTheme(isDark ? 'light' : 'dark');
     };
 
+    // Early click listener for immediate responsiveness (Theme, Notifications, Profile)
+    document.addEventListener('click', function(e) {
+        // 1. Theme toggle
+        const themeBtn = e.target.closest('.theme-toggle-btn');
+        if (themeBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.toggleBlaxTheme();
+            return;
+        }
+
+        // 2. Notification toggle
+        const notifBtn = e.target.closest('#notif-dropdown-toggle, #notif-toggle, #admin-notif-toggle');
+        if (notifBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const panel = document.getElementById('notif-dropdown') 
+                || document.getElementById('notif-panel') 
+                || document.getElementById('admin-notif-panel');
+            if (panel) {
+                const isHidden = panel.classList.contains('hidden');
+                document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
+                document.querySelectorAll('#admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
+                if (isHidden) {
+                    panel.classList.remove('hidden');
+                    notifBtn.setAttribute('aria-expanded', 'true');
+                } else {
+                    panel.classList.add('hidden');
+                    notifBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+            return;
+        }
+
+        // 3. Profile dropdown toggle
+        const profileBtn = e.target.closest('#profile-dropdown-toggle, #tenant-profile-toggle, #admin-profile-toggle');
+        if (profileBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const custDropdown = document.getElementById('profile-dropdown');
+            const tenantDropdown = document.getElementById('tenant-profile-dropdown');
+            const adminMenu = document.getElementById('admin-profile-quickmenu');
+
+            document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel').forEach(p => p.classList.add('hidden'));
+
+            if ((profileBtn.id === 'profile-dropdown-toggle' || profileBtn.matches('#profile-dropdown-toggle')) && custDropdown) {
+                const isOpen = custDropdown.classList.contains('open');
+                custDropdown.classList.toggle('open', !isOpen);
+                profileBtn.setAttribute('aria-expanded', (!isOpen).toString());
+            } else if ((profileBtn.id === 'tenant-profile-toggle' || profileBtn.matches('#tenant-profile-toggle')) && tenantDropdown) {
+                const isOpen = tenantDropdown.classList.contains('open');
+                tenantDropdown.classList.toggle('open', !isOpen);
+                profileBtn.setAttribute('aria-expanded', (!isOpen).toString());
+            } else if ((profileBtn.id === 'admin-profile-toggle' || profileBtn.matches('#admin-profile-toggle')) && adminMenu) {
+                const isHidden = adminMenu.classList.contains('hidden');
+                adminMenu.classList.toggle('hidden', !isHidden);
+                profileBtn.setAttribute('aria-expanded', isHidden.toString());
+            }
+            return;
+        }
+
+        // 4. Outside clicks dismiss open menus
+        if (!e.target.closest('#notif-dropdown, #notif-panel, #admin-notif-panel')) {
+            document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel').forEach(p => p.classList.add('hidden'));
+        }
+        if (!e.target.closest('#profile-dropdown, #tenant-profile-dropdown, #admin-profile-quickmenu')) {
+            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
+            document.querySelectorAll('#admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel, #admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
+        }
+    });
+
     try {
         const savedTheme = localStorage.getItem('blax_theme');
         if (savedTheme === 'dark') {
