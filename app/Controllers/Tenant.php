@@ -1250,12 +1250,7 @@ class Tenant extends BaseController
             ]);
         }
 
-        if (!DeliveryModel::isPolomolokCoordinate($lat, $lng)) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'success' => false,
-                'error'   => 'GPS coordinates are outside the Polomolok operational delivery zone.',
-            ]);
-        }
+        $isInZone = DeliveryModel::isPolomolokCoordinate($lat, $lng);
 
         $now = date('Y-m-d H:i:s');
         $updateData = [
@@ -1273,6 +1268,7 @@ class Tenant extends BaseController
             'success'    => true,
             'lat'        => $lat,
             'lng'        => $lng,
+            'in_zone'    => $isInZone,
             'status'     => $updateData['status'] ?? $delivery['status'],
             'updated_at' => $now,
             'csrf_hash'  => csrf_hash(),
@@ -5714,24 +5710,16 @@ class Tenant extends BaseController
             return redirect()->to('/tenant/delivery')->with('error', 'Unauthorized access to this delivery record.');
         }
 
-        // Activate live tracking broadcast when tenant views the live route
-        if (in_array($delivery['status'], ['shipped', 'in_transit'], true)) {
-            $now = date('Y-m-d H:i:s');
-            $startLat = !empty($delivery['current_lat']) && (float) $delivery['current_lat'] != 0
-                ? (float) $delivery['current_lat']
-                : (!empty($shop['latitude']) && (float) $shop['latitude'] != 0 ? (float) $shop['latitude'] : DeliveryModel::POLOMOLOK_CENTER_LAT);
-            $startLng = !empty($delivery['current_lng']) && (float) $delivery['current_lng'] != 0
-                ? (float) $delivery['current_lng']
-                : (!empty($shop['longitude']) && (float) $shop['longitude'] != 0 ? (float) $shop['longitude'] : DeliveryModel::POLOMOLOK_CENTER_LNG);
-
-            $deliveryModel->update($deliveryId, [
-                'current_lat'         => $startLat,
-                'current_lng'         => $startLng,
-                'location_updated_at' => $now,
-            ]);
-            $delivery['current_lat'] = $startLat;
-            $delivery['current_lng'] = $startLng;
-            $delivery['location_updated_at'] = $now;
+        // Provide in-memory fallback for initial map view rendering without mutating the database
+        if (empty($delivery['current_lat']) || (float) $delivery['current_lat'] == 0) {
+            $delivery['current_lat'] = !empty($shop['latitude']) && (float) $shop['latitude'] != 0
+                ? (float) $shop['latitude']
+                : DeliveryModel::POLOMOLOK_CENTER_LAT;
+        }
+        if (empty($delivery['current_lng']) || (float) $delivery['current_lng'] == 0) {
+            $delivery['current_lng'] = !empty($shop['longitude']) && (float) $shop['longitude'] != 0
+                ? (float) $shop['longitude']
+                : DeliveryModel::POLOMOLOK_CENTER_LNG;
         }
 
         // Fetch customer and deliverable details

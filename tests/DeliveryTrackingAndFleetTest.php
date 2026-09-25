@@ -187,18 +187,24 @@ class DeliveryTrackingAndFleetTest extends CIUnitTestCase
         $this->assertEquals(125.0680, (float) $updatedDelivery['current_lng']);
         $this->assertNotNull($updatedDelivery['location_updated_at']);
 
-        // 2. Out-of-bounds update (Manila coords: 14.5995, 120.9842) should be rejected
-        $invalidPost = $this->asShopOwner($ownerId, $shopId)
+        // 2. Out-of-bounds update (Manila coords: 14.5995, 120.9842) is saved with in_zone = false (informational flag)
+        $outOfZonePost = $this->asShopOwner($ownerId, $shopId)
             ->post('tenant/deliveries/update-location', [
                 'delivery_id' => $deliveryId,
                 'lat'         => 14.5995,
                 'lng'         => 120.9842,
             ]);
 
-        $invalidPost->assertStatus(422);
-        $invalidJson = json_decode($invalidPost->response()->getBody(), true);
-        $this->assertFalse($invalidJson['success']);
-        $this->assertStringContainsString('Polomolok', $invalidJson['error']);
+        $outOfZonePost->assertOK();
+        $outOfZoneJson = json_decode($outOfZonePost->response()->getBody(), true);
+        $this->assertTrue($outOfZoneJson['success']);
+        $this->assertFalse($outOfZoneJson['in_zone']);
+        $this->assertEquals(14.5995, (float) $outOfZoneJson['lat']);
+        $this->assertEquals(120.9842, (float) $outOfZoneJson['lng']);
+
+        $updatedOutOfZone = $deliveryModel->find($deliveryId);
+        $this->assertEquals(14.5995, (float) $updatedOutOfZone['current_lat']);
+        $this->assertEquals(120.9842, (float) $updatedOutOfZone['current_lng']);
     }
 
     public function testAdminTrackingPinsEndpointReturnsJsonWithGroupedShops()

@@ -220,10 +220,18 @@ class RealtimeAndLiveRouteTest extends CIUnitTestCase
         }
         $this->assertFalse($foundInPinsBefore, 'Unviewed/unbroadcasted delivery should NOT appear on admin live map.');
 
-        // 3. As Tenant, click "View Live Route & Map" (open delivery detail page)
+        // 3. As Tenant, click "View Live Route & Map" (open delivery detail page) and broadcast GPS location
         $tenantRes = $this->asTenant((int) $tenantUser['id'], (int) $shop['id'])
             ->get('tenant/deliveries/' . $deliveryId);
         $tenantRes->assertStatus(200);
+
+        $updateRes = $this->asTenant((int) $tenantUser['id'], (int) $shop['id'])
+            ->post('tenant/deliveries/update-location', [
+                'delivery_id' => $deliveryId,
+                'lat'         => 6.2136,
+                'lng'         => 125.0661,
+            ]);
+        $updateRes->assertStatus(200);
 
         // 4. As Admin, check tracking pins again: delivery MUST now appear in pins and groupedShops!
         $adminResAfter = $this->asAdmin()->get('admin/tracking/pins');

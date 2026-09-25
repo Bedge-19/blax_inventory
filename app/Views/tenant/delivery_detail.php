@@ -879,11 +879,23 @@
             if (data && data.success) {
                 const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 const statusElem = document.getElementById('gpsStatusText');
-                if (statusElem) statusElem.textContent = `Broadcasting your live location to customer (±${accuracy}m)`;
+                if (statusElem) {
+                    if (data.in_zone === false) {
+                        statusElem.textContent = `Broadcasting your live location (outside designated zone) (±${accuracy}m)`;
+                    } else {
+                        statusElem.textContent = `Broadcasting your live location to customer (±${accuracy}m)`;
+                    }
+                }
                 const timeElem = document.getElementById('gpsLastUpdated');
                 if (timeElem) timeElem.textContent = `Last sent: ${timeStr}`;
                 const dot = document.getElementById('gpsIndicatorDot');
-                if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+                if (dot) {
+                    if (data.in_zone === false) {
+                        dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse';
+                    } else {
+                        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping';
+                    }
+                }
             } else if (data && data.error) {
                 const statusElem = document.getElementById('gpsStatusText');
                 if (statusElem) statusElem.textContent = data.error;
