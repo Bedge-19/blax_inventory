@@ -1,9 +1,10 @@
 FROM php:8.3-fpm
 
-# Install Nginx, gettext-base (for envsubst), system build tools, and PHP extension dependencies
+# Install Nginx, gettext-base (for envsubst), system build tools, poppler-utils (pdfinfo), and PHP extension dependencies
 RUN apt-get update && apt-get install -y \
     nginx \
     gettext-base \
+    poppler-utils \
     libicu-dev \
     libzip-dev \
     libpng-dev \

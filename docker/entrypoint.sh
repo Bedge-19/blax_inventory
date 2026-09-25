@@ -44,6 +44,15 @@ opcache.fast_shutdown=1
 realpath_cache_size=4096k
 realpath_cache_ttl=600
 EOF
+
+    cat <<'EOF' > /usr/local/etc/php/conf.d/zz-uploads.ini
+upload_max_filesize=50M
+post_max_size=50M
+memory_limit=512M
+max_execution_time=180
+max_input_time=180
+default_socket_timeout=180
+EOF
 fi
 
 # Ensure writable directories exist with correct permissions for www-data

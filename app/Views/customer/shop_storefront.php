@@ -1346,10 +1346,24 @@ if (dropzone && fileInput) {
         })
         .then(response => response.json().then(data => ({ ok: response.ok, data })))
         .then(({ ok, data }) => {
-            if (ok && data && data.success) {
+            const pageManualContainer = document.getElementById('docxPageCountContainer');
+            if (ok && data && data.success && data.page_count > 0) {
+                if (pageManualContainer && !document.getElementById('docTypeDocx')?.checked) {
+                    pageManualContainer.classList.add('hidden');
+                }
                 setUploadState('ready', data.page_count);
                 updatePrintingPrice();
                 showPdfModal('success', 'PDF Uploaded Successfully', 'Your document was verified and page count was calculated.', file.name, data.page_count);
+            } else if (data && data.can_manual) {
+                if (pageManualContainer) {
+                    pageManualContainer.classList.remove('hidden');
+                    const label = pageManualContainer.querySelector('label span:first-child');
+                    if (label) label.innerHTML = 'Confirm Total PDF Pages <span class="text-error">*</span>';
+                }
+                const fallbackPages = Math.max(1, parseInt(document.getElementById('docxEstimatedPages')?.value || '1', 10));
+                setUploadState('ready', fallbackPages);
+                updatePrintingPrice();
+                showPdfModal('success', 'PDF Attached', 'Document attached. Please confirm your total page count below.', file.name, fallbackPages);
             } else {
                 const msg = (data && data.error) ? data.error : 'Unable to determine page count.';
                 setUploadState('error', msg);
@@ -1358,10 +1372,16 @@ if (dropzone && fileInput) {
             }
         })
         .catch(() => {
-            const msg = 'Unable to determine page count or process PDF.';
-            setUploadState('error', msg);
+            const pageManualContainer = document.getElementById('docxPageCountContainer');
+            if (pageManualContainer) {
+                pageManualContainer.classList.remove('hidden');
+                const label = pageManualContainer.querySelector('label span:first-child');
+                if (label) label.innerHTML = 'Confirm Total PDF Pages <span class="text-error">*</span>';
+            }
+            const fallbackPages = Math.max(1, parseInt(document.getElementById('docxEstimatedPages')?.value || '1', 10));
+            setUploadState('ready', fallbackPages);
             updatePrintingPrice();
-            showPdfModal('error', 'PDF Upload Failed', msg);
+            showPdfModal('success', 'PDF Attached', 'Document attached. Please confirm your total page count below.', file.name, fallbackPages);
         });
     }
 

@@ -1366,8 +1366,13 @@ class Customer extends BaseController
 
             $pageCount = count_pdf_pages($tmpPath);
             if ($pageCount <= 0) {
-                session()->setFlashdata('error', 'Could not determine the page count of the uploaded PDF.');
-                return redirect()->back();
+                $submittedPages = (int) ($this->request->getPost('page_count') ?: $this->request->getPost('estimated_page_count'));
+                if ($submittedPages > 0) {
+                    $pageCount = min(5000, $submittedPages);
+                } else {
+                    session()->setFlashdata('error', 'Could not determine the page count of the uploaded PDF. Please enter the page count.');
+                    return redirect()->back();
+                }
             }
 
             $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
@@ -1864,9 +1869,13 @@ class Customer extends BaseController
 
         $pageCount = count_pdf_pages($tmpPath);
         if ($pageCount <= 0) {
-            return $this->response->setStatusCode(422)->setJSON([
-                'success' => false,
-                'error'   => 'Could not determine the page count of the uploaded PDF.',
+            return $this->response->setJSON([
+                'success'    => false,
+                'page_count' => 0,
+                'can_manual' => true,
+                'error'      => 'Automatic page detection was inconclusive. Please confirm your page count manually below.',
+                'file_name'  => $file->getClientName(),
+                'doc_type'   => 'pdf',
             ]);
         }
 
