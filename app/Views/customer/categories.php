@@ -44,12 +44,12 @@
         </div>
     </section>
 
-    <!-- Trending Categories (Bento Grid) -->
+    <!-- Trending Categories (High-Impact Showcase Cards) -->
     <?php if (!empty($trending)): ?>
         <section class="flex flex-col gap-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center">
                         <span class="material-symbols-outlined text-[18px] fill-icon">trending_up</span>
                     </div>
                     <div>
@@ -64,62 +64,67 @@
                 </a>
             </div>
 
-            <!-- Bento Layout -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                
-                <?php if (isset($trending[0])): ?>
-                    <!-- #1 Trending Hero Bento Tile (Span 7) -->
-                    <a href="<?= base_url('category/' . ($trending[0]['slug'] ?? $trending[0]['id'])) ?>" class="md:col-span-7 rounded-3xl overflow-hidden relative group cursor-pointer border border-slate-200/90 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[260px] sm:min-h-[320px] flex flex-col justify-end">
+            <!-- Trending Cards Grid (3 Columns) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+                <?php foreach ($trending as $index => $tCat): ?>
+                    <?php 
+                        $isRank1 = ($index === 0);
+                        $isRank2 = ($index === 1);
                         
-                        <div class="absolute inset-0 bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out" style="background-image: url('<?= esc($trending[0]['image_url']) ?>');"></div>
-                        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/20 to-transparent"></div>
+                        $badgeBg = $isRank1 
+                            ? 'bg-amber-500 text-white' 
+                            : ($isRank2 ? 'bg-blue-600 text-white' : 'bg-indigo-600 text-white');
+                        $badgeText = $isRank1 
+                            ? '#1 Trending' 
+                            : ($isRank2 ? '#2 Trending' : '#3 Trending');
+                        $badgeIcon = $isRank1 ? 'local_fire_department' : 'trending_up';
+                        $imgSrc = product_image_url($tCat['image_url'] ?? null, 'card');
+                    ?>
+                    <a href="<?= base_url('category/' . ($tCat['slug'] ?? $tCat['id'])) ?>" 
+                       class="card-elevated bg-white border <?= $isRank1 ? 'border-amber-300/80 shadow-md' : 'border-slate-200/90 shadow-2xs' ?> hover:border-primary/50 hover:shadow-lg rounded-2xl overflow-hidden flex flex-col justify-between group transition-all duration-300">
+                        
+                        <!-- Top Image Showcase Banner -->
+                        <div class="h-44 sm:h-48 w-full overflow-hidden relative bg-slate-100">
+                            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                 src="<?= esc($imgSrc) ?>" 
+                                 alt="<?= esc($tCat['name']) ?>" 
+                                 loading="lazy"
+                                 onerror="this.src='https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';">
+                            
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
 
-                        <!-- Content Glass Card Overlay -->
-                        <div class="relative z-10 m-4 sm:m-6 p-4 sm:p-5 rounded-2xl bg-white/95 backdrop-blur-md border border-white/60 shadow-lg flex items-center justify-between gap-4">
-                            <div>
-                                <span class="px-2.5 py-0.5 bg-amber-500 text-white text-[10px] font-extrabold rounded-full mb-1.5 inline-flex items-center gap-1 shadow-2xs uppercase tracking-wide">
-                                    <span class="material-symbols-outlined text-[12px] fill-icon">local_fire_department</span>
-                                    #1 Trending
+                            <!-- Rank Pill Badge -->
+                            <div class="absolute top-3 left-3">
+                                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider <?= $badgeBg ?> shadow-md">
+                                    <span class="material-symbols-outlined text-[13px] fill-icon"><?= $badgeIcon ?></span>
+                                    <span><?= $badgeText ?></span>
                                 </span>
-                                <h3 class="text-base sm:text-xl font-extrabold text-slate-900"><?= esc($trending[0]['name']) ?></h3>
-                                <p class="text-xs text-slate-500 mt-0.5 font-medium"><?= (int) ($trending[0]['product_count'] ?? 0) ?> items available</p>
                             </div>
 
-                            <span class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-xs group-hover:bg-blue-700 transition-colors">
+                            <!-- Item Count Pill -->
+                            <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white">
+                                <span class="text-xs font-bold bg-black/50 backdrop-blur-xs px-2.5 py-0.5 rounded-full border border-white/20">
+                                    <?= (int) ($tCat['product_count'] ?? 0) ?> items available
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card Info Footer -->
+                        <div class="p-4 flex items-center justify-between gap-3 bg-white">
+                            <div class="min-w-0">
+                                <h3 class="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-primary transition-colors truncate">
+                                    <?= esc($tCat['name']) ?>
+                                </h3>
+                                <p class="text-[11px] text-slate-500 font-medium mt-0.5">Explore catalog &amp; deals</p>
+                            </div>
+
+                            <span class="w-9 h-9 rounded-xl <?= $isRank1 ? 'bg-amber-500/10 text-amber-700 group-hover:bg-amber-500 group-hover:text-white' : 'bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white' ?> transition-colors flex items-center justify-center shrink-0 shadow-2xs">
                                 <span class="material-symbols-outlined text-[18px]">arrow_outward</span>
                             </span>
                         </div>
 
                     </a>
-                <?php endif; ?>
-
-                <?php if (isset($trending[1]) || isset($trending[2])): ?>
-                    <!-- Secondary Trending Stack (Span 5) -->
-                    <div class="md:col-span-5 flex flex-col gap-4">
-                        <?php for ($ti = 1; $ti <= 2; $ti++): ?>
-                            <?php if (isset($trending[$ti])): ?>
-                                <a href="<?= base_url('category/' . ($trending[$ti]['slug'] ?? $trending[$ti]['id'])) ?>" class="flex-1 rounded-3xl overflow-hidden relative group cursor-pointer border border-slate-200/90 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 min-h-[150px] flex flex-col justify-end">
-                                    
-                                    <div class="absolute inset-0 bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-700 ease-out" style="background-image: url('<?= esc($trending[$ti]['image_url']) ?>');"></div>
-                                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/15 to-transparent"></div>
-
-                                    <div class="relative z-10 m-3 sm:m-4 p-3 sm:p-4 rounded-xl bg-white/95 backdrop-blur-md border border-white/60 shadow-md flex items-center justify-between">
-                                        <div>
-                                            <span class="px-2 py-0.5 bg-blue-100 text-primary text-[9px] font-bold rounded-full mb-1 inline-block uppercase tracking-wide">Trending</span>
-                                            <h3 class="text-sm sm:text-base font-bold text-slate-900"><?= esc($trending[$ti]['name']) ?></h3>
-                                            <p class="text-[11px] text-slate-500"><?= (int) ($trending[$ti]['product_count'] ?? 0) ?> items</p>
-                                        </div>
-                                        <span class="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 group-hover:bg-primary group-hover:text-white transition-colors flex items-center justify-center shrink-0">
-                                            <span class="material-symbols-outlined text-[16px]">arrow_outward</span>
-                                        </span>
-                                    </div>
-
-                                </a>
-                            <?php endif; ?>
-                        <?php endfor; ?>
-                    </div>
-                <?php endif; ?>
-
+                <?php endforeach; ?>
             </div>
         </section>
     <?php endif; ?>
@@ -141,7 +146,11 @@
                         
                         <div class="aspect-[4/3] w-full overflow-hidden relative bg-slate-100">
                             <?php if (!empty($cat['image_url'])): ?>
-                                <div class="bg-cover bg-center w-full h-full group-hover:scale-105 transition-transform duration-500" style="background-image: url('<?= esc($cat['image_url']) ?>');"></div>
+                                <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                     src="<?= esc(product_image_url($cat['image_url'], 'card')) ?>" 
+                                     alt="<?= esc($cat['name']) ?>" 
+                                     loading="lazy"
+                                     onerror="this.src='https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';">
                             <?php else: ?>
                                 <div class="w-full h-full bg-gradient-to-br from-blue-50 to-slate-100 flex items-center justify-center">
                                     <span class="material-symbols-outlined text-primary/70 text-4xl group-hover:scale-110 transition-transform">category</span>

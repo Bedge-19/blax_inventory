@@ -29,8 +29,18 @@ if (!function_exists('product_image_url')) {
             return $fallback;
         }
 
+        $url = trim($url);
+
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             return cloudinary_transform_url($url, $variant);
+        }
+
+        // Validate local file existence on disk (handles Railway container redeployment where local files are wiped)
+        if (defined('FCPATH')) {
+            $localDiskPath = FCPATH . ltrim($url, '/\\');
+            if (!is_file($localDiskPath)) {
+                return $fallback;
+            }
         }
 
         return base_url($url);
@@ -58,6 +68,13 @@ if (!function_exists('cms_image_url')) {
             return cloudinary_transform_url($url, $variant);
         }
 
+        if (defined('FCPATH')) {
+            $localDiskPath = FCPATH . ltrim($url, '/\\');
+            if (!is_file($localDiskPath)) {
+                return $fallback;
+            }
+        }
+
         return base_url($url);
     }
 }
@@ -69,15 +86,24 @@ if (!function_exists('logo_url')) {
      */
     function logo_url(?string $url, string $variant = 'logo'): string
     {
-        if ($url === null || $url === '') {
+        if ($url === null || trim($url) === '') {
             return '';
         }
+
+        $url = trim($url);
 
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             return cloudinary_transform_url($url, $variant);
         }
 
-        return strpos($url, 'uploads/') === 0 ? base_url($url) : base_url($url);
+        if (defined('FCPATH')) {
+            $localDiskPath = FCPATH . ltrim($url, '/\\');
+            if (!is_file($localDiskPath)) {
+                return ''; // Safely return empty string so views render clean letter badge
+            }
+        }
+
+        return base_url($url);
     }
 }
 
@@ -92,8 +118,17 @@ if (!function_exists('profile_image_url')) {
             return '';
         }
 
+        $url = trim($url);
+
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             return cloudinary_transform_url($url, $variant);
+        }
+
+        if (defined('FCPATH')) {
+            $localDiskPath = FCPATH . ltrim($url, '/\\');
+            if (!is_file($localDiskPath)) {
+                return ''; // Safely return empty string so views render user initial badge
+            }
         }
 
         return base_url($url);

@@ -10,18 +10,14 @@
     <!-- Shop Header -->
     <section class="mb-lg sm:mb-xxl flex flex-col md:flex-row gap-md sm:gap-lg items-center md:items-center text-center md:text-left">
 
-        <div class="w-20 h-20 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-full border-2 sm:border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center">
-
-            <?php if (!empty($shop['logo_url'])): ?>
-
-                <img class="w-full h-full object-cover" src="<?= esc(logo_url($shop['logo_url'])) ?>" alt="<?= esc($shop['shop_name']) ?> logo">
-
+        <div class="w-20 h-20 sm:w-32 sm:h-32 md:w-48 md:h-48 rounded-full border-2 sm:border-4 border-white shadow-md overflow-hidden flex-shrink-0 bg-surface-container flex items-center justify-center relative">
+            <?php $stLogo = logo_url($shop['logo_url'] ?? null); ?>
+            <?php if (!empty($stLogo)): ?>
+                <img class="w-full h-full object-cover" src="<?= esc($stLogo) ?>" alt="<?= esc($shop['shop_name']) ?> logo" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                <span class="hidden material-symbols-outlined text-primary text-3xl sm:text-6xl items-center justify-center w-full h-full">store</span>
             <?php else: ?>
-
                 <span class="material-symbols-outlined text-primary text-3xl sm:text-6xl">store</span>
-
             <?php endif; ?>
-
         </div>
 
         <div class="flex-grow">

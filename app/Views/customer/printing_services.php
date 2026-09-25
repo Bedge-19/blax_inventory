@@ -315,9 +315,13 @@
                             </div>
 
                             <div class="p-3 sm:p-4 pt-0 flex flex-col items-center text-center -mt-7">
-                                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white shadow-md border border-slate-200/80 p-0.5 overflow-hidden mb-2.5 group-hover:scale-105 transition-transform">
-                                    <?php if (!empty($s['logo_url'])): ?>
-                                        <img class="w-full h-full object-cover rounded-full" src="<?= esc(logo_url($s['logo_url'])) ?>" alt="<?= esc($s['shop_name']) ?>">
+                                <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white shadow-md border border-slate-200/80 p-0.5 overflow-hidden mb-2.5 group-hover:scale-105 transition-transform relative">
+                                    <?php $pLogo = logo_url($s['logo_url'] ?? null); ?>
+                                    <?php if (!empty($pLogo)): ?>
+                                        <img class="w-full h-full object-cover rounded-full" src="<?= esc($pLogo) ?>" alt="<?= esc($s['shop_name']) ?>" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                        <div class="hidden w-full h-full bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
+                                            <span class="material-symbols-outlined text-[24px]">print</span>
+                                        </div>
                                     <?php else: ?>
                                         <div class="w-full h-full bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold">
                                             <span class="material-symbols-outlined text-[24px]">print</span>

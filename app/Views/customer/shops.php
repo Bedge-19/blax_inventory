@@ -152,9 +152,14 @@
                                 
                                 <!-- Proportional Avatar (w-12 h-12 on mobile, w-16 h-16 on desktop) -->
                                 <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full p-0.5 sm:p-1 bg-white shadow-md border border-slate-200/90 overflow-hidden mb-2 sm:mb-2.5 group-hover:scale-105 transition-transform shrink-0">
-                                    <div class="w-full h-full rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
-                                        <?php if (!empty($s['logo_url'])): ?>
-                                            <img class="w-full h-full object-cover" src="<?= esc(logo_url($s['logo_url'])) ?>" alt="<?= esc($s['shop_name']) ?> logo">
+                                    <div class="w-full h-full rounded-full overflow-hidden bg-slate-100 flex items-center justify-center relative">
+                                        <?php $sLogo = logo_url($s['logo_url'] ?? null); ?>
+                                        <?php if (!empty($sLogo)): ?>
+                                            <img class="w-full h-full object-cover" src="<?= esc($sLogo) ?>" alt="<?= esc($s['shop_name']) ?> logo" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                            <div class="hidden w-full h-full bg-gradient-to-br from-primary/10 to-blue-100 flex flex-col items-center justify-center text-primary font-bold">
+                                                <span class="material-symbols-outlined text-[18px] sm:text-[24px]">storefront</span>
+                                                <span class="text-[8px] sm:text-[9px] uppercase tracking-wider"><?= esc(substr($s['shop_name'], 0, 3)) ?></span>
+                                            </div>
                                         <?php else: ?>
                                             <div class="w-full h-full bg-gradient-to-br from-primary/10 to-blue-100 flex flex-col items-center justify-center text-primary font-bold">
                                                 <span class="material-symbols-outlined text-[18px] sm:text-[24px]">storefront</span>

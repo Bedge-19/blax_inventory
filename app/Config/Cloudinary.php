@@ -65,8 +65,7 @@ class Cloudinary extends BaseConfig
         if ($fallbackEnv !== null) {
             $this->allowLocalFallback = filter_var($fallbackEnv, FILTER_VALIDATE_BOOLEAN);
         } else {
-            $ciEnv = getenv('CI_ENVIRONMENT') ?: (env('CI_ENVIRONMENT') ?: (defined('ENVIRONMENT') ? ENVIRONMENT : 'development'));
-            $this->allowLocalFallback = ($ciEnv !== 'production');
+            $this->allowLocalFallback = true;
         }
     }
 }

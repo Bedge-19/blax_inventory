@@ -284,9 +284,14 @@
                         <div class="p-2.5 sm:p-4 pt-0 flex flex-col items-center text-center flex-grow -mt-5 sm:-mt-6">
                             
                             <!-- Overlapping Avatar -->
-                            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full p-0.5 bg-white shadow-md border border-slate-200/80 overflow-hidden mb-2 sm:mb-2.5 group-hover:scale-105 transition-transform shrink-0">
-                                <?php if (!empty($s['logo_url'])): ?>
-                                    <img class="w-full h-full object-cover rounded-full" src="<?= esc(logo_url($s['logo_url'])) ?>" alt="<?= esc($s['shop_name']) ?>">
+                            <div class="w-12 h-12 sm:w-16 sm:h-16 rounded-full p-0.5 bg-white shadow-md border border-slate-200/80 overflow-hidden mb-2 sm:mb-2.5 group-hover:scale-105 transition-transform shrink-0 relative">
+                                <?php $sLogo = logo_url($s['logo_url'] ?? null); ?>
+                                <?php if (!empty($sLogo)): ?>
+                                    <img class="w-full h-full object-cover rounded-full" src="<?= esc($sLogo) ?>" alt="<?= esc($s['shop_name']) ?>" onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                    <div class="hidden w-full h-full bg-gradient-to-br from-primary/10 to-blue-100 rounded-full flex flex-col items-center justify-center text-primary font-black">
+                                        <span class="material-symbols-outlined text-[18px] sm:text-[20px]">storefront</span>
+                                        <span class="text-[8px] sm:text-[9px] tracking-wider uppercase"><?= esc(substr($s['shop_name'], 0, 3)) ?></span>
+                                    </div>
                                 <?php else: ?>
                                     <div class="w-full h-full bg-gradient-to-br from-primary/10 to-blue-100 rounded-full flex flex-col items-center justify-center text-primary font-black">
                                         <span class="material-symbols-outlined text-[18px] sm:text-[20px]">storefront</span>
