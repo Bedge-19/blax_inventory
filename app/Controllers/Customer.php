@@ -1889,6 +1889,333 @@ class Customer extends BaseController
         ]);
     }
 
+    /**
+     * Get JSON details of a printing request for editing/viewing.
+     * Route: GET /customer/printing/details/(:num)
+     */
+    public function getPrintingRequestJson(int $id)
+    {
+        $session = session();
+        $userId  = (int) $session->get('user_id');
+
+        if (!$userId) {
+            return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized.']);
+        }
+
+        $prModel = new PrintingRequestModel();
+        $row = $prModel->find($id);
+
+        if (!$row || (int) $row['customer_id'] !== $userId) {
+            return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Printing request not found.']);
+        }
+
+        $status = strtolower((string) ($row['status'] ?? 'new'));
+        $isProcessingOrLocked = in_array($status, ['in_production', 'processing', 'ready_for_pickup', 'ready_for_delivery', 'completed', 'cancelled'], true);
+        $canEdit = !$isProcessingOrLocked;
+
+        $shopId = (int) $row['shop_id'];
+        $shop = (new ShopModel())->find($shopId);
+        $shopPaperSizes = (new \App\Models\ShopPaperSizeSettingModel())->getForShop($shopId);
+        $shopSettings   = (new \App\Models\ShopPrintingSettingModel())->getForShop($shopId);
+
+        $attachments = (new \App\Models\PrintingRequestAttachmentModel())->where('printing_request_id', $id)->findAll();
+
+        return $this->response
+            ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+            ->setJSON([
+                'success'          => true,
+                'request'          => $row,
+                'can_edit'         => $canEdit,
+                'status'           => $status,
+                'status_label'     => humanize_status($status),
+                'shop_name'        => $shop['shop_name'] ?? 'Printing Shop',
+                'shop_settings'    => $shopSettings,
+                'shop_paper_sizes' => $shopPaperSizes,
+                'attachments'      => $attachments,
+            ]);
+    }
+
+    /**
+     * Update an existing printing request options or replace files (only allowed when NOT in production/processing).
+     * Route: POST /customer/printing/update
+     */
+    public function updatePrintingRequest()
+    {
+        $session = session();
+        $userId  = (int) $session->get('user_id');
+
+        if (!$userId) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized.']);
+            }
+            return redirect()->to('/login');
+        }
+
+        $requestId = (int) ($this->request->getPost('request_id') ?: $this->request->getPost('id'));
+        if ($requestId <= 0) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => 'Invalid printing request.']);
+            }
+            session()->setFlashdata('error', 'Invalid printing request.');
+            return redirect()->back();
+        }
+
+        $prModel = new PrintingRequestModel();
+        $row     = $prModel->find($requestId);
+
+        if (!$row || (int) $row['customer_id'] !== $userId) {
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(404)->setJSON(['success' => false, 'error' => 'Printing request not found.']);
+            }
+            session()->setFlashdata('error', 'Printing request not found.');
+            return redirect()->back();
+        }
+
+        // STRICT VALIDATION: Cannot edit or change files if request is in production (processing) or beyond
+        $status = strtolower((string) ($row['status'] ?? 'new'));
+        if (in_array($status, ['in_production', 'processing', 'ready_for_pickup', 'ready_for_delivery', 'completed', 'cancelled'], true)) {
+            $msg = 'This printing request is already in processing/production and cannot be edited or modified.';
+            if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $msg]);
+            }
+            session()->setFlashdata('error', $msg);
+            return redirect()->back();
+        }
+
+        $shopId = (int) $row['shop_id'];
+        $shopModel = new ShopModel();
+        $shop = $shopModel->find($shopId);
+
+        $cloudinary = new \App\Libraries\CloudinaryService();
+
+        // 1. Process document replacement if a new file was uploaded
+        $file = $this->request->getFile('document');
+        $fileName = $row['file_name'];
+        $fileUrl  = $row['file_url'];
+        $pageCount = (int) ($row['page_count'] ?? 1);
+        $documentType = strtolower(trim((string) ($this->request->getPost('document_type') ?: $row['document_type'] ?: 'pdf')));
+        if ($documentType !== 'docx') {
+            $documentType = 'pdf';
+        }
+
+        if ($file && $file->isValid() && !$file->hasMoved()) {
+            $ext = strtolower($file->getClientExtension());
+            if ($documentType === 'docx') {
+                if (!in_array($ext, ['docx', 'doc'], true)) {
+                    $err = 'Only Word documents (.doc, .docx) are accepted when Word Document is selected.';
+                    if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                        return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $err]);
+                    }
+                    session()->setFlashdata('error', $err);
+                    return redirect()->back();
+                }
+
+                $docPages = max(1, (int) ($this->request->getPost('estimated_page_count') ?: $this->request->getPost('page_count')));
+                if ($ext === 'docx' && class_exists('ZipArchive')) {
+                    $tmpPath = $file->getRealPath() ?: $file->getTempName();
+                    if ($tmpPath && is_file($tmpPath)) {
+                        $zip = new \ZipArchive();
+                        if ($zip->open($tmpPath) === true) {
+                            $appXml = $zip->getFromName('docProps/app.xml');
+                            if ($appXml !== false && preg_match('/<Pages>(\d+)<\/Pages>/i', $appXml, $matches)) {
+                                $parsedPages = (int) $matches[1];
+                                if ($parsedPages > 0) {
+                                    $docPages = $parsedPages;
+                                }
+                            }
+                            $zip->close();
+                        }
+                    }
+                }
+                $pageCount = $docPages;
+
+                $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $uploadedUrl = $cloudinary->uploadOrFallback(
+                    $file,
+                    \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS,
+                    'printing/documents',
+                    $docPublicId,
+                    'raw'
+                );
+
+                if (!$uploadedUrl) {
+                    $err = 'Failed to upload replacement Word document: ' . ($cloudinary->getLastError() ?: 'Upload error');
+                    if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                        return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => $err]);
+                    }
+                    session()->setFlashdata('error', $err);
+                    return redirect()->back();
+                }
+                $fileName = $file->getClientName();
+                $fileUrl  = $uploadedUrl;
+            } else {
+                // PDF Document
+                if ($ext !== 'pdf') {
+                    $err = 'Only PDF documents are accepted for PDF printing.';
+                    if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                        return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $err]);
+                    }
+                    session()->setFlashdata('error', $err);
+                    return redirect()->back();
+                }
+
+                $tmpPath = $file->getRealPath() ?: $file->getTempName();
+                if (!is_valid_pdf($tmpPath, $file->getClientName())) {
+                    $err = 'The uploaded replacement file is not a valid PDF document.';
+                    if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                        return $this->response->setStatusCode(400)->setJSON(['success' => false, 'error' => $err]);
+                    }
+                    session()->setFlashdata('error', $err);
+                    return redirect()->back();
+                }
+
+                $counted = count_pdf_pages($tmpPath);
+                if ($counted > 0) {
+                    $pageCount = $counted;
+                } else {
+                    $submittedPages = (int) ($this->request->getPost('page_count') ?: $this->request->getPost('estimated_page_count'));
+                    if ($submittedPages > 0) {
+                        $pageCount = min(5000, $submittedPages);
+                    }
+                }
+
+                $docPublicId = 'doc_' . time() . '_' . bin2hex(random_bytes(4)) . '.pdf';
+                $uploadedUrl = $cloudinary->uploadOrFallback(
+                    $file,
+                    \App\Libraries\CloudinaryService::FOLDER_PRINTING_DOCS,
+                    'printing/documents',
+                    $docPublicId,
+                    'raw'
+                );
+
+                if (!$uploadedUrl) {
+                    $err = 'Failed to upload replacement PDF document: ' . ($cloudinary->getLastError() ?: 'Upload error');
+                    if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+                        return $this->response->setStatusCode(500)->setJSON(['success' => false, 'error' => $err]);
+                    }
+                    session()->setFlashdata('error', $err);
+                    return redirect()->back();
+                }
+                $fileName = $file->getClientName();
+                $fileUrl  = $uploadedUrl;
+            }
+        }
+
+        // 2. Process optional new reference photos
+        $refFiles = $this->request->getFileMultiple('reference_photos');
+        if (!empty($refFiles)) {
+            $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            $maxBytes = 5 * 1024 * 1024;
+            $attachmentModel = new \App\Models\PrintingRequestAttachmentModel();
+
+            foreach ($refFiles as $rf) {
+                if ($rf && $rf->isValid() && !$rf->hasMoved()) {
+                    if (in_array($rf->getMimeType(), $allowedMimes, true) && $rf->getSize() <= $maxBytes) {
+                        $refPublicId = 'ref_' . time() . '_' . bin2hex(random_bytes(4));
+                        $refUploadUrl = $cloudinary->uploadOrFallback(
+                            $rf,
+                            \App\Libraries\CloudinaryService::FOLDER_PRINTING_REFS,
+                            'printing/references',
+                            $refPublicId,
+                            'image'
+                        );
+                        if ($refUploadUrl) {
+                            $attachmentModel->insert([
+                                'printing_request_id' => $requestId,
+                                'file_name'           => $rf->getClientName(),
+                                'file_path'           => $refUploadUrl,
+                                'file_size'           => $rf->getSize(),
+                                'uploaded_at'         => date('Y-m-d H:i:s'),
+                            ]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 3. Process options & recalculate price
+        $allowedPaperSizes = ['letter', 'legal', 'a4', 'a3', 'a5', 'b5', 'b4', 'a2', 'a1', 'a0'];
+        $paperSize = strtolower(trim((string) ($this->request->getPost('paper_size') ?: $row['paper_size'] ?: 'letter')));
+        if (!in_array($paperSize, $allowedPaperSizes, true)) {
+            $paperSize = 'letter';
+        }
+
+        $rawColor = strtolower((string) ($this->request->getPost('color_mode') ?: $row['color_mode'] ?: 'bw'));
+        $colorMode = in_array($rawColor, ['colored', 'color'], true) ? 'color' : 'bw';
+
+        $bindingMap = ['stapled' => 'staple', 'staple' => 'staple', 'spiral' => 'spiral', 'comb' => 'spiral', 'none' => 'none'];
+        $rawBinding = strtolower((string) ($this->request->getPost('binding') ?: $this->request->getPost('binding_option') ?: $row['binding_option'] ?: 'none'));
+        $binding = $bindingMap[$rawBinding] ?? 'none';
+
+        $copies = max(1, min(500, (int) ($this->request->getPost('copies') ?: $row['copies'] ?: 1)));
+        $paperStock = trim((string) ($this->request->getPost('paper_stock') ?: $row['paper_stock'] ?: 'standard'));
+        $notes = trim((string) ($this->request->getPost('notes') ?: $this->request->getPost('special_instructions') ?: ''));
+        $docChangeType = strtolower(trim((string) ($this->request->getPost('doc_change_type') ?: $row['doc_change_type'] ?: 'as_is')));
+
+        $shopPaperSizes = (new \App\Models\ShopPaperSizeSettingModel())->getForShop($shopId);
+        $shopSettings   = (new \App\Models\ShopPrintingSettingModel())->getForShop($shopId);
+
+        $basePerPage = ($colorMode === 'color')
+            ? (float) ($shopSettings['price_color_per_page'] ?? 5.00)
+            : (float) ($shopSettings['price_bw_per_page'] ?? 2.00);
+
+        $bindingCost = match ($binding) {
+            'staple' => (float) ($shopSettings['price_staple'] ?? 10.00),
+            'spiral' => (float) ($shopSettings['price_spiral'] ?? 35.00),
+            default  => 0.00,
+        };
+
+        $totalPrice = round((($pageCount * $basePerPage) + $bindingCost) * $copies, 2);
+        $downPaymentPercent = (float) ($shopSettings['down_payment_percent'] ?? 50.00);
+        $downPayment = round($totalPrice * ($downPaymentPercent / 100.00), 2);
+
+        $updateData = [
+            'file_name'            => $fileName,
+            'file_url'             => $fileUrl,
+            'document_type'        => $documentType,
+            'doc_change_type'      => $docChangeType,
+            'special_instructions' => $notes !== '' ? $notes : ($row['special_instructions'] ?? null),
+            'paper_size'           => $paperSize,
+            'color_mode'           => $colorMode,
+            'copies'               => $copies,
+            'page_count'           => $pageCount,
+            'binding_option'       => $binding,
+            'paper_stock'          => $paperStock,
+            'total_price'          => $totalPrice,
+            'down_payment'         => $downPayment,
+            'updated_at'           => date('Y-m-d H:i:s'),
+        ];
+
+        $prModel->update($requestId, $updateData);
+
+        // Send in-app notification to shop owner
+        if ($shop && !empty($shop['owner_id'])) {
+            $reqNum = $row['request_number'] ?? ('PR-' . $requestId);
+            (new \App\Models\NotificationModel())->create(
+                (int) $shop['owner_id'],
+                'printing',
+                'Printing Request Updated',
+                "Customer updated request #{$reqNum} ({$fileName}). Options / files modified before production.",
+                '/tenant/printing'
+            );
+        }
+
+        if ($this->request->isAJAX() || str_contains($this->request->getHeaderLine('Accept'), 'application/json')) {
+            return $this->response
+                ->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate')
+                ->setJSON([
+                    'success'     => true,
+                    'message'     => 'Printing request and files updated successfully.',
+                    'total_price' => number_format($totalPrice, 2),
+                    'page_count'  => $pageCount,
+                    'copies'      => $copies,
+                    'file_name'   => $fileName,
+                ]);
+        }
+
+        return redirect()->back()->with('success', 'Printing request updated successfully.');
+    }
+
     public function cancelPrintingRequest(?int $id = null)
     {
         $session = session();

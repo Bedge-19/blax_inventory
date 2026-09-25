@@ -320,10 +320,36 @@
                                     </button>
                                 <?php endif; ?>
 
-                                <!-- Cancel Request Button: only visible if new or in_production -->
-                                <?php if (in_array($reqStatus, ['new', 'in_production'], true)): ?>
+                                <!-- Edit Request & Change Files Button: Only available if status is NOT in production/processing -->
+                                <?php if (in_array($reqStatus, ['new', 'pending'], true)): ?>
                                     <button type="button" 
-                                            class="cancel-pr-btn border border-error/50 text-error hover:bg-error/10 py-2 px-3 rounded-xl font-button text-xs transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer"
+                                            class="edit-pr-btn bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 py-2 px-3 rounded-xl font-button text-xs transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer font-bold shadow-2xs"
+                                            data-id="<?= (int) $req['id'] ?>"
+                                            data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>"
+                                            data-name="<?= esc($req['file_name'] ?? 'Document.pdf') ?>"
+                                            data-doctype="<?= esc($req['document_type'] ?? 'pdf') ?>"
+                                            data-papersize="<?= esc($req['paper_size'] ?? 'letter') ?>"
+                                            data-color="<?= esc($req['color_mode'] ?? 'bw') ?>"
+                                            data-stock="<?= esc($req['paper_stock'] ?? 'standard') ?>"
+                                            data-binding="<?= esc($req['binding_option'] ?? 'none') ?>"
+                                            data-copies="<?= (int) ($req['copies'] ?? 1) ?>"
+                                            data-pages="<?= (int) ($req['page_count'] ?? 1) ?>"
+                                            data-instructions="<?= esc($req['special_instructions'] ?? '') ?>"
+                                            data-changetype="<?= esc($req['doc_change_type'] ?? 'as_is') ?>">
+                                        <span class="material-symbols-outlined text-[16px]">edit_document</span>
+                                        <span>Edit &amp; Change Files</span>
+                                    </button>
+                                <?php elseif ($reqStatus === 'in_production'): ?>
+                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20 shadow-2xs" title="This printing request is currently in production and cannot be modified or have its files replaced.">
+                                        <span class="material-symbols-outlined text-[15px] text-amber-600">lock</span>
+                                        <span>In Production (Locked)</span>
+                                    </span>
+                                <?php endif; ?>
+
+                                <!-- Cancel Request Button: only visible if new or pending (not yet in production) -->
+                                <?php if (in_array($reqStatus, ['new', 'pending'], true)): ?>
+                                    <button type="button" 
+                                            class="cancel-pr-btn border border-error/50 text-error hover:bg-error/10 py-2 px-3 rounded-xl font-button text-xs transition-colors flex items-center justify-center gap-1 active:scale-95 cursor-pointer font-semibold"
                                             data-id="<?= (int) $req['id'] ?>"
                                             data-number="<?= esc($req['request_number'] ?? ('PR-' . $req['id'])) ?>">
                                         <span class="material-symbols-outlined text-[16px]">close</span>
@@ -593,6 +619,154 @@
         <div class="pt-sm border-t border-outline-variant/20 flex justify-end">
             <button type="button" id="ref-modal-done" class="px-xl py-2 bg-primary text-on-primary rounded-xl font-button text-xs font-semibold hover:bg-primary/90 transition-all cursor-pointer">Close</button>
         </div>
+    </div>
+</div>
+
+<!-- Edit Printing Request Modal (Restricted if In Production) -->
+<div id="edit-pr-modal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-md">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" id="edit-pr-overlay"></div>
+    <div class="relative bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-2xl w-full max-w-2xl p-lg md:p-xl flex flex-col gap-md z-10 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center border-b border-outline-variant/20 pb-md">
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <span class="material-symbols-outlined text-2xl">edit_document</span>
+                </div>
+                <div>
+                    <span class="text-[10px] uppercase font-bold text-primary tracking-wider" id="edit-pr-ref-number">#PR-0000</span>
+                    <h3 class="text-title-lg font-bold text-on-surface">Edit Request &amp; Files</h3>
+                </div>
+            </div>
+            <button type="button" id="edit-pr-close" class="p-1 rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors cursor-pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <div id="edit-pr-locked-alert" class="hidden p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-xs text-amber-800 dark:text-amber-300 font-semibold flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-amber-600 shrink-0">lock</span>
+            <span>This request is already in processing/production. Options and uploaded files can no longer be modified.</span>
+        </div>
+
+        <form id="edit-pr-form" action="<?= base_url('printing/update') ?>" method="POST" enctype="multipart/form-data" class="space-y-4">
+            <?= csrf_field() ?>
+            <input type="hidden" name="request_id" id="edit-pr-id" value="">
+
+            <!-- Document Details & File Replacement -->
+            <div class="bg-surface-container-low p-3.5 rounded-2xl border border-outline-variant/20 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <label class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px] text-primary">description</span>
+                        <span>Attached Document</span>
+                    </label>
+                    <span id="edit-pr-current-pages-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface">1 Page</span>
+                </div>
+
+                <div class="flex items-center gap-2 p-2.5 bg-surface-container-lowest rounded-xl border border-outline-variant/30">
+                    <span class="material-symbols-outlined text-primary text-[20px] shrink-0">file_present</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-on-surface truncate" id="edit-pr-current-file-name">Document.pdf</p>
+                        <p class="text-[10px] text-on-surface-variant">Current file used for printing</p>
+                    </div>
+                </div>
+
+                <!-- Replace Document Upload -->
+                <div class="pt-1 space-y-1.5">
+                    <label class="text-[11px] font-semibold text-on-surface-variant flex items-center gap-1">
+                        <span>Replace with a new document (Optional):</span>
+                    </label>
+                    <input type="file" name="document" id="edit-pr-file-input" accept=".pdf,.docx,.doc" class="block w-full text-xs text-on-surface file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90 file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl p-1 bg-surface-container-lowest">
+                    <p class="text-[10px] text-on-surface-variant/70">Supported formats: PDF, Word (.docx, .doc). Uploading a new file will automatically recalculate total page count.</p>
+                </div>
+            </div>
+
+            <!-- Print Options (Grid) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <!-- Document Type -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Document Format</label>
+                    <select name="document_type" id="edit-pr-doctype" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                        <option value="pdf">PDF Document</option>
+                        <option value="docx">Word Document (.docx)</option>
+                    </select>
+                </div>
+
+                <!-- Color Mode -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Color Mode</label>
+                    <select name="color_mode" id="edit-pr-color" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                        <option value="bw">Black &amp; White (Monochrome)</option>
+                        <option value="color">Full Color</option>
+                    </select>
+                </div>
+
+                <!-- Paper Size -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Paper Size</label>
+                    <select name="paper_size" id="edit-pr-size" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                        <option value="letter">Short (Letter - 8.5 x 11 in)</option>
+                        <option value="legal">Long (Legal - 8.5 x 13/14 in)</option>
+                        <option value="a4">A4 (8.27 x 11.69 in)</option>
+                        <option value="a3">A3 (11.69 x 16.54 in)</option>
+                        <option value="a5">A5</option>
+                    </select>
+                </div>
+
+                <!-- Paper Stock -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Paper Stock</label>
+                    <select name="paper_stock" id="edit-pr-stock" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                        <option value="standard">Standard 70gsm (Bond Paper)</option>
+                        <option value="standard_80gsm">Standard 80gsm (High Quality)</option>
+                        <option value="glossy">Glossy Photo Paper</option>
+                        <option value="sticker">Sticker Paper</option>
+                    </select>
+                </div>
+
+                <!-- Binding Option -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Binding</label>
+                    <select name="binding" id="edit-pr-binding" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                        <option value="none">No Binding (Loose Sheets)</option>
+                        <option value="staple">Corner / Side Staple</option>
+                        <option value="spiral">Spiral / Ring Binding</option>
+                    </select>
+                </div>
+
+                <!-- Number of Copies -->
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-on-surface">Number of Sets / Copies</label>
+                    <input type="number" name="copies" id="edit-pr-copies" min="1" max="500" value="1" class="w-full text-xs font-semibold p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary">
+                </div>
+            </div>
+
+            <!-- Special Instructions & Changes -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-on-surface">Special Instructions &amp; Formatting Notes</label>
+                <textarea name="notes" id="edit-pr-notes" rows="2" placeholder="e.g. Page 1 to 5 only, double sided, landscape orientation..." class="w-full text-xs p-2.5 rounded-xl border border-outline-variant/30 bg-surface-container-lowest text-on-surface focus:ring-2 focus:ring-primary resize-none"></textarea>
+            </div>
+
+            <!-- Additional Reference Photos Upload -->
+            <div class="space-y-1.5">
+                <label class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px] text-purple-600">photo_library</span>
+                    <span>Attach New Reference Photos (Optional)</span>
+                </label>
+                <input type="file" name="reference_photos[]" multiple accept="image/*" id="edit-pr-photos-input" class="block w-full text-xs text-on-surface file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-purple-600 file:text-white hover:file:bg-purple-700 file:cursor-pointer cursor-pointer border border-outline-variant/30 rounded-xl p-1 bg-surface-container-lowest">
+            </div>
+
+            <!-- Error Banner -->
+            <div id="edit-pr-error" class="hidden p-3 bg-error-container/20 border border-error-container/50 rounded-xl text-xs text-error font-semibold flex items-center gap-2">
+                <span class="material-symbols-outlined text-[16px]">error</span>
+                <span id="edit-pr-error-text">Failed to update printing request.</span>
+            </div>
+
+            <div class="flex items-center gap-sm pt-sm border-t border-outline-variant/20">
+                <button type="button" id="edit-pr-cancel" class="flex-1 py-2.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface rounded-xl font-button text-xs font-semibold transition-all cursor-pointer">Cancel</button>
+                <button type="submit" id="edit-pr-submit" class="flex-1 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-button text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer">
+                    <span id="edit-pr-spinner" class="material-symbols-outlined text-[16px] animate-spin hidden">progress_activity</span>
+                    <span id="edit-pr-submit-text">Save Changes &amp; Files</span>
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1114,6 +1288,159 @@
         if (refModal) refModal.classList.add('hidden');
     }
 
+    // 7. Edit Printing Request & Replace Files Modal
+    var editModal       = document.getElementById('edit-pr-modal');
+    var editOverlay     = document.getElementById('edit-pr-overlay');
+    var editClose       = document.getElementById('edit-pr-close');
+    var editCancel      = document.getElementById('edit-pr-cancel');
+    var editForm        = document.getElementById('edit-pr-form');
+    var editRefNum      = document.getElementById('edit-pr-ref-number');
+    var editId          = document.getElementById('edit-pr-id');
+    var editLockedAlert = document.getElementById('edit-pr-locked-alert');
+    var editFileName    = document.getElementById('edit-pr-current-file-name');
+    var editPagesBadge  = document.getElementById('edit-pr-current-pages-badge');
+    var editFileInput   = document.getElementById('edit-pr-file-input');
+    var editDocType     = document.getElementById('edit-pr-doctype');
+    var editColor       = document.getElementById('edit-pr-color');
+    var editSize        = document.getElementById('edit-pr-size');
+    var editStock       = document.getElementById('edit-pr-stock');
+    var editBinding     = document.getElementById('edit-pr-binding');
+    var editCopies      = document.getElementById('edit-pr-copies');
+    var editNotes       = document.getElementById('edit-pr-notes');
+    var editError       = document.getElementById('edit-pr-error');
+    var editErrorText   = document.getElementById('edit-pr-error-text');
+    var editSubmit      = document.getElementById('edit-pr-submit');
+    var editSpinner     = document.getElementById('edit-pr-spinner');
+    var editSubmitText  = document.getElementById('edit-pr-submit-text');
+
+    function openEditModal(btn) {
+        if (!editModal) return;
+        var id = btn.dataset.id || '';
+        var reqNum = btn.dataset.number || '';
+        var name = btn.dataset.name || 'Document.pdf';
+        var docType = btn.dataset.doctype || 'pdf';
+        var size = btn.dataset.papersize || 'letter';
+        var color = btn.dataset.color || 'bw';
+        var stock = btn.dataset.stock || 'standard';
+        var binding = btn.dataset.binding || 'none';
+        var copies = btn.dataset.copies || '1';
+        var pages = btn.dataset.pages || '1';
+        var instructions = btn.dataset.instructions || '';
+
+        editId.value = id;
+        editRefNum.textContent = '#' + reqNum;
+        editFileName.textContent = name;
+        editPagesBadge.textContent = pages + (parseInt(pages, 10) === 1 ? ' Page' : ' Pages');
+
+        if (editDocType) editDocType.value = docType;
+        if (editColor) editColor.value = color;
+        if (editSize) editSize.value = size;
+        if (editStock) editStock.value = stock;
+        if (editBinding) editBinding.value = binding;
+        if (editCopies) editCopies.value = copies;
+        if (editNotes) editNotes.value = instructions;
+        if (editFileInput) editFileInput.value = '';
+
+        if (editError) editError.classList.add('hidden');
+        if (editLockedAlert) editLockedAlert.classList.add('hidden');
+        if (editSubmit) editSubmit.disabled = false;
+
+        // Fetch fresh status check from server
+        fetch('<?= base_url('customer/printing/details/') ?>' + id, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data && data.success) {
+                if (!data.can_edit) {
+                    if (editLockedAlert) editLockedAlert.classList.remove('hidden');
+                    if (editSubmit) editSubmit.disabled = true;
+                }
+            }
+        })
+        .catch(function() {});
+
+        editModal.classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        if (editModal) editModal.classList.add('hidden');
+        if (editForm) editForm.reset();
+    }
+
+    document.querySelectorAll('.edit-pr-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEditModal(btn);
+        });
+    });
+
+    if (editOverlay) editOverlay.addEventListener('click', closeEditModal);
+    if (editClose) editClose.addEventListener('click', closeEditModal);
+    if (editCancel) editCancel.addEventListener('click', closeEditModal);
+
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (editError) editError.classList.add('hidden');
+            if (editSubmit) editSubmit.disabled = true;
+            if (editSpinner) editSpinner.classList.remove('hidden');
+            if (editSubmitText) editSubmitText.textContent = 'Saving Changes...';
+
+            var formData = new FormData(editForm);
+
+            fetch(editForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(function(res) {
+                return res.json().then(function(json) {
+                    return { ok: res.ok, status: res.status, data: json };
+                });
+            })
+            .then(function(result) {
+                if (editSpinner) editSpinner.classList.add('hidden');
+                if (editSubmitText) editSubmitText.textContent = 'Save Changes & Files';
+                if (editSubmit) editSubmit.disabled = false;
+
+                if (result.ok && result.data && result.data.success) {
+                    closeEditModal();
+                    if (window.showToast) {
+                        window.showToast({
+                            type: 'success',
+                            title: 'Printing Request Updated',
+                            message: result.data.message || 'Your printing options and files have been updated.'
+                        });
+                    }
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 800);
+                } else {
+                    var msg = (result.data && result.data.error) ? result.data.error : 'Failed to update printing request.';
+                    if (editError && editErrorText) {
+                        editErrorText.textContent = msg;
+                        editError.classList.remove('hidden');
+                    } else if (window.showToast) {
+                        window.showToast({ type: 'error', title: 'Update Error', message: msg });
+                    }
+                }
+            })
+            .catch(function(err) {
+                if (editSpinner) editSpinner.classList.add('hidden');
+                if (editSubmitText) editSubmitText.textContent = 'Save Changes & Files';
+                if (editSubmit) editSubmit.disabled = false;
+                if (editError && editErrorText) {
+                    editErrorText.textContent = 'Network or server error while updating printing request.';
+                    editError.classList.remove('hidden');
+                }
+            });
+        });
+    }
+
     document.querySelectorAll('.view-ref-photos-btn').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
             e.stopPropagation();
@@ -1133,6 +1460,10 @@
             }
             if (refModal && !refModal.classList.contains('hidden')) {
                 closeRefPhotos();
+                return;
+            }
+            if (editModal && !editModal.classList.contains('hidden')) {
+                closeEditModal();
                 return;
             }
         }

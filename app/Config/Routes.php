@@ -68,6 +68,8 @@ $routes->group('customer', ['filter' => 'roleAccess:customer'], function ($route
     $routes->post('orders/(:num)/cancel', 'Customer::cancelOrder/$1');
     $routes->post('orders/cancel', 'Customer::cancelOrder');
     $routes->get('printing', 'Customer::printingRequests');
+    $routes->get('printing/details/(:num)', 'Customer::getPrintingRequestJson/$1');
+    $routes->post('printing/update', 'Customer::updatePrintingRequest', ['filter' => 'actionThrottle']);
     $routes->get('printing/track/(:any)/position', 'Customer::getPrintingDeliveryPosition/$1');
     $routes->get('printing/track/(:any)', 'Customer::trackPrintingRequest/$1');
     $routes->post('printing/(:num)/cancel', 'Customer::cancelPrintingRequest/$1');

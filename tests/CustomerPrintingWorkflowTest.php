@@ -203,4 +203,134 @@ class CustomerPrintingWorkflowTest extends CIUnitTestCase
         // Clean up
         $orderModel->delete($orderId, true);
     }
+
+    public function testPrintingRequestEditAllowedWhenNew(): void
+    {
+        $shop = (new ShopModel())->first();
+        $this->assertNotNull($shop);
+        $shopId = (int) $shop['id'];
+
+        $customer = (new UserModel())->where('role', 'customer')->first() ?? (new UserModel())->first();
+        $this->assertNotNull($customer);
+        $customerId = (int) $customer['id'];
+
+        $prModel = new PrintingRequestModel();
+        $reqId = $prModel->insert([
+            'request_number'     => 'PR-EDIT-TEST-' . rand(1000, 9999),
+            'shop_id'            => $shopId,
+            'customer_id'        => $customerId,
+            'file_name'          => 'original_draft.pdf',
+            'document_type'      => 'pdf',
+            'paper_size'         => 'letter',
+            'color_mode'         => 'bw',
+            'copies'             => 1,
+            'page_count'         => 4,
+            'binding_option'     => 'none',
+            'total_price'        => 8.00,
+            'down_payment'       => 4.00,
+            'status'             => 'new',
+            'fulfillment_method' => 'pickup',
+            'created_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        session()->set([
+            'user_id'    => $customerId,
+            'user_role'  => 'customer',
+            'role'       => 'customer',
+            'isLoggedIn' => true,
+        ]);
+
+        $request = \Config\Services::request();
+        $request->setMethod('POST');
+        $request->setHeader('Accept', 'application/json');
+        $request->setGlobal('post', [
+            'request_id'   => $reqId,
+            'paper_size'   => 'a4',
+            'color_mode'   => 'color',
+            'copies'       => 3,
+            'binding'      => 'staple',
+            'paper_stock'  => 'standard_80gsm',
+            'notes'        => 'Updated notes by customer',
+        ]);
+
+        $ctrl = new Customer();
+        $ctrl->initController($request, \Config\Services::response(), \Config\Services::logger());
+
+        $response = $ctrl->updatePrintingRequest();
+        $this->assertEquals(200, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), true);
+        $this->assertTrue($body['success']);
+
+        // Check updated fields in DB
+        $updated = $prModel->find($reqId);
+        $this->assertEquals('a4', $updated['paper_size']);
+        $this->assertEquals('color', $updated['color_mode']);
+        $this->assertEquals(3, (int) $updated['copies']);
+        $this->assertEquals('staple', $updated['binding_option']);
+        $this->assertEquals('Updated notes by customer', $updated['special_instructions']);
+
+        $prModel->delete($reqId, true);
+    }
+
+    public function testPrintingRequestEditForbiddenWhenProcessing(): void
+    {
+        $shop = (new ShopModel())->first();
+        $this->assertNotNull($shop);
+        $shopId = (int) $shop['id'];
+
+        $customer = (new UserModel())->where('role', 'customer')->first() ?? (new UserModel())->first();
+        $this->assertNotNull($customer);
+        $customerId = (int) $customer['id'];
+
+        $prModel = new PrintingRequestModel();
+        $reqId = $prModel->insert([
+            'request_number'     => 'PR-LOCK-TEST-' . rand(1000, 9999),
+            'shop_id'            => $shopId,
+            'customer_id'        => $customerId,
+            'file_name'          => 'in_production_doc.pdf',
+            'document_type'      => 'pdf',
+            'paper_size'         => 'letter',
+            'color_mode'         => 'bw',
+            'copies'             => 1,
+            'page_count'         => 5,
+            'binding_option'     => 'none',
+            'total_price'        => 10.00,
+            'down_payment'       => 5.00,
+            'status'             => 'in_production', // Shop has moved to processing/production!
+            'fulfillment_method' => 'pickup',
+            'created_at'         => date('Y-m-d H:i:s'),
+        ]);
+
+        session()->set([
+            'user_id'    => $customerId,
+            'user_role'  => 'customer',
+            'role'       => 'customer',
+            'isLoggedIn' => true,
+        ]);
+
+        $request = \Config\Services::request();
+        $request->setMethod('POST');
+        $request->setHeader('Accept', 'application/json');
+        $request->setGlobal('post', [
+            'request_id' => $reqId,
+            'copies'     => 10,
+        ]);
+
+        $ctrl = new Customer();
+        $ctrl->initController($request, \Config\Services::response(), \Config\Services::logger());
+
+        $response = $ctrl->updatePrintingRequest();
+        $this->assertEquals(400, $response->getStatusCode());
+
+        $body = json_decode($response->getBody(), true);
+        $this->assertFalse($body['success']);
+        $this->assertStringContainsString('cannot be edited', $body['error']);
+
+        // Check DB copies was NOT altered
+        $row = $prModel->find($reqId);
+        $this->assertEquals(1, (int) $row['copies']);
+
+        $prModel->delete($reqId, true);
+    }
 }
