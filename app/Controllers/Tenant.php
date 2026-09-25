@@ -576,7 +576,9 @@ class Tenant extends BaseController
                 ->orderBy('orders.id', 'ASC')
                 ->findAll();
 
+            $orderIds = [];
             foreach ($rawOrders as $ord) {
+                $orderIds[] = (int) $ord['id'];
                 $custName = trim(($ord['first_name'] ?? '') . ' ' . ($ord['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
                 $initials = strtoupper(substr($ord['first_name'] ?? 'C', 0, 1) . substr($ord['last_name'] ?? 'U', 0, 1));
@@ -595,13 +597,17 @@ class Tenant extends BaseController
                 $newOrders[] = [
                     'id'                 => (int) $ord['id'],
                     'order_number'       => $ord['order_number'] ?? ('ORD-' . $ord['id']),
+                    'customer_id'        => (int) ($ord['customer_id'] ?? 0),
                     'customer_name'      => $custName,
                     'customer_initials'  => $initials,
                     'customer_phone'     => $ord['addr_phone'] ?? $ord['cust_phone'] ?? 'N/A',
                     'customer_image'     => $ord['profile_image_url'] ?? '',
                     'total_amount'       => (float) ($ord['total_amount'] ?? 0),
                     'total_amount_fmt'   => number_format((float) ($ord['total_amount'] ?? 0), 2),
+                    'payment_status'     => $ord['payment_status'] ?? 'pending',
+                    'is_paid'            => ($ord['payment_status'] ?? '') === 'paid',
                     'items_count'        => $itemsCount,
+                    'items'              => [],
                     'fulfillment_method' => $ord['fulfillment_method'] ?? 'delivery',
                     'is_pickup'          => $isPickup,
                     'delivery_address'   => $deliveryAddr,
@@ -610,12 +616,40 @@ class Tenant extends BaseController
                     'placed_at_fmt'      => date('M d, h:i A', strtotime($ord['created_at'] ?? 'now')),
                 ];
             }
+
+            // Batch-fetch items for all new orders in one query
+            if (!empty($orderIds)) {
+                $db = \Config\Database::connect();
+                $itemsRaw = $db->table('order_items')
+                    ->select('order_items.*, (SELECT image_url FROM product_images WHERE product_id = order_items.product_id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as gallery_image')
+                    ->whereIn('order_id', $orderIds)
+                    ->get()->getResultArray();
+
+                $itemsByOrder = [];
+                foreach ($itemsRaw as $it) {
+                    $oId = (int) $it['order_id'];
+                    $itemsByOrder[$oId][] = [
+                        'product_name'   => $it['product_name'] ?? 'Product Item',
+                        'quantity'       => (int) ($it['quantity'] ?? 1),
+                        'unit_price'     => (float) ($it['unit_price'] ?? 0),
+                        'unit_price_fmt' => number_format((float) ($it['unit_price'] ?? 0), 2),
+                        'line_total'     => (float) ($it['line_total'] ?? 0),
+                        'line_total_fmt' => number_format((float) ($it['line_total'] ?? 0), 2),
+                        'image'          => $it['gallery_image'] ?? '',
+                    ];
+                }
+
+                foreach ($newOrders as &$no) {
+                    $no['items'] = $itemsByOrder[$no['id']] ?? [];
+                }
+                unset($no);
+            }
         }
 
         // 2. Fetch new printing requests in a single JOIN query
         $newPrinting = [];
         if ($lastPrintingId > 0) {
-            $rawPrinting = $printingModel->select('printing_requests.*, users.first_name, users.last_name')
+            $rawPrinting = $printingModel->select('printing_requests.*, users.first_name, users.last_name, users.phone as cust_phone, users.email as cust_email, users.profile_image_url')
                 ->join('users', 'users.id = printing_requests.customer_id', 'left')
                 ->where('printing_requests.shop_id', $shopId)
                 ->where('printing_requests.id >', $lastPrintingId)
@@ -626,25 +660,43 @@ class Tenant extends BaseController
                 $custName = trim(($pr['first_name'] ?? '') . ' ' . ($pr['last_name'] ?? ''));
                 if ($custName === '') $custName = 'Customer';
                 $initials = strtoupper(substr($pr['first_name'] ?? 'C', 0, 1) . substr($pr['last_name'] ?? 'U', 0, 1));
+                $fileName = !empty($pr['file_name']) ? $pr['file_name'] : 'Document.pdf';
+                $docType = strtoupper(!empty($pr['document_type']) ? $pr['document_type'] : (pathinfo($fileName, PATHINFO_EXTENSION) ?: 'PDF'));
 
                 $newPrinting[] = [
                     'id'                 => (int) $pr['id'],
                     'request_number'     => $pr['request_number'] ?? ('PR-' . $pr['id']),
+                    'customer_id'        => (int) ($pr['customer_id'] ?? 0),
                     'customer_name'      => $custName,
                     'customer_initials'  => $initials,
+                    'customer_phone'     => $pr['cust_phone'] ?? $pr['phone'] ?? 'Direct Order',
+                    'customer_email'     => $pr['cust_email'] ?? $pr['email'] ?? '',
+                    'customer_image'     => $pr['profile_image_url'] ?? '',
                     'service_name'       => $pr['service_type'] ?? 'Printing Request',
+                    'file_name'          => $fileName,
+                    'document_type'      => $docType,
+                    'page_count'         => (int) ($pr['page_count'] ?? 1),
+                    'copies'             => (int) ($pr['copies'] ?? 1),
+                    'paper_size'         => ucfirst($pr['paper_size'] ?? 'A4'),
+                    'color_mode'         => strtoupper(($pr['color_mode'] ?? 'color') === 'color' ? 'Color' : 'B&W'),
+                    'binding_option'     => $pr['binding_option'] ?? 'none',
+                    'doc_change_type'    => ($pr['doc_change_type'] ?? '') === 'has_changes' ? 'Requested Changes' : 'Print As-Is',
+                    'special_instructions' => $pr['special_instructions'] ?? '',
                     'total_pages'        => (int) ($pr['total_pages'] ?? 1),
                     'total_amount'       => (float) ($pr['total_price'] ?? 0),
                     'total_amount_fmt'   => number_format((float) ($pr['total_price'] ?? 0), 2),
+                    'down_payment'       => (float) ($pr['down_payment'] ?? 0),
+                    'down_payment_fmt'   => number_format((float) ($pr['down_payment'] ?? 0), 2),
                     'fulfillment_method' => strtolower($pr['fulfillment_method'] ?? 'delivery'),
                     'status'             => $pr['status'] ?? 'new',
                     'created_at'         => $pr['created_at'],
-                    'placed_at_fmt'      => date('M d, h:i A', strtotime($pr['created_at'] ?? 'now')),
+                    'placed_at_fmt'      => date('M d, g:i A', strtotime($pr['created_at'] ?? 'now')),
                 ];
             }
         }
 
         $summary = $orderModel->getOrdersSummary($shopId);
+        $printSummary = $printingModel->getPrintSummary($shopId);
 
         $maxOrdRow = $orderModel->where('shop_id', $shopId)->selectMax('id')->first();
         $currentMaxOrderId = (int) ($maxOrdRow['id'] ?? 0);
@@ -670,6 +722,7 @@ class Tenant extends BaseController
                 'unread_count'     => $unreadCount,
                 'notifications'    => $recentNotifs,
                 'summary'          => $summary,
+                'printing_summary' => $printSummary,
                 'timestamp'        => date('Y-m-d H:i:s'),
             ]);
     }

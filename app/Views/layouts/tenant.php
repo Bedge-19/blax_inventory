@@ -510,6 +510,9 @@
                             showRealtimeToast('printing', pr);
                             window.dispatchEvent(new CustomEvent('blax:new-printing', { detail: pr }));
                         });
+                        if (res.printing_summary) {
+                            window.dispatchEvent(new CustomEvent('blax:printing-summary-update', { detail: res.printing_summary }));
+                        }
                     }
                 })
                 .catch(err => {
@@ -593,9 +596,9 @@
             });
         });
 
-        // Start polling loop every 4 seconds
+        // Start polling loop every 3 seconds for instant real-time ingestion
         checkRealtime();
-        pollTimer = setInterval(checkRealtime, 4000);
+        pollTimer = setInterval(checkRealtime, 3000);
 
         // Universal showToast helper for tenant pages
         window.showToast = function(opts) {

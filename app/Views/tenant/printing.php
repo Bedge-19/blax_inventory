@@ -67,7 +67,7 @@ $nextStates = [
                 <span class="text-label-sm font-label-sm text-on-surface-variant group-hover:text-primary">New Requests</span>
                 <span class="material-symbols-outlined text-primary bg-primary-fixed p-xs rounded">new_releases</span>
             </div>
-            <div class="text-headline-md font-headline-md text-primary"><?= number_format((int) $summary['new']) ?></div>
+            <div id="kpi-printing-new" class="text-headline-md font-headline-md text-primary"><?= number_format((int) $summary['new']) ?></div>
         </a>
         <div onclick="document.getElementById('in-production-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' })" class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32 transition-all cursor-pointer group hover:border-tertiary/50 hover:shadow-md">
             <div class="flex justify-between items-start">
@@ -77,28 +77,28 @@ $nextStates = [
                 </span>
                 <span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-xs rounded">manufacturing</span>
             </div>
-            <div class="text-headline-md font-headline-md text-tertiary"><?= number_format((int) $summary['in_production']) ?></div>
+            <div id="kpi-printing-in-production" class="text-headline-md font-headline-md text-tertiary"><?= number_format((int) $summary['in_production']) ?></div>
         </div>
         <a href="<?= base_url('tenant/printing?status=ready_for_pickup') ?>" class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32 transition-all cursor-pointer group hover:border-secondary/40">
             <div class="flex justify-between items-start">
                 <span class="text-label-sm font-label-sm text-on-surface-variant group-hover:text-secondary">Ready for Pickup</span>
                 <span class="material-symbols-outlined text-secondary bg-secondary-container p-xs rounded">local_shipping</span>
             </div>
-            <div class="text-headline-md font-headline-md text-secondary"><?= number_format((int) $summary['ready_for_pickup']) ?></div>
+            <div id="kpi-printing-ready-pickup" class="text-headline-md font-headline-md text-secondary"><?= number_format((int) $summary['ready_for_pickup']) ?></div>
         </a>
         <a href="<?= base_url('tenant/printing?status=ready_for_delivery') ?>" class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32 transition-all cursor-pointer group hover:border-outline/40">
             <div class="flex justify-between items-start">
                 <span class="text-label-sm font-label-sm text-on-surface-variant group-hover:text-outline">Ready for Delivery</span>
                 <span class="material-symbols-outlined text-outline bg-outline/10 p-xs rounded">local_post_office</span>
             </div>
-            <div class="text-headline-md font-headline-md text-outline"><?= number_format((int) $summary['ready_for_delivery']) ?></div>
+            <div id="kpi-printing-ready-delivery" class="text-headline-md font-headline-md text-outline"><?= number_format((int) $summary['ready_for_delivery']) ?></div>
         </a>
         <a href="<?= base_url('tenant/printing?status=completed') ?>" class="glass-card p-lg rounded-xl hover-lift flex flex-col justify-between h-32 transition-all cursor-pointer group hover:border-green-400">
             <div class="flex justify-between items-start">
                 <span class="text-label-sm font-label-sm text-on-surface-variant group-hover:text-green-700">Completed</span>
                 <span class="material-symbols-outlined text-green-600 bg-green-100 p-xs rounded">check_circle</span>
             </div>
-            <div class="text-headline-md font-headline-md text-green-600"><?= number_format((int) $summary['completed']) ?></div>
+            <div id="kpi-printing-completed" class="text-headline-md font-headline-md text-green-600"><?= number_format((int) $summary['completed']) ?></div>
         </a>
     </div>    <!-- Main Workspace: 2-Column Responsive Layout -->
     <div class="grid grid-cols-1 xl:grid-cols-12 gap-gutter items-start">
@@ -116,7 +116,7 @@ $nextStates = [
                         <div>
                             <div class="flex items-center gap-2">
                                 <h3 class="text-title-lg font-bold text-on-surface">Recent Requests</h3>
-                                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                <span id="recentPrintingTotalBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
                                     <?= number_format((int) ($pager->getTotal('recent') ?? count($requests))) ?> total
                                 </span>
                             </div>
@@ -1417,66 +1417,225 @@ $nextStates = [
         document.getElementById('requestModal').classList.remove('hidden');
     }
 
-    // Real-time Printing Request Injection without refresh
+    // Real-time Printing KPI & Metrics Synchronization
+    window.addEventListener('blax:printing-summary-update', function(e) {
+        const summary = e.detail;
+        if (!summary) return;
+
+        const kpiNew = document.getElementById('kpi-printing-new');
+        if (kpiNew && summary.new !== undefined) {
+            kpiNew.textContent = Number(summary.new).toLocaleString();
+        }
+
+        const kpiProd = document.getElementById('kpi-printing-in-production');
+        if (kpiProd && summary.in_production !== undefined) {
+            kpiProd.textContent = Number(summary.in_production).toLocaleString();
+        }
+
+        const kpiPickup = document.getElementById('kpi-printing-ready-pickup');
+        if (kpiPickup && summary.ready_for_pickup !== undefined) {
+            kpiPickup.textContent = Number(summary.ready_for_pickup).toLocaleString();
+        }
+
+        const kpiDelivery = document.getElementById('kpi-printing-ready-delivery');
+        if (kpiDelivery && summary.ready_for_delivery !== undefined) {
+            kpiDelivery.textContent = Number(summary.ready_for_delivery).toLocaleString();
+        }
+
+        const kpiCompleted = document.getElementById('kpi-printing-completed');
+        if (kpiCompleted && summary.completed !== undefined) {
+            kpiCompleted.textContent = Number(summary.completed).toLocaleString();
+        }
+    });
+
+    // Real-time Printing Request Injection without page refresh
     window.addEventListener('blax:new-printing', function(e) {
         const pr = e.detail;
-        if (!pr) return;
+        if (!pr || !pr.id) return;
+
+        const csrfName = '<?= csrf_token() ?>';
+        const csrfHash = '<?= csrf_hash() ?>';
+
+        // Increment Recent Requests Total Badge
+        const totalBadge = document.getElementById('recentPrintingTotalBadge');
+        if (totalBadge) {
+            const curTot = parseInt(totalBadge.textContent.replace(/[^0-9]/g, '') || '0', 10) + 1;
+            totalBadge.textContent = curTot + ' total';
+        }
+
+        // Increment KPI New Requests Counter
+        const kpiNew = document.getElementById('kpi-printing-new');
+        if (kpiNew) {
+            const curNew = parseInt(kpiNew.textContent.replace(/[^0-9]/g, '') || '0', 10) + 1;
+            kpiNew.textContent = curNew.toLocaleString();
+        }
 
         const tableBody = document.getElementById('recentPrintingTableBody');
         if (tableBody) {
             const emptyTd = tableBody.querySelector('td[colspan]');
-            if (emptyTd) emptyTd.parentElement.remove();
+            if (emptyTd) emptyTd.closest('tr')?.remove();
+
+            const isDeliv = (pr.fulfillment_method || 'pickup') === 'delivery';
+            const fileName = pr.file_name || 'Document.pdf';
+            const docType = (pr.document_type || (fileName.split('.').pop() || 'PDF')).toUpperCase();
+            const changeType = pr.doc_change_type === 'has_changes' ? 'Requested Changes' : 'Print As-Is';
+            const reqNum = pr.request_number || ('PR-' + pr.id);
+            const cleanReq = '#' + reqNum.replace(/^#+/, '');
+            const custName = pr.customer_name || 'Customer';
+            const custInitials = pr.customer_initials || 'CU';
+            const custPhone = pr.customer_phone || pr.customer_email || 'Direct Order';
+            const colorStr = (pr.color_mode === 'color' ? 'COLOR' : 'B&W') + ' • ' + (pr.paper_size ? pr.paper_size.toUpperCase() : 'A4');
+            const totalPages = parseInt(pr.total_pages || 1, 10);
+            const copies = parseInt(pr.copies || 1, 10);
+            const bindingStr = pr.binding_option ? (pr.binding_option.charAt(0).toUpperCase() + pr.binding_option.slice(1)) : 'Standard';
+            const specsLine = totalPages + ' pages • ' + copies + ' ' + (copies === 1 ? 'copy' : 'copies') + ' • ' + bindingStr;
+            const downPayment = parseFloat(pr.down_payment || 0);
+
+            const safeCustName = custName.replace(/"/g, '&quot;');
+            const safeFile = fileName.replace(/"/g, '&quot;');
+            const safeInst = (pr.special_instructions || '').replace(/"/g, '&quot;');
+            const safeAtts = JSON.stringify(pr.attachments || []).replace(/"/g, '&quot;');
 
             const tr = document.createElement('tr');
             tr.className = 'hover:bg-surface-container-low/40 transition-colors bg-purple-50/50 dark:bg-purple-950/20 animate-fadeIn';
             tr.innerHTML = `
+                <!-- Request ID -->
                 <td class="px-4 py-3.5 whitespace-nowrap">
-                    <span class="font-mono text-xs font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-lg inline-flex items-center gap-1">
+                    <button type="button"
+                            onclick="openRequestDetails(this)"
+                            class="font-mono text-xs font-bold text-primary hover:text-primary-container bg-primary/5 hover:bg-primary/15 border border-primary/20 px-2.5 py-1 rounded-lg inline-flex items-center gap-1 transition-all active:scale-95"
+                            title="View Full Details"
+                            data-id="${pr.id}"
+                            data-request="${reqNum}"
+                            data-customer="${safeCustName}"
+                            data-file="${safeFile}"
+                            data-doctype="${docType}"
+                            data-changetype="${changeType}"
+                            data-instructions="${safeInst}"
+                            data-attachments="${safeAtts}"
+                            data-specs="${specsLine}"
+                            data-color="${colorStr}"
+                            data-fulfillment="${isDeliv ? 'Delivery' : 'Pickup'}"
+                            data-printer="Not assigned"
+                            data-progress="0"
+                            data-amount="${pr.total_amount_fmt || '0.00'}"
+                            data-down="${downPayment.toFixed(2)}"
+                            data-date="${pr.placed_at_fmt || 'Just now'}">
                         <span class="material-symbols-outlined text-[13px]">tag</span>
-                        <span>#${pr.request_number}</span>
-                    </span>
-                    <span class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-ping ml-1" title="New Incoming Printing Request"></span>
+                        <span>${cleanReq}</span>
+                    </button>
+                    <span class="inline-block w-2 h-2 rounded-full bg-purple-500 animate-ping ml-1" title="⚡ New Incoming Printing Request"></span>
                     <div class="text-[10px] text-on-surface-variant/70 font-medium mt-1 flex items-center gap-1 whitespace-nowrap">
                         <span class="material-symbols-outlined text-[12px]">schedule</span>
-                        <span>${pr.placed_at_fmt}</span>
+                        <span>${pr.placed_at_fmt || 'Just now'}</span>
                     </div>
                 </td>
+
+                <!-- Customer Info -->
                 <td class="px-4 py-3.5">
                     <div class="flex items-center gap-2.5 min-w-[130px]">
-                        <div class="w-8 h-8 rounded-full bg-purple-100 text-purple-800 flex items-center justify-center text-xs font-bold shrink-0">
-                            <span>${pr.customer_initials}</span>
+                        <div class="w-8 h-8 rounded-full bg-primary-container text-primary flex items-center justify-center text-xs font-bold shrink-0 ring-2 ring-surface ${pr.profile_image_url ? 'relative overflow-hidden' : ''}">
+                            <span>${custInitials}</span>
+                            ${pr.profile_image_url ? `<img class="absolute inset-0 w-full h-full object-cover" src="${pr.profile_image_url}" alt="${safeCustName}" loading="lazy" onerror="this.remove();">` : ''}
                         </div>
                         <div class="min-w-0">
-                            <span class="text-xs font-bold text-on-surface truncate block">${pr.customer_name}</span>
-                            <span class="text-[10px] text-on-surface-variant truncate block mt-0.5">${pr.fulfillment_method === 'pickup' ? 'Store Pick-up' : 'Doorstep Delivery'}</span>
+                            <span class="text-xs font-bold text-on-surface truncate block leading-tight max-w-[130px]" title="${safeCustName}">${custName}</span>
+                            <span class="text-[10px] text-on-surface-variant truncate block max-w-[130px] mt-0.5">${custPhone}</span>
                         </div>
                     </div>
                 </td>
+
+                <!-- File Column -->
                 <td class="px-4 py-3.5">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2.5">
                         <div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0 border border-outline-variant/30">
                             <span class="material-symbols-outlined text-[18px]">description</span>
                         </div>
-                        <span class="text-xs font-semibold text-on-surface truncate">${pr.service_name}</span>
-                    </div>
-                </td>
-                <td class="px-4 py-3.5">
-                    <div class="space-y-1">
-                        <div class="text-[11px] text-on-surface-variant">
-                            <span>${pr.total_pages} page(s)</span> • <span class="font-bold text-on-surface">₱${pr.total_amount_fmt}</span>
+                        <div class="min-w-0 max-w-[150px] sm:max-w-[170px]">
+                            <span class="text-xs font-semibold text-on-surface truncate block" title="${safeFile}">${fileName}</span>
+                            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold tracking-wider uppercase ${docType === 'DOCX' ? 'bg-blue-100 text-blue-800' : 'bg-red-100 text-red-800'}">
+                                    ${docType}
+                                </span>
+                                ${docType === 'DOCX' ? `
+                                    <span class="text-[10px] font-medium ${pr.doc_change_type === 'has_changes' ? 'text-amber-700 font-semibold' : 'text-on-surface-variant'}">
+                                        ${pr.doc_change_type === 'has_changes' ? 'Changes' : 'As-Is'}
+                                    </span>
+                                ` : ''}
+                            </div>
                         </div>
                     </div>
                 </td>
-                <td class="px-4 py-3.5 text-center whitespace-nowrap">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                        <span>New</span>
-                    </span>
+
+                <!-- Specifications & Price -->
+                <td class="px-4 py-3.5">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container text-on-surface text-[11px] font-semibold border border-outline-variant/20 whitespace-nowrap">
+                                ${colorStr}
+                            </span>
+                            ${isDeliv ? `
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200/50 whitespace-nowrap" title="Doorstep Delivery">
+                                    <span class="material-symbols-outlined text-[12px]">local_shipping</span> Delivery
+                                </span>
+                            ` : `
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200/50 whitespace-nowrap" title="Store Pick-up">
+                                    <span class="material-symbols-outlined text-[12px]">storefront</span> Pick-up
+                                </span>
+                            `}
+                        </div>
+                        <div class="flex items-center gap-1.5 text-[11px] text-on-surface-variant whitespace-nowrap">
+                            <span>${totalPages} pgs • ${copies} ${copies === 1 ? 'copy' : 'copies'}</span>
+                            <span class="text-outline-variant/60">•</span>
+                            <span class="font-bold text-on-surface">₱${pr.total_amount_fmt || '0.00'}</span>
+                        </div>
+                    </div>
                 </td>
+
+                <!-- Status Badge -->
+                <td class="px-4 py-3.5 text-center whitespace-nowrap">
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span>New</span>
+                        </span>
+                        ${downPayment > 0 ? `
+                            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+                                <span class="material-symbols-outlined text-[11px]">payments</span> Paid
+                            </span>
+                        ` : ''}
+                    </div>
+                </td>
+
+                <!-- Actions -->
                 <td class="px-4 py-3.5 text-right whitespace-nowrap">
                     <div class="flex items-center justify-end gap-1.5">
+                        <button type="button"
+                                onclick="openRequestDetails(this)"
+                                class="px-2.5 py-1.5 rounded-xl bg-surface-container hover:bg-primary hover:text-on-primary text-on-surface font-bold text-xs flex items-center gap-1 transition-all shadow-2xs active:scale-95 border border-outline-variant/30"
+                                title="View Full Details"
+                                data-id="${pr.id}"
+                                data-request="${reqNum}"
+                                data-customer="${safeCustName}"
+                                data-file="${safeFile}"
+                                data-doctype="${docType}"
+                                data-changetype="${changeType}"
+                                data-instructions="${safeInst}"
+                                data-attachments="${safeAtts}"
+                                data-specs="${specsLine}"
+                                data-color="${colorStr}"
+                                data-fulfillment="${isDeliv ? 'Delivery' : 'Pickup'}"
+                                data-printer="Not assigned"
+                                data-progress="0"
+                                data-amount="${pr.total_amount_fmt || '0.00'}"
+                                data-down="${downPayment.toFixed(2)}"
+                                data-date="${pr.placed_at_fmt || 'Just now'}">
+                            <span class="material-symbols-outlined text-[15px]">visibility</span>
+                            <span>Details</span>
+                        </button>
+
                         <form action="<?= base_url('tenant/printing/update-status') ?>" method="POST" class="inline">
-                            <?= csrf_field() ?>
+                            <input type="hidden" name="${csrfName}" value="${csrfHash}">
                             <input type="hidden" name="request_id" value="${pr.id}">
                             <input type="hidden" name="status" value="in_production">
                             <button type="submit" class="px-2.5 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1 shadow-2xs transition-all cursor-pointer">
