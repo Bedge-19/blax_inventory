@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install intl mbstring pdo_mysql mysqli zip gd \
+    && docker-php-ext-install intl mbstring pdo_mysql mysqli zip gd opcache \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy Composer binary from official composer image

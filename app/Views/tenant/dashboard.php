@@ -72,7 +72,7 @@ $compactMoney = function (float $v): string {
 
     <?php if (!empty($seasonal_spotlight) && !empty($seasonal_spotlight['top_items'])): ?>
         <!-- AI Seasonal Intelligence & Restock Forecast Banner -->
-        <div class="rounded-3xl p-5 lg:p-6 bg-gradient-to-r from-blue-900/95 via-indigo-900/95 to-slate-900 text-white shadow-xl border border-white/10 relative overflow-hidden group">
+        <div class="rounded-3xl p-5 lg:p-6 bg-slate-900 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white shadow-xl border border-white/10 relative overflow-hidden group" style="background-color: #0f172a;">
             <!-- Ambient Glow -->
             <div class="absolute -top-16 -right-16 w-64 h-64 bg-primary/30 rounded-full blur-3xl pointer-events-none"></div>
             <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -119,7 +119,7 @@ $compactMoney = function (float $v): string {
             <!-- Spotlight Top Restock Items -->
             <div class="relative z-10 mt-5 pt-4 border-t border-white/10 grid grid-cols-1 md:grid-cols-3 gap-3">
                 <?php foreach ($seasonal_spotlight['top_items'] as $item): ?>
-                    <div class="bg-white/10 hover:bg-white/15 rounded-2xl p-3.5 border border-white/10 backdrop-blur-xs transition-all flex flex-col justify-between">
+                    <div class="bg-slate-800/80 hover:bg-slate-800 rounded-2xl p-3.5 border border-white/15 backdrop-blur-xs transition-all flex flex-col justify-between" style="background-color: rgba(30, 41, 59, 0.85);">
                         <div>
                             <div class="flex items-start justify-between gap-2">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 truncate block"><?= esc($item['category']) ?></span>
@@ -135,7 +135,7 @@ $compactMoney = function (float $v): string {
                                 <span class="font-mono text-emerald-300 font-bold">+<?= $item['restock_units'] ?> needed</span>
                             </div>
                             <!-- Mini Progress Bar -->
-                            <div class="w-full bg-white/20 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                            <div class="w-full bg-slate-700 h-1.5 rounded-full mt-1.5 overflow-hidden">
                                 <div class="h-full rounded-full <?= $item['urgency'] === 'critical' ? 'bg-rose-400' : 'bg-amber-400' ?>" style="width: <?= $item['stock_pct'] ?>%"></div>
                             </div>
                         </div>

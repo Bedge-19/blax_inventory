@@ -148,22 +148,22 @@ $detectedSeason  = $seasonal_data['detected_active_season'] ?? 'school';
         </div>
 
         <!-- KPI 4: Seasonal AI Restock Opportunity -->
-        <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-blue-950 p-5 rounded-2xl border border-white/10 shadow-xs hover:shadow-lg text-white transition-all flex flex-col justify-between relative overflow-hidden">
-            <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-primary/20 rounded-full blur-xl pointer-events-none"></div>
+        <div class="bg-surface-container-lowest p-5 rounded-2xl border border-indigo-200/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden bg-gradient-to-br from-indigo-50/70 via-surface-container-lowest to-blue-50/50">
             <div class="flex items-center justify-between gap-2 mb-2 relative z-10">
-                <span class="text-xs font-bold text-indigo-200 uppercase tracking-wider">Seasonal Opportunity</span>
-                <span class="p-1.5 rounded-lg bg-white/15 text-amber-300">
-                    <span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+                <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider">Seasonal Opportunity</span>
+                <span class="p-2 rounded-xl bg-indigo-500/10 text-indigo-600">
+                    <span class="material-symbols-outlined text-[20px]">auto_awesome</span>
                 </span>
             </div>
             <div class="relative z-10">
-                <p class="text-2xl font-black text-white tracking-tight">₱<?= number_format((float) ($seasonal_data['est_seasonal_opp_revenue'] ?? 0), 2) ?></p>
-                <p class="text-[11px] text-slate-300 mt-1 flex items-center gap-1">
+                <p class="text-2xl font-black text-indigo-950 tracking-tight">₱<?= number_format((float) ($seasonal_data['est_seasonal_opp_revenue'] ?? 0), 2) ?></p>
+                <p class="text-[11px] text-on-surface-variant mt-1 flex items-center gap-1">
                     <?php if (($seasonal_data['critical_stockout_count'] ?? 0) > 0): ?>
-                        <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span>
-                        <strong class="text-rose-300"><?= (int) $seasonal_data['critical_stockout_count'] ?></strong> items need immediate restock
+                        <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+                        <strong class="text-rose-600 font-bold"><?= (int) $seasonal_data['critical_stockout_count'] ?></strong> items need immediate restock
                     <?php else: ?>
-                        <span class="text-emerald-300">Safety stock well-maintained</span>
+                        <span class="material-symbols-outlined text-[14px] text-emerald-600">verified</span>
+                        <span class="text-emerald-700 font-semibold">Safety stock well-maintained</span>
                     <?php endif; ?>
                 </p>
             </div>
@@ -175,8 +175,8 @@ $detectedSeason  = $seasonal_data['detected_active_season'] ?? 'school';
     <!-- ================================================================= -->
     <div id="seasonal-ai-hub" class="bg-surface-container-lowest rounded-3xl border border-outline-variant/30 shadow-md overflow-hidden relative">
 
-        <!-- Header Section with High-Impact Gradient -->
-        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-6 sm:p-8 relative overflow-hidden">
+        <!-- Header Section with High-Impact Gradient & Solid Navy Fallback -->
+        <div class="bg-slate-900 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white p-6 sm:p-8 relative overflow-hidden" style="background-color: #0f172a;">
             <!-- Ambient Highlights -->
             <div class="absolute -top-24 -right-24 w-80 h-80 bg-primary/25 rounded-full blur-3xl pointer-events-none"></div>
             <div class="absolute -bottom-24 -left-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>

@@ -598,9 +598,9 @@ class SeasonalAiService
             $aiResult = $this->cohereClient->chat($messages, $schema);
 
             if (is_array($aiResult) && !empty($aiResult['executive_summary'])) {
-                // Cache for 2 hours (7200 seconds)
+                // Cache for 24 hours (86400 seconds) to ensure lightning-fast dashboard performance
                 try {
-                    cache()->save($cacheKey, $aiResult, 7200);
+                    cache()->save($cacheKey, $aiResult, 86400);
                 } catch (\Throwable $e) {}
 
                 $this->applyCohereData($aiResult, $seasonDef, $recommendations, $expansionIdeas);

@@ -13,13 +13,36 @@ envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d
 # Remove default Nginx site so only our port-configured site is active
 rm -f /etc/nginx/sites-enabled/default
 
-# Configure PHP-FPM to preserve environment variables (clear_env = no) and capture worker output
+# Configure PHP-FPM to preserve environment variables (clear_env = no) and tune workers
 if [ -d "/usr/local/etc/php-fpm.d" ]; then
     cat <<'EOF' > /usr/local/etc/php-fpm.d/zz-railway.conf
 [www]
 clear_env = no
 catch_workers_output = yes
 decorate_workers_output = no
+pm = dynamic
+pm.max_children = 20
+pm.start_servers = 4
+pm.min_spare_servers = 2
+pm.max_spare_servers = 6
+pm.max_requests = 1000
+EOF
+fi
+
+# Configure PHP OPcache and production performance settings
+if [ -d "/usr/local/etc/php/conf.d" ]; then
+    cat <<'EOF' > /usr/local/etc/php/conf.d/zz-opcache.ini
+opcache.enable=1
+opcache.enable_cli=0
+opcache.memory_consumption=128
+opcache.interned_strings_buffer=16
+opcache.max_accelerated_files=10000
+opcache.validate_timestamps=0
+opcache.revalidate_freq=0
+opcache.save_comments=1
+opcache.fast_shutdown=1
+realpath_cache_size=4096k
+realpath_cache_ttl=600
 EOF
 fi
 

@@ -7,9 +7,25 @@ server {
 
     client_max_body_size 50M;
 
+    # Performance: Sendfile, TCP optimizations & Keepalive
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+
+    # Open file cache for fast static asset discovery
+    open_file_cache max=3000 inactive=30s;
+    open_file_cache_valid 60s;
+    open_file_cache_min_uses 2;
+    open_file_cache_errors off;
+
     # Gzip compression
     gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 256;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml font/woff2;
 
     location / {
         try_files $uri $uri/ /index.php?$query_string;
@@ -27,6 +43,7 @@ server {
         fastcgi_buffer_size 128k;
         fastcgi_buffers 4 256k;
         fastcgi_busy_buffers_size 256k;
+        fastcgi_keep_conn on;
     }
 
     # Deny access to hidden files (.env, .git, .htaccess, etc.)
@@ -41,6 +58,9 @@ server {
     # Cache static assets
     location ~* \.(jpg|jpeg|png|gif|ico|css|js|webp|svg|woff|woff2|ttf|eot)$ {
         expires 30d;
-        add_header Cache-Control "public, no-transform";
+        add_header Cache-Control "public, no-transform, max-age=2592000";
+        access_log off;
+        log_not_found off;
+        try_files $uri =404;
     }
 }

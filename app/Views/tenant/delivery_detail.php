@@ -91,6 +91,16 @@
                     </div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <span id="gpsLastUpdated" class="font-mono text-outline text-[11px]"></span>
+                        
+                        <!-- Quick Action: Scan Delivery QR -->
+                        <button type="button" 
+                                onclick="openDeliveryScanner()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
+                                title="Open QR Scanner to verify delivery">
+                            <span class="material-symbols-outlined text-[15px]">qr_code_scanner</span>
+                            <span>Scan QR</span>
+                        </button>
+
                         <!-- Auto-Follow Camera Button -->
                         <button type="button" 
                                 id="btn-tenant-autofollow"
@@ -161,17 +171,18 @@
                     <div id="singleDeliveryMap" class="w-full h-[480px] sm:h-[520px] bg-surface-container z-0 relative" style="min-height:480px;"></div>
 
                     <!-- Floating QR Code Scanner Action Pill Button on Map -->
-                    <div class="absolute top-3.5 left-3.5 z-20">
+                    <div class="absolute top-3.5 left-3.5 z-30 pointer-events-auto">
                         <button type="button" 
                                 id="btnFloatingQrScan"
                                 onclick="openDeliveryScanner()" 
-                                class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-primary to-blue-600 text-white font-bold text-xs shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all border border-white/30 backdrop-blur-md group">
+                                style="background-color: #004ac6; background-image: linear-gradient(135deg, #004ac6 0%, #2563eb 100%);"
+                                class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-white font-bold text-xs shadow-2xl hover:scale-105 active:scale-95 transition-all border border-white/40 cursor-pointer group">
                             <span class="relative flex h-2.5 w-2.5">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-80"></span>
                                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-200"></span>
                             </span>
                             <span class="material-symbols-outlined text-[19px] group-hover:rotate-12 transition-transform">qr_code_scanner</span>
-                            <span class="tracking-wide">Scan Delivery QR</span>
+                            <span class="tracking-wide font-bold">Scan Delivery QR</span>
                         </button>
                     </div>
                 </div>
