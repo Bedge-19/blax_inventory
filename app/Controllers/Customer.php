@@ -902,6 +902,11 @@ class Customer extends BaseController
             return $this->response->setStatusCode(401)->setJSON(['success' => false, 'error' => 'Unauthorized']);
         }
 
+        // Release PHP session lock immediately so concurrent browser requests are never blocked
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+
         $notifModel = new \App\Models\NotificationModel();
         $unreadCount = $notifModel->getUnreadCount($userId);
 
