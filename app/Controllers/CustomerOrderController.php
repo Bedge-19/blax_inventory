@@ -222,8 +222,10 @@ class CustomerOrderController extends BaseController
         if (in_array($status, ['delivered', 'completed'], true)) {
             $courierCoords = $destCoords;
         } elseif (in_array($status, ['shipped', 'in_transit'], true)) {
-            if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
-                $courierCoords = [(float) $delivery['current_lat'], (float) $delivery['current_lng']];
+            $dLat = (float) ($delivery['current_lat'] ?? 0);
+            $dLng = (float) ($delivery['current_lng'] ?? 0);
+            if ($delivery && $dLat != 0.0 && $dLng != 0.0) {
+                $courierCoords = [$dLat, $dLng];
             } else {
                 // Courier is actively en route from store to customer
                 $courierCoords = $storeCoords;
@@ -477,11 +479,17 @@ class CustomerOrderController extends BaseController
 
         $lat = null;
         $lng = null;
+        $locationIsStale = false;
 
-        if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
-            $lat = (float) $delivery['current_lat'];
-            $lng = (float) $delivery['current_lng'];
+        $dLat = (float) ($delivery['current_lat'] ?? 0);
+        $dLng = (float) ($delivery['current_lng'] ?? 0);
+
+        if ($delivery && $dLat != 0.0 && $dLng != 0.0) {
+            $lat = $dLat;
+            $lng = $dLng;
+            $locationIsStale = !DeliveryModel::isPolomolokCoordinate($lat, $lng);
         } else {
+            $locationIsStale = true;
             $shop = (new ShopModel())->find($order['shop_id']);
             if ($shop && !empty($shop['latitude']) && !empty($shop['longitude']) && DeliveryModel::isPolomolokCoordinate((float) $shop['latitude'], (float) $shop['longitude'])) {
                 $lat = (float) $shop['latitude'];
@@ -493,12 +501,13 @@ class CustomerOrderController extends BaseController
         }
 
         return $this->response->setJSON([
-            'success'         => true,
-            'status'          => $status,
-            'delivery_status' => $delivery['status'] ?? 'pending',
-            'lat'             => $lat,
-            'lng'             => $lng,
-            'updated_at'      => $delivery['location_updated_at'] ?? $delivery['updated_at'] ?? null,
+            'success'           => true,
+            'status'            => $status,
+            'delivery_status'   => $delivery['status'] ?? 'pending',
+            'lat'               => $lat,
+            'lng'               => $lng,
+            'location_is_stale' => $locationIsStale,
+            'updated_at'        => $delivery['location_updated_at'] ?? $delivery['updated_at'] ?? null,
         ]);
     }
 
@@ -633,8 +642,10 @@ class CustomerOrderController extends BaseController
         if (in_array($status, ['delivered', 'completed'], true)) {
             $courierCoords = $destCoords;
         } elseif (in_array($status, ['shipped', 'in_transit', 'ready_for_delivery'], true)) {
-            if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
-                $courierCoords = [(float) $delivery['current_lat'], (float) $delivery['current_lng']];
+            $dLat = (float) ($delivery['current_lat'] ?? 0);
+            $dLng = (float) ($delivery['current_lng'] ?? 0);
+            if ($delivery && $dLat != 0.0 && $dLng != 0.0) {
+                $courierCoords = [$dLat, $dLng];
             } else {
                 $courierCoords = $storeCoords;
             }
@@ -815,11 +826,17 @@ class CustomerOrderController extends BaseController
         $status = strtolower(trim((string) $req['status']));
         $lat = null;
         $lng = null;
+        $locationIsStale = false;
 
-        if ($delivery && !empty($delivery['current_lat']) && !empty($delivery['current_lng']) && DeliveryModel::isPolomolokCoordinate((float) $delivery['current_lat'], (float) $delivery['current_lng'])) {
-            $lat = (float) $delivery['current_lat'];
-            $lng = (float) $delivery['current_lng'];
+        $dLat = (float) ($delivery['current_lat'] ?? 0);
+        $dLng = (float) ($delivery['current_lng'] ?? 0);
+
+        if ($delivery && $dLat != 0.0 && $dLng != 0.0) {
+            $lat = $dLat;
+            $lng = $dLng;
+            $locationIsStale = !DeliveryModel::isPolomolokCoordinate($lat, $lng);
         } else {
+            $locationIsStale = true;
             $shop = (new ShopModel())->find($req['shop_id']);
             if ($shop && !empty($shop['latitude']) && !empty($shop['longitude']) && DeliveryModel::isPolomolokCoordinate((float) $shop['latitude'], (float) $shop['longitude'])) {
                 $lat = (float) $shop['latitude'];
@@ -831,12 +848,13 @@ class CustomerOrderController extends BaseController
         }
 
         return $this->response->setJSON([
-            'success'         => true,
-            'status'          => $status,
-            'delivery_status' => $delivery['status'] ?? 'pending',
-            'lat'             => $lat,
-            'lng'             => $lng,
-            'updated_at'      => $delivery['location_updated_at'] ?? $delivery['updated_at'] ?? null,
+            'success'           => true,
+            'status'            => $status,
+            'delivery_status'   => $delivery['status'] ?? 'pending',
+            'lat'               => $lat,
+            'lng'               => $lng,
+            'location_is_stale' => $locationIsStale,
+            'updated_at'        => $delivery['location_updated_at'] ?? $delivery['updated_at'] ?? null,
         ]);
     }
 }

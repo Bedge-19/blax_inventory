@@ -239,12 +239,8 @@ class Admin extends BaseController
         $deliveryModel = new DeliveryModel();
         $pins = $deliveryModel->getAllDeliveryPins();
 
-        // Ensure pins only contain valid Polomolok coordinates
         $pins = array_values(array_filter($pins, function ($p) {
-            if (!empty($p['current_lat']) && !empty($p['current_lng'])) {
-                return DeliveryModel::isPolomolokCoordinate((float) $p['current_lat'], (float) $p['current_lng']);
-            }
-            return false;
+            return !empty($p['current_lat']) && !empty($p['current_lng']) && ((float) $p['current_lat'] != 0.0);
         }));
 
         $groupedShops = [];
@@ -307,10 +303,7 @@ class Admin extends BaseController
         $pins = $deliveryModel->getAllDeliveryPins();
 
         $pins = array_values(array_filter($pins, function ($p) {
-            if (!empty($p['current_lat']) && !empty($p['current_lng'])) {
-                return DeliveryModel::isPolomolokCoordinate((float) $p['current_lat'], (float) $p['current_lng']);
-            }
-            return false;
+            return !empty($p['current_lat']) && !empty($p['current_lng']) && ((float) $p['current_lat'] != 0.0);
         }));
 
         $groupedShops = [];

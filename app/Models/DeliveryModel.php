@@ -552,8 +552,14 @@ class DeliveryModel extends Model
 
             $lat = (float) ($r['current_lat'] ?? 0);
             $lng = (float) ($r['current_lng'] ?? 0);
-            if (!self::isPolomolokCoordinate($lat, $lng)) {
-                // Honest fallback: use shop's real starting coordinates if valid, else Polomolok center
+            if ($lat != 0.0 && $lng != 0.0) {
+                // Keep the last known real coordinate, flag as stale if outside operating bounds
+                $r['location_is_stale'] = !self::isPolomolokCoordinate($lat, $lng);
+                $r['current_lat'] = number_format($lat, 7, '.', '');
+                $r['current_lng'] = number_format($lng, 7, '.', '');
+            } else {
+                // No coordinates ever saved: initial fallback to shop or Polomolok center
+                $r['location_is_stale'] = true;
                 $shopLat = (float) ($r['shop_lat'] ?? 0);
                 $shopLng = (float) ($r['shop_lng'] ?? 0);
                 if (self::isPolomolokCoordinate($shopLat, $shopLng)) {
@@ -586,7 +592,8 @@ class DeliveryModel extends Model
             ->whereIn('d.status', ['shipped', 'in_transit'])
             ->where('d.current_lat IS NOT NULL')
             ->where('d.current_lng IS NOT NULL')
-            ->where('d.location_updated_at IS NOT NULL');
+            ->where('d.location_updated_at IS NOT NULL')
+            ->where('d.location_updated_at >=', date('Y-m-d H:i:s', strtotime('-15 minutes')));
 
         if ($search !== null && $search !== '') {
             $builder->groupStart()->like('d.tracking_id', $search)->orLike('d.destination_address', $search)->orLike('s.shop_name', $search)->groupEnd();
@@ -600,7 +607,8 @@ class DeliveryModel extends Model
         foreach ($rows as $r) {
             $lat = (float) ($r['current_lat'] ?? 0);
             $lng = (float) ($r['current_lng'] ?? 0);
-            if ($lat != 0.0 && $lng != 0.0 && self::isPolomolokCoordinate($lat, $lng)) {
+            if ($lat != 0.0 && $lng != 0.0) {
+                $r['location_is_stale'] = !self::isPolomolokCoordinate($lat, $lng);
                 $r['current_lat'] = number_format($lat, 7, '.', '');
                 $r['current_lng'] = number_format($lng, 7, '.', '');
                 $activePins[] = $r;

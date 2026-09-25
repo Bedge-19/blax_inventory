@@ -101,6 +101,15 @@
                             <span>Scan QR</span>
                         </button>
 
+                        <!-- Satellite / Roadmap Toggle Button -->
+                        <button type="button" 
+                                id="btn-tenant-map-type"
+                                onclick="toggleTenantMapType()"
+                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-container border border-outline-variant/40 hover:bg-surface-container-high text-xs font-bold text-on-surface transition-all cursor-pointer"
+                                title="Toggle Satellite / Roadmap View">
+                            <span id="tenantMapTypeIcon" class="material-symbols-outlined text-[15px] text-primary">satellite_alt</span>
+                            <span id="tenantMapTypeText">Satellite</span>
+                        </button>
                         <!-- Auto-Follow Camera Button -->
                         <button type="button" 
                                 id="btn-tenant-autofollow"
@@ -459,6 +468,35 @@
         return (theta * toDeg + 360) % 360;
     }
 
+    const TENANT_MAP_TYPE_STORAGE_KEY = 'blax_tenant_delivery_map_type';
+    let currentTenantMapType = localStorage.getItem(TENANT_MAP_TYPE_STORAGE_KEY) || 'hybrid';
+
+    function updateTenantMapTypeToggleUI() {
+        const icon = document.getElementById('tenantMapTypeIcon');
+        const text = document.getElementById('tenantMapTypeText');
+        if (!icon || !text) return;
+        if (currentTenantMapType === 'hybrid') {
+            icon.textContent = 'map';
+            text.textContent = 'Roadmap';
+        } else {
+            icon.textContent = 'satellite_alt';
+            text.textContent = 'Satellite';
+        }
+    }
+
+    function toggleTenantMapType() {
+        if (!mapInstance || typeof google === 'undefined' || !google.maps) return;
+        if (currentTenantMapType === 'hybrid') {
+            currentTenantMapType = 'roadmap';
+            mapInstance.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        } else {
+            currentTenantMapType = 'hybrid';
+            mapInstance.setMapTypeId(google.maps.MapTypeId.HYBRID);
+        }
+        localStorage.setItem(TENANT_MAP_TYPE_STORAGE_KEY, currentTenantMapType);
+        updateTenantMapTypeToggleUI();
+    }
+
     function updateTenantAutoFollowUI() {
         const dot = document.getElementById('tenantAutoFollowDot');
         const text = document.getElementById('tenantAutoFollowText');
@@ -499,10 +537,13 @@
         const container = document.getElementById('singleDeliveryMap');
         if (!container || typeof google === 'undefined' || !google.maps) return;
 
+        const initialMapTypeId = currentTenantMapType === 'roadmap' ? google.maps.MapTypeId.ROADMAP : google.maps.MapTypeId.HYBRID;
+
         mapInstance = new google.maps.Map(container, {
             center: currentRiderLatLng,
             zoom: 15,
             minZoom: 11,
+            mapTypeId: initialMapTypeId,
             restriction: {
                 latLngBounds: POLOMOLOK_BOUNDS,
                 strictBounds: false
@@ -514,6 +555,8 @@
             streetViewControl: false,
             fullscreenControl: true
         });
+
+        updateTenantMapTypeToggleUI();
 
         // Suspend auto-follow on user manual map dragging
         mapInstance.addListener('dragstart', () => {

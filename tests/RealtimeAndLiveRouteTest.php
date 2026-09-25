@@ -269,4 +269,102 @@ class RealtimeAndLiveRouteTest extends CIUnitTestCase
         $deliveryModel->delete($deliveryId);
         $db->table('orders')->where('id', 999991)->delete();
     }
+
+    public function testDeliveryPinsStaleFlagAndFifteenMinuteExpiry()
+    {
+        $shop = (new ShopModel())->first();
+        if (!$shop) {
+            $this->markTestSkipped('No shops available in database.');
+        }
+
+        $tenantUser = (new UserModel())->find($shop['owner_id']);
+        if (!$tenantUser) {
+            $this->markTestSkipped('Shop owner not found.');
+        }
+
+        $deliveryModel = new DeliveryModel();
+        $db = \Config\Database::connect();
+
+        // 1. Create a dummy order
+        $db->table('orders')->where('id', 999992)->delete();
+        $db->table('orders')->insert([
+            'id'                 => 999992,
+            'shop_id'            => (int) $shop['id'],
+            'customer_id'        => (int) $tenantUser['id'],
+            'order_number'       => 'ORD-STALE-TEST-1',
+            'fulfillment_method' => 'delivery',
+            'status'             => 'shipped',
+            'total_amount'       => 150.00,
+            'placed_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        // 2. Insert delivery with out-of-bounds coordinates (e.g., Manila coords: 14.5995, 120.9842) but fresh timestamp (2 mins ago)
+        $freshStaleTracking = 'TRK-STALE-FRESH-' . time();
+        $deliveryId1 = $deliveryModel->insert([
+            'deliverable_type'    => 'order',
+            'deliverable_id'      => 999992,
+            'tracking_id'         => $freshStaleTracking,
+            'courier_name'        => 'Store Courier',
+            'destination_address' => 'Cannery Site, Polomolok',
+            'current_lat'         => 14.5995000,
+            'current_lng'         => 120.9842000,
+            'location_updated_at' => date('Y-m-d H:i:s', strtotime('-2 minutes')),
+            'status'              => 'shipped',
+            'created_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        // 3. Insert delivery with coordinates updated 20 minutes ago (> 15 mins)
+        $expiredTracking = 'TRK-EXPIRED-' . time();
+        $deliveryId2 = $deliveryModel->insert([
+            'deliverable_type'    => 'order',
+            'deliverable_id'      => 999992,
+            'tracking_id'         => $expiredTracking,
+            'courier_name'        => 'Store Courier',
+            'destination_address' => 'Cannery Site, Polomolok',
+            'current_lat'         => 6.2185000,
+            'current_lng'         => 125.0650000,
+            'location_updated_at' => date('Y-m-d H:i:s', strtotime('-20 minutes')),
+            'status'              => 'shipped',
+            'created_at'          => date('Y-m-d H:i:s'),
+        ]);
+
+        // 4. Test getDeliveryPins: out-of-bounds should retain original real coordinate and have location_is_stale = true
+        $tenantPins = $deliveryModel->getDeliveryPins((int) $shop['id']);
+        $foundStaleInTenant = null;
+        foreach ($tenantPins as $p) {
+            if ($p['tracking_id'] === $freshStaleTracking) {
+                $foundStaleInTenant = $p;
+                break;
+            }
+        }
+        $this->assertNotNull($foundStaleInTenant, 'Fresh out-of-bounds delivery should be returned by getDeliveryPins.');
+        $this->assertEquals('14.5995000', $foundStaleInTenant['current_lat'], 'Coordinates must NOT be overwritten with shop/center fallback.');
+        $this->assertEquals('120.9842000', $foundStaleInTenant['current_lng'], 'Coordinates must NOT be overwritten with shop/center fallback.');
+        $this->assertTrue($foundStaleInTenant['location_is_stale'], 'Out-of-bounds pin must have location_is_stale = true.');
+
+        // 5. Test getAllDeliveryPins:
+        // - fresh out-of-bounds delivery must be present with location_is_stale = true
+        // - expired delivery (> 15 mins) must NOT be present
+        $adminPins = $deliveryModel->getAllDeliveryPins();
+        $foundFreshInAdmin = null;
+        $foundExpiredInAdmin = null;
+        foreach ($adminPins as $p) {
+            if ($p['tracking_id'] === $freshStaleTracking) {
+                $foundFreshInAdmin = $p;
+            }
+            if ($p['tracking_id'] === $expiredTracking) {
+                $foundExpiredInAdmin = $p;
+            }
+        }
+
+        $this->assertNotNull($foundFreshInAdmin, 'Fresh delivery (<15m) must be included in getAllDeliveryPins.');
+        $this->assertEquals('14.5995000', $foundFreshInAdmin['current_lat']);
+        $this->assertTrue($foundFreshInAdmin['location_is_stale']);
+        $this->assertNull($foundExpiredInAdmin, 'Delivery with location updated >15m ago must be filtered out of getAllDeliveryPins.');
+
+        // 6. Clean up
+        $deliveryModel->delete($deliveryId1);
+        $deliveryModel->delete($deliveryId2);
+        $db->table('orders')->where('id', 999992)->delete();
+    }
 }

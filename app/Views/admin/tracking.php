@@ -68,6 +68,17 @@
     <div class="relative rounded-2xl overflow-hidden border border-outline-variant/30 bg-surface-container shadow-sm" style="min-height: 540px;">
         <div id="fleet-map" class="w-full h-full" style="min-height: 540px;"></div>
 
+        <!-- Floating Satellite / Roadmap View Toggle Button (Top Right) -->
+        <div class="absolute top-4 right-14 z-10 pointer-events-auto">
+            <button type="button" 
+                    id="btn-admin-map-type" 
+                    onclick="toggleAdminMapType()"
+                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-surface-container-lowest/90 backdrop-blur-md border border-outline-variant/40 hover:bg-surface-container-high text-xs font-bold text-on-surface shadow-md transition-all active:scale-95 cursor-pointer">
+                <span id="adminMapTypeIcon" class="material-symbols-outlined text-[18px] text-primary">satellite_alt</span>
+                <span id="adminMapTypeText">Satellite</span>
+            </button>
+        </div>
+
         <!-- Live Fleet Legend Overlay Card (Bottom Left) -->
         <div class="absolute bottom-4 left-4 z-10 bg-surface-container-lowest/90 backdrop-blur-md p-3.5 rounded-xl border border-outline-variant/30 shadow-md flex flex-col gap-2 max-w-xs text-xs pointer-events-auto">
             <div class="flex items-center gap-2 border-b border-outline-variant/20 pb-1.5">
@@ -217,6 +228,34 @@
 
     let mapInstance = null;
     let activeMarkers = new Map(); // id -> { marker, markerElement, infoWindow, pinData }
+    const MAP_TYPE_STORAGE_KEY = 'blax_admin_tracking_map_type';
+    let currentAdminMapType = localStorage.getItem(MAP_TYPE_STORAGE_KEY) || 'hybrid';
+
+    function updateAdminMapTypeToggleUI() {
+        const icon = document.getElementById('adminMapTypeIcon');
+        const text = document.getElementById('adminMapTypeText');
+        if (!icon || !text) return;
+        if (currentAdminMapType === 'hybrid') {
+            icon.textContent = 'map';
+            text.textContent = 'Roadmap';
+        } else {
+            icon.textContent = 'satellite_alt';
+            text.textContent = 'Satellite';
+        }
+    }
+
+    function toggleAdminMapType() {
+        if (!mapInstance || typeof google === 'undefined' || !google.maps) return;
+        if (currentAdminMapType === 'hybrid') {
+            currentAdminMapType = 'roadmap';
+            mapInstance.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        } else {
+            currentAdminMapType = 'hybrid';
+            mapInstance.setMapTypeId(google.maps.MapTypeId.HYBRID);
+        }
+        localStorage.setItem(MAP_TYPE_STORAGE_KEY, currentAdminMapType);
+        updateAdminMapTypeToggleUI();
+    }
 
     function calculateBearing(lat1, lon1, lat2, lon2) {
         const toRad = deg => (deg * Math.PI) / 180;
@@ -228,10 +267,14 @@
         return (toDeg(Math.atan2(y, x)) + 360) % 360;
     }
 
-    function createMotorcycleMarkerElement(status) {
+    function createMotorcycleMarkerElement(status, isStale) {
         const isTransit = status === 'in_transit';
-        const bgColor = isTransit ? '#7c3aed' : '#2563eb';
-        const shadowColor = isTransit ? 'rgba(124, 58, 237, 0.4)' : 'rgba(37, 99, 235, 0.4)';
+        let bgColor = isTransit ? '#7c3aed' : '#2563eb';
+        let shadowColor = isTransit ? 'rgba(124, 58, 237, 0.4)' : 'rgba(37, 99, 235, 0.4)';
+        if (isStale) {
+            bgColor = '#d97706'; // Amber badge for stale / signal lost
+            shadowColor = 'rgba(217, 119, 6, 0.4)';
+        }
 
         const div = document.createElement('div');
         div.className = 'motorcycle-marker-wrap';
@@ -246,7 +289,7 @@
         div.innerHTML = `
             <div style="position:absolute;width:100%;height:100%;border-radius:50%;background:${bgColor};opacity:0.25;animation:pulse 2s infinite;"></div>
             <div class="motorcycle-icon-inner" style="width:32px;height:32px;border-radius:50%;background:${bgColor};border:2px solid #ffffff;box-shadow:0 3px 10px ${shadowColor};display:flex;align-items:center;justify-content:center;color:#ffffff;z-index:2;transition:transform 0.5s ease-out;">
-                <span class="material-symbols-outlined" style="font-size:17px;line-height:1;">two_wheeler</span>
+                <span class="material-symbols-outlined" style="font-size:17px;line-height:1;">${isStale ? 'signal_wifi_bad' : 'two_wheeler'}</span>
             </div>
         `;
         return div;
@@ -307,6 +350,7 @@
         const statusBg = isTransit ? '#f3e8ff' : '#eff6ff';
         const statusText = isTransit ? '#7c3aed' : '#1d4ed8';
         const demoTag = p.is_demo ? '<span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:4px;font-weight:bold;margin-left:4px;">DEMO</span>' : '';
+        const staleBadge = p.location_is_stale ? '<span style="font-size:9px;background:#fee2e2;color:#b91c1c;padding:2px 6px;border-radius:6px;font-weight:bold;margin-left:4px;border:1px solid #fca5a5;">⚠️ Signal Lost</span>' : '';
         const custName = [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Customer';
 
         return `
@@ -323,10 +367,11 @@
                 <div style="font-size:11px;color:#64748b;margin-top:1px;">
                     📍 ${p.destination_address || 'Polomolok'}
                 </div>
-                <div style="margin-top:6px;display:flex;align-items:center;justify-content:between;">
+                <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
                     <span style="font-size:10px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:999px;background:${statusBg};color:${statusText};">
                         ${statusLabel}
                     </span>
+                    ${staleBadge}
                 </div>
             </div>
         `;
@@ -340,8 +385,7 @@
         (pins || []).forEach(p => {
             const lat = parseFloat(p.current_lat);
             const lng = parseFloat(p.current_lng);
-            if (isNaN(lat) || isNaN(lng)) return;
-            if (lat < 6.10 || lat > 6.45 || lng < 124.85 || lng > 125.20) return;
+            if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) return;
 
             const pinId = String(p.id || p.tracking_id);
             currentIds.add(pinId);
@@ -355,7 +399,8 @@
                 entry.infoWindow.setContent(createInfoWindowContent(p));
             } else {
                 // Create new marker
-                const pinElem = createMotorcycleMarkerElement(p.status);
+                const isStale = Boolean(p.location_is_stale);
+                const pinElem = createMotorcycleMarkerElement(p.status, isStale);
                 let marker;
                 if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
                     marker = new google.maps.marker.AdvancedMarkerElement({
@@ -384,11 +429,18 @@
             }
         });
 
-        // Remove markers that are no longer active
+        // Remove markers that are no longer active (or finished / expired)
         for (const [id, entry] of activeMarkers.entries()) {
             if (!currentIds.has(id)) {
-                if (entry.marker.map) entry.marker.map = null;
-                if (typeof entry.marker.setMap === 'function') entry.marker.setMap(null);
+                if (entry.marker) {
+                    if (typeof entry.marker.setMap === 'function') {
+                        entry.marker.setMap(null);
+                    }
+                    entry.marker.map = null;
+                }
+                if (entry.infoWindow) {
+                    entry.infoWindow.close();
+                }
                 activeMarkers.delete(id);
             }
         }
@@ -398,10 +450,13 @@
         const el = document.getElementById('fleet-map');
         if (!el || typeof google === 'undefined' || !google.maps) return;
 
+        const initialMapTypeId = currentAdminMapType === 'roadmap' ? google.maps.MapTypeId.ROADMAP : google.maps.MapTypeId.HYBRID;
+
         mapInstance = new google.maps.Map(el, {
             center: POLO_CENTER,
             zoom: 12,
             minZoom: 11,
+            mapTypeId: initialMapTypeId,
             restriction: {
                 latLngBounds: POLO_BOUNDS,
                 strictBounds: false
@@ -414,6 +469,7 @@
             fullscreenControl: true
         });
 
+        updateAdminMapTypeToggleUI();
         updatePinsOnMap(currentPins);
 
         if (activeMarkers.size === 1) {

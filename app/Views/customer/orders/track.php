@@ -348,8 +348,18 @@
                                 <span id="liveEtaText">Calculating route...</span>
                             </div>
 
-                            <!-- Controls Group (Auto-Follow Toggle + Center on Courier) -->
-                            <div class="pointer-events-auto flex items-center gap-2">
+                            <!-- Controls Group (Satellite Toggle + Auto-Follow + Center on Courier) -->
+                            <div class="pointer-events-auto flex items-center gap-2 flex-wrap">
+                                <!-- Satellite / Roadmap View Toggle Button -->
+                                <button type="button" 
+                                        id="btn-customer-map-type"
+                                        onclick="toggleCustomerMapType()"
+                                        title="Toggle Satellite / Roadmap View"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900/90 hover:bg-slate-800 text-white text-xs font-bold shadow-md backdrop-blur-md transition-all active:scale-95 cursor-pointer">
+                                    <span id="custMapTypeIcon" class="material-symbols-outlined text-[15px] text-primary">satellite_alt</span>
+                                    <span id="custMapTypeText">Satellite</span>
+                                </button>
+
                                 <!-- Auto-Follow Camera Toggle -->
                                 <button type="button" 
                                         id="btn-auto-follow"
@@ -584,6 +594,46 @@
         });
     }
 
+    const CUST_MAP_TYPE_STORAGE_KEY = 'blax_customer_track_map_type';
+    let currentCustMapType = localStorage.getItem(CUST_MAP_TYPE_STORAGE_KEY) || 'hybrid';
+
+    function updateCustomerMapTypeToggleUI() {
+        const icon = document.getElementById('custMapTypeIcon');
+        const text = document.getElementById('custMapTypeText');
+        if (!icon || !text) return;
+        if (currentCustMapType === 'hybrid') {
+            icon.textContent = 'map';
+            text.textContent = 'Roadmap';
+        } else {
+            icon.textContent = 'satellite_alt';
+            text.textContent = 'Satellite';
+        }
+    }
+
+    function toggleCustomerMapType() {
+        if (!trackMap || typeof google === 'undefined' || !google.maps) return;
+        if (currentCustMapType === 'hybrid') {
+            currentCustMapType = 'roadmap';
+            trackMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        } else {
+            currentCustMapType = 'hybrid';
+            trackMap.setMapTypeId(google.maps.MapTypeId.HYBRID);
+        }
+        localStorage.setItem(CUST_MAP_TYPE_STORAGE_KEY, currentCustMapType);
+        updateCustomerMapTypeToggleUI();
+    }
+
+    function createCourierInfoWindowContent(isStale) {
+        const staleNotice = isStale ? '<div style="font-size:10px;font-weight:700;color:#dc2626;background:#fef2f2;padding:2px 6px;border-radius:4px;border:1px solid #fecaca;margin-top:3px;">⚠️ Signal Lost • Last Known Position</div>' : '<div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route to Delivery</div>';
+        return `
+            <div style="font-family:inherit;padding:4px;min-width:140px;">
+                <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div>
+                <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
+                ${staleNotice}
+            </div>
+        `;
+    }
+
     window.initGoogleTrackMap = function() {
         const container = document.getElementById('trackMap');
         if (!container || typeof google === 'undefined' || !google.maps) return;
@@ -591,9 +641,12 @@
         const destLatLng    = { lat: parseFloat(DEST_COORDS[0]), lng: parseFloat(DEST_COORDS[1]) };
         const courierLatLng = { lat: parseFloat(COURIER_COORDS[0]), lng: parseFloat(COURIER_COORDS[1]) };
 
+        const initialMapTypeId = currentCustMapType === 'roadmap' ? google.maps.MapTypeId.ROADMAP : google.maps.MapTypeId.HYBRID;
+
         trackMap = new google.maps.Map(container, {
             center: courierLatLng,
             zoom: 15,
+            mapTypeId: initialMapTypeId,
             mapId: 'DEMO_MAP_ID',
             disableDefaultUI: false,
             zoomControl: true,
@@ -601,6 +654,8 @@
             streetViewControl: false,
             fullscreenControl: true
         });
+
+        updateCustomerMapTypeToggleUI();
 
         // Detect user manual pan/drag to suspend auto-follow until re-enabled
         trackMap.addListener('dragstart', () => {
@@ -656,13 +711,7 @@
             });
         }
         courierInfoWindow = new google.maps.InfoWindow({
-            content: `
-                <div style="font-family:inherit;padding:4px;min-width:140px;">
-                    <div style="font-size:11px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.5px;">Live Courier Position</div>
-                    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px;">🏍️ ${COURIER_NAME}</div>
-                    <div style="font-size:11px;color:#475569;margin-top:2px;">Status: En Route to Delivery</div>
-                </div>
-            `
+            content: createCourierInfoWindowContent(false)
         });
         courierMarker.addListener('click', () => {
             courierInfoWindow.open(trackMap, courierMarker);
@@ -787,6 +836,11 @@
                 if (data && data.success && data.lat && data.lng) {
                     const newLat = parseFloat(data.lat);
                     const newLng = parseFloat(data.lng);
+                    const isStale = Boolean(data.location_is_stale);
+
+                    if (courierInfoWindow) {
+                        courierInfoWindow.setContent(createCourierInfoWindowContent(isStale));
+                    }
 
                     // If coordinates moved significantly (> 1 meter), smoothly interpolate
                     if (Math.abs(newLat - currentRiderPos.lat) > 0.00001 || Math.abs(newLng - currentRiderPos.lng) > 0.00001) {

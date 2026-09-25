@@ -369,10 +369,16 @@
                         <span class="material-symbols-outlined text-[16px] text-primary">my_location</span>
                         <span>4. Exact Doorstep GPS Pin (Interactive Map)</span>
                     </label>
-                    <button type="button" id="btn-locate-me" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
-                        <span class="material-symbols-outlined text-[14px]">near_me</span>
-                        <span>Locate My GPS</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btn-address-map-type" onclick="toggleAddressMapType()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-surface-container border border-outline-variant/40 text-on-surface hover:bg-surface-container-high transition-all cursor-pointer" title="Toggle Satellite / Roadmap View">
+                            <span id="addressMapTypeIcon" class="material-symbols-outlined text-[14px] text-primary">satellite_alt</span>
+                            <span id="addressMapTypeText">Satellite</span>
+                        </button>
+                        <button type="button" id="btn-locate-me" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                            <span class="material-symbols-outlined text-[14px]">near_me</span>
+                            <span>Locate My GPS</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="relative rounded-2xl overflow-hidden border border-outline-variant/40 bg-surface-container shadow-2xs">
@@ -528,6 +534,35 @@
         }
     }
 
+    const ADDR_MAP_TYPE_STORAGE_KEY = 'blax_address_modal_map_type';
+    let currentAddrMapType = localStorage.getItem(ADDR_MAP_TYPE_STORAGE_KEY) || 'hybrid';
+
+    function updateAddressMapTypeToggleUI() {
+        const icon = document.getElementById('addressMapTypeIcon');
+        const text = document.getElementById('addressMapTypeText');
+        if (!icon || !text) return;
+        if (currentAddrMapType === 'hybrid') {
+            icon.textContent = 'map';
+            text.textContent = 'Roadmap';
+        } else {
+            icon.textContent = 'satellite_alt';
+            text.textContent = 'Satellite';
+        }
+    }
+
+    function toggleAddressMapType() {
+        if (!modalMap || typeof google === 'undefined' || !google.maps) return;
+        if (currentAddrMapType === 'hybrid') {
+            currentAddrMapType = 'roadmap';
+            modalMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        } else {
+            currentAddrMapType = 'hybrid';
+            modalMap.setMapTypeId(google.maps.MapTypeId.HYBRID);
+        }
+        localStorage.setItem(ADDR_MAP_TYPE_STORAGE_KEY, currentAddrMapType);
+        updateAddressMapTypeToggleUI();
+    }
+
     function initOrUpdateModalMap(initialLat, initialLng) {
         const lat = parseFloat(initialLat) || 6.2185;
         const lng = parseFloat(initialLng) || 125.0650;
@@ -539,9 +574,11 @@
         if (!mapEl || typeof google === 'undefined' || !google.maps) return;
 
         if (!modalMap) {
+            const initialMapTypeId = currentAddrMapType === 'roadmap' ? google.maps.MapTypeId.ROADMAP : google.maps.MapTypeId.HYBRID;
             modalMap = new google.maps.Map(mapEl, {
                 center: center,
                 zoom: 15,
+                mapTypeId: initialMapTypeId,
                 mapId: 'ADDRESS_PICKER_MAP',
                 disableDefaultUI: false,
                 zoomControl: true,
@@ -549,6 +586,7 @@
                 streetViewControl: false,
                 fullscreenControl: true
             });
+            updateAddressMapTypeToggleUI();
 
             // Create draggable marker
             if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
