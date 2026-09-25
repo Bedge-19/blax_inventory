@@ -678,13 +678,13 @@
 
                     <div class="group bg-surface-container-lowest rounded-xl overflow-hidden border border-outline-variant/30 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between">
 
-                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block relative aspect-square overflow-hidden bg-surface-container">
+                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900/60 flex items-center justify-center p-2.5">
 
-                            <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="<?= esc(product_image_url($p['image_url'] ?? null)) ?>" alt="<?= esc($p['name']) ?>">
+                            <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" src="<?= esc(product_image_url($p['image_url'] ?? null)) ?>" alt="<?= esc($p['name']) ?>" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';">
 
                             <?php if (!empty($p['is_bestseller'])): ?>
 
-                                <span class="absolute top-1 right-1 sm:top-md sm:right-md bg-primary-container text-on-primary-container px-1.5 py-0.5 sm:px-sm sm:py-xs rounded-full text-[9px] sm:text-label-sm font-label-sm shadow-sm">Hot</span>
+                                <span class="absolute top-1 right-1 sm:top-2 sm:right-2 bg-primary-container text-on-primary-container px-1.5 py-0.5 sm:px-sm sm:py-xs rounded-full text-[9px] sm:text-label-sm font-label-sm shadow-sm z-10">Hot</span>
 
                             <?php endif; ?>
 

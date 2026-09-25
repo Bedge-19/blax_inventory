@@ -56,26 +56,26 @@
                     $imageUrl = product_image_url($p['image_url'] ?? null);
                     $rating   = $p['rating_average'] ?? 0;
                 ?>
-                <div class="card-elevated rounded-2xl overflow-hidden flex flex-col group">
+                <div class="card-elevated rounded-2xl overflow-hidden flex flex-col group bg-surface-container-lowest border border-outline-variant/30">
                     
-                    <div class="relative aspect-square bg-slate-50 overflow-hidden">
-                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
-                            <img src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy">
+                    <div class="relative aspect-square bg-slate-50 dark:bg-slate-900/60 overflow-hidden flex items-center justify-center p-2.5">
+                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full flex items-center justify-center">
+                            <img src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';">
                         </a>
 
                         <?php if (!empty($p['shop_name'])): ?>
-                            <span class="absolute top-2 left-2 bg-white/90 backdrop-blur-xs text-slate-800 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-2xs truncate max-w-[120px]">
+                            <span class="absolute top-2 left-2 bg-slate-900/80 dark:bg-slate-800/90 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-2xs truncate max-w-[120px] backdrop-blur-xs z-10 border border-white/10">
                                 <?= esc($p['shop_name']) ?>
                             </span>
                         <?php endif; ?>
 
-                        <button type="button" class="absolute top-2 right-2 bg-white/90 backdrop-blur-xs hover:bg-white text-slate-500 hover:text-red-500 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-xs" aria-label="Add to favorites">
+                        <button type="button" class="absolute top-2 right-2 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xs hover:bg-white text-slate-500 hover:text-red-500 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-xs z-10" aria-label="Add to favorites">
                             <span class="material-symbols-outlined text-[15px]">favorite</span>
                         </button>
                     </div>
 
                     <div class="p-3 sm:p-4 flex flex-col flex-grow">
-                        <h4 class="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors line-clamp-2 leading-snug mb-1.5">
+                        <h4 class="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-primary transition-colors line-clamp-2 leading-snug mb-1.5 min-h-[2.5rem]">
                             <a href="<?= base_url('product/' . $p['id']) ?>"><?= esc($p['name']) ?></a>
                         </h4>
 
@@ -84,7 +84,7 @@
                             <span class="text-[11px] font-bold text-slate-700"><?= number_format((float) $rating, 1) ?></span>
                         </div>
 
-                        <div class="mt-auto flex justify-between items-center pt-2 border-t border-slate-100">
+                        <div class="mt-auto flex justify-between items-center pt-2 border-t border-outline-variant/15">
                             <div>
                                 <span class="text-[11px] font-bold text-primary">₱</span>
                                 <span class="text-sm sm:text-base font-black text-slate-900"><?= number_format($p['price'], 2) ?></span>

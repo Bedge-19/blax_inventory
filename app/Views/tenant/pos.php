@@ -1494,7 +1494,8 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
             </div>
         `;
 
-        let url = `${BASE_URL}tenant/pos/search-products?q=${encodeURIComponent(query)}`;
+        let base = (window.BASE_URL || '<?= rtrim(base_url(), "/") ?>/').replace(/^http:\/\//i, window.location.protocol + '//');
+        let url = `${base}tenant/pos/search-products?q=${encodeURIComponent(query)}`;
         if (categoryId) {
             url += `&category_id=${encodeURIComponent(categoryId)}`;
         }
@@ -1509,63 +1510,71 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
                 quickCatalogBox.innerHTML = '<div class="col-span-full py-lg text-center text-outline text-xs">No products found matching your selection.</div>';
             }
         })
-        .catch(() => {
+        .catch(err => {
+            console.error('POS Catalog load error:', err);
             quickCatalogBox.innerHTML = '<div class="col-span-full py-lg text-center text-error text-xs">Failed to load shop catalog.</div>';
         });
     }
 
     // Render modern product cards grid
     function renderProductCards(products) {
-        quickCatalogBox.innerHTML = products.map(p => {
-            const outOfStock = p.stock_quantity <= 0;
-            const isLowStock = p.stock_quantity > 0 && p.stock_quantity <= 5;
-            const cartItem = cart.find(x => x.product_id === p.id);
-            const inCartQty = cartItem ? cartItem.quantity : 0;
+        try {
+            quickCatalogBox.innerHTML = products.map(p => {
+                const stockQty = parseInt(p.stock_quantity, 10) || 0;
+                const outOfStock = stockQty <= 0;
+                const isLowStock = stockQty > 0 && stockQty <= 5;
+                const cartItem = cart.find(x => x.product_id === p.id);
+                const inCartQty = cartItem ? cartItem.quantity : 0;
+                const priceFormatted = formatMoney(p.price);
 
-            return `
-                <div class="pos-product-card bg-surface-container-lowest hover:bg-surface-container-low border ${inCartQty > 0 ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant/30'} rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-2 transition-all hover:shadow-md group cursor-pointer relative" data-id="${p.id}" ${outOfStock ? 'style="opacity: 0.6; cursor: not-allowed;"' : ''}>
-                    <!-- Product Image -->
-                    <div class="w-full aspect-square rounded-xl bg-surface-container overflow-hidden flex items-center justify-center relative">
-                        ${p.image_url 
-                            ? `<img src="${p.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="${esc(p.name)}" onerror="this.parentElement.innerHTML='<div class=\\'text-primary/40 flex flex-col items-center gap-1\\'><span class=\\'material-symbols-outlined text-3xl sm:text-4xl\\'>inventory_2</span><span class=\\'text-[9px] uppercase font-bold text-outline\\'>No Image</span></div>'">` 
-                            : `<div class="text-primary/40 flex flex-col items-center gap-1"><span class="material-symbols-outlined text-3xl sm:text-4xl">inventory_2</span><span class="text-[9px] uppercase font-bold text-outline">No Image</span></div>`}
-                        
-                        <!-- In-cart Badge -->
-                        ${inCartQty > 0 ? `
-                            <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary text-on-primary shadow-xs flex items-center gap-0.5">
-                                <span class="material-symbols-outlined text-[12px]">shopping_bag</span>
-                                ${inCartQty} in cart
+                return `
+                    <div class="pos-product-card bg-surface-container-lowest hover:bg-surface-container-low border ${inCartQty > 0 ? 'border-primary ring-1 ring-primary/40' : 'border-outline-variant/30'} rounded-2xl p-2.5 sm:p-3 flex flex-col justify-between gap-2 transition-all hover:shadow-md group cursor-pointer relative" data-id="${p.id}" ${outOfStock ? 'style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+                        <!-- Product Image -->
+                        <div class="w-full aspect-square rounded-xl bg-slate-50 dark:bg-slate-900/60 overflow-hidden flex items-center justify-center relative p-1.5">
+                            ${p.image_url 
+                                ? `<img src="${p.image_url}" class="w-full h-full object-contain group-hover:scale-105 transition-transform" alt="${esc(p.name)}" onerror="this.parentElement.innerHTML='<div class=\\'text-primary/40 flex flex-col items-center gap-1\\'><span class=\\'material-symbols-outlined text-3xl sm:text-4xl\\'>inventory_2</span><span class=\\'text-[9px] uppercase font-bold text-outline\\'>No Image</span></div>'">` 
+                                : `<div class="text-primary/40 flex flex-col items-center gap-1"><span class="material-symbols-outlined text-3xl sm:text-4xl">inventory_2</span><span class="text-[9px] uppercase font-bold text-outline">No Image</span></div>`}
+                            
+                            <!-- In-cart Badge -->
+                            ${inCartQty > 0 ? `
+                                <span class="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-primary text-on-primary shadow-xs flex items-center gap-0.5">
+                                    <span class="material-symbols-outlined text-[12px]">shopping_bag</span>
+                                    ${inCartQty} in cart
+                                </span>
+                            ` : ''}
+
+                            <!-- Stock Badge Overlay -->
+                            <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs ${
+                                outOfStock ? 'bg-error text-on-error' : (isLowStock ? 'bg-amber-500 text-white' : 'bg-surface-container-lowest/90 text-on-surface')
+                            }">
+                                ${outOfStock ? 'Out of Stock' : (isLowStock ? `Low: ${stockQty}` : `Stock: ${stockQty}`)}
                             </span>
-                        ` : ''}
+                        </div>
 
-                        <!-- Stock Badge Overlay -->
-                        <span class="absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold shadow-xs ${
-                            outOfStock ? 'bg-error text-on-error' : (isLowStock ? 'bg-amber-500 text-white' : 'bg-surface-container-lowest/90 text-on-surface')
-                        }">
-                            ${outOfStock ? 'Out of Stock' : (isLowStock ? `Low: ${p.stock_quantity}` : `Stock: ${p.stock_quantity}`)}
-                        </span>
+                        <!-- Product Details -->
+                        <div class="space-y-0.5 min-w-0">
+                            <p class="text-xs font-bold text-on-surface truncate" title="${esc(p.name)}">${esc(p.name)}</p>
+                            <p class="text-[10px] text-outline truncate font-mono">SKU: ${esc(p.sku || 'N/A')}</p>
+                            <p class="text-sm sm:text-body-md font-mono font-bold text-primary">${priceFormatted}</p>
+                        </div>
+
+                        <!-- Add Button -->
+                        <button type="button" 
+                                class="pos-card-add-btn w-full py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-2xs ${
+                                    outOfStock ? 'bg-outline/20 text-outline cursor-not-allowed' : (inCartQty > 0 ? 'bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary' : 'bg-primary text-on-primary hover:bg-primary/90 active:scale-95')
+                                }" 
+                                data-id="${p.id}" 
+                                ${outOfStock ? 'disabled' : ''}>
+                            <span class="material-symbols-outlined text-[16px]">${inCartQty > 0 ? 'add' : 'add_shopping_cart'}</span>
+                            <span>${inCartQty > 0 ? 'Add More' : 'Add'}</span>
+                        </button>
                     </div>
-
-                    <!-- Product Details -->
-                    <div class="space-y-0.5 min-w-0">
-                        <p class="text-xs font-bold text-on-surface truncate" title="${esc(p.name)}">${esc(p.name)}</p>
-                        <p class="text-[10px] text-outline truncate font-mono">SKU: ${esc(p.sku || 'N/A')}</p>
-                        <p class="text-sm sm:text-body-md font-mono font-bold text-primary">₱${p.price.toFixed(2)}</p>
-                    </div>
-
-                    <!-- Add Button -->
-                    <button type="button" 
-                            class="pos-card-add-btn w-full py-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all shadow-2xs ${
-                                outOfStock ? 'bg-outline/20 text-outline cursor-not-allowed' : (inCartQty > 0 ? 'bg-primary/10 text-primary border border-primary/30 hover:bg-primary hover:text-on-primary' : 'bg-primary text-on-primary hover:bg-primary/90 active:scale-95')
-                            }" 
-                            data-id="${p.id}" 
-                            ${outOfStock ? 'disabled' : ''}>
-                        <span class="material-symbols-outlined text-[16px]">${inCartQty > 0 ? 'add' : 'add_shopping_cart'}</span>
-                        <span>${inCartQty > 0 ? 'Add More' : 'Add'}</span>
-                    </button>
-                </div>
-            `;
-        }).join('');
+                `;
+            }).join('');
+        } catch (e) {
+            console.error('Error rendering product cards:', e);
+            quickCatalogBox.innerHTML = '<div class="col-span-full py-lg text-center text-error text-xs">Failed to display products.</div>';
+        }
 
         // Attach click handlers to cards and add buttons
         quickCatalogBox.querySelectorAll('.pos-product-card').forEach(card => {
@@ -1743,7 +1752,7 @@ $customerHasOrderMap = $customerHasOrderMap ?? [];
                     <div class="p-2 bg-surface-container-low rounded-xl flex items-center justify-between gap-2 border border-outline-variant/20">
                         <div class="min-w-0 flex-1">
                             <p class="text-xs font-bold text-on-surface truncate">${esc(it.name)}</p>
-                            <p class="text-[10px] text-outline font-mono">₱${it.price.toFixed(2)} ea • Line: <span class="font-bold text-on-surface">₱${lineTotal.toFixed(2)}</span></p>
+                            <p class="text-[10px] text-outline font-mono">${formatMoney(it.price)} ea • Line: <span class="font-bold text-on-surface">${formatMoney(lineTotal)}</span></p>
                         </div>
                         <div class="flex items-center gap-1.5">
                             <div class="inline-flex items-center border border-outline-variant/40 rounded-lg overflow-hidden bg-surface-container-lowest">

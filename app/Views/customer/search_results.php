@@ -60,19 +60,19 @@
                     $hasDiscount = $comparePrice > $price;
                 ?>
                 <div class="group bg-surface-container-lowest border border-outline-variant/40 rounded-xl sm:rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 flex flex-col justify-between">
-                    <div class="relative aspect-square overflow-hidden bg-surface-container-high/40">
-                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full">
-                            <img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" loading="lazy">
+                    <div class="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900/60 flex items-center justify-center p-2 sm:p-2.5">
+                        <a href="<?= base_url('product/' . $p['id']) ?>" class="block w-full h-full flex items-center justify-center">
+                            <img class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" src="<?= esc($imageUrl) ?>" alt="<?= esc($p['name']) ?>" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1544816155-12df9643f363?auto=format&fit=crop&w=600&q=80';">
                         </a>
 
                         <?php if ($hasDiscount): ?>
-                            <span class="absolute top-1 left-1 sm:top-3 sm:left-3 bg-error text-on-error px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold shadow-md">
+                            <span class="absolute top-1 left-1 sm:top-2 sm:left-2 bg-error text-on-error px-1.5 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[9px] sm:text-xs font-bold shadow-md z-10">
                                 SALE
                             </span>
                         <?php endif; ?>
 
                         <?php if (!empty($p['shop_name'])): ?>
-                            <span class="absolute bottom-1 left-1 sm:bottom-3 sm:left-3 bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.2 sm:px-2.5 sm:py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium truncate max-w-[85%]">
+                            <span class="absolute bottom-1 left-1 sm:bottom-2 sm:left-2 bg-slate-900/80 dark:bg-slate-800/90 text-white px-1.5 py-0.5 sm:px-2.5 sm:py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold truncate max-w-[85%] backdrop-blur-xs z-10 border border-white/10">
                                 <?= esc($p['shop_name']) ?>
                             </span>
                         <?php endif; ?>
