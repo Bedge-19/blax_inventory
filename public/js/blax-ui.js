@@ -302,12 +302,14 @@
 
             if (tenantSidebar && tenantOverlay) {
                 const openTenantSidebar = function () {
+                    tenantSidebar.classList.add('mobile-open');
                     tenantSidebar.classList.remove('hidden');
                     tenantSidebar.classList.add('flex', 'z-50');
                     tenantOverlay.classList.add('active');
                     document.body.classList.add('mobile-nav-open');
                 };
                 const closeTenantSidebar = function () {
+                    tenantSidebar.classList.remove('mobile-open');
                     tenantSidebar.classList.add('hidden');
                     tenantSidebar.classList.remove('flex', 'z-50');
                     tenantOverlay.classList.remove('active');
@@ -327,12 +329,14 @@
 
             if (adminSidebar && adminOverlay) {
                 const openAdminSidebar = function () {
+                    adminSidebar.classList.add('mobile-open');
                     adminSidebar.classList.remove('hidden');
                     adminSidebar.classList.add('flex', 'z-50');
                     adminOverlay.classList.add('active');
                     document.body.classList.add('mobile-nav-open');
                 };
                 const closeAdminSidebar = function () {
+                    adminSidebar.classList.remove('mobile-open');
                     adminSidebar.classList.add('hidden');
                     adminSidebar.classList.remove('flex', 'z-50');
                     adminOverlay.classList.remove('active');

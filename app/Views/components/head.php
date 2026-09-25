@@ -104,7 +104,91 @@
             return;
         }
 
-        // 4. Outside clicks dismiss open menus
+        // 4. Mobile Menu / Drawer / Sidebar Toggles (Customer, Tenant, Admin)
+        const custMenuBtn = e.target.closest('#mobile-menu-toggle');
+        if (custMenuBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const drawer = document.getElementById('mobile-drawer');
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            if (drawer && backdrop) {
+                drawer.classList.add('open');
+                backdrop.classList.add('active');
+                document.body.classList.add('mobile-nav-open');
+            }
+            return;
+        }
+        const custCloseBtn = e.target.closest('#mobile-menu-close, #mobile-drawer-backdrop');
+        if (custCloseBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const drawer = document.getElementById('mobile-drawer');
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            if (drawer && backdrop) {
+                drawer.classList.remove('open');
+                backdrop.classList.remove('active');
+                document.body.classList.remove('mobile-nav-open');
+            }
+            return;
+        }
+
+        const tenantMenuBtn = e.target.closest('#sidebar-toggle, #tenant-sidebar-toggle');
+        if (tenantMenuBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sidebar = document.getElementById('tenant-sidebar');
+            const overlay = document.getElementById('tenant-sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.add('mobile-open');
+                sidebar.classList.remove('hidden');
+                overlay.classList.add('active');
+                document.body.classList.add('mobile-nav-open');
+            }
+            return;
+        }
+        const tenantCloseBtn = e.target.closest('#tenant-sidebar-close, #tenant-sidebar-overlay');
+        if (tenantCloseBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sidebar = document.getElementById('tenant-sidebar');
+            const overlay = document.getElementById('tenant-sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                document.body.classList.remove('mobile-nav-open');
+            }
+            return;
+        }
+
+        const adminMenuBtn = e.target.closest('#admin-sidebar-toggle');
+        if (adminMenuBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sidebar = document.getElementById('admin-sidebar');
+            const overlay = document.getElementById('admin-sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.add('mobile-open');
+                sidebar.classList.remove('hidden');
+                overlay.classList.add('active');
+                document.body.classList.add('mobile-nav-open');
+            }
+            return;
+        }
+        const adminCloseBtn = e.target.closest('#admin-sidebar-close, #admin-sidebar-overlay');
+        if (adminCloseBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const sidebar = document.getElementById('admin-sidebar');
+            const overlay = document.getElementById('admin-sidebar-overlay');
+            if (sidebar && overlay) {
+                sidebar.classList.remove('mobile-open');
+                overlay.classList.remove('active');
+                document.body.classList.remove('mobile-nav-open');
+            }
+            return;
+        }
+
+        // 5. Outside clicks dismiss open menus
         if (!e.target.closest('#notif-dropdown, #notif-panel, #admin-notif-panel')) {
             document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel').forEach(p => p.classList.add('hidden'));
         }
@@ -118,6 +202,16 @@
         if (e.key === 'Escape') {
             document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel, #admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
             document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
+            const drawer = document.getElementById('mobile-drawer');
+            const backdrop = document.getElementById('mobile-drawer-backdrop');
+            if (drawer && backdrop) { drawer.classList.remove('open'); backdrop.classList.remove('active'); }
+            const tenantSidebar = document.getElementById('tenant-sidebar');
+            const tenantOverlay = document.getElementById('tenant-sidebar-overlay');
+            if (tenantSidebar && tenantOverlay) { tenantSidebar.classList.remove('mobile-open'); tenantOverlay.classList.remove('active'); }
+            const adminSidebar = document.getElementById('admin-sidebar');
+            const adminOverlay = document.getElementById('admin-sidebar-overlay');
+            if (adminSidebar && adminOverlay) { adminSidebar.classList.remove('mobile-open'); adminOverlay.classList.remove('active'); }
+            document.body.classList.remove('mobile-nav-open');
         }
     });
 
@@ -367,6 +461,17 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
         .sidebar-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 35; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
         .sidebar-overlay.active { opacity: 1; pointer-events: auto; }
         @media (max-width: 767px) {
+            #tenant-sidebar.mobile-open,
+            #admin-sidebar.mobile-open {
+                display: flex !important;
+                position: fixed !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                z-index: 50 !important;
+                transform: translateX(0) !important;
+                box-shadow: 4px 0 24px rgba(0,0,0,0.2) !important;
+            }
             .responsive-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
             .responsive-table table { min-width: 640px; }
             .responsive-table th, .responsive-table td { padding-left: 12px; padding-right: 12px; white-space: nowrap; }

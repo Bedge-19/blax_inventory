@@ -195,7 +195,7 @@
 
                 <!-- Left: Mobile Toggle & Breadcrumbs -->
                 <div class="flex items-center gap-3">
-                    <button id="sidebar-toggle" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> p-2 text-on-surface-variant hover:bg-surface-container rounded-xl transition-colors" aria-label="Toggle sidebar">
+                    <button id="sidebar-toggle" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> p-2 text-on-surface-variant hover:bg-surface-container rounded-xl transition-colors" aria-label="Toggle sidebar">
                         <span class="material-symbols-outlined text-[20px]">menu</span>
                     </button>
 
@@ -236,7 +236,7 @@
                             <?php endif; ?>
                         </button>
 
-                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw_-_2rem)] bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        <div id="notif-panel" class="hidden fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-80 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
                                 <div class="flex items-center gap-1.5">
                                     <p class="text-xs font-bold text-on-surface">Notifications</p>
@@ -309,7 +309,7 @@
                             <span class="material-symbols-outlined text-[16px] text-outline group-hover:text-on-surface transition-transform group-hover:translate-y-0.5 hidden sm:inline">expand_more</span>
                         </button>
 
-                        <div id="tenant-profile-dropdown" class="dropdown-menu absolute right-0 top-full mt-2 w-56 bg-surface-container-lowest rounded-2xl shadow-xl border border-outline-variant/30 p-2 z-50">
+                        <div id="tenant-profile-dropdown" class="dropdown-menu fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-56 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 p-2 z-50">
                             <div class="px-3 py-2 border-b border-outline-variant/15 mb-1.5">
                                 <p class="text-xs font-bold text-on-surface truncate"><?= esc($shopName) ?></p>
                                 <p class="text-[10px] text-on-surface-variant truncate"><?= esc(session()->get('user_email') ?? 'Merchant') ?></p>
