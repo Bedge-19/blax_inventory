@@ -90,16 +90,24 @@
             document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel').forEach(p => p.classList.add('hidden'));
 
             if ((profileBtn.id === 'profile-dropdown-toggle' || profileBtn.matches('#profile-dropdown-toggle')) && custDropdown) {
+                document.querySelectorAll('#tenant-profile-dropdown').forEach(p => { p.classList.remove('open'); p.classList.add('hidden'); });
+                document.querySelectorAll('#admin-profile-quickmenu').forEach(p => { p.classList.add('hidden'); p.classList.remove('open'); });
                 const isOpen = custDropdown.classList.contains('open');
                 custDropdown.classList.toggle('open', !isOpen);
+                custDropdown.classList.toggle('hidden', isOpen);
                 profileBtn.setAttribute('aria-expanded', (!isOpen).toString());
             } else if ((profileBtn.id === 'tenant-profile-toggle' || profileBtn.matches('#tenant-profile-toggle')) && tenantDropdown) {
+                document.querySelectorAll('#profile-dropdown').forEach(p => { p.classList.remove('open'); p.classList.add('hidden'); });
+                document.querySelectorAll('#admin-profile-quickmenu').forEach(p => { p.classList.add('hidden'); p.classList.remove('open'); });
                 const isOpen = tenantDropdown.classList.contains('open');
                 tenantDropdown.classList.toggle('open', !isOpen);
+                tenantDropdown.classList.toggle('hidden', isOpen);
                 profileBtn.setAttribute('aria-expanded', (!isOpen).toString());
             } else if ((profileBtn.id === 'admin-profile-toggle' || profileBtn.matches('#admin-profile-toggle')) && adminMenu) {
+                document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => { p.classList.remove('open'); p.classList.add('hidden'); });
                 const isHidden = adminMenu.classList.contains('hidden');
                 adminMenu.classList.toggle('hidden', !isHidden);
+                adminMenu.classList.toggle('open', isHidden);
                 profileBtn.setAttribute('aria-expanded', isHidden.toString());
             }
             return;
@@ -196,19 +204,19 @@
         }
 
         // 5. Outside clicks dismiss open menus
-        if (!e.target.closest('#notif-dropdown, #notif-panel, #admin-notif-panel')) {
+        if (!e.target.closest('#notif-dropdown, #notif-panel, #admin-notif-panel, #notif-dropdown-toggle, #notif-toggle, #admin-notif-toggle')) {
             document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel').forEach(p => p.classList.add('hidden'));
         }
-        if (!e.target.closest('#profile-dropdown, #tenant-profile-dropdown, #admin-profile-quickmenu')) {
-            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
-            document.querySelectorAll('#admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
+        if (!e.target.closest('#profile-dropdown, #tenant-profile-dropdown, #admin-profile-quickmenu, #profile-dropdown-toggle, #tenant-profile-toggle, #admin-profile-toggle')) {
+            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => { p.classList.remove('open'); p.classList.add('hidden'); });
+            document.querySelectorAll('#admin-profile-quickmenu').forEach(p => { p.classList.add('hidden'); p.classList.remove('open'); });
         }
     });
 
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             document.querySelectorAll('#notif-dropdown, #notif-panel, #admin-notif-panel, #admin-profile-quickmenu').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
+            document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => { p.classList.remove('open'); p.classList.add('hidden'); });
             const drawer = document.getElementById('mobile-drawer');
             const backdrop = document.getElementById('mobile-drawer-backdrop');
             if (drawer && backdrop) { drawer.classList.remove('open'); backdrop.classList.remove('active'); }
@@ -503,4 +511,33 @@ window.BASE_URL = '<?= rtrim(base_url(), '/') ?>/';
             .dropdown-menu:hover { opacity: 1; visibility: visible; pointer-events: auto; }
         }
         .profile-dropdown-toggle { display: inline-flex; }
+
+        /* Bulletproof top-right dropdown anchoring */
+        #notif-panel, #admin-notif-panel, #notif-dropdown,
+        #tenant-profile-dropdown, #admin-profile-quickmenu, #profile-dropdown {
+            box-sizing: border-box !important;
+            position: absolute !important;
+            top: 100% !important;
+            right: 0 !important;
+            left: auto !important;
+            margin-top: 0.5rem !important;
+            z-index: 60 !important;
+            transform-origin: top right;
+        }
+        #notif-panel, #admin-notif-panel, #notif-dropdown {
+            width: 20rem !important;
+            max-width: min(20rem, calc(100vw - 1.5rem)) !important;
+        }
+        #profile-dropdown {
+            width: 16rem !important;
+            max-width: min(16rem, calc(100vw - 1.5rem)) !important;
+        }
+        #tenant-profile-dropdown {
+            width: 14.5rem !important;
+            max-width: min(14.5rem, calc(100vw - 1.5rem)) !important;
+        }
+        #admin-profile-quickmenu {
+            width: 13rem !important;
+            max-width: min(13rem, calc(100vw - 1.5rem)) !important;
+        }
     </style>

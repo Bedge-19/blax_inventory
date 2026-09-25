@@ -222,7 +222,7 @@
                             <?php endif; ?>
                         </button>
 
-                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/40 z-50 overflow-hidden">
+                        <div id="admin-notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/40 z-50 overflow-hidden origin-top-right">
                             <div class="px-4 py-3 border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/50">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs font-bold text-on-surface">Platform Alerts</span>
@@ -275,7 +275,7 @@
                             <span class="hidden md:inline text-xs font-semibold text-on-surface truncate max-w-[100px]"><?= esc($adminName) ?></span>
                             <span class="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
                         </button>
-                        <div id="admin-profile-quickmenu" class="hidden fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-48 bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/40 py-1.5 z-50 text-xs">
+                        <div id="admin-profile-quickmenu" class="hidden absolute right-0 top-full mt-2 w-48 max-w-[calc(100vw-1.5rem)] bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant/40 py-1.5 z-50 text-xs origin-top-right">
                             <div class="px-3 py-2 border-b border-outline-variant/20 mb-1">
                                 <p class="font-bold text-on-surface truncate"><?= esc($adminName) ?></p>
                                 <p class="text-[10px] text-on-surface-variant truncate"><?= esc($adminEmail) ?></p>

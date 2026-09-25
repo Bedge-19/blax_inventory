@@ -97,55 +97,43 @@ body { font-family: 'Inter', sans-serif; scroll-behavior: smooth; }
 }
 .profile-dropdown-toggle { display: inline-flex; }
 
-/* Bulletproof Notification and Profile Dropdown Positioning across Railway & Local */
+/* Bulletproof Notification and Profile Dropdown Positioning across Railway, Desktop & Mobile */
+#notif-panel,
+#admin-notif-panel,
+#notif-dropdown,
+#tenant-profile-dropdown,
+#admin-profile-quickmenu,
+#profile-dropdown {
+    box-sizing: border-box !important;
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    margin-top: 0.5rem !important;
+    z-index: 60 !important;
+    transform-origin: top right;
+}
+
 #notif-panel,
 #admin-notif-panel,
 #notif-dropdown {
-    box-sizing: border-box;
+    width: 20rem !important; /* 320px */
+    max-width: min(20rem, calc(100vw - 1.5rem)) !important;
 }
 
-@media (min-width: 640px) {
-    #notif-panel,
-    #admin-notif-panel,
-    #notif-dropdown {
-        position: absolute !important;
-        left: auto !important;
-        right: 0 !important;
-        top: 100% !important;
-        margin-top: 0.5rem !important;
-        width: 20rem !important; /* 320px */
-        max-width: calc(100vw - 2rem) !important;
-        z-index: 60 !important;
-    }
-    #tenant-profile-dropdown,
-    #admin-profile-quickmenu,
-    #profile-dropdown {
-        position: absolute !important;
-        left: auto !important;
-        right: 0 !important;
-        top: 100% !important;
-        margin-top: 0.5rem !important;
-        width: 15rem !important;
-        max-width: calc(100vw - 2rem) !important;
-        z-index: 60 !important;
-    }
+#profile-dropdown {
+    width: 16rem !important; /* 256px */
+    max-width: min(16rem, calc(100vw - 1.5rem)) !important;
 }
 
-@media (max-width: 639px) {
-    #notif-panel,
-    #admin-notif-panel,
-    #notif-dropdown,
-    #tenant-profile-dropdown,
-    #admin-profile-quickmenu,
-    #profile-dropdown {
-        position: fixed !important;
-        left: 0.5rem !important;
-        right: 0.5rem !important;
-        top: 3.75rem !important;
-        width: auto !important;
-        max-width: calc(100vw - 1rem) !important;
-        z-index: 70 !important;
-    }
+#tenant-profile-dropdown {
+    width: 14.5rem !important; /* 232px */
+    max-width: min(14.5rem, calc(100vw - 1.5rem)) !important;
+}
+
+#admin-profile-quickmenu {
+    width: 13rem !important; /* 208px */
+    max-width: min(13rem, calc(100vw - 1.5rem)) !important;
 }
 
 /* ══════════════════════════════════════════════════════════════════
