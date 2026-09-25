@@ -36,7 +36,7 @@
         <div id="tenant-sidebar-overlay" class="sidebar-overlay"></div>
 
         <!-- SideNavBar -->
-        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex flex-col h-full py-md px-3 z-40 border-r border-outline-variant/30 shadow-sm w-64 fixed left-0 h-screen <?= $fullscreenLayout ? 'hidden' : 'hidden md:flex' ?> transition-transform duration-300">
+        <aside id="tenant-sidebar" class="bg-surface-container-lowest flex-col h-full py-md px-3 z-40 border-r border-outline-variant/30 shadow-sm w-64 fixed left-0 h-screen <?= $fullscreenLayout ? 'hidden' : 'hidden md:flex' ?> transition-transform duration-300">
 
             <!-- Brand Identity & Store Card -->
             <div class="px-2 mb-md flex items-center justify-between">
@@ -52,8 +52,8 @@
                         <p class="text-[11px] text-on-surface-variant/70 truncate" title="<?= esc($shopName) ?>"><?= esc($shopName) ?></p>
                     </div>
                 </div>
-                <button id="tenant-sidebar-close" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors" aria-label="Close navigation">
-                    <span class="material-symbols-outlined text-[20px]">close</span>
+                <button id="tenant-sidebar-close" type="button" class="<?= $fullscreenLayout ? '' : 'md:hidden' ?> text-on-surface-variant hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container transition-colors cursor-pointer relative z-50" aria-label="Close navigation" onclick="const s=document.getElementById('tenant-sidebar');if(s){s.classList.remove('mobile-open','flex','z-50');s.classList.add('hidden');}const o=document.getElementById('tenant-sidebar-overlay');if(o){o.classList.remove('active');}document.body.classList.remove('mobile-nav-open');">
+                    <span class="material-symbols-outlined text-[20px] pointer-events-none">close</span>
                 </button>
             </div>
 
@@ -236,7 +236,7 @@
                             <?php endif; ?>
                         </button>
 
-                        <div id="notif-panel" class="hidden fixed left-2 right-2 sm:left-auto sm:right-0 sm:absolute top-[56px] sm:top-full mt-2 sm:w-80 bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                        <div id="notif-panel" class="hidden absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-surface-container-lowest rounded-2xl shadow-2xl border border-outline-variant/30 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
                             <div class="px-md py-sm border-b border-outline-variant/20 flex items-center justify-between bg-surface-container-low/40">
                                 <div class="flex items-center gap-1.5">
                                     <p class="text-xs font-bold text-on-surface">Notifications</p>

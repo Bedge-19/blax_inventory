@@ -140,7 +140,7 @@ class AiAssistant extends BaseController
 
         // ---- Stage 3: choose the customer-facing message ------------------
         if ($intent === 'product_search' && $products === []) {
-            $replyText = $replyEmpty ?? 'Sorry, I could not find a matching product. Could you describe it differently?';
+            $replyText = $replyEmpty ?? $reply ?? 'Sorry, I could not find a matching product. Could you describe it differently?';
         } elseif ($reply !== null) {
             $replyText = $reply;
         } elseif ($products !== []) {

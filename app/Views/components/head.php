@@ -59,9 +59,10 @@
         if (notifBtn) {
             e.preventDefault();
             e.stopPropagation();
-            const panel = document.getElementById('notif-dropdown') 
+            const panel = (notifBtn.parentElement ? notifBtn.parentElement.querySelector('#notif-dropdown, #notif-panel, #admin-notif-panel') : null)
                 || document.getElementById('notif-panel') 
-                || document.getElementById('admin-notif-panel');
+                || document.getElementById('admin-notif-panel')
+                || document.getElementById('notif-dropdown');
             if (panel) {
                 const isHidden = panel.classList.contains('hidden');
                 document.querySelectorAll('#profile-dropdown, #tenant-profile-dropdown').forEach(p => p.classList.remove('open'));
@@ -141,6 +142,7 @@
             if (sidebar && overlay) {
                 sidebar.classList.add('mobile-open');
                 sidebar.classList.remove('hidden');
+                sidebar.classList.add('flex', 'z-50');
                 overlay.classList.add('active');
                 document.body.classList.add('mobile-nav-open');
             }
@@ -154,6 +156,8 @@
             const overlay = document.getElementById('tenant-sidebar-overlay');
             if (sidebar && overlay) {
                 sidebar.classList.remove('mobile-open');
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('flex', 'z-50');
                 overlay.classList.remove('active');
                 document.body.classList.remove('mobile-nav-open');
             }
@@ -169,6 +173,7 @@
             if (sidebar && overlay) {
                 sidebar.classList.add('mobile-open');
                 sidebar.classList.remove('hidden');
+                sidebar.classList.add('flex', 'z-50');
                 overlay.classList.add('active');
                 document.body.classList.add('mobile-nav-open');
             }
@@ -182,6 +187,8 @@
             const overlay = document.getElementById('admin-sidebar-overlay');
             if (sidebar && overlay) {
                 sidebar.classList.remove('mobile-open');
+                sidebar.classList.add('hidden');
+                sidebar.classList.remove('flex', 'z-50');
                 overlay.classList.remove('active');
                 document.body.classList.remove('mobile-nav-open');
             }
