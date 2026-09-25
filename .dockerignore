@@ -3,6 +3,12 @@
 .github
 vendor
 tests
+node_modules
+Admin-prototype
+tenant-prototype
+final_user_design
+scratch
 .idea
 .vscode
 *.log
+*.sql

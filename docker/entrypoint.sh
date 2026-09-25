@@ -5,7 +5,7 @@ set -e
 export PORT="${PORT:-8080}"
 export CI_ENVIRONMENT="${CI_ENVIRONMENT:-production}"
 
-echo "Starting container on PORT ${PORT}..."
+echo "Starting container on PORT ${PORT} (CI_ENVIRONMENT: ${CI_ENVIRONMENT})..."
 
 # Substitute only ${PORT} into the Nginx config template to protect Nginx variables ($uri, $document_root, etc.)
 envsubst '${PORT}' < /etc/nginx/conf.d/default.conf.template > /etc/nginx/conf.d/default.conf
@@ -21,10 +21,10 @@ clear_env = no
 catch_workers_output = yes
 decorate_workers_output = no
 pm = dynamic
-pm.max_children = 20
+pm.max_children = 25
 pm.start_servers = 4
 pm.min_spare_servers = 2
-pm.max_spare_servers = 6
+pm.max_spare_servers = 8
 pm.max_requests = 1000
 EOF
 fi
@@ -49,9 +49,9 @@ EOF
 upload_max_filesize=50M
 post_max_size=50M
 memory_limit=512M
-max_execution_time=180
-max_input_time=180
-default_socket_timeout=180
+max_execution_time=300
+max_input_time=300
+default_socket_timeout=300
 EOF
 fi
 
@@ -60,6 +60,8 @@ mkdir -p /var/www/html/writable/cache \
          /var/www/html/writable/logs \
          /var/www/html/writable/session \
          /var/www/html/writable/uploads \
+         /var/www/html/writable/uploads/printing \
+         /var/www/html/writable/uploads/business_permits \
          /var/www/html/writable/debugbar
 chown -R www-data:www-data /var/www/html/writable
 chmod -R 775 /var/www/html/writable
@@ -68,9 +70,17 @@ mkdir -p /var/www/html/public/uploads/profiles \
          /var/www/html/public/uploads/product_images \
          /var/www/html/public/uploads/business_permits \
          /var/www/html/public/uploads/shop_logos \
-         /var/www/html/public/uploads/cms
+         /var/www/html/public/uploads/cms \
+         /var/www/html/public/uploads/printing \
+         /var/www/html/public/uploads/printing_attachments
 chown -R www-data:www-data /var/www/html/public/uploads
 chmod -R 775 /var/www/html/public/uploads
+
+# Run automatic database migrations if database environment variables are present
+if [ -n "$MYSQLHOST" ] || [ -n "$MYSQL_URL" ] || [ -n "$DATABASE_URL" ] || [ -n "$DB_HOST" ] || [ -n "$database_default_hostname" ]; then
+    echo "Database environment detected. Running CodeIgniter database migrations..."
+    php spark migrate --all || echo "Database migrations notice: already up to date or completed."
+fi
 
 # Start PHP-FPM in the background
 echo "Starting PHP-FPM daemon..."

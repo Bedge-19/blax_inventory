@@ -29,22 +29,31 @@ COPY . .
 # Install PHP production dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Set correct permissions for CodeIgniter 4 writable storage directory
-RUN chown -R www-data:www-data /var/www/html/writable \
-    && chmod -R 775 /var/www/html/writable
-
-RUN mkdir -p /var/www/html/public/uploads/profiles \
+# Set correct permissions for CodeIgniter 4 writable storage directory and uploads
+RUN mkdir -p /var/www/html/writable/cache \
+             /var/www/html/writable/logs \
+             /var/www/html/writable/session \
+             /var/www/html/writable/uploads \
+             /var/www/html/writable/uploads/printing \
+             /var/www/html/writable/uploads/business_permits \
+             /var/www/html/writable/debugbar \
+             /var/www/html/public/uploads/profiles \
              /var/www/html/public/uploads/product_images \
              /var/www/html/public/uploads/business_permits \
              /var/www/html/public/uploads/shop_logos \
              /var/www/html/public/uploads/cms \
-    && chown -R www-data:www-data /var/www/html/public/uploads \
-    && chmod -R 775 /var/www/html/public/uploads
+             /var/www/html/public/uploads/printing \
+             /var/www/html/public/uploads/printing_attachments \
+    && chown -R www-data:www-data /var/www/html/writable /var/www/html/public/uploads \
+    && chmod -R 775 /var/www/html/writable /var/www/html/public/uploads
 
 # Copy Nginx configuration template and entrypoint script
 RUN rm -f /etc/nginx/sites-enabled/default
 COPY docker/nginx.conf.template /etc/nginx/conf.d/default.conf.template
-RUN chmod +x /var/www/html/docker/entrypoint.sh
+
+# Ensure entrypoint has LF line endings (safe from Windows CRLF) and executable permission
+RUN sed -i 's/\r$//' /var/www/html/docker/entrypoint.sh \
+    && chmod +x /var/www/html/docker/entrypoint.sh
 
 EXPOSE 8080
 
